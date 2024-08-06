@@ -1,0 +1,8 @@
+[Desktop Entry]
+Encoding=UTF-8
+Version=4.3
+Type=Application
+Name=Frodo
+Exec=/usr/bin/Frodo
+X-Osso-Service=de.lachner_net.frodo
+Icon=frodo

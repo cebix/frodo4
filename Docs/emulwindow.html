@@ -1,0 +1,41 @@
+<HTML>
+<HEAD>
+<TITLE>Emulation window</TITLE>
+</HEAD>
+<BODY>
+
+<H1>Emulation window</H1>
+
+<HR>
+
+The emulation window displays the C64 graphics and receives the keyboard
+input. Under BeOS and AmigaOS, this window has a menu offerring six commands
+(apart from About/Quit):<P>
+
+<UL>
+<LI><B>"Reset C64"</B> resets the C64 and the 1541 emulation (same as pressing F12)
+<LI><B>"Preferences..."</B> re-opens the <A HREF="settings.html">settings window</A>
+<LI><B>"SAM..."</B> halts the emulation and activates <A HREF="sam.html">SAM</A> (you can exit from SAM with the "x" command)
+<LI><B>"Insert next disk"</B> changes the disk image of drive 8 if in "D64" mode and inserts the "next" disk. Frodo tries to be smart about what the "next" disk is. Your disk images should be named "Foo1.d64", "Foo2.d64"... or "BarA.d64", "BarB.d64"... for this feature to work.
+<LI><B>"Load snapshot..."</B> restores the emulator state from a snapshot file saved with "Save snapshot...".
+<LI><B>"Save snapshot..."</B> saves the current emulator state to disk.
+</UL>
+
+In the bottom left corner of the window, Frodo displays how much percent of
+the speed of a real C64 the emulation achieves.<P>
+
+The four items labeled "Drive 8" to "Drive 11" are the disk activity
+indicators of the 1541 emulation.<P>
+
+Under <B>RISC OS</B> Frodo can be controlled via Menus and the emulator
+pane. Some notes on the pane entries:
+
+<UL>
+<LI><B>Drive LEDs 8-11</B> display the drives' state. You can also set the drive paths by dragging files/directories to the corresponding LEDs.
+<LI>The <B>Speedometer</B> is clickable, its border type displays the state of the speed limiter. Slab in means off, slab out means on.
+<LI>The <B>Pause</B> and <B>Reset</B> icons should be self-explanatory.
+<LI>The <B>Size Toggler</B> lets you choose between two display sizes. It shows the one you'll get if you click it, rather than the current one.
+</UL>
+
+</BODY>
+</HTML>

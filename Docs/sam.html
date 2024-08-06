@@ -1,0 +1,283 @@
+<HTML>
+<HEAD>
+<TITLE>SAM</TITLE>
+</HEAD>
+<BODY>
+
+<H1>SAM</H1>
+
+<CITE>
+"Frodo! Mr.Frodo, my dear!" cried Sam,<BR>
+tears almost blinding him. "It's Sam, I've come!"
+</CITE>
+
+<HR>
+
+Frodo has a built-in machine language monitor that can be activated at any
+time by pressing F9 (Unix, not available in full-screen mode) or selecting
+the appropriate menu item (BeOS/AmigaOS/MacOS): SAM (Simple Assembler and
+Monitor). It provides full access to the memory and hardware of the emulated
+C64 and 1541 (under BeOS, you should only start SAM if you launched Frodo
+from the Shell).<P>
+
+SAM is controlled by a command-based interface, all numbers are in hex.
+With the command "h" you can display a list of all commands. The command
+"x" quits SAM and returns to Frodo.<P>
+
+SAM has two modes of operation, indicated by the prompt "C64>" or "1541>".
+You can switch between them with the "64" and "1541" commands. In "C64"
+mode, all commands that access memory or the CPU operate on the memory/CPU
+of the emulated C64. In "1541" mode, they operate on the emulated 1541
+(this is only useful if the processor-level 1541 emulation is turned
+on).<P>
+
+All commands that access the C64 memory use the memory configuration set
+with the "k" command. On starting up SAM, the configuration is set to the
+one the processor is in. Accesses from within SAM have the same effect as
+accesses of the emulated processor. This affects especially the I/O
+registers: a memory dump of $dc00-$de00 clears pending CIA interrupts as
+SAM reads from $dc0d and $dd0d. With the "v" commands, you can examine the
+state of the I/O chips without modifying the state of the emulation.<P>
+
+In all places where SAM expects a number (except in the assembler) you can
+also enter an expression of hex numbers containing '+', '-', '*', '/' and
+parens. Commands that create a longer output can be interrupted with
+Ctrl-C.<P>
+
+Here is a description of all commands ('[]' marks a parameter than can be
+left out, '{}' marks a parameter that can be repeated many times. If a
+[start] parameter is left out, SAM continues at the address where the last
+command stopped):<P>
+
+
+<PRE>
+ a [start]           Assemble
+</PRE><P>
+
+starts the assembler at the address "start". SAM always prints the address
+where the next instruction will be written to. The syntax of the
+instructions conforms to the standard except for shift/rotation
+instructions in the "accumulator" addressing mode. Those have to be entered
+without operand, e.g. "lsr" instead of "lsr a". Entering a blank line quits
+the assembler and returns to the command mode of SAM.<P>
+
+
+<PRE>
+ b [start] [end]     Binary dump
+</PRE><P>
+
+displays the memory from "start" to "end" byte-wise binary. With this
+command, you can view character sets.<P>
+
+
+<PRE>
+ c start end dest    Compare memory
+</PRE><P>
+
+compares the memory in the range from "start" to (and including) "end"
+with the memory at "dest". The addresses of all different bytes and the
+total number of differences (decimal) are printed.<P>
+
+
+<PRE>
+ d [start] [end]     Disassemble
+</PRE><P>
+
+disassembles the memory from "start" to "end". Undocumented opcodes are
+markes with a star '*'.<P>
+
+
+<PRE>
+ e                   Show interrupt vectors
+</PRE><P>
+
+shows the currently active interrupt vectors of the 6510 (C64) or 6502
+(1541) and (in C64 mode, if the Kernal ROM is mapped in) of the Kernal.<P>
+
+
+<PRE>
+ f start end byte    Fill memory
+</PRE><P>
+
+fills the memory in the range from "start" to (and including) "end" with
+the value "byte".<P>
+
+
+<PRE>
+ i [start] [end]     ASCII/PETSCII dump
+</PRE><P>
+
+shows the memory from "start" to "end" as ASCII/PETSCII characters.<P>
+
+
+<PRE>
+ k [config]          Show/set C64 memory configuration
+</PRE><P>
+
+"k" without parameters shows the memory configuration that is set for SAM,
+"k" with parameter modifies it. On exiting SAM, the configuration set with
+the processor port is reactivated. The memory configuration has no effect
+in 1541 mode. The 8 possible configurations are:
+
+<PRE>
+  #  $a000-$bfff  $d000-$dfff  $e000-$ffff
+  ----------------------------------------
+  0      RAM          RAM          RAM
+  1      RAM       Char ROM        RAM
+  2      RAM       Char ROM    Kernal ROM
+  3   Basic ROM    Char ROM    Kernal ROM
+  4      RAM          RAM          RAM
+  5      RAM          I/O          RAM
+  6      RAM          I/O      Kernal ROM
+  7   Basic ROM       I/O      Kernal ROM
+
+</PRE>
+
+
+<PRE>
+ l start "file"      Load data
+</PRE><P>
+
+loads the contents of the specified file into memory starting from address
+"start". The file name must be enclosed in quotation marks even if it
+contains no spaces. This command cannot be used to load C64 programs as
+it doesn't respect the embedded load address in the programs.<P>
+
+
+<PRE>
+ m [start] [end]     Memory dump
+</PRE><P>
+
+displays the memory from "start" to "end" as hexadecimal numbers and ASCII
+characters.<P>
+
+
+<PRE>
+ n [start] [end]     Screen code dump
+</PRE><P>
+
+displays the memory from "start" to "end" as ASCII characters, interpreting
+each byte as a screen code of the standard character set.<P>
+
+
+<PRE>
+ o ["file"]          Redirect output
+</PRE><P>
+
+When a file name is specified, all following output is redirected to this
+file. The file name must be enclosed in quotation marks even if it contains
+no spaces. Entering "o" without parameters closes the file and directs the
+output into the window of SAM again.<P>
+
+
+<PRE>
+ p [start] [end]     Sprite dump
+</PRE><P>
+
+displays the memory from "start" to "end" binary with three bytes per line.
+With this command, you can display sprite data.<P>
+
+
+<PRE>
+ r [reg value]       Show/set CPU registers
+</PRE><P>
+
+"r" without parameters shows all 6510 (C64) or 6502 (1541) registers and
+flags and the instruction at the address specified by the program counter.
+For the 6510, "DR" and "PR" are the data direction register and data
+register of the processor port. To modify a register, give its name ("reg")
+and the new value ("value") as parameters.<P>
+
+
+<PRE>
+ s start end "file"  Save data
+</PRE><P>
+
+writes the memory from "start" to (and including) "end" to the specified
+file. The file name must be enclosed in quotation marks even if it contains
+no spaces. This command cannot be used to save C64 programs as it doesn't
+save a load address in the file.<P>
+
+
+<PRE>
+ t start end dest    Transfer memory
+</PRE><P>
+
+transfers the memory from "start" to (and including) "end" to "dest".
+Source and destination may overlap.<P>
+
+
+<PRE>
+ vc1                 View CIA 1 state
+</PRE><P>
+
+shows the state of CIA 1 ($dc00).<P>
+
+
+<PRE>
+ vc2                 View CIA 2 state
+</PRE><P>
+
+shows the state of CIA 2 ($dd00).<P>
+
+
+<PRE>
+ vf                  View floppy state
+</PRE><P>
+
+shows the state of the processor-level 1541 emulation.<P>
+
+
+<PRE>
+ vs                  View SID state
+</PRE><P>
+
+shows the state of the SID.<P>
+
+
+<PRE>
+ vv                  View VIC state
+</PRE><P>
+
+shows the state of the VIC.<P>
+
+
+<PRE>
+ x                   Return to Frodo
+</PRE><P>
+
+quits SAM and returns to Frodo.<P>
+
+
+<PRE>
+ : addr {byte}       Modify memory
+</PRE><P>
+
+writes the space-separated values "byte" into memory starting at "addr".<P>
+
+
+<PRE>
+ 1541                Switch to 1541 mode
+</PRE><P>
+
+switches to 1541 mode. All commands that access memory or the CPU will then
+operate on the emulated 1541 (processor-level).<P>
+
+
+<PRE>
+ 64                  Switch to C64 mode
+</PRE><P>
+
+switches to C64 mode. All commands that access memory or the CPU will then
+operate on the emulated C64.<P>
+
+
+<PRE>
+ ? expression        Calculate expression
+</PRE><P>
+
+calculates the value of the given expression and displays it in decimal
+and hexadecimal.<P>
+
+</BODY>
+</HTML>

@@ -1,0 +1,96 @@
+<HTML>
+<HEAD>
+<TITLE>Starting and quitting</TITLE>
+</HEAD>
+<BODY>
+
+<H1>Starting and quitting</H1>
+
+<HR>
+
+<H2>Unix</H2>
+
+Frodo accepts a single argument when started from the shell: The name of a
+preferences file to load instead of the default "~/.frodorc".<P>
+
+At first, the window for the emulation <A HREF="settings.html">settings</A>
+appears. The actual emulation is started by a click on "OK". Then the <A
+HREF="emulwindow.html">emulation</A> window appears in which the C64
+startup message is displayed.<P>
+
+To quit Frodo, either close the emulation window, or press F10 to bring up
+the settings window and select "Quit".
+
+<H2>BeOS</H2>
+
+Frodo may be started from the shell or from the Tracker. When started from
+the shell, Frodo accepts a single argument: The name of a preferences file
+to load instead of the default "Frodo Prefs".<P>
+
+At first, the window for the emulation <A HREF="settings.html">settings</A>
+appears. The actual emulation is started by a click on "Start". Then the <A
+HREF="emulwindow.html">emulation</A> window appears in which the C64
+startup message is displayed.<P>
+
+You can quit from the running emulation by selecting the "Quit" menu
+item.<P>
+
+Frodo should be run in a 256-color workspace for maximum speed.<P>
+
+Sampled sounds are only played correctly if "Limit Speed" is on and "Draw
+every n-th frame" is set to "1" and if the emulation can sustain 100%
+speed.<P>
+
+<H2>MacOS</H2>
+
+Frodo is started by double-clicking its icon.<P>
+
+You can quit from the running emulation by selecting the "Quit" menu
+item.<P>
+
+Frodo should be run with 8-bit color depth. The "DIR" 1541 emulation mode
+and SAM are currently not implemented.<P>
+
+See the file "MacFrodo Notes" for more information.<P>
+
+<H2>AmigaOS</H2>
+
+Frodo should be started from the shell. When started from the shell, Frodo
+accepts a single argument: The name of a preferences file to load instead
+of the default "Frodo Prefs".<P>
+
+At first, the window for the emulation <A HREF="settings.html">settings</A>
+appears. The actual emulation is started by a click on "OK". Then the <A
+HREF="emulwindow.html">emulation</A> window appears in which the C64
+startup message is displayed.<P>
+
+You can quit from the running emulation by selecting the "Quit" menu
+item.<P>
+
+Frodo opens its windows on the default public screen. This screen should
+be a 256-color screen on a graphics card, otherwise the emulation will
+be very slow.<P>
+
+The AmigaOS version is somewhat experimental. You need AHI to get sound,
+but the sound emulation is not very good. It might be better to leave the
+SID emulation turned of for now. Only one joystick (on port 2) is supported.<P>
+
+<H2>RISC OS</H2>
+
+Frodo is started by double-clicking its icon. The shared resources stored in
+!FrodoRsrc must have been seen by the filer first, otherwise the program will
+abort with an error. Frodo and FrodoPC need 1344kB, FrodoSC 832kB to run.<p>
+
+Frodo can be controlled with the menus and the <a href="emulwindow.html">emulator
+pane</a>. You can load snapshots and native C64-files (which usually have the
+filetype &64) by dragging them to the emulator window.<p>
+
+Frodo can be run in any colour-depth, although 16bpp and especially 32bpp are
+noticably slower than the others. You can toggle between two display sizes
+using the pane.<p>
+
+For a lot more information see the file !Help supplied in the RISC OS
+distribution.
+
+</BODY>
+</HTML>

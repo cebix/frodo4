@@ -1,0 +1,20 @@
+#!/bin/sh
+## ----------------------------------------------------------------------
+## debian/postinst : postinstallation script for frodo
+## ----------------------------------------------------------------------
+
+## ----------------------------------------------------------------------
+set -e
+
+chmod +x /usr/bin/mirage
+echo "updated permiss"
+
+gtk-update-icon-cache -f /usr/share/icons/hicolor
+
+
+oldversion="$2"
+if [ -z "$oldversion" ]; then
+  maemo-select-menu-location frodo.desktop
+fi
+
+exit 0

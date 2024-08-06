@@ -1,0 +1,79 @@
+<HTML>
+<HEAD>
+<TITLE>File access</TITLE>
+</HEAD>
+<BODY>
+
+<H1>File access</H1>
+
+<HR>
+
+Frodo offers four possibilities for the 1541 emulation:
+
+<H3>1. Host system directory (Directory Mode)</H3>
+
+In this mode, the C64 programs and files are stored in a directory on your
+hard disk and can be <KBD>LOAD</KBD>ed and <KBD>SAVE</KBD>d as usual from
+the emulator. The paths to the directories of the simulated drives are
+given in the settings window in the path entry fields of the "Drives"
+box.<P>
+
+You can also load the directory with <KBD>LOAD"$",8</KBD>. All files are
+displayed as "PRG", all subdirectories as "DIR". To get into a
+subdirectory, you have to open the settings window and change the path for
+the drive, as the operating system of the C64 doesn't know about
+subdirectories. However, it is possible to use a "/" in the C64 file name
+to access these subdirectories (e.g. <KBD>LOAD"GAMES/ELITE",8</KBD>),
+unless the '/' translation setting is turned on.<P>
+
+For the opening of files, the file types "P" and "S" and the access modes
+"R", "W" and "A" are supported. Wildcards (*,?) can be used, but you have
+to remember that files in BeOS/Unix/AmigaOS directories have no determined
+order and the result of <KBD>LOAD"*",8</KBD> is rather random. Files are
+always overwritten even if they are not opened with "@:". Floppy commands
+other than "I" and "UJ", relative files and direct block access are not
+implemented. You can however read the error channel.<P>
+
+
+<H3>2. .d64/x64 disk image file (Disk Image Mode)</H3>
+
+Most C64 programs available on the Internet and on CD-ROMs, expecially demos
+and games, are stored in files with the ending ".d64". Such a file holds all
+683 blocks of a complete side of a 1541 disk, so that direct block accesses
+are possible from within the emulation. The path name of the disk image file
+must be given in the settings window in the path entry fields of the
+"Drives" box.<P>
+
+Apart from .d64 files, Frodo can also use image files of the "x64" emulator,
+automatically detecting the file type.<P>
+
+
+<H3>3. .t64/LYNX archive file (Tape/Archive Mode)</H3>
+
+.t64 and LYNX (.lnx) files are archive files like "tar". .t64 files are
+also often found on the Internet and on CD-ROMs; LYNX is a native C64
+archiver. Frodo's .t64 support is a bit special in that it doesn't treat
+the .t64 file like a tape image (that's what the .t64 format was designed
+for), but rather like a disk image file. .t64's are not accessed with
+device number 1 (Frodo doesn't have any tape emulation), but with numbers
+8..11 like a disk drive.<P>
+
+When loading the directory with <KBD>LOAD"$",8</KBD>, Frodo creates a
+listing of all files within the archive. You cannot write to .t64 or LYNX
+files, they are read-only under Frodo.<P>
+
+
+<H3>4. Processor-level 1541 emulation</H3>
+
+The 1541 is an "intelligent" disk drive bearing its own CPU and memory that
+can even be programmed and execute code concurrently to the C64. Frodo is
+able to emulate a 1541 on this level, but as this slows down the whole
+emulation notably, the 1541 processor emulation can be turned on and off
+from the settings.<P>
+
+If the 1541 processor emulation is turned on, only drive number 8 in Disk
+Image Mode is available. The path name of the .d64/x64 file to be used must
+be given in the path entry field of drive 8.<P>
+
+</BODY>
+</HTML>

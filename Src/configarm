@@ -1,0 +1,2 @@
+./configure --host=i386-linux --x-includes=/opt/Qtopia/sharp/include/ --x-libraries=/opt/Qtopia/sharp/lib/ --with-sdl-prefix=/opt/Qtopia/sharp/ --with-embedded-extension=qtopia
+

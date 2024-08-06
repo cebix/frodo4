@@ -1,0 +1,40 @@
+Source: frodo
+Section: user/other
+Priority: extra
+Maintainer: Bernd Lachner <dev@lachner-net.de>
+Build-Depends: debhelper (>= 5), autotools-dev
+Standards-Version: 3.7.2
+
+Package: frodo
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Frodo C64 Emulator
+ A C64 Emulator.
+XB-Maemo-Icon-26:
+ iVBORw0KGgoAAAANSUhEUgAAABoAAAAaCAMAAACelLz8AAADAFBMVEUAACkA
+ ABAAABgAACEAAAAAADEAADkAAFIAAFoAAGMAAGsAAHsAAIQAAIwAAJQAAJwA
+ AKUAAK0AALUAAL0AAMYAAM4AAN4AAP8ICL0ICMYICOcICP8QAAAQEPcQEP8Y
+ GBgYGP8hIf8pAAApKSkpKf8xMf85AAA5Of9CAABCQkJCQv9KAABKSkpKSv9S
+ UlJSUv9aAABaWlpaWv9jAABjY2NjY/9ra2tra/9zAABzc/97AAB7e/+EAACE
+ hP+MjIyMjP+UlP+cnP+lAAClpf+tAAC9AAC9vb3GAADGxsbOAADW1tbe3t7n
+ 5+fvAAD39/f/AAD/EBD/GBj/KSn/MTH/QkL/////////////////////////
+ ////////////////////////////////////////////////////////////
+ ////////////////////////////////////////////////////////////
+ ////////////////////////////////////////////////////////////
+ ////////////////////////////////////////////////////////////
+ ////////////////////////////////////////////////////////////
+ ////////////////////////////////////////////////////////////
+ ////////////////////////////////////////////////////////////
+ ////////////////////////////////////////////////////////////
+ ////////////////////////////////////////////////////////////
+ ////////////////////////////////////////////////////////////
+ ///////////////////////////////////////////////////////////2
+ g8mqAAAAAXRSTlMAQObYZgAAAAFiS0dEAIgFHUgAAAAJcEhZcwAACvAAAArw
+ AUKsNJgAAAAHdElNRQfYARcNEzJj9/E1AAABLklEQVQoz7WSX0+DMBTF2cZE
+ MEPGwrJFpcyBZAjB8WfYKCIzDlIUs8zv/1ks7SAiPvjieWt+t/ec216G+Sed
+ CQLPc7+R6VRR5rLI9TtE9aIwDF1D7BdlC2hODEPXMk1zwduodcVJYtdQZ+PJ
+ VNPbaJEkUJdOAZE6n8jyeDRgCTLSB088AWBpY8VO1XfEImJqptAaYrJGWC8J
+ hPr50Laf3jCyUk/DICfZLhRZ4qo6crKe3Suw2tHUyK4ccSHToDpZsakcA9qC
+ NqzR9t73b1E9OIlRo/3n4bDf3hxv0fBHr4/3LMteHy/z7yPTwqqh799ds2Xr
+ oWRJGNCEOCOtLFQrhlEUhc6sF+wQFU1S5s2n9NrPW7HmK38iplzTBQCgg5g8
+ WC2J+6bobkdZEPO/LdkXNRI8wk8H6PoAAAAASUVORK5CYII=

@@ -1,0 +1,139 @@
+<HTML>
+<HEAD>
+<TITLE>Keyboard layout</TITLE>
+</HEAD>
+<BODY>
+
+<H1>Keyboard layout</H1>
+
+<HR>
+
+The keyboard layout in Frodo closely resembles that of a real C64. The
+individual rows of the keyboard are mapped as follows (american keyboard):
+
+<PRE>
+&lt;- 1 2 3 4 5 6 7 8 9 0 + -
+    Q W E R T Y U I O P @ *
+    A S D F G H J K L : ;
+     Z X C V B N M , . /
+</PRE><P>
+
+In addition, the following keys are used:
+
+<PRE>
+ Esc        - RUN/STOP
+ Backspace  - INS/DEL
+ Return     - RETURN
+ Enter      - RETURN
+ Shift keys - SHIFT
+ Caps lock  - SHIFT LOCK
+ F1-F8      - F1-F8
+</PRE><P>
+
+Special keys under Unix:
+
+<PRE>
+ \          - ^
+ Insert     - Shift-INS/DEL
+ Delete     - INS/DEL
+ Home       - CLR/HOME
+ End        - &pound;
+ Page Up    - ^
+ Page Down  - =
+ Alt Keys   - C=
+ Ctrl Left  - CTRL
+ Ctrl Right - C=
+ F9         - Start <A HREF="sam.html">SAM</A>
+ F10        - Quit Frodo
+ F11        - RESTORE
+ F12        - C64 Reset
+</PRE><P>
+
+Special keys under BeOS:
+
+<PRE>
+ \          - ^
+ Insert     - Shift-INS/DEL
+ Delete     - INS/DEL
+ Home       - CLR/HOME
+ End        - &pound;
+ Page Up    - &pound;
+ Page Down  - =
+ Menu Keys  - C=
+ Ctrl Left  - CTRL
+ Ctrl Right - C=
+ F11        - RESTORE
+ F12        - C64 Reset
+</PRE><P>
+
+Special keys under AmigaOS:
+
+<PRE>
+ \          - &pound;
+ Delete     - CLR/HOME
+ ( (keypad) - ^
+ ) (keypad) - =
+ Alt Keys   - C=
+ Ctrl       - CTRL
+ F9         - RESTORE
+ F10        - C64 Reset
+</PRE><P>
+
+Special keys under RISC OS:
+
+<PRE>
+ F5         - Toggle sound emulation mode
+ F6         - Enter SAM
+ F7         - RESTORE
+ F8         - Reset
+ Copy       - Toggle pause
+ PageUp     - Increase SkipFrames
+ PageDown   - Decrease SkipFrames
+ num/       - Toggle 1541 emulation mode
+ num*       - Toggle speed limiter
+ num+/-     - +/-
+ Alt        - CBM
+ ScrollLock - On: force single tasking, else multitasking
+</PRE><P>
+
+Apart from that the function keys are mapped differently under RISC OS. (F1,F2,F3,F4) maps
+to the C64's (F1,F3,F5,F7), you get (F2,F4,F6,F8) by pressing shift like on a real C64.<P>
+
+So the famous key combination RUN/STOP-RESTORE must be typed as Esc-F11 (Esc-F9 under AmigaOS).
+But you don't have to thrash the F11 key the same way as the RESTORE key on
+the original C64. <TT>:-)</TT><P>
+
+The cursor (arrow) keys work as expected. I.e. "cursor up" corresponds to
+"Shift-cursor down" on the C64. The same applies to the function keys F2,
+F4, F6 and F8.
+
+The numerical keypad emulates a joystick in port 1 or 2, depending on the
+state of the Num Lock (Num Lock off: port 2, Num Lock on: port 1):<P>
+
+<PRE>
+   7    8    9
+        ^
+        |
+   4    5    6
+  &lt;-- Fire  --&gt;
+        |
+        v
+   1    2    3
+
+   0
+ Fire
+</PRE><P>
+
+Keyboard joysticks are handled differently under RISC OS:
+
+<UL>
+<LI>NumLock on: only joystick 1 active, mapped to port 2. NumLock off: both joysticks active, 1 mapped to port 1, 2 mapped to port 2.
+<LI>Joystick keys can be defined freely. Defaults are: joystick 1: (1 2 3 . enter) on the numerical keypad, joystick 2: (z x f c g).
+</UL><P>
+
+The '+' and '-' keys on the numerical keypad increase and decrease the
+"Draw every n-th frame" setting on the fly. The '*' on the numerical keypad
+toggles the "Limit Speed to 100%" option.
+
+</BODY>
+</HTML>

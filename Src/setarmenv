@@ -1,0 +1,6 @@
+export PATH=$PATH:/opt/Embedix/tools/bin/
+export CXX=arm-linux-g++
+export CC=arm-linux-gcc
+export LD=arm-linux-ld
+export LDFLAGS="-L/opt/Qtopia/sharp/lib/ -L/opt/Embedix/tools/arm-linux/lib"
+export CPPFLAGS="-DQTOPIA"

@@ -1,0 +1,219 @@
+Changes from V4.1b to V4.2:
+ - Changed license to GPL
+ - "Plain" Frodo removed, "Frodo PC" renamed to "Frodo"
+ - ROMs are built into the Frodo executable
+ - Implemented write access to disk image files (D64/X64)
+ - Voice 3 mute works
+ - Unix: added Gtk preferences editor
+ - Unix: removed obsolete Linux joystick code, added SDL joystick support
+ - Unix: added fullscreen display with SDL
+ - Unix: added resizable window display with SDL/OpenGL
+ - Unix: added SDL sound support
+ - Linux: added support for Catweasel SID
+ - Linux: more accurate timing
+ - BeOS: added support for digital joysticks connected to the GeekPort
+ - BeOS: updated to new Media Kit API
+
+Changes from V4.1a to V4.1b:
+ - Unix: Updated Tcl/Tk preferences editor [Gerard Decatrel]
+ - Unix: Added SDL display driver which is the default if SDL >= 1.2 is
+   detected by the configure script
+ - Unix: Increased number of sound buffers from 4 to 16 (emu10k driver doesn't
+   work with the smaller value)
+ - Unix: Fixed some small compilation problems
+
+Changes from V4.1 to V4.1a:
+ - Fixed bug in IEC::NewPrefs()
+ - Optimized VIC emulation for speed
+ - BeOS: Prefs saved in /boot/home/config/settings/Frodo_settings
+ - BeOS: Directory panel works again
+ - BeOS: Correct C64/1541 clock frequency ratio (Frodo SC)
+ - BeOS: Correct audio mixing/clipping
+
+Changes from V4.0a to V4.1:
+ - Integrated Win32 and RiscOS ports
+ - Snapshot support
+ - Added page-crossing and "borrowed" cycles in line-based CPU emulation (Frodo PC)
+ - Added precise CIA cycles for line-based emulation (Frodo PC)
+ - Optional fixed-point arithmetic and precomputed filters in SID.cpp
+ - Optional dynamic alignment checks in VIC.cpp
+ - Changed typedefs and constants:
+     BYTE  -> int8
+     UBYTE -> uint8
+     WORD  -> int16
+     UWORD -> uint16
+     LONG  -> int32
+     ULONG -> uint32
+     FALSE -> false
+     TRUE -> true
+ - Unix: Better configure script
+ - Unix: Sound support for Solaris 2.x
+ - Unix: Joystick can be toggled between port 1/2 with the NumLock key
+ - Unix: US keyboard layouts supported
+ - BeOS: Fixed for BeOS AA:DR9
+ - BeOS: Can now switch between window/screen mode while the emulation is running,
+   speeded up full screen mode
+ - BeOS: Prefs saved in /system/settings/Frodo_settings by default
+
+Changes from V4.0 to V4.0a:
+ - Corrected BRK, ANE, ARR, SBX and DCP instructions
+ - Frodo SC: Improved the CIA timers
+ - Frodo SC: MOS6526::EmulateCycle() split into MOS6526::EmulateCycle()
+   and MOS6526::CheckIRQs()
+ - Frodo SC: Corrected interrupt behaviour of branch instructions
+ - BeOS: Sound calculation is now done in stereo
+
+Changes from V3.1c to V4.0:
+ - The C64 ROM files are now included
+ - Unix: Added SVGAlib keyboard patches from Bernd
+
+Changes from V3.1b to V3.1c:
+ - Ported to AmigaOS
+ - Fixed bug in IEC::Reset()
+ - Fixed bug when writing to SID registers >24
+ - The SID noise waveform should now sound the same on all
+   platforms
+ - Removed all calls to tolower() in SAM.cpp because of
+   possible side-effects if tolower() is a macro
+ - Drive LEDs are only updated once per frame
+ - .d64/.t64 files are opened with read permissions only
+ - Fixed bug with read_char buffering in 1541fs.cpp/1541t64.cpp
+ - Frodo SC: Fixed memory trashing bug in MOS6569::draw_background()
+ - Unix: Drive LEDs blink on error
+ - Unix: Added more patches from Bernd
+
+Changes from V3.1a to V3.1b:
+ - Corrected SID sustain behaviour
+ - Reading from write-only SID registers returns the last
+   byte written to the SID
+ - No more distortions when playing samples
+ - Removed the "Ignore SID Volume" prefs item again
+ - Combined SID waveforms now sampled from a 6581R4
+ - Improved 1541 VIA timer operation
+ - Fixed bug in 1541 head movement
+ - Raster IRQs can be triggered by writing to $d011/$d012
+ - Some changes for the MacOS port
+ - Included autoconf stuff from Bernd
+ - Frodo SC: Fixed some CIA timer bugs
+
+Changes from V3.1 to V3.1a:
+ - Frodo SC ported
+ - Processor-level 1541 emulation supports reading GCR data,
+   removed the faked job loop
+ - Corrected ISB, RRA, SBX and SHA instructions
+ - The last line of Y expanded sprites wasn't drawn
+ - Light pen registers work
+ - Small fixes to 1541d64/1541t64
+ - CIA 2 PRA write: IEC lines respect DDRA
+ - Better triangle waveform (12 bits)
+ - SID emulation can play sampled sounds
+ - New "Ignore SID Volume" prefs item for better sample playing
+ - '*' on numerical keypad toggles speed limiter
+ - BeOS: '/' on numerical keypad toggles processor-level 1541
+   emulation
+ - BeOS: Safer quitting
+ - BeOS: Option to use GameKit (screen)
+ - BeOS: Replaced srand(system_time()) with srand(real_time_clock())
+ - Unix: Sun makefile
+
+Changes from V3.0h to V3.1:
+ - BeOS: Joysticks work again
+
+Changes from V3.0g to V3.0h:
+ - Implemented SID notch filter, better resonance frequency calculation
+ - Fixed bug with SID filter option
+ - CIA timer B one-shot mode stops timer when counting undeflows
+   of timer A
+ - Implemented lightpen trigger
+ - BeOS: Fixed for BeOS DR8, improved the GUI a bit
+ - Unix: Some fixes to the TkGui (T64, SIDFilters, removed speed
+   display)
+ - Unix: Main window no longer resizable
+ - Unix: SVGALib support works again
+
+Changes from V3.0f to V3.0g:
+ - New T64/LYNX mode for 1541 emulation
+ - 1541fs.cpp/match() used to treat the pattern "foo" as "foo*"
+ - 1541 DIR mode uses tmpfile() for opening temporary directory files
+ - 1541 D64 mode allows wildcards for selective directory reading
+ - Increased compatibility of processor-level 1541 emulation in
+   various places (C64<->1541 communication, VIA registers, memory
+   map, disk change flag)
+ - Inlined MOS6526::EmulateLine() and some small public functions of
+   MOS6502_1541
+ - New prefs option to enable/disable SID filter emulation
+ - Joystick calibration is reset when joystick options change
+ - BeOS: Self-calibrating joystick routines
+
+Changes from V3.0e to V3.0f:
+ - Improved DIR/D64 drive reset, resetting the C64 resets the drives
+ - Implemented 'G' command for DIR/D64 drives
+ - Corrected translation of 0xc1..0xda characters in conv_from_64()
+ - BeOS: Implemented smart "Insert next disk" menu item
+ - Unix: Improved the speedometer/LED bar
+ - Unix: Self-calibrating joystick routines
+ - Unix: No need to enter path of 'wish' in TkGui.tcl
+
+Changes from V3.0d to V3.0e:
+ - Removed the CBOOL data type
+ - Unix: Sound for HP-UX
+ - Unix: Keyboard layout matches the picture in the docs more
+   closely
+ - Unix: Diagonal directions of keypad joystick emulation work
+ - Unix: +/- on numerical keypad modifies SkipFrames
+ - Unix: F9 invokes SAM
+ - Unix: Drive LEDs and speedometer implemented
+ - Unix: Some changes to the GUI
+ - Unix: Random number generator is initialized
+ - Unix: Name of prefs file can be given as an argument
+ - Unix: Calls XFlush() and XSync() in C64Display::Update()
+
+Changes from V3.0c to V3.0d:
+ - SID filter emulation implemented
+ - SID master volume setting works again
+ - Flags are recalculated in MOS6526::SetState()
+ - Changed CBOOL->bool in some places
+ - Fixed bug with char_in in MOS6510::new_config()
+ - BeOS: Emulation thread priority lowered
+ - Unix: Some changes for DEC Alpha
+ - Unix: Joystick support for Linux
+
+Changes from V3.0b to V3.0c:
+ - 1541 DIR mode can load directory with "$0"
+ - Rearranged the CPU code (more macros, less inline functions)
+ - SID envelope generators rewritten, envelopes are now
+   recalculated for every sample
+ - SID calc_buffer function now takes pointer to WORD buffer
+ - Unix: Sound for Linux
+ - Unix: Prefs window implemented (needs Tcl/Tk)
+ - Unix: Corrected x64 disk image detection on little-endian systems
+ - Unix: SVGAlib support works again, accesses frame buffer
+   directly if possible
+ - Unix: Added support for SHM under X11
+
+Changes from V3.0a to V3.0b:
+ - Implemented REU emulation
+ - Formatting disks with ID possible under processor-level
+   1541 emulation
+ - Corrected and optimized SID waveform/envelope calculation
+   (signed arithmetic)
+ - Corrected idle state display again (ECM text)
+ - 1541 D64 mode ignores drive numbers when opening the
+   directory
+ - Processor-level 1541 emulation deactivates when idle
+ - BeOS: Sound output quality is now 16 bits
+ - Unix: Quits more cleanly, reactivates key repeat
+ - Unix: Fixed alignment problem with text_chunky_buf in VIC.h
+
+Changes from V3.0 to V3.0a:
+ - Implemented SID test bits
+ - Combined SID waveforms respect pulse width
+ - Corrected idle state graphics display
+ - Processor-level 1541 emulation respects .d64 error info
+ - CPU emulation optimized (6510 and 6502 split)
+ - VIC emulation optimized (raster counter in local variable
+   in EmulateLine())
+ - BeOS: Now exiting the audio subscriber with ExitStream(TRUE)
+ - Unix: Fixed missing thread_func() declaration
+ - Unix: getcwd(AppDirPath) was missing in main_x.i
+ - Unix: Speed limiter works

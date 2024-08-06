@@ -1,0 +1,178 @@
+<HTML>
+<HEAD>
+<TITLE>Settings</TITLE>
+</HEAD>
+<BODY>
+
+<H1>Settings</H1>
+
+<HR>
+
+Under Unix, the settings window appears directly after starting Frodo, or by
+pressing F10. Under BeOS, the settings window can be brought up by selecting
+the "Settings..." menu item in the running emulation.<P>
+
+<H2>Drives</H2>
+
+In the box <B>"Drive Paths"</B>, there are four fields, each corresponding
+to one of four emulated 1541 drives with the drive numbers 8, 9, 10 and 11
+(normally you only need drive 8). For every drive, there is a <EM>path entry
+field</EM> and a <EM>button</EM>.<P>
+
+Frodo offers three different modes for drive emulation (see <A
+HREF="files.html">here</A> for details):<P>
+
+<UL>
+<LI><EM>Directory Mode</EM>, where the contents of a directory of the host
+file system are made available to the emulated C64 as a "pseudo disk".
+<LI><EM>Disk Image Mode</EM> uses a binary dump of a 1541 floppy disk in the
+.d64 or x64 disk image format for providing true, sector-by-sector floppy
+emulation. This is the preferred mode with the highest compatibility.
+<LI><EM>Tape/Archive Mode</EM> makes the contents of a .t64 tape image file,
+a LYNX archive file, or a single .p00 program file available to the emulated
+C64 as a "pseudo disk".
+</UL>
+
+The <B>path entry field</B> holds either the path name of a directory,
+the path name of a .d64/x64 image file, or the path name of the .t64/LYNX
+archive file. Under BeOS, you may also drop Tracker icons to the entry field.
+The drive emulation mode is selected automatically depending on the type of
+the selected file or directory.<P>
+
+The button labeled <B>"Browse..."</B> opens a file selection dialog for a
+more comfortable selection of directories and .d64/x64/.t64/LYNX files.<P>
+
+If <B>"Enable Full 1541 Emulation"</B> is turned on, the four emulated 1541s
+are disabled and replaced by a single 1541 emulation (drive 8) that only
+operates on .d64/x64 files, but emulates the entire 1541 hardware and is
+compatible with most fast loaders and some forms of copy protection.
+However, it has considerably slower disk access and can also slow down the
+emulation. If you have a .d64 with a program that doesn't load with the
+normal emulation (see above), you may have better luck with the full 1541
+processor emulation instead.<P>
+
+With <B>"Map '/' &lt;-&gt; '\' in file names"</B> you control whether the
+'/' in C64 filenames will be translated to '\' and vice versa for Directory
+Mode drives. The '/' character is used to access subdirectories under
+Unix/BeOS, but as the C64 doesn't have subdirectories, it's a valid part of
+a C64 file name. This is a problem if a program wants to create a file with
+'/' in it as the host system would interpret the part before the '/' as a
+directory name and, finding no such directory, would return an error and
+the operation would fail. If you activate this checkbox all '/'s will
+transparently be translated into '\', so in directory listings the '/' will
+still appear. If you turn off this option, you can of course use the '/' to
+access files in subdirectories from the C64.<P>
+
+<H2>Video/Sound</H2>
+
+With <B>"Display Type"</B> you can choose whether the emulation runs in a
+window or in full-screen mode.<P>
+
+<B>"Doublescan Lines"</B> is only available under BeOS for the "Screen"
+display type. It removes the black lines between scanlines, but makes
+the emulation a bit slower.<P>
+
+With <B>"Display Sprites"</B>, you can switch the display of sprites on and
+off.<P>
+
+<B>"Detect Sprite Collisions"</B> determines whether collisions between
+sprites and between sprites and graphics should be detected. Turning off
+collisions will make you invincible in some games (sadly, your enemies are
+likely to become invincible, too <TT>:-/</TT>).<P>
+
+The <B>"Sound Emulation"</B> selection controls the type of sound output.
+<EM>"None"</EM> means no sound (faster), <EM>"Software"</EM> turns on the
+software 6581 SID emulation. Under Linux, there is another option,
+<EM>"Catweasel"</EM> for using a hardware SID chip on a Catweasel board (you
+also need Catweasel kernel drivers for this).<P>
+
+The <B>"Enable SID Filters"</B> field enables the software emulation of the
+SID sound filters. Some C64 music may sound better with the filters
+disabled.<P>
+
+<H2>Input</H2>
+
+<B>"Joystick Port 1/2"</B> specifies which joysticks you want to use for
+each of the two C64 joystick ports (there is also a
+<A HREF="keyboard.html">joystick emulation</A> on the numerical keypad).
+You should only turn on the ports to which you have actual joysticks
+connected, or the C64 keyboard will behave erratically. Frodo has an automatic
+joystick calibration. If you plug in a new joystick or change the joystick
+settings, you should first move the joystick once in each direction.<P>
+
+With <B>"Swap joysticks"</B> you can swap the assignment of the joystick
+ports of the host machine to the C64 ports without having to plug out and
+in your joysticks. E.g. if a C64 game is using a joystick on C64 port 1 you
+can simply activate "Swap joysticks" and use a joystick in port 2 on your
+machine to play the game.<P>
+
+<H2>Options</H2>
+
+With <B>"Draw every n-th frame"</B> you can select if Frodo should skip
+frames when displaying the C64 graphics. The normal setting is "1", that is,
+every frame (every simulated raster beam sweep) is recalculated. If you
+change this to "2", for example, then only every second frame is calculated,
+immensely speeding up the display on slow machines, though some raster
+effects may look a bit jerky. This setting can also be changed while the
+emulation is running with the '+' and '-' keys on the numerical keypad.<P>
+
+When the field <B>"Limit speed"</B> is active, the emulation is slowed down
+when its relative speed exceeds 100%. If you set the value in "Every (n)th
+frame" so that the speed is just over 100% and activate the speed limiter,
+the emulation always runs at the original C64 speed, with the highest
+possible precision. This setting can be toggled with the '*' key on the
+numerical keypad.<P>
+
+With the setting <B>"Fast Reset"</B> you can disable the memory test that
+is normally performed by the C64 on a reset, and which takes about three
+seconds. Under emulation, the memory test is not necessary and resetting the
+C64 (F12) gets much faster when it is disabled.<P>
+
+<B>"REU size"</B> sets the size of the REU (RAM Expansion Unit) emulated by
+Frodo or turns the REU emulation off ("None"). Very few programs actually
+use the REU (operating systems like ACE and GEOS, and some utilities), so
+you can usually leave this at the <EM>"None"</EM> setting.<P>
+
+<H2>Advanced</H2>
+
+The settings in this group are not available in Frodo SC.<P>
+
+<B>"Cycles per line (CPU)"</B> and <B>"Cycles per Bad Line (CPU)"</B> set
+the number of clock cycles available to the CPU per normal raster line and
+per Bad Line. If a program is showing flickering lines or graphical flaws
+you should try to slightly alter both values. For "Bruce Lee" you must
+enter "62" for the "Cycles per line (CPU)".<P>
+
+With <B>"Cycles per line (CIA)"</B> you can control the speed of the CIA
+timers. Entering a higher value increases the frequency of cursor blinking
+and key repeat. Some programs don't run correcly with the default value
+(e.g. "Ballblazer" which needs a value of 65).<P>
+
+<B>"Cycles per line (1541)"</B> sets the number of cycles available to the
+1541 processor emulation per raster line. There is normally no need to
+change this value. This setting has no effect if 1541 processor emulation
+is turned off.<P>
+
+The settings for the four "cycles" coming closest to an original PAL C64
+are (63, 23, 63, 64).<P>
+
+The setting <B>"Clear CIA ICR on write"</B> is necessary to make some
+programs (such as the games "Gyruss" and "Motos") run that would otherwise
+hang in an endless interrupt loop because they use an unusual technique to
+acknowledge CIA interrupts (sometimes even without the programmer knowing
+it). It should normally be turned off.<P>
+
+<H2>Unix/BeOS/AmigaOS</H2>
+
+Clicking <B>"Start"/"OK"</B> will start the actual emulation (or return
+to it) and <B>"Quit"/"Cancel"</b> will discard your changes to the settings
+and quit Frodo (or discard the changes and return to the emulation).<P>
+
+<H2>BeOS/AmigaOS</H2>
+
+With the menu items <B>"Open..."</B>, <B>"Save"</B>, <B>"Save As..."</B>
+and <B>"Revert"</B> you can load and save the settings from and to
+arbitrary files.<P>
+
+</BODY>
+</HTML>

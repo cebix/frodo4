@@ -1,0 +1,64 @@
+<HTML>
+<HEAD>
+<TITLE>Sample programs</TITLE>
+</HEAD>
+<BODY>
+
+<H1>Sample programs</H1>
+
+<HR>
+
+The directory "64prgs" contains some little sample programs to show the
+capabilities of Frodo/Frodo SC. Except for "dadb" and "lrborder" they are all loaded with
+<CODE>LOAD"&lt;name&gt;",8,1</CODE> and started with <CODE>SYS49152</CODE>.
+To do so, you have to set "Drive 8" in the settings to "Dir" and set the
+path to '64prgs' so Frodo will find the programs.<P>
+
+The programs were written by Pasi Ojala, Marko M&auml;kel&auml;, Andreas
+Boose and me. If you like, you can try them on other emulators or on a real
+C64.<P>
+
+A short description of each program:<P>
+
+<H4>3fff</H4>
+Opens the top and bottom border and displays swinging letters ("Cycles per
+line (CPU)" should be set to 60 for this one)
+
+<H4>colorbars</H4>
+Flickering colors
+
+<H4>d011h3</H4>
+8-way soft scrolling without moving a single byte in memory (cursor keys
+to scroll left/right, 't' for text mode, 'g' for bitmap mode), requires Frodo SC
+
+<H4>dadb</H4>
+A program running in the color RAM (press space), requires Frodo SC
+
+<H4>de00all</H4>
+A program running in the address space $de00-$dfff (press space), requires
+Frodo SC
+
+<H4>dycp</H4>
+Scrolling with different Y character position
+
+<H4>fld</H4>
+Demonstrates the FLD effect (flexible line distance)
+
+<H4>lrborder</H4>
+Opens the left/right border, requires Frodo SC
+
+<H4>sprsync</H4>
+Stable raster routine by synchronizing with a sprite, requires Frodo SC
+
+<H4>stretch</H4>
+Variably expanded sprites, requires Frodo SC
+
+<H4>tech-tech</H4>
+Horizontal scrolling with large amplitude (use joystick in port 2 to
+control)
+
+<H4>text26</H4>
+Displays (nearly) 26 lines of text
+
+</BODY>
+</HTML>

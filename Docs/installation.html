@@ -1,0 +1,83 @@
+<HTML>
+<HEAD>
+<TITLE>Installation</TITLE>
+</HEAD>
+<BODY>
+
+<H1>Installation</H1>
+
+<HR>
+
+There are two kinds of Frodo distributions. The source distributions
+(<TT>FrodoV?_?.Src.*</TT>) contain source code that has to be compiled on
+your system. The binary distributions (<TT>FrodoV?_?.&lt;system
+name&gt;.*</TT>) contain an executable that can be started directly.
+
+<H2>Compiling under Unix</H2>
+
+First you have to run the script <TT>configure</TT>. This can be done simply
+with the following command:<P>
+
+<KBD>$ cd Src<BR>
+$ ./configure</KBD><P>
+
+If there is no configure script in the distribution (for example, if you have
+checked out the Frodo sources from the CVS repository) run
+<TT>autogen.sh</TT> instead:<P>
+
+<KBD>$ cd Src<BR>
+$ ./autogen.sh</KBD><P>
+
+For optimum performance, Frodo needs the following prerequisites:<P>
+
+<UL>
+<LI><A HREF="http://www.libsdl.org">SDL 1.2.x</A>
+<LI>OpenGL 2.0 or higher
+<LI><A HREF="http://glew.sourceforge.net">GLEW</A>
+<LI>libglade2 and libgnomeui 2.x
+</UL>
+
+<TT>configure</TT> and <TT>autogen.sh</TT> accept optional arguments (type
+<KBD>./configure --help</KBD> for a full list). For example, to disable
+OpenGL support, you can enter<P>
+
+<KBD>$ ./configure --disable-opengl</KBD><P>
+
+To use SVGAlib on Linux systems, you have to do<P>
+
+<KBD>$ ./configure --without-x</KBD><P>
+
+After configuration has completed, type<P>
+
+<KBD>$ make</KBD><P>
+
+The Frodo GUI requires the <TT>Frodo.glade</TT> file to be present in the
+directory <TT>/usr/local/src/frodo</TT> (you can specify a different
+installation directory with <KBD>./configure --prefix</KBD>). Either copy
+this file manually from <TT>Src/glade/Frodo.glade</TT> or become root and
+type<P>
+
+<KBD># make install</KBD>
+
+<H2>Compiling under BeOS</H2>
+
+There are separate Makefiles for Frodo (<TT>Makefile.BeOS</TT>) and Frodo SC
+(<TT>Makefile.BeOS.SC</TT>). Type<P>
+
+<KBD>$ cd Src<BR>
+$ make -fMakefile.BeOS<BR>
+$ make -fMakefile.BeOS.SC</KBD><P>
+
+to compile both versions.
+
+<H2>Compiling under AmigaOS</H2>
+
+The makefile was written for the ADE with GCC. Other compilers have not been
+tested. You must rename (or copy) Src/sysconfig.h.Amiga to Src/sysconfig.h
+first. Then type<P>
+
+<KBD>cd Src<BR>
+make -fMakefile.Amiga all</KBD><P>
+
+</BODY>
+</HTML>

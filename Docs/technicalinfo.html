@@ -1,0 +1,60 @@
+<HTML>
+<HEAD>
+<TITLE>Technical info</TITLE>
+</HEAD>
+<BODY>
+
+<H1>Technical info</H1>
+
+<CITE>
+"Known?" said Gandalf.<BR>
+"I have known much that only the Wise know, Frodo."
+</CITE>
+
+<HR>
+
+Frodo tries to exactly imitate C64 hardware features. Now the 64's hardware
+(esp. the graphics chip "VIC-II") has a rather simple design resulting in
+many of the internal processes being visible to the "outside". So there are
+lots of "undocumented features" you can do effects with the designers never
+dared to dream about.<P>
+
+Frodo uses a line-by-line emulation, i.e. the function of the VIC and the
+processor (6510) are emulated for one raster line of the C64 screen at
+times. In practice, Frodo runs VIC and 6510 alternately for 63 simulated
+cycles each (corresponding to one raster line). At first, it emulates the
+processor for 63 cycles, then switches over to the VIC that paints one
+pixel row to the screen, then again 63 cycles processor, and so on... If
+the 1541 processor emulation is turned on, 6510 and 6502 (in the 1541)
+instructions are executed by Frodo in an interleaved fashion.<P>
+
+Even though this is a heavy simplification of the processes in a real C64,
+it lets you perfectly emulate many graphical effects possible on the C64,
+e.g. FLD, DYCP, hyperscreen and many more. But this method has one big
+disadvantage: Changes made to VIC registers by the processor in the middle
+of a raster line will only take effect at the start of the next line. E.g.
+you can't change the border color in the middle of a line, the color change
+takes place in the next line. Therefore, very sophisticated techniques
+depending on the exact position of a register change can't be emulated. For
+instance, it is no problem to open the top and bottom border, but opening
+the left and right border is impossible (and therefore not implemented in
+the emulation).<P>
+
+Frodo SC goes one step further by switching between VIC and 6510 in every
+cycle and precisely emulating the internal functions. Modifications to
+VIC registers become visible immediately in the next clock phase and
+therefore it can even emulate effects that depend on the exact position
+of a register change within a raster line, e.g. special FLI routines,
+opening the left/right border, linecrunch, DMA delay, multiple repeated
+sprite lines and executing programs in open address spaces ($de00-$dfff)
+and in the color RAM. The 6510 emulation is also more precise and does
+the same memory accesses as the real 6510, even the "unnecessary" ones
+that come from design weaknesses of the 6510 and are not needed for the
+function of single opcodes (e.g. in an instruction sequence like
+INX:INX:INX:INX, the 6510 reads every opcode twice).<P>
+
+A detailed technical description of the VIC-II can be found in an
+<A HREF="http://www.cebix.net/VIC-Article.txt">article</A> I wrote.
+
+</BODY>
+</HTML>
