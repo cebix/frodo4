@@ -1,9 +1,9 @@
 dnl Process this file with autoconf to produce a configure script.
 
-AC_INIT([Frodo], [4.2])
+AC_INIT([Frodo],[4.2])
 AC_CONFIG_SRCDIR(main.cpp)
-AC_PREREQ(2.52)
-AC_CONFIG_HEADER(sysconfig.h)
+AC_PREREQ([2.71])
+AC_CONFIG_HEADERS([sysconfig.h])
 
 dnl Checks for programs.
 AC_PROG_CC
@@ -21,8 +21,8 @@ if [[ x"$GXX" = "xyes" ]]; then
   CFLAGS="$CFLAGS -fomit-frame-pointer -fno-exceptions"
 fi
 
-AC_AIX
-AC_ISC_POSIX
+AC_USE_SYSTEM_EXTENSIONS
+AC_SEARCH_LIBS([strerror],[cposix])
 
 dnl Checks for libraries.
 AC_CHECK_LIB(vga, vga_setmode, HAVE_SVGA_LIB=yes, HAVE_SVGA_LIB=no)
@@ -59,7 +59,7 @@ fi
 AC_PATH_XTRA
 
 AC_HEADER_DIRENT
-AC_HEADER_STDC
+
 AC_CHECK_HEADERS(unistd.h fcntl.h sys/time.h sys/types.h utime.h string.h strings.h values.h ncurses.h)
 AC_CHECK_HEADERS(sys/vfs.h sys/mount.h sys/select.h sys/param.h sys/statfs.h sys/statvfs.h sys/stat.h)
 
@@ -76,13 +76,13 @@ AC_TYPE_MODE_T
 AC_TYPE_OFF_T
 AC_TYPE_PID_T
 AC_STRUCT_ST_BLOCKS
-AC_HEADER_TIME
+AC_CHECK_HEADERS_ONCE([sys/time.h])
+
 AC_STRUCT_TM
 
 dnl Checks for library functions.
 AC_PROG_GCC_TRADITIONAL
-AC_FUNC_MEMCMP
-AC_TYPE_SIGNAL
+
 AC_FUNC_UTIME_NULL
 AC_CHECK_FUNCS(gettimeofday sigaction mkdir rmdir select strerror strstr statfs usleep)
 
@@ -109,12 +109,12 @@ elif [[ x"$HAVE_SDL" = "xyes" ]]; then
   if [[ "x$enable_opengl" = "xyes" ]]; then
     AC_MSG_CHECKING(for OpenGL support)
     have_opengl=no
-    AC_TRY_COMPILE([
+    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
      #include <GL/glew.h>
-    ],[
-    ],[
+    ]], [[
+    ]])],[
     have_opengl=yes
-    ])
+    ],[])
     AC_MSG_RESULT($have_opengl)
     if test x$have_opengl = xyes; then
       AC_DEFINE(ENABLE_OPENGL, 1, [OpenGL support is enabled])

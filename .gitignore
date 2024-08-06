@@ -16,10 +16,6 @@
 *.dylib
 *.dll
 
-# Fortran module files
-*.mod
-*.smod
-
 # Compiled Static libraries
 *.lai
 *.la
@@ -30,3 +26,13 @@
 *.exe
 *.out
 *.app
+
+# Autotools
+*/aclocal.m4
+*/autom4te.cache
+*/config.log
+*/config.status
+*/configure
+*/sysconfig.h
+*/sysconfig.h.in
+*/Makefile
