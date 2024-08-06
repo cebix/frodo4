@@ -188,7 +188,7 @@ bool ImageDrive::change_image(const char *path)
 		// Determine file type and fill in image_file_desc structure
 		if (!parse_image_file(the_file, desc)) {
 			fclose(the_file);
-			the_file = false;
+			the_file = NULL;
 			return false;
 		}
 

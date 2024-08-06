@@ -90,7 +90,8 @@ Drive *IEC::create_drive(const char *path)
 			}
 		} else {
 			// Unknown file type
-			// print error?
+			// TODO: print error?
+			return NULL;
 		}
 	}
 }
