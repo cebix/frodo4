@@ -1,9 +1,11 @@
 dnl Process this file with autoconf to produce a configure script.
 
-AC_INIT([Frodo],[4.2])
-AC_CONFIG_SRCDIR(main.cpp)
+AC_INIT([Frodo],[4.2], [], [Frodo])
+AC_CONFIG_SRCDIR([src/main.cpp])
 AC_PREREQ([2.71])
-AC_CONFIG_HEADERS([sysconfig.h])
+AM_INIT_AUTOMAKE([foreign])
+AC_CONFIG_FILES([src/Makefile docs/Makefile])
+AC_CONFIG_HEADERS([src/sysconfig.h])
 
 dnl Checks for programs.
 AC_PROG_CC
@@ -15,11 +17,6 @@ PKG_PROG_PKG_CONFIG
 
 dnl Configure options.
 AC_ARG_ENABLE(opengl, [  --enable-opengl         use SDL/OpenGL for rendering [default=yes]], , enable_opengl=yes)
-
-dnl -fomit-frame-pointer makes things faster
-if [[ x"$GXX" = "xyes" ]]; then
-  CFLAGS="$CFLAGS -fomit-frame-pointer -fno-exceptions"
-fi
 
 AC_USE_SYSTEM_EXTENSIONS
 AC_SEARCH_LIBS([strerror],[cposix])
@@ -49,11 +46,13 @@ if [[ x"$EMBEDDED_EXTENSION" == "xnone" ]]; then
   PKG_CHECK_MODULES(GLADE, [libglade-2.0 libgnomeui-2.0 >= 1.110.0], HAVE_GLADE=yes)
   if [[ $HAVE_GLADE = yes ]]; then
     AC_DEFINE(HAVE_GLADE, 1, [Glade support is enabled])
+    CPPFLAGS="$CPPFLAGS $GLADE_CFLAGS"
+    LIBS="$LIBS $GLADE_LIBS"
     LDFLAGS="$LDFLAGS -Wl,-E"
   fi
+  GUI_OBJS=""
 else
-  GUIOBJS="sdlgui.o file.o dlgFileSelect.o dlgMain.o dlgDrives.o dlgOptions.o dlgVideoSound.o dlgAdvanced.o dlgInput.o"
-  GUISRCS="sdlgui.cpp file.cpp dlgFileSelect.cpp dlgMain.cpp dlgDrives.cpp dlgOptions.cpp dlgVidoSound.cpp dlgAdvanced.cpp dlgInput.cpp"
+  GUI_OBJS="sdlgui.o file.o dlgFileSelect.o dlgMain.o dlgDrives.o dlgOptions.o dlgVideoSound.o dlgAdvanced.o dlgInput.o"
 fi
 
 AC_PATH_XTRA
@@ -95,7 +94,7 @@ if [[ x"$no_x" = "xyes" ]]; then
   if [[ x"$HAVE_SVGA_LIB" = "xyes" ]]; then
     AC_MSG_RESULT([SVGAlib])
     TARGET=svgalib
-    CFLAGS="$CFLAGS -D__svgalib__"
+    GUI_CFLAGS="-D__svgalib__"
     LIBS="$LIBS -lvga"
   else
     AC_MSG_RESULT([Ummm...])
@@ -104,7 +103,7 @@ if [[ x"$no_x" = "xyes" ]]; then
 elif [[ x"$HAVE_SDL" = "xyes" ]]; then
   AC_MSG_RESULT([SDL])
   TARGET=sdl
-  CFLAGS="$CFLAGS $SDL_CFLAGS -DHAVE_SDL"
+  GUI_CFLAGS="$SDL_CFLAGS -DHAVE_SDL"
   LIBS="$LIBS $SDL_LIBS"
   if [[ "x$enable_opengl" = "xyes" ]]; then
     AC_MSG_CHECKING(for OpenGL support)
@@ -126,17 +125,14 @@ elif [[ x"$HAVE_SDL" = "xyes" ]]; then
 else
   AC_MSG_RESULT([X Window System])
   TARGET=x11
-  CFLAGS="$CFLAGS $X_CFLAGS -I$ac_cv_x_include"
+  GUI_CFLAGS="$X_CFLAGS -I$ac_cv_x_include"
   LIBS="$LIBS $X_LIBS $X_PRE_LIBS -lXext -lX11 $X_EXTRA_LIBS"
 fi
 
 AC_SUBST(TARGET)
-AC_SUBST(SET_MAKE)
-AC_SUBST(top_srcdir)
-AC_SUBST(HPUX_REV)
 AC_SUBST(KBD_LANG)
-AC_SUBST(GUIOBJS)
-AC_SUBST(GUISRCS)
+AC_SUBST(GUI_CFLAGS)
+AC_SUBST(GUI_OBJS)
 
 dnl Generate Makefile.
 AC_CONFIG_FILES([Makefile])

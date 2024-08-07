@@ -15,18 +15,10 @@ name&gt;.*</TT>) contain an executable that can be started directly.
 
 <H2>Compiling under Unix</H2>
 
-First you have to run the script <TT>configure</TT>. This can be done simply
-with the following command:<P>
+To build Frodo from an unpacked source distribution:<P>
 
-<KBD>$ cd src<BR>
-$ ./configure</KBD><P>
-
-If there is no configure script in the distribution (for example, if you have
-checked out the Frodo sources from the CVS repository) run
-<TT>autogen.sh</TT> instead:<P>
-
-<KBD>$ cd src<BR>
-$ ./autogen.sh</KBD><P>
+<KBD>$ ./autogen.sh<BR>
+$ make</KBD><P>
 
 For optimum performance, Frodo needs the following prerequisites:<P>
 
@@ -37,8 +29,8 @@ For optimum performance, Frodo needs the following prerequisites:<P>
 <LI>libglade2 and libgnomeui 2.x
 </UL>
 
-<TT>configure</TT> and <TT>autogen.sh</TT> accept optional arguments (type
-<KBD>./configure --help</KBD> for a full list). For example, to disable
+<TT>autogen.sh</TT> and <TT>configure</TT> accept optional arguments (type
+<KBD>./autogen.sh --help</KBD> for a full list). For example, to disable
 OpenGL support, you can enter<P>
 
 <KBD>$ ./configure --disable-opengl</KBD><P>
@@ -52,7 +44,7 @@ After configuration has completed, type<P>
 <KBD>$ make</KBD><P>
 
 The Frodo GUI requires the <TT>Frodo.glade</TT> file to be present in the
-directory <TT>/usr/local/share/frodo</TT> (you can specify a different
+directory <TT>/usr/local/share/Frodo</TT> (you can specify a different
 installation directory with <KBD>./configure --prefix</KBD>). Either copy
 this file manually from <TT>src/glade/Frodo.glade</TT> or become root and
 type<P>

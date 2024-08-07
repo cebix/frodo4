@@ -26,13 +26,26 @@
 *.exe
 *.out
 *.app
+src/Frodo
+src/FrodoSC
 
 # Autotools
-*/aclocal.m4
-*/autom4te.cache
-*/config.log
-*/config.status
-*/configure
-*/sysconfig.h
-*/sysconfig.h.in
-*/Makefile
+.deps/
+aclocal.m4
+autom4te.cache
+config.cache
+config.guess
+config.log
+config.status
+config.sub
+configure
+configure~
+compile
+depcomp
+install-sh
+missing
+Makefile
+Makefile.in
+stamp-h1
+src/sysconfig.h
+src/sysconfig.h.in

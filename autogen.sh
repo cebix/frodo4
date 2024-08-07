@@ -1,7 +1,5 @@
 #! /bin/sh
 # Run this to generate all the initial makefiles, etc.
-# This was lifted from the Gimp, and adapted slightly by
-# Christian Bauer.
 
 DIE=0
 
@@ -13,7 +11,7 @@ case `echo -n` in
 *)  _echo_n=-n _echo_c=;;
 esac
 
-(autoconf --version) < /dev/null > /dev/null 2>&1 || {
+(autoreconf --version) < /dev/null > /dev/null 2>&1 || {
         echo
         echo "You must have autoconf installed to compile $PROG."
         echo "Download the appropriate package for your distribution,"
@@ -21,29 +19,13 @@ esac
         DIE=1
 }
 
-(aclocal --version) < /dev/null > /dev/null 2>&1 || {
-	echo
-	echo "**Error**: Missing aclocal. The version of automake"
-	echo "installed doesn't appear recent enough."
-	echo "Get ftp://ftp.gnu.org/pub/gnu/automake-1.4.tar.gz"
-	echo "(or a newer version if it is available)"
-	DIE=1
-}
-
 if test "$DIE" -eq 1; then
         exit 1
 fi
 
-aclocalinclude="$ACLOCAL_FLAGS"; \
-(echo $_echo_n " + Running aclocal: $_echo_c"; \
-    aclocal $aclocalinclude; \
+(echo $_echo_n " + Running autoreconf: $_echo_c"; \
+    autoreconf --install; \
  echo "done.") && \
-(echo $_echo_n " + Running autoheader: $_echo_c"; \
-    autoheader; \
- echo "done.") && \
-(echo $_echo_n " + Running autoconf: $_echo_c"; \
-    autoconf; \
- echo "done.")
 
 rm -f config.cache
 
