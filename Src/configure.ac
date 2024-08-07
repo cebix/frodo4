@@ -118,7 +118,7 @@ elif [[ x"$HAVE_SDL" = "xyes" ]]; then
     AC_MSG_RESULT($have_opengl)
     if test x$have_opengl = xyes; then
       AC_DEFINE(ENABLE_OPENGL, 1, [OpenGL support is enabled])
-      LIBS="$LIBS -lGLEW"
+      LIBS="$LIBS -lGL -lGLEW"
     else
       AC_MSG_WARN([Could not find OpenGL, ignoring --enable-opengl.])
     fi
