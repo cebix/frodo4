@@ -911,7 +911,7 @@ long C64Display::WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 					case ID_HELP_SETTINGS: html = "settings"; break;
 					}
 					char helpfile[256];
-					sprintf(helpfile, "%s\\Docs\\%s.html", AppDirPath, html);
+					sprintf(helpfile, "%s\\docs\\%s.html", AppDirPath, html);
 					ShellExecute(0, 0, helpfile, 0, 0, SW_NORMAL);
 				}
 				break;

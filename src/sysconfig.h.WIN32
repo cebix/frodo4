@@ -1,4 +1,4 @@
-/* Src/sysconfig.h for AmigaOS */
+/* src/sysconfig.h for AmigaOS */
 
 /* Define if on AIX 3.
    System headers sometimes define this.

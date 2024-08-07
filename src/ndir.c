@@ -14,8 +14,6 @@
     You should have received a copy of the GNU General Public License
     along with this program; if not, write to the Free Software
     Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-
-    $Header: /home/cvs/cebix/Frodo4/Src/ndir.c,v 1.1 2003/07/01 17:09:43 cebix Exp $
  */
 
 /* Everything non trivial in this code is from: @(#)msd_dir.c 1.4
@@ -23,7 +21,6 @@
    for MS-DOS.  Written by Michael Rendell ({uunet,utai}michael@garfield),
    August 1987 */
 
-
 #include <io.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -212,11 +209,3 @@ main (int argc, char *argv[])
 }
 
 #endif /* TEST */
-
-/* 
- * Local Variables:
- * mode:C
- * ChangeLog:ChangeLog
- * compile-command:make
- * End:
- */

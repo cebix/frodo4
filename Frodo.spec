@@ -26,13 +26,13 @@ but far more compatible.
 %setup -q
 
 %build
-cd Src
+cd src
 CFLAGS=${RPM_OPT_FLAGS} CXXFLAGS=${RPM_OPT_FLAGS} ./configure --prefix=%{_prefix}
 make
 
 %install
 rm -rf ${RPM_BUILD_ROOT}
-cd Src
+cd src
 make DESTDIR=${RPM_BUILD_ROOT} install
 
 %clean
@@ -41,7 +41,7 @@ rm -rf ${RPM_BUILD_ROOT}
 %files
 %defattr(-,root,root)
 %doc COPYING CHANGES
-%doc Docs/*.html
+%doc docs/*.html
 %{_bindir}/Frodo
 %{_bindir}/FrodoSC
 %{_bindir}/Frodo_GUI.tcl

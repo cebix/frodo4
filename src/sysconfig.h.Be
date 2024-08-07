@@ -1,6 +1,8 @@
-/* Src/sysconfig.h for Acorn RISC OS */
+/* src/sysconfig.h for BeOS */
 
-
+/* Define if on AIX 3.
+   System headers sometimes define this.
+   We just want to avoid a redefinition error message.  */
 #ifndef _ALL_SOURCE
 /* #undef _ALL_SOURCE */
 #endif
@@ -9,7 +11,7 @@
 /* #undef HAVE_ST_BLOCKS */
 
 /* Define if utime(file, NULL) sets file's timestamp to the present.  */
-/*#define HAVE_UTIME_NULL 1 */
+#define HAVE_UTIME_NULL 1
 
 /* Define to `int' if <sys/types.h> doesn't define.  */
 /* #undef mode_t */
@@ -36,28 +38,25 @@
 #define SIZEOF_LONG 4
 
 /* The number of bytes in a long long.  */
-/* #undef SIZEOF_LONG_LONG */
+#define SIZEOF_LONG_LONG 8
 
 /* The number of bytes in a short.  */
 #define SIZEOF_SHORT 2
 
 /* Define if you have the gettimeofday function.  */
-/*#define HAVE_GETTIMEOFDAY 1*/
+#define HAVE_GETTIMEOFDAY 1
 
 /* Define if you have the mkdir function.  */
-/*#define HAVE_MKDIR 1*/
+#define HAVE_MKDIR 1
 
 /* Define if you have the rmdir function.  */
-/*#define HAVE_RMDIR 1*/
+#define HAVE_RMDIR 1
 
 /* Define if you have the select function.  */
-/*#define HAVE_SELECT 1*/
+#define HAVE_SELECT 1
 
 /* Define if you have the sigaction function.  */
-/*#define HAVE_SIGACTION 1*/
-
-/* Define if you have the signal function */
-#define HAVE_SIGNAL
+#define HAVE_SIGACTION 1
 
 /* Define if you have the statfs function.  */
 /* #undef HAVE_STATFS */
@@ -72,10 +71,10 @@
 /* #undef HAVE_USLEEP */
 
 /* Define if you have the <dirent.h> header file.  */
-/*#define HAVE_DIRENT_H 1*/
+#define HAVE_DIRENT_H 1
 
 /* Define if you have the <fcntl.h> header file.  */
-/*#define HAVE_FCNTL_H 1*/
+#define HAVE_FCNTL_H 1
 
 /* Define if you have the <linux/joystick.h> header file.  */
 /* #undef HAVE_LINUX_JOYSTICK_H */
@@ -93,7 +92,7 @@
 /* #undef HAVE_STRINGS_H */
 
 /* Define if you have the <sys/dir.h> header file.  */
-/*#define HAVE_SYS_DIR_H 1*/
+#define HAVE_SYS_DIR_H 1
 
 /* Define if you have the <sys/mount.h> header file.  */
 /* #undef HAVE_SYS_MOUNT_H */
@@ -102,13 +101,13 @@
 /* #undef HAVE_SYS_NDIR_H */
 
 /* Define if you have the <sys/param.h> header file.  */
-/*#define HAVE_SYS_PARAM_H 1*/
+#define HAVE_SYS_PARAM_H 1
 
 /* Define if you have the <sys/select.h> header file.  */
 /* #undef HAVE_SYS_SELECT_H */
 
 /* Define if you have the <sys/stat.h> header file.  */
-/*#define HAVE_SYS_STAT_H 1*/
+#define HAVE_SYS_STAT_H 1
 
 /* Define if you have the <sys/statfs.h> header file.  */
 /* #undef HAVE_SYS_STATFS_H */
@@ -117,19 +116,19 @@
 /* #undef HAVE_SYS_STATVFS_H */
 
 /* Define if you have the <sys/time.h> header file.  */
-/*#define HAVE_SYS_TIME_H 1*/
+#define HAVE_SYS_TIME_H 1
 
 /* Define if you have the <sys/types.h> header file.  */
-/*#define HAVE_SYS_TYPES_H 1*/
+#define HAVE_SYS_TYPES_H 1
 
 /* Define if you have the <sys/vfs.h> header file.  */
 /* #undef HAVE_SYS_VFS_H */
 
 /* Define if you have the <unistd.h> header file.  */
-/*#define HAVE_UNISTD_H 1*/
+#define HAVE_UNISTD_H 1
 
 /* Define if you have the <utime.h> header file.  */
-/*#define HAVE_UTIME_H 1*/
+#define HAVE_UTIME_H 1
 
 /* Define if you have the <values.h> header file.  */
 /* #undef HAVE_VALUES_H */

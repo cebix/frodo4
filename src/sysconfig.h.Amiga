@@ -1,4 +1,4 @@
-/* Src/sysconfig.h for BeOS */
+/* src/sysconfig.h for AmigaOS */
 
 /* Define if on AIX 3.
    System headers sometimes define this.
@@ -8,7 +8,7 @@
 #endif
 
 /* Define if your struct stat has st_blocks.  */
-/* #undef HAVE_ST_BLOCKS */
+#define HAVE_ST_BLOCKS 1
 
 /* Define if utime(file, NULL) sets file's timestamp to the present.  */
 #define HAVE_UTIME_NULL 1
@@ -23,7 +23,7 @@
 /* #undef pid_t */
 
 /* Define if you need to in order for stat and other things to work.  */
-/* #undef _POSIX_SOURCE */
+#define _POSIX_SOURCE 1
 
 /* Define if your <sys/time.h> declares struct tm.  */
 /* #undef TM_IN_SYS_TIME */
@@ -83,7 +83,7 @@
 /* #undef HAVE_NCURSES_H */
 
 /* Define if you have the <ndir.h> header file.  */
-/* #undef HAVE_NDIR_H */
+#define HAVE_NDIR_H 1
 
 /* Define if you have the <string.h> header file.  */
 #define HAVE_STRING_H 1
