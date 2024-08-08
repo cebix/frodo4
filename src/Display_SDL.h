@@ -140,19 +140,6 @@ static void set_projection()
 
 	glClear(GL_COLOR_BUFFER_BIT);
 }
-
-
-/*
- *  User resized video display (only possible with OpenGL)
- */
-
-static void video_resized(int width, int height)
-{
-	uint32 flags = (ThePrefs.DisplayType == DISPTYPE_SCREEN ? SDL_FULLSCREEN : 0);
-	flags |= (SDL_ANYFORMAT | SDL_OPENGL | SDL_RESIZABLE);
-	SDL_SetVideoMode(width, height, 16, flags);
-	set_projection();
-}
 #endif
 
 
@@ -734,9 +721,9 @@ void C64Display::PollKeyboard(uint8 *key_matrix, uint8 *rev_matrix, uint8 *joyst
 				break;
 
 #ifdef ENABLE_OPENGL
-			// Window resized
+			// Window resized, reset projection
 			case SDL_VIDEORESIZE:
-				video_resized(event.resize.w, event.resize.h);
+				set_projection();
 				break;
 #endif
 
