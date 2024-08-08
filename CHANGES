@@ -1,3 +1,6 @@
+Changes from V4.2 to V4.3:
+ - Unix: removed SVGAlib support
+
 Changes from V4.1b to V4.2:
  - Changed license to GPL
  - "Plain" Frodo removed, "Frodo PC" renamed to "Frodo"

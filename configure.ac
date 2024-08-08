@@ -22,7 +22,6 @@ AC_USE_SYSTEM_EXTENSIONS
 AC_SEARCH_LIBS([strerror],[cposix])
 
 dnl Checks for libraries.
-AC_CHECK_LIB(vga, vga_setmode, HAVE_SVGA_LIB=yes, HAVE_SVGA_LIB=no)
 AM_PATH_SDL(1.2.0, HAVE_SDL=yes, HAVE_SDL=no)
 
 EMBEDDED_EXTENSION=none
@@ -90,17 +89,7 @@ AC_ARG_ENABLE(kbd-lang-de,[  --enable-kbd-lang-de    Use german keyboard layout]
 AC_ARG_ENABLE(kbd-lang-us,[  --enable-kbd-lang-us    Use american keyboard layout],[KBD_LANG=0],[])
 
 AC_MSG_CHECKING(which target to use)
-if [[ x"$no_x" = "xyes" ]]; then
-  if [[ x"$HAVE_SVGA_LIB" = "xyes" ]]; then
-    AC_MSG_RESULT([SVGAlib])
-    TARGET=svgalib
-    GUI_CFLAGS="-D__svgalib__"
-    LIBS="$LIBS -lvga"
-  else
-    AC_MSG_RESULT([Ummm...])
-    AC_MSG_ERROR([Neither X nor SVGAlib found, don't know what target to use.])
-  fi
-elif [[ x"$HAVE_SDL" = "xyes" ]]; then
+if [[ x"$HAVE_SDL" = "xyes" ]]; then
   AC_MSG_RESULT([SDL])
   TARGET=sdl
   GUI_CFLAGS="$SDL_CFLAGS -DHAVE_SDL"

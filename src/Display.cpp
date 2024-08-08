@@ -95,11 +95,7 @@ void C64Display::UpdateLEDs(int l0, int l1, int l2, int l3)
 #  include "Display_SDL.h"
 # endif
 #elif defined(__unix)
-# ifdef __svgalib__
-#  include "Display_svga.h"
-# else
-#  include "Display_x.h"
-# endif
+# include "Display_x.h"
 #elif defined(__mac__)
 #include "Display_mac.h"
 #elif defined(WIN32)

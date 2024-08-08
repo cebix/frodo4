@@ -32,7 +32,7 @@
 #include "Display.h"
 #include "Prefs.h"
 
-#if defined(__unix) && !defined(__svgalib__)
+#if defined(__unix)
 #include "CmdPipe.h"
 #endif
 
