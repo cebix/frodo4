@@ -370,14 +370,7 @@ private:
 
 #ifdef HAVE_SDL
 	static void buffer_proc(void *cookie, uint8 *buffer, int size);
-#else
-
-# ifdef __linux__
-	int devfd, sndbufsize, buffer_rate;
-	int16 *sound_buffer;
-# endif
-
-#endif // ndef HAVE_SDL
+#endif
 
 #ifdef WIN32
 public:
@@ -1213,7 +1206,6 @@ void DigitalRenderer::calc_buffer(int16 *buf, long count)
 # endif
 
 #elif defined(__linux__)
-#include "SID_linux.h"
 #include "SID_catweasel.h"
 
 #elif defined(WIN32)
