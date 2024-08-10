@@ -35,12 +35,6 @@
 #include <media/SoundPlayer.h>
 #endif
 
-#ifdef SUN
-extern "C" {
-	#include <sys/audioio.h>
-}
-#endif
-
 #ifdef WIN32
 class DigitalPlayer;
 #endif
@@ -381,13 +375,6 @@ private:
 # ifdef __linux__
 	int devfd, sndbufsize, buffer_rate;
 	int16 *sound_buffer;
-# endif
-
-# ifdef SUN
-	int fd;
-	audio_info status;
-	uint_t sent_samples,delta_samples;
-	int16 *sound_calc_buf;
 # endif
 
 #endif // ndef HAVE_SDL
@@ -1228,9 +1215,6 @@ void DigitalRenderer::calc_buffer(int16 *buf, long count)
 #elif defined(__linux__)
 #include "SID_linux.h"
 #include "SID_catweasel.h"
-
-#elif defined(SUN)
-#include "SID_sun.h"
 
 #elif defined(WIN32)
 #include "SID_WIN32.h"

@@ -84,19 +84,11 @@ static const long int eventmask = (KeyPressMask|KeyReleaseMask|FocusChangeMask|E
 #define KEY_F11 514
 #define KEY_F12 515
 
-#ifdef SUN
-#define KEY_FIRE 58
-#define KEY_JU 135
-#define KEY_JD 7
-#define KEY_JL 130
-#define KEY_JR 2
-#else
 #define KEY_FIRE 516
 #define KEY_JU 517
 #define KEY_JD 518
 #define KEY_JL 519
 #define KEY_JR 520
-#endif
 
 #define KEY_JUL 521
 #define KEY_JUR 522
@@ -226,10 +218,6 @@ static int kc_decode(KeySym ks)
 		case XK_KP_Multiply: return KEY_KP_MULT;
 		case XK_KP_Divide: return MATRIX(6,7);
 		case XK_KP_Enter: return MATRIX(0,1);
-
-#ifdef SUN
-		case XK_Num_Lock: return KEY_NUM_LOCK;
-#endif
 	}
 	return -1;
 }
