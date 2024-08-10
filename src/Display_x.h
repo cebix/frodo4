@@ -167,13 +167,8 @@ static int kc_decode(KeySym ks)
 		case XK_Insert: return MATRIX(6,3);
 		case XK_Home: case XK_Help: return MATRIX(6,3);
 		case XK_End: return MATRIX(6,0);
-#ifdef __hpux
-		case XK_Prior: return MATRIX(6,0);
-		case XK_Next: return MATRIX(6,5);
-#else
 		case XK_Page_Up: return MATRIX(6,0);
 		case XK_Page_Down: return MATRIX(6,5);
-#endif
 		case XK_Control_L: return MATRIX(7,2);
 		case XK_Control_R: return MATRIX(7,5);
 		case XK_Shift_L: return MATRIX(1,7);

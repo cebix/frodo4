@@ -41,12 +41,6 @@ extern "C" {
 }
 #endif
 
-#ifdef __hpux
-extern "C" {
-	#include <sys/audio.h>
-}
-#endif
-
 #ifdef __mac__
 #include <Sound.h>
 #define M_PI 3.14159265358979323846
@@ -424,13 +418,6 @@ private:
 	audio_info status;
 	uint_t sent_samples,delta_samples;
 	int16 *sound_calc_buf;
-# endif
-
-# ifdef __hpux
-	int fd;
-	audio_status status;
-	int16 *sound_calc_buf;
-	int linecnt;
 # endif
 
 #endif // ndef HAVE_SDL
@@ -1325,9 +1312,6 @@ void DigitalRenderer::calc_buffer(int16 *buf, long count)
 
 #elif defined(SUN)
 #include "SID_sun.h"
-
-#elif defined(__hpux)
-#include "SID_hp.h"
 
 #elif defined(__mac__)
 #include "SID_mac.h"

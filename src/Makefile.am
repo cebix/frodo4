@@ -14,7 +14,7 @@ FrodoSC_SOURCES = $(common_SOURCES) \
 
 EXTRA_Frodo_SOURCES = sysdeps.h debug.h file.cpp file.h \
     main_x.h C64_x.h C64_Embedded.h Display_SDL.h Display_EmbeddedSDL.h Display_x.h \
-    SID_SDL.h SID_catweasel.h SID_hp.h SID_linux.h \
+    SID_SDL.h SID_catweasel.h SID_linux.h \
     Prefs_glade.h Prefs_x.h \
     sdlgui.cpp sdlgui.h dlgFileSelect.cpp dlgFileSelect.h dlgMain.cpp dlgDrives.cpp dlgOptions.cpp dlgVideoSound.cpp dlgAdvanced.cpp dlgInput.cpp
 
