@@ -3,8 +3,7 @@ bin_PROGRAMS = Frodo FrodoSC
 common_SOURCES = \
     main.cpp main.h Display.cpp Display.h Prefs.cpp Prefs.h SID.cpp SID.h REU.cpp REU.h \
     IEC.cpp IEC.h 1541fs.cpp 1541fs.h 1541d64.cpp 1541d64.h 1541t64.cpp 1541t64.h 1541job.cpp 1541job.h \
-    SAM.cpp SAM.h CmdPipe.cpp CmdPipe.h \
-    1541_ROM.h Basic_ROM.h Char_ROM.h Kernal_ROM.h Version.h
+    SAM.cpp SAM.h 1541_ROM.h Basic_ROM.h Char_ROM.h Kernal_ROM.h Version.h
 
 Frodo_SOURCES = $(common_SOURCES) \
     C64.cpp C64.h CPUC64.cpp CPUC64.h VIC.cpp VIC.h CIA.cpp CIA.h CPU1541.cpp CPU1541.h CPU_emulline.h

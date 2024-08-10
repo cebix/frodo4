@@ -55,7 +55,6 @@ class IEC;
 class REU;
 class MOS6502_1541;
 class Job1541;
-class CmdPipe;
 
 class C64 {
 public:

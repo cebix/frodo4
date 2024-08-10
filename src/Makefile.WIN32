@@ -63,7 +63,7 @@ clean:
 .c.obj:
 	$(CXX) $(ALLCFLAGS) -o $@ -c $*.c
        
-C64_SC.obj: C64.cpp C64.h C64_WIN32.h CmdPipe.h CPUC64.h CPU1541.h VIC.h SID.h CIA.h REU.h IEC.h 1541job.h Display.h Prefs.h
+C64_SC.obj: C64.cpp C64.h C64_WIN32.h CPUC64.h CPU1541.h VIC.h SID.h CIA.h REU.h IEC.h 1541job.h Display.h Prefs.h
 	$(CXX) $(ALLSCCFLAGS) -Fo$@ -c $*.cpp
 
 CPUC64_SC.obj: CPUC64_SC.cpp CPUC64.h CPU_emulcycle.h CPU_common.h C64.h VIC.h SID.h CIA.h REU.h IEC.h Display.h Version.h
@@ -78,7 +78,7 @@ VIC_SC.obj: VIC_SC.cpp VIC.h C64.h CPUC64.h Display.h Prefs.h
 CIA_SC.obj: CIA_SC.cpp CIA.h CPUC64.h CPU1541.h VIC.h Prefs.h
 	$(CXX) $(ALLSCCFLAGS) -Fo$@ -c $*.cpp
 
-C64_PC.obj: C64.cpp C64.h C64_WIN32.h CmdPipe.h CPUC64.h CPU1541.h VIC.h SID.h CIA.h REU.h IEC.h 1541job.h Display.h Prefs.h
+C64_PC.obj: C64.cpp C64.h C64_WIN32.h CPUC64.h CPU1541.h VIC.h SID.h CIA.h REU.h IEC.h 1541job.h Display.h Prefs.h
 	$(CXX) $(ALLPCCFLAGS) -Fo$@ -c $*.cpp
 
 CPUC64_PC.obj: CPUC64.cpp CPUC64.h CPU_emulline.h CPU_common.h C64.h VIC.h SID.h CIA.h REU.h IEC.h Display.h Version.h
@@ -89,8 +89,7 @@ CPU1541_PC.obj: CPU1541_PC.cpp CPU1541.h CPU_emulline.h CPU_common.h 1541job.h C
 
 ## Dependencies
 main.obj: main.cpp main.h main_WIN32.h C64.h Display.h Prefs.h SAM.h
-C64.obj: C64.cpp C64.h C64_WIN32.h CmdPipe.h CPUC64.h CPU1541.h VIC.h SID.h CIA.h REU.h IEC.h 1541job.h Display.h Prefs.h
-CmdPipe.obj: CmdPipe.h
+C64.obj: C64.cpp C64.h C64_WIN32.h CPUC64.h CPU1541.h VIC.h SID.h CIA.h REU.h IEC.h 1541job.h Display.h Prefs.h
 Display.obj: Display.cpp Display.h Display_WIN32.h main.h Prefs.h Version.h resource.h
 Prefs.obj: Prefs.cpp Prefs.h Prefs_WIN32.h Display.h main.h resource.h
 CPUC64.obj: CPUC64.cpp CPUC64.h CPU_emulline.h C64.h VIC.h SID.h CIA.h REU.h IEC.h Display.h Version.h
