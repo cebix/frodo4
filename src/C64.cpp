@@ -710,10 +710,6 @@ bool C64::LoadSnapshot(char *filename)
 # endif
 #endif
 
-#ifdef __mac__
-#include "C64_mac.h"
-#endif
-
 #ifdef WIN32
 #include "C64_WIN32.h"
 #endif

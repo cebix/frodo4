@@ -93,10 +93,6 @@ void Frodo::load_rom_files()
 #include "main_x.h"
 #endif
 
-#ifdef __mac__
-#include "main_mac.h"
-#endif
-
 #ifdef WIN32
 #include "main_WIN32.h"
 #endif

@@ -94,8 +94,6 @@ void C64Display::UpdateLEDs(int l0, int l1, int l2, int l3)
 # endif
 #elif defined(__unix)
 # include "Display_x.h"
-#elif defined(__mac__)
-#include "Display_mac.h"
 #elif defined(WIN32)
 #include "Display_WIN32.h"
 #elif defined(__riscos__)

@@ -137,10 +137,6 @@ struct utimbuf
 #define O_BINARY 0
 #endif
 
-#ifdef __mac__
-#define bool Boolean
-#endif
-
 #ifdef __riscos
 #define bool int
 #endif

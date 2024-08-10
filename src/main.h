@@ -116,26 +116,6 @@ extern Frodo *TheApp;  // Pointer to Frodo object
 
 
 /*
- *  Mac specific stuff
- */
-
-#ifdef __mac__
-
-class Frodo {
-public:
-	Frodo();
-
-	void Run(void);
-
-private:
-	void load_rom(const char *which, const char *path, uint8 *where, size_t size, const uint8 *builtin);
-	void load_rom_files();
-};
-
-#endif
-
-
-/*
  *  WIN32 specific stuff
  */
 

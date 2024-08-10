@@ -41,11 +41,6 @@ extern "C" {
 }
 #endif
 
-#ifdef __mac__
-#include <Sound.h>
-#define M_PI 3.14159265358979323846
-#endif
-
 #ifdef WIN32
 class DigitalPlayer;
 #endif
@@ -421,18 +416,6 @@ private:
 # endif
 
 #endif // ndef HAVE_SDL
-
-
-#ifdef __mac__
-	SndChannelPtr chan1;
-	SndDoubleBufferHeader myDblHeader;
-	SndDoubleBufferPtr sampleBuffer1, sampleBuffer2;
-	SCStatus myStatus;
-	short sndbufsize;
-	OSErr err;
-
-	static void doubleBackProc(SndChannelPtr chan, SndDoubleBufferPtr doubleBuffer);
-#endif
 
 #ifdef WIN32
 public:
@@ -1312,9 +1295,6 @@ void DigitalRenderer::calc_buffer(int16 *buf, long count)
 
 #elif defined(SUN)
 #include "SID_sun.h"
-
-#elif defined(__mac__)
-#include "SID_mac.h"
 
 #elif defined(WIN32)
 #include "SID_WIN32.h"

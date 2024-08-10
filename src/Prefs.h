@@ -101,10 +101,6 @@ public:
 	bool SystemKeys;		// Enable system keys and menu keys (Win32)
 	bool ShowLEDs;			// Show LEDs (Win32)
 
-#ifdef __mac__
-	void ChangeDisks(void);
-#endif
-
 #ifdef WIN32
 private:
 	static BOOL CALLBACK StandardDialogProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
