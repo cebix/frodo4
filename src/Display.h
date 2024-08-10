@@ -33,10 +33,6 @@ struct SDL_Surface;
 #include <ddraw.h>
 #endif
 
-#ifdef __riscos__
-#include "ROlib.h"
-#endif
-
 
 // Display dimensions
 #if defined(SMALL_DISPLAY)
@@ -64,11 +60,7 @@ public:
 	void Speedometer(int speed);
 	uint8 *BitmapBase(void);
 	int BitmapXMod(void);
-#ifdef __riscos__
-	void PollKeyboard(uint8 *key_matrix, uint8 *rev_matrix, uint8 *joystick, uint8 *joystick2);
-#else
 	void PollKeyboard(uint8 *key_matrix, uint8 *rev_matrix, uint8 *joystick);
-#endif
 	bool NumLock(void);
 	void InitColors(uint8 *colors);
 	void NewPrefs(Prefs *prefs);
@@ -78,15 +70,6 @@ public:
 #ifdef __BEOS__
 	void Pause(void);
 	void Resume(void);
-#endif
-
-#ifdef __riscos__
-	void ModeChange(void);
-	unsigned int *GetColourTable(void);	// returns pointer to mode_cols
-	bool CheckForUnpause(bool CheckLastState);
-
-	ROScreen *screen;
-	Joy_Keys JoystickKeys[2];		// it's easier making the joystick keys public
 #endif
 
 #ifdef __unix
@@ -196,12 +179,6 @@ private:
 
 	DWORD colors[256];			// our palette colors
 	int colors_depth;			// depth of the colors table
-#endif
-
-#ifdef __riscos__
-	unsigned int mode_cols[256];	// Colours in the current mode corresponding to C64's
-	uint8 *bitmap;
-	uint32 lastkeys[8];		// bitfield describing keys pressed last time.
 #endif
 };
 

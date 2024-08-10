@@ -137,10 +137,6 @@ struct utimbuf
 #define O_BINARY 0
 #endif
 
-#ifdef __riscos
-#define bool int
-#endif
-
 #ifdef WIN32
 #include <windows.h>
 #include <direct.h>

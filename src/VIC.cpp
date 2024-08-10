@@ -65,9 +65,7 @@
 
 
 // Test alignment on run-time for processors that can't access unaligned:
-#ifdef __riscos__
-#define ALIGNMENT_CHECK
-#endif
+#undef ALIGNMENT_CHECK
 
 // First and last displayed line
 const unsigned FIRST_DISP_LINE = 0x10;
@@ -897,10 +895,6 @@ inline void MOS6569::vblank(void)
 }
 
 
-#ifdef __riscos__
-#include "el_Acorn.h"
-#else
-
 #ifdef GLOBAL_VARS
 static inline void el_std_text(uint8 *p, uint8 *q, uint8 *r)
 #else
@@ -1128,8 +1122,6 @@ inline void MOS6569::el_mc_idle(uint8 *p, uint8 *r)
 		*++r = data;
 	}
 }
-
-#endif //__riscos__
 
 
 #ifdef GLOBAL_VARS

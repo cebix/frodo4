@@ -25,10 +25,6 @@
 #include <KernelKit.h>
 #endif
 
-#ifdef __riscos__
-#include "ROlib.h"
-#endif
-
 
 // Sizes of memory areas
 const int C64_RAM_SIZE = 0x10000;
@@ -164,35 +160,6 @@ private:
 	int frame;					// current frame number
 	uint8 joy_state;			// Current state of joystick
 	bool state_change;
-#endif
-
-#ifdef __riscos__
-public:
-	void RequestSnapshot(void);
-	bool LoadOldSnapshot(FILE *f);
-	void LoadSystemConfig(const char *filename);	// loads timing vals and keyboard joys
-	void SaveSystemConfig(const char *filename);	// saves timing vals and keyboard joys
-	void ReadTimings(int *poll_after, int *speed_after, int *sound_after);
-	void WriteTimings(int poll_after, int speed_after, int sound_after);
-
-	WIMP *TheWIMP;
-	int PollAfter;		// centiseconds before polling
-	int SpeedAfter;		// centiseconds before updating speedometer
-	int PollSoundAfter;	// *rasterlines* after which DigitalRenderer is polled
-	int HostVolume;		// sound volume of host machine
-
-private:
-	bool make_a_snapshot;
-
-	uint8 joykey2;			// two keyboard joysticks possible here
-
-	uint8 joystate[2];		// Joystick state
-	bool Poll;			// TRUE if polling should take place
-	int LastPoll, LastFrame, LastSpeed;	// time of last poll / last frame / speedom (cs)
-	int FramesSince;
-	int laststate;			// last keyboard state (-> scroll lock)
-	int lastptr;			// last mouse pointer shape
-	bool SingleTasking;
 #endif
 };
 

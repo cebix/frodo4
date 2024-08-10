@@ -148,26 +148,6 @@ extern BOOL full_screen;
 #endif
 
 
-/*
- *  RiscOS specific stuff
- */
-
-#ifdef __riscos__
-
-class Frodo
-{
-public:
-	Frodo();
-	~Frodo();
-	void ReadyToRun(void);
-
-private:
-	void load_rom(const char *which, const char *path, uint8 *where, size_t size, const uint8 *builtin);
-	void load_rom_files();
-};
-
-#endif
-
 // Global C64 object
 extern C64 *TheC64;
 

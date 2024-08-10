@@ -45,19 +45,13 @@ extern "C" {
 class DigitalPlayer;
 #endif
 
-#ifdef __riscos__
-#include "ROLib.h"
-# ifndef M_PI
-# define M_PI 3.14159265358979323846
-# endif
-#define USE_FIXPOINT_MATHS
-#define FIXPOINT_PREC 16	// number of fractional bits used in fixpoint representation
-#define PRECOMPUTE_RESONANCE
-#define ldSINTAB 9			// size of sinus table (0 to 90 degrees)
-#endif
 
+#undef USE_FIXPOINT_MATHS
 
 #ifdef USE_FIXPOINT_MATHS
+#define FIXPOINT_PREC 16      // number of fractional bits used in fixpoint representation
+#define PRECOMPUTE_RESONANCE
+#define ldSINTAB 9            // size of sinus table (0 to 90 degrees)
 #include "FixPoint.h"
 #endif
 
@@ -255,11 +249,7 @@ void MOS6581::SetState(MOS6581State *ss)
  **  Renderer for digital SID emulation (SIDTYPE_DIGITAL)
  **/
 
-#if defined(__riscos__)
-const uint32 SAMPLE_FREQ = 22050;	// Sample output frequency in Hz
-#else
 const uint32 SAMPLE_FREQ = 44100;	// Sample output frequency in Hz
-#endif
 const uint32 SID_FREQ = 985248;		// SID frequency in Hz
 const uint32 CALC_FREQ = 50;			// Frequency at which calc_buffer is called in Hz (should be 50Hz)
 const uint32 SID_CYCLES = SID_FREQ/SAMPLE_FREQ;	// # of SID clocks per sample frame
@@ -346,11 +336,7 @@ public:
 private:
 	void init_sound(void);
 	void calc_filter(void);
-#ifdef __riscos__
-	void calc_buffer(uint8 *buf, long count);
-#else
 	void calc_buffer(int16 *buf, long count);
-#endif
 
 	C64 *the_c64;					// Pointer to C64 object
 
@@ -371,23 +357,12 @@ private:
 	uint8 f_type;					// Filter type
 	uint8 f_freq;					// SID filter frequency (upper 8 bits)
 	uint8 f_res;					// Filter resonance (0..15)
-#ifdef USE_FIXPOINT_MATHS
-	FixPoint f_ampl;
-	FixPoint d1, d2, g1, g2;
-	int32 xn1, xn2, yn1, yn2;		// can become very large
-	FixPoint sidquot;
-#ifdef PRECOMPUTE_RESONANCE
-	FixPoint resonanceLP[256];
-	FixPoint resonanceHP[256];
-#endif
-#else
 	float f_ampl;					// IIR filter input attenuation
 	float d1, d2, g1, g2;			// IIR filter coefficients
 	float xn1, xn2, yn1, yn2;		// IIR filter previous input/output signal
 #ifdef PRECOMPUTE_RESONANCE
 	float resonanceLP[256];			// shortcut for calc_filter
 	float resonanceHP[256];
-#endif
 #endif
 
 	uint8 sample_buf[SAMPLE_BUF_SIZE]; // Buffer for sampled voice
@@ -433,11 +408,6 @@ private:
 	int divisor;
 	int *lead;
 	int lead_pos;
-#endif
-
-#ifdef __riscos__
-	int linecnt, sndbufsize;
-	uint8 *sound_buffer;
 #endif
 };
 
@@ -785,22 +755,10 @@ DigitalRenderer::DigitalRenderer(C64 *c64) : the_c64(c64)
 	}
 
 #ifdef PRECOMPUTE_RESONANCE
-#ifdef USE_FIXPOINT_MATHS
-	// slow floating point doesn't matter much on startup!
-	for (int i=0; i<256; i++) {
-	  resonanceLP[i] = FixNo(CALC_RESONANCE_LP(i));
-	  resonanceHP[i] = FixNo(CALC_RESONANCE_HP(i));
-	}
-	// Pre-compute the quotient. No problem since int-part is small enough
-	sidquot = (int32)((((double)SID_FREQ)*65536) / SAMPLE_FREQ);
-	// compute lookup table for sin and cos
-	InitFixSinTab();
-#else
 	for (int i=0; i<256; i++) {
 	  resonanceLP[i] = CALC_RESONANCE_LP(i);
 	  resonanceHP[i] = CALC_RESONANCE_HP(i);
 	}
-#endif
 #endif
 
 	Reset();
@@ -831,15 +789,9 @@ void DigitalRenderer::Reset(void)
 
 	f_type = FILT_NONE;
 	f_freq = f_res = 0;
-#ifdef USE_FIXPOINT_MATHS
-	f_ampl = FixNo(1);
-	d1 = d2 = g1 = g2 = 0;
-	xn1 = xn2 = yn1 = yn2 = 0;
-#else
 	f_ampl = 1.0;
 	d1 = d2 = g1 = g2 = 0.0;
 	xn1 = xn2 = yn1 = yn2 = 0.0;
-#endif
 
 	sample_in_ptr = 0;
 	memset(sample_buf, 0, SAMPLE_BUF_SIZE);
@@ -1114,11 +1066,7 @@ void DigitalRenderer::calc_filter(void)
  *  Fill one audio buffer with calculated SID sound
  */
 
-#ifdef __riscos__
-void DigitalRenderer::calc_buffer(uint8 *buf, long count)
-#else
 void DigitalRenderer::calc_buffer(int16 *buf, long count)
-#endif
 {
 	// Get filter coefficients, so the emulator won't change
 	// them in the middle of our calculations
@@ -1130,18 +1078,10 @@ void DigitalRenderer::calc_buffer(int16 *buf, long count)
 	float cd1 = d1, cd2 = d2, cg1 = g1, cg2 = g2;
 #endif
 
-#ifdef __riscos__
-	uint8 *LinToLog, *LogScale;
-#endif
-
 	// Index in sample_buf for reading, 16.16 fixed
 	uint32 sample_count = (sample_in_ptr + SAMPLE_BUF_SIZE/2) << 16;
 
-#ifdef __riscos__	// on RISC OS we have 8 bit logarithmic sound
-	DigitalRenderer_GetTables(&LinToLog, &LogScale);	// get translation tables
-#else
 	count >>= 1;	// 16 bit mono output, count is in bytes
-#endif
 	while (count--) {
 		// Get current master volume from sample buffer,
 		// calculate sampled voice
@@ -1270,11 +1210,7 @@ void DigitalRenderer::calc_buffer(int16 *buf, long count)
 		}
 
 		// Write to buffer
-#if defined(__riscos__)	// lookup in 8k (13bit) translation table
-		*buf++ = LinToLog[((sum_output + sum_output_filter) >> 13) & 0x1fff];
-#else
 		*buf++ = (sum_output + sum_output_filter) >> 10;
-#endif
 	}
 }
 
@@ -1298,9 +1234,6 @@ void DigitalRenderer::calc_buffer(int16 *buf, long count)
 
 #elif defined(WIN32)
 #include "SID_WIN32.h"
-
-#elif defined(__riscos__)
-#include "SID_Acorn.h"
 
 #else	// No sound
 void DigitalRenderer::init_sound(void) {ready = false;}

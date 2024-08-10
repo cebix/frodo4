@@ -37,17 +37,10 @@ char AppDirPath[1024];	// Path of application directory
 #define DATADIR
 #endif
 
-#ifdef __riscos__
-#define BASIC_ROM_FILE	"FrodoRsrc:Basic_ROM"
-#define KERNAL_ROM_FILE	"FrodoRsrc:Kernal_ROM"
-#define CHAR_ROM_FILE	"FrodoRsrc:Char_ROM"
-#define DRIVE_ROM_FILE	"FrodoRsrc:1541_ROM"
-#else
 #define BASIC_ROM_FILE DATADIR "Basic ROM"
 #define KERNAL_ROM_FILE DATADIR "Kernal ROM"
 #define CHAR_ROM_FILE DATADIR "Char ROM"
 #define DRIVE_ROM_FILE DATADIR "1541 ROM"
-#endif
 
 
 // Builtin ROMs
@@ -95,8 +88,4 @@ void Frodo::load_rom_files()
 
 #ifdef WIN32
 #include "main_WIN32.h"
-#endif
-
-#ifdef __riscos__
-#include "main_Acorn.h"
 #endif

@@ -298,10 +298,6 @@ void SAM(C64 *the_c64)
 	TheCPU->ExtConfig = (~R64.ddr | R64.pr) & 7;
 	TheCPU1541->GetState(&R1541);
 
-#ifdef __riscos__
-	Wimp_CommandWindow((int)"SAM");
-#endif
-
 	fin = stdin;
 	fout = stdout;
 	ferr = stdout;
@@ -446,10 +442,6 @@ void SAM(C64 *the_c64)
 	if (fout != ferr)
 		fclose(fout);
 
-#ifdef __riscos__
-	Wimp_CommandWindow(-1);
-#endif
-
 	// Set CPU registers
 	TheCPU->SetState(&R64);
 	TheCPU1541->SetState(&R1541);
@@ -480,11 +472,7 @@ static void handle_abort(...)
 {
 	WasAborted = true;
 #if !defined(HAVE_SIGACTION) && defined(HAVE_SIGNAL)
-#ifdef __riscos__
-	signal(SIGINT, (Handler*) handle_abort);
-#else
 	signal(SIGINT, (sighandler_t) handle_abort);
-#endif
 #endif
 }
 
@@ -497,11 +485,7 @@ static void init_abort(void)
 	sigemptyset(&my_sa.sa_mask);
 	sigaction(SIGINT, &my_sa, NULL);
 #elif defined(HAVE_SIGNAL)
-#ifdef __riscos__
-	signal(SIGINT, (Handler*) handle_abort);
-#else
 	signal(SIGINT, (sighandler_t) handle_abort);
-#endif
 #endif
 }
 
@@ -530,11 +514,7 @@ static bool aborted(void)
 
 static void read_line(void)
 {
-#ifdef __riscos__
-	OS_ReadLine(in_ptr = input, INPUT_LENGTH, 0, 255, 0);
-#else
 	fgets(in_ptr = input, INPUT_LENGTH, fin);
-#endif
 }
 
 
