@@ -25,10 +25,6 @@
 #include <InterfaceKit.h>
 #endif
 
-#ifdef AMIGA
-#include <graphics/rastport.h>
-#endif
-
 #ifdef HAVE_SDL
 struct SDL_Surface;
 #endif
@@ -107,25 +103,6 @@ private:
 	bool using_screen;		// Flag: Using the_screen
 	key_info old_key_info;
 	int draw_bitmap;		// Number of bitmap for the VIC to draw into
-#endif
-
-#ifdef AMIGA
-	void draw_led_bar(void);	// Draw LED bar at the bottom of the window
-	void draw_led(int num, int state);	// Draw one LED
-
-	struct Window *the_window;	// Pointer to C64 display window
-	struct Screen *the_screen;	// The window's screen
-	struct RastPort *the_rp;	// The window's RastPort
-	struct VisualInfo *the_visual_info;
-	struct Menu *the_menus;
-	struct TextFont *led_font;
-	struct TextFont *speedo_font;
-	struct RastPort temp_rp;	// For WritePixelArray8()
-	struct BitMap *temp_bm;
-	uint8 *chunky_buf;			// Chunky buffer for drawing into
-	LONG pens[16];				// Pens for C64 colors
-	int xo, yo;					// Window X/Y border size
-	struct FileRequester *open_req, *save_req;	// File requesters for load/save snapshot
 #endif
 
 #ifdef HAVE_SDL

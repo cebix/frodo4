@@ -706,10 +706,6 @@ bool C64::LoadSnapshot(char *filename)
 #include "C64_Be.h"
 #endif
 
-#ifdef AMIGA
-#include "C64_Amiga.h"
-#endif
-
 #ifdef __unix
 # if defined(QTOPIA) or defined(MAEMO)
 #  include "C64_Embedded.h"

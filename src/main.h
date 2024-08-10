@@ -87,32 +87,6 @@ private:
 
 
 /*
- *  AmigaOS specific stuff
- */
-
-#ifdef AMIGA
-
-class Frodo {
-public:
-	Frodo();
-	void ArgvReceived(int argc, char **argv);
-	void ReadyToRun(void);
-	void RunPrefsEditor(void);
-
-private:
-	void load_rom(const char *which, const char *path, uint8 *where, size_t size, const uint8 *builtin);
-	void load_rom_files();
-
-	char prefs_path[256];	// Pathname of current preferences file
-};
-
-// Global variables
-extern Frodo *be_app;	// Pointer to Frodo object
-
-#endif
-
-
-/*
  *  X specific stuff
  */
 

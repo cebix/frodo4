@@ -35,16 +35,6 @@
 #include <media/SoundPlayer.h>
 #endif
 
-#ifdef AMIGA
-#include <exec/types.h>
-#include <utility/hooks.h>
-#include <devices/ahi.h>
-#define USE_FIXPOINT_MATHS
-#define FIXPOINT_PREC 16	// number of fractional bits used in fixpoint representation
-#define PRECOMPUTE_RESONANCE
-#define ldSINTAB 9			// size of sinus table (0 to 90 degrees)
-#endif
-
 #ifdef SUN
 extern "C" {
 	#include <sys/audioio.h>
@@ -276,7 +266,7 @@ void MOS6581::SetState(MOS6581State *ss)
  **  Renderer for digital SID emulation (SIDTYPE_DIGITAL)
  **/
 
-#if defined(AMIGA) || defined(__riscos__)
+#if defined(__riscos__)
 const uint32 SAMPLE_FREQ = 22050;	// Sample output frequency in Hz
 #else
 const uint32 SAMPLE_FREQ = 44100;	// Sample output frequency in Hz
@@ -419,24 +409,6 @@ private:
 	BSoundPlayer *the_player;		// Pointer to sound player
 	bool player_stopped;			// Flag: player stopped
 #endif
-
-#ifdef AMIGA
-	static void sub_invoc(void);	// Sound sub-process
-	void sub_func(void);
-	struct Process *sound_process;
-	int quit_sig, pause_sig,
-		resume_sig, ahi_sig;		// Sub-process signals
-	struct Task *main_task;			// Main task
-	int main_sig;					// Main task signals
-	static ULONG sound_func(void);	// AHI callback
-	struct MsgPort *ahi_port;		// Port and IORequest for AHI
-	struct AHIRequest *ahi_io;
-	struct AHIAudioCtrl *ahi_ctrl;	// AHI control structure
-	struct AHISampleInfo sample[2];	// SampleInfos for double buffering
-	struct Hook sf_hook;			// Hook for callback function
-	int play_buf;					// Number of buffer currently playing
-#endif
-
 
 #ifdef HAVE_SDL
 	static void buffer_proc(void *cookie, uint8 *buffer, int size);
@@ -1341,9 +1313,6 @@ void DigitalRenderer::calc_buffer(int16 *buf, long count)
 #if defined(__BEOS__)
 #include "SID_Be.h"
 
-#elif defined(AMIGA)
-#include "SID_Amiga.h"
-
 #elif defined(HAVE_SDL)
 #include "SID_SDL.h"
 # if defined(__linux__)
@@ -1393,10 +1362,6 @@ void MOS6581::open_close_renderer(int old_type, int new_type)
 	// Create new renderer
 	if (new_type == SIDTYPE_DIGITAL) {
 		the_renderer = new DigitalRenderer(the_c64);
-#ifdef AMIGA
-	} else if (new_type == SIDTYPE_SIDCARD) {
-		the_renderer = new SIDCardRenderer;
-#endif
 #ifdef __linux__
 	} else if (new_type == SIDTYPE_SIDCARD) {
 		the_renderer = new CatweaselRenderer;

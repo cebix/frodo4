@@ -302,14 +302,9 @@ void SAM(C64 *the_c64)
 	Wimp_CommandWindow((int)"SAM");
 #endif
 
-#ifdef AMIGA
-	if (!(fin = fout = ferr = fopen("CON:0/0/640/480/SAM", "w+")))
-		return;
-#else
 	fin = stdin;
 	fout = stdout;
 	ferr = stdout;
-#endif
 
 	access_1541 = false;
 	address = R64.pc;
@@ -448,9 +443,6 @@ void SAM(C64 *the_c64)
 
 	exit_abort();
 
-#ifdef AMIGA
-	fclose(fin);
-#endif
 	if (fout != ferr)
 		fclose(fout);
 

@@ -25,12 +25,6 @@
 #include <KernelKit.h>
 #endif
 
-#ifdef AMIGA
-#include <devices/timer.h>
-#include <devices/gameport.h>
-#include <devices/inputevent.h>
-#endif
-
 #ifdef __riscos__
 #include "ROlib.h"
 #endif
@@ -144,18 +138,6 @@ private:
 	sem_id pause_sem;
 	sem_id sound_sync_sem;
 	bigtime_t start_time;
-#endif
-
-#ifdef AMIGA
-	struct MsgPort *timer_port;		// For speed limiter
-	struct timerequest *timer_io;
-	struct timeval start_time;
-	struct MsgPort *game_port;		// For joystick
-	struct IOStdReq *game_io;
-	struct GamePortTrigger game_trigger;
-	struct InputEvent game_event;
-	UBYTE joy_state;				// Current state of joystick
-	bool game_open, port_allocated;	// Flags: gameport.device opened, game port allocated
 #endif
 
 #ifdef __unix

@@ -86,8 +86,6 @@ void C64Display::UpdateLEDs(int l0, int l1, int l2, int l3)
 
 #if defined(__BEOS__)
 #include "Display_Be.h"
-#elif defined(AMIGA)
-#include "Display_Amiga.h"
 #elif defined(HAVE_SDL)
 # if defined(QTOPIA) or defined(MAEMO)
 #  include "Display_EmbeddedSDL.h"

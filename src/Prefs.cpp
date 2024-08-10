@@ -360,10 +360,6 @@ bool Prefs::Save(const char *filename)
 #include "Prefs_Be.h"
 #endif
 
-#ifdef AMIGA
-#include "Prefs_Amiga.h"
-#endif
-
 #ifdef WIN32
 #include "Prefs_WIN32.h"
 #endif

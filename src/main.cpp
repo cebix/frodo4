@@ -89,10 +89,6 @@ void Frodo::load_rom_files()
 #include "main_Be.h"
 #endif
 
-#ifdef AMIGA
-#include "main_Amiga.h"
-#endif
-
 #ifdef __unix
 #include "main_x.h"
 #endif
