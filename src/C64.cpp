@@ -46,7 +46,7 @@ bool IsFrodoSC = false;
 
 C64::C64()
 {
-	uint8 *p;
+	uint8_t *p;
 
 	// The thread is not yet running
 	thread_running = false;
@@ -60,13 +60,13 @@ C64::C64()
 	TheDisplay = new C64Display(this);
 
 	// Allocate RAM/ROM memory
-	RAM = new uint8[C64_RAM_SIZE];
-	Basic = new uint8[BASIC_ROM_SIZE];
-	Kernal = new uint8[KERNAL_ROM_SIZE];
-	Char = new uint8[CHAR_ROM_SIZE];
-	Color = new uint8[COLOR_RAM_SIZE];
-	RAM1541 = new uint8[DRIVE_RAM_SIZE];
-	ROM1541 = new uint8[DRIVE_ROM_SIZE];
+	RAM = new uint8_t[C64_RAM_SIZE];
+	Basic = new uint8_t[BASIC_ROM_SIZE];
+	Kernal = new uint8_t[KERNAL_ROM_SIZE];
+	Char = new uint8_t[CHAR_ROM_SIZE];
+	Color = new uint8_t[COLOR_RAM_SIZE];
+	RAM1541 = new uint8_t[DRIVE_RAM_SIZE];
+	ROM1541 = new uint8_t[DRIVE_ROM_SIZE];
 
 	// Create the chips
 	TheCPU = new MOS6510(this, RAM, Basic, Kernal, Char, Color);
@@ -512,8 +512,8 @@ bool C64::Load1541JobState(FILE *f)
 void C64::SaveSnapshot(char *filename)
 {
 	FILE *f;
-	uint8 flags;
-	uint8 delay;
+	uint8_t flags;
+	uint8_t delay;
 	int stat;
 
 	if ((f = fopen(filename, "wb")) == NULL) {
@@ -577,7 +577,7 @@ bool C64::LoadSnapshot(char *filename)
 	if ((f = fopen(filename, "rb")) != NULL) {
 		char Header[] = SNAPSHOT_HEADER;
 		char *b = Header, c = 0;
-		uint8 delay, i;
+		uint8_t delay, i;
 
 		// For some reason memcmp()/strcmp() and so forth utterly fail here.
 		while (*b > 32) {
@@ -587,7 +587,7 @@ bool C64::LoadSnapshot(char *filename)
 			}
 		}
 		if (b != NULL) {
-			uint8 flags;
+			uint8_t flags;
 			bool error = false;
 #ifndef FRODO_SC
 			long vicptr;	// File offset of VIC data

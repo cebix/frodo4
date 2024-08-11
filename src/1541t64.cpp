@@ -46,9 +46,9 @@
 
 
 // Prototypes
-static bool is_t64_header(const uint8 *header);
-static bool is_lynx_header(const uint8 *header);
-static bool is_p00_header(const uint8 *header);
+static bool is_t64_header(const uint8_t *header);
+static bool is_lynx_header(const uint8_t *header);
+static bool is_p00_header(const uint8_t *header);
 static bool parse_t64_file(FILE *f, vector<c64_dir_entry> &vec, char *dir_title);
 static bool parse_lynx_file(FILE *f, vector<c64_dir_entry> &vec, char *dir_title);
 static bool parse_p00_file(FILE *f, vector<c64_dir_entry> &vec, char *dir_title);
@@ -99,7 +99,7 @@ bool ArchDrive::change_arch(const char *path)
 		file_info.clear();
 
 		// Read header, determine archive type and parse archive contents
-		uint8 header[64];
+		uint8_t header[64];
 		fread(header, 1, 64, new_file);
 		bool parsed_ok = false;
 		if (is_t64_header(header)) {
@@ -140,7 +140,7 @@ bool ArchDrive::change_arch(const char *path)
  *  Open channel
  */
 
-uint8 ArchDrive::Open(int channel, const uint8 *name, int name_len)
+uint8_t ArchDrive::Open(int channel, const uint8_t *name, int name_len)
 {
 	D(bug("ArchDrive::Open channel %d, file %s\n", channel, name));
 
@@ -179,9 +179,9 @@ uint8 ArchDrive::Open(int channel, const uint8 *name, int name_len)
  *  Open file
  */
 
-uint8 ArchDrive::open_file(int channel, const uint8 *name, int name_len)
+uint8_t ArchDrive::open_file(int channel, const uint8_t *name, int name_len)
 {
-	uint8 plain_name[NAMEBUF_LENGTH];
+	uint8_t plain_name[NAMEBUF_LENGTH];
 	int plain_name_len;
 	int mode = FMODE_READ;
 	int type = FTYPE_DEL;
@@ -229,7 +229,7 @@ uint8 ArchDrive::open_file(int channel, const uint8 *name, int name_len)
 			}
 
 			// Copy file contents from archive file to temp file
-			uint8 *buf = new uint8[file_info[num].size];
+			uint8_t *buf = new uint8_t[file_info[num].size];
 			fseek(the_file, file_info[num].offset, SEEK_SET);
 			fread(buf, file_info[num].size, 1, the_file);
 			fwrite(buf, file_info[num].size, 1, file[channel]);
@@ -251,7 +251,7 @@ uint8 ArchDrive::open_file(int channel, const uint8 *name, int name_len)
  */
 
 // Return true if name 'n' matches pattern 'p'
-static bool match(const uint8 *p, int p_len, const uint8 *n)
+static bool match(const uint8_t *p, int p_len, const uint8_t *n)
 {
 	while (p_len-- > 0) {
 		if (*p == '*')	// Wildcard '*' matches all following characters
@@ -264,11 +264,11 @@ static bool match(const uint8 *p, int p_len, const uint8 *n)
 	return *n == 0;
 }
 
-bool ArchDrive::find_first_file(const uint8 *pattern, int pattern_len, int &num)
+bool ArchDrive::find_first_file(const uint8_t *pattern, int pattern_len, int &num)
 {
 	vector<c64_dir_entry>::const_iterator i, end = file_info.end();
 	for (i = file_info.begin(), num = 0; i != end; i++, num++) {
-		if (match(pattern, pattern_len, (uint8 *)i->name))
+		if (match(pattern, pattern_len, (uint8_t *)i->name))
 			return true;
 	}
 	return false;
@@ -279,7 +279,7 @@ bool ArchDrive::find_first_file(const uint8 *pattern, int pattern_len, int &num)
  *  Open directory, create temporary file
  */
 
-uint8 ArchDrive::open_directory(int channel, const uint8 *pattern, int pattern_len)
+uint8_t ArchDrive::open_directory(int channel, const uint8_t *pattern, int pattern_len)
 {
 	// Special treatment for "$0"
 	if (pattern[0] == '0' && pattern_len == 1) {
@@ -288,7 +288,7 @@ uint8 ArchDrive::open_directory(int channel, const uint8 *pattern, int pattern_l
 	}
 
 	// Skip everything before the ':' in the pattern
-	uint8 *t = (uint8 *)memchr(pattern, ':', pattern_len);
+	uint8_t *t = (uint8_t *)memchr(pattern, ':', pattern_len);
 	if (t) {
 		t++;
 		pattern_len -= t - pattern;
@@ -300,7 +300,7 @@ uint8 ArchDrive::open_directory(int channel, const uint8 *pattern, int pattern_l
 		return ST_OK;
 
 	// Create directory title
-	uint8 buf[] = "\001\004\001\001\0\0\022\042                \042 00 2A";
+	uint8_t buf[] = "\001\004\001\001\0\0\022\042                \042 00 2A";
 	for (int i=0; i<16 && dir_title[i]; i++)
 		buf[i + 8] = dir_title[i];
 	fwrite(buf, 1, 32, file[channel]);
@@ -310,13 +310,13 @@ uint8 ArchDrive::open_directory(int channel, const uint8 *pattern, int pattern_l
 	for (i = file_info.begin(); i != end; i++) {
 
 		// Include only files matching the pattern
-		if (pattern_len == 0 || match(pattern, pattern_len, (uint8 *)i->name)) {
+		if (pattern_len == 0 || match(pattern, pattern_len, (uint8_t *)i->name)) {
 
 			// Clear line with spaces and terminate with null byte
 			memset(buf, ' ', 31);
 			buf[31] = 0;
 
-			uint8 *p = (uint8 *)buf;
+			uint8_t *p = (uint8_t *)buf;
 			*p++ = 0x01;	// Dummy line link
 			*p++ = 0x01;
 
@@ -331,7 +331,7 @@ uint8 ArchDrive::open_directory(int channel, const uint8 *pattern, int pattern_l
 
 			// Convert and insert file name
 			*p++ = '\"';
-			uint8 *q = p;
+			uint8_t *q = p;
 			for (int j=0; j<16 && i->name[j]; j++)
 				*q++ = i->name[j];
 			*q++ = '\"';
@@ -391,7 +391,7 @@ uint8 ArchDrive::open_directory(int channel, const uint8 *pattern, int pattern_l
  *  Close channel
  */
 
-uint8 ArchDrive::Close(int channel)
+uint8_t ArchDrive::Close(int channel)
 {
 	D(bug("ArchDrive::Close channel %d\n", channel));
 
@@ -426,7 +426,7 @@ void ArchDrive::close_all_channels(void)
  *  Read from channel
  */
 
-uint8 ArchDrive::Read(int channel, uint8 &byte)
+uint8_t ArchDrive::Read(int channel, uint8_t &byte)
 {
 	D(bug("ArchDrive::Read channel %d\n", channel));
 
@@ -460,7 +460,7 @@ uint8 ArchDrive::Read(int channel, uint8 &byte)
  *  Write to channel
  */
 
-uint8 ArchDrive::Write(int channel, uint8 byte, bool eoi)
+uint8_t ArchDrive::Write(int channel, uint8_t byte, bool eoi)
 {
 	D(bug("ArchDrive::Write channel %d, byte %02x, eoi %d\n", channel, byte, eoi));
 
@@ -496,7 +496,7 @@ uint8 ArchDrive::Write(int channel, uint8 byte, bool eoi)
 // RENAME:new=old
 //        ^   ^
 // new_file   old_file
-void ArchDrive::rename_cmd(const uint8 *new_file, int new_file_len, const uint8 *old_file, int old_file_len)
+void ArchDrive::rename_cmd(const uint8_t *new_file, int new_file_len, const uint8_t *old_file, int old_file_len)
 {
 	// Check if destination file is already present
 	int num;
@@ -543,7 +543,7 @@ void ArchDrive::Reset(void)
  *  of the file types supported by this module
  */
 
-static bool is_t64_header(const uint8 *header)
+static bool is_t64_header(const uint8_t *header)
 {
 	if (memcmp(header, "C64S tape file", 14) == 0
 	 || memcmp(header, "C64 tape image", 14) == 0
@@ -553,17 +553,17 @@ static bool is_t64_header(const uint8 *header)
 		return false;
 }
 
-static bool is_lynx_header(const uint8 *header)
+static bool is_lynx_header(const uint8_t *header)
 {
 	return memcmp(header + 0x38, "USE LYNX", 8) == 0;
 }
 
-static bool is_p00_header(const uint8 *header)
+static bool is_p00_header(const uint8_t *header)
 {
 	return memcmp(header, "C64File", 7) == 0;
 }
 
-bool IsArchFile(const char *path, const uint8 *header, long size)
+bool IsArchFile(const char *path, const uint8_t *header, long size)
 {
 	return is_t64_header(header) || is_lynx_header(header) || is_p00_header(header);
 }
@@ -578,7 +578,7 @@ static bool parse_t64_file(FILE *f, vector<c64_dir_entry> &vec, char *dir_title)
 {
 	// Read header and get maximum number of files contained
 	fseek(f, 32, SEEK_SET);
-	uint8 buf[32];
+	uint8_t buf[32];
 	fread(&buf, 32, 1, f);
 	int max = (buf[3] << 8) | buf[2];
 	if (max == 0)
@@ -587,7 +587,7 @@ static bool parse_t64_file(FILE *f, vector<c64_dir_entry> &vec, char *dir_title)
 	memcpy(dir_title, buf+8, 16);
 
 	// Allocate buffer for file records and read them
-	uint8 *buf2 = new uint8[max * 32];
+	uint8_t *buf2 = new uint8_t[max * 32];
 	fread(buf2, 32, max, f);
 
 	// Determine number of files contained
@@ -603,15 +603,15 @@ static bool parse_t64_file(FILE *f, vector<c64_dir_entry> &vec, char *dir_title)
 
 	// Construct file information array
 	vec.reserve(num_files);
-	uint8 *b = buf2;
+	uint8_t *b = buf2;
 	for (int i=0; i<max; i++, b+=32) {
 		if (b[0] == 1) {
 
 			// Convert file name (strip trailing spaces)
-			uint8 name_buf[17];
+			uint8_t name_buf[17];
 			memcpy(name_buf, b + 16, 16);
 			name_buf[16] = 0x20;
-			uint8 *p = name_buf + 16;
+			uint8_t *p = name_buf + 16;
 			while (*p-- == 0x20) ;
 			p[2] = 0;
 
@@ -649,10 +649,10 @@ static bool parse_lynx_file(FILE *f, vector<c64_dir_entry> &vec, char *dir_title
 	for (int i=0; i<num_files; i++) {
 
 		// Read and convert file name (strip trailing shift-spaces)
-		uint8 name_buf[17];
+		uint8_t name_buf[17];
 		fread(name_buf, 16, 1, f);
 		name_buf[16] = 0xa0;
-		uint8 *p = name_buf + 16;
+		uint8_t *p = name_buf + 16;
 		while (*p-- == 0xa0) ;
 		p[2] = 0;
 
@@ -680,7 +680,7 @@ static bool parse_lynx_file(FILE *f, vector<c64_dir_entry> &vec, char *dir_title
 
 		// Read start address
 		long here = ftell(f);
-		uint8 sa_lo, sa_hi;
+		uint8_t sa_lo, sa_hi;
 		fseek(f, cur_offset, SEEK_SET);
 		fread(&sa_lo, 1, 1, f);
 		fread(&sa_hi, 1, 1, f);
@@ -704,11 +704,11 @@ static bool parse_p00_file(FILE *f, vector<c64_dir_entry> &vec, char *dir_title)
 	vec.reserve(1);
 
 	// Read file name and start address
-	uint8 name_buf[17];
+	uint8_t name_buf[17];
 	fseek(f, 8, SEEK_SET);
 	fread(name_buf, 17, 1, f);
 	name_buf[16] = 0;
-	uint8 sa_lo, sa_hi;
+	uint8_t sa_lo, sa_hi;
 	fseek(f, 26, SEEK_SET);
 	fread(&sa_lo, 1, 1, f);
 	fread(&sa_hi, 1, 1, f);
@@ -729,7 +729,7 @@ bool ReadArchDirectory(const char *path, vector<c64_dir_entry> &vec)
 	if (f) {
 
 		// Read header
-		uint8 header[64];
+		uint8_t header[64];
 		fread(header, 1, sizeof(header), f);
 
 		// Determine archive type and parse archive

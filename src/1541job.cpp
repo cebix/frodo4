@@ -83,11 +83,11 @@ const int sector_offset[36] = {
  *   emulation is enabled
  */
 
-Job1541::Job1541(uint8 *ram1541) : ram(ram1541)
+Job1541::Job1541(uint8_t *ram1541) : ram(ram1541)
 {
 	the_file = NULL;
 
-	gcr_data = gcr_ptr = gcr_track_start = new uint8[GCR_DISK_SIZE];
+	gcr_data = gcr_ptr = gcr_track_start = new uint8_t[GCR_DISK_SIZE];
 	gcr_track_end = gcr_track_start + GCR_TRACK_SIZE;
 	current_halftrack = 2;
 
@@ -139,8 +139,8 @@ void Job1541::NewPrefs(Prefs *prefs)
 void Job1541::open_d64_file(char *filepath)
 {
 	long size;
-	uint8 magic[4];
-	uint8 bam[256];
+	uint8_t magic[4];
+	uint8_t bam[256];
 
 	// Clear GCR buffer
 	memset(gcr_data, 0x55, GCR_DISK_SIZE);
@@ -211,7 +211,7 @@ void Job1541::WriteSector(void)
 {
 	int track = ram[0x18];
 	int sector = ram[0x19];
-	uint16 buf = ram[0x30] | (ram[0x31] << 8);
+	uint16_t buf = ram[0x30] | (ram[0x31] << 8);
 
 	if (buf <= 0x0700)
 		if (write_sector(track, sector, ram + buf))
@@ -228,12 +228,12 @@ void Job1541::FormatTrack(void)
 	int track = ram[0x51];
 
 	// Get new ID
-	uint8 bufnum = ram[0x3d];
+	uint8_t bufnum = ram[0x3d];
 	id1 = ram[0x12 + bufnum];
 	id2 = ram[0x13 + bufnum];
 
 	// Create empty block
-	uint8 buf[256];
+	uint8_t buf[256];
 	memset(buf, 1, 256);
 	buf[0] = 0x4b;
 
@@ -255,7 +255,7 @@ void Job1541::FormatTrack(void)
  *  true: success, false: error
  */
 
-bool Job1541::read_sector(int track, int sector, uint8 *buffer)
+bool Job1541::read_sector(int track, int sector, uint8_t *buffer)
 {
 	int offset;
 
@@ -274,7 +274,7 @@ bool Job1541::read_sector(int track, int sector, uint8 *buffer)
  *  true: success, false: error
  */
 
-bool Job1541::write_sector(int track, int sector, uint8 *buffer)
+bool Job1541::write_sector(int track, int sector, uint8_t *buffer)
 {
 	int offset;
 
@@ -311,14 +311,14 @@ int Job1541::offset_from_ts(int track, int sector)
  *  Convert 4 bytes to 5 GCR encoded bytes
  */
 
-const uint16 gcr_table[16] = {
+const uint16_t gcr_table[16] = {
 	0x0a, 0x0b, 0x12, 0x13, 0x0e, 0x0f, 0x16, 0x17,
 	0x09, 0x19, 0x1a, 0x1b, 0x0d, 0x1d, 0x1e, 0x15
 };
 
-void Job1541::gcr_conv4(uint8 *from, uint8 *to)
+void Job1541::gcr_conv4(uint8_t *from, uint8_t *to)
 {
-	uint16 g;
+	uint16_t g;
 
 	g = (gcr_table[*from >> 4] << 5) | gcr_table[*from & 15];
 	*to++ = g >> 2;
@@ -347,9 +347,9 @@ void Job1541::gcr_conv4(uint8 *from, uint8 *to)
 
 void Job1541::sector2gcr(int track, int sector)
 {
-	uint8 block[256];
-	uint8 buf[4];
-	uint8 *p = gcr_data + (track-1) * GCR_TRACK_SIZE + sector * GCR_SECTOR_SIZE;
+	uint8_t block[256];
+	uint8_t buf[4];
+	uint8_t *p = gcr_data + (track-1) * GCR_TRACK_SIZE + sector * GCR_SECTOR_SIZE;
 
 	read_sector(track, sector, block);
 
@@ -370,7 +370,7 @@ void Job1541::sector2gcr(int track, int sector)
 	p += 9;
 
 	// Create GCR data
-	uint8 sum;
+	uint8_t sum;
 	*p++ = 0xff;							// SYNC
 	buf[0] = 0x07;							// Data mark
 	sum = buf[1] = block[0];

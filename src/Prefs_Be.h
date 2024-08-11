@@ -30,35 +30,35 @@ const rgb_color dark_color = {184, 184, 184, 0};
 
 
 // Window thread messages
-const uint32 MSG_OK = 'okok';
-const uint32 MSG_CANCEL = 'cncl';
-const uint32 MSG_SPRITES_ON = 'spon';
-const uint32 MSG_SPRITE_COLLISIONS = 'scol';
-const uint32 MSG_JOYSTICK_1_PORT = 'joy1';
-const uint32 MSG_JOYSTICK_2_PORT = 'joy2';
-const uint32 MSG_JOYSTICK_SWAP = 'jswp';
-const uint32 MSG_LIMIT_SPEED = 'lmit';
-const uint32 MSG_FAST_RESET = 'frst';
-const uint32 MSG_CIA_IRQ_HACK = 'cirq';
-const uint32 MSG_SID_FILTERS = 'filt';
-const uint32 MSG_DOUBLE_SCAN = 'dbls';
-const uint32 MSG_MAP_SLASH = 'mpsl';
-const uint32 MSG_EMUL_1541_PROC = '15pr';
-const uint32 MSG_GETDRIVE_8 = 'gtd8';
-const uint32 MSG_GETDRIVE_9 = 'gtd9';
-const uint32 MSG_GETDRIVE_10 = 'gtd:';
-const uint32 MSG_GETDRIVE_11 = 'gtd;';
-const uint32 MSG_DRIVE_PANEL_RETURNED = 'gdr8';
-const uint32 MSG_SID_TYPE = 'sidt';
-const uint32 MSG_REU_SIZE = 'reus';
-const uint32 MSG_DISPLAY_TYPE = 'dspt';
+const uint32_t MSG_OK = 'okok';
+const uint32_t MSG_CANCEL = 'cncl';
+const uint32_t MSG_SPRITES_ON = 'spon';
+const uint32_t MSG_SPRITE_COLLISIONS = 'scol';
+const uint32_t MSG_JOYSTICK_1_PORT = 'joy1';
+const uint32_t MSG_JOYSTICK_2_PORT = 'joy2';
+const uint32_t MSG_JOYSTICK_SWAP = 'jswp';
+const uint32_t MSG_LIMIT_SPEED = 'lmit';
+const uint32_t MSG_FAST_RESET = 'frst';
+const uint32_t MSG_CIA_IRQ_HACK = 'cirq';
+const uint32_t MSG_SID_FILTERS = 'filt';
+const uint32_t MSG_DOUBLE_SCAN = 'dbls';
+const uint32_t MSG_MAP_SLASH = 'mpsl';
+const uint32_t MSG_EMUL_1541_PROC = '15pr';
+const uint32_t MSG_GETDRIVE_8 = 'gtd8';
+const uint32_t MSG_GETDRIVE_9 = 'gtd9';
+const uint32_t MSG_GETDRIVE_10 = 'gtd:';
+const uint32_t MSG_GETDRIVE_11 = 'gtd;';
+const uint32_t MSG_DRIVE_PANEL_RETURNED = 'gdr8';
+const uint32_t MSG_SID_TYPE = 'sidt';
+const uint32_t MSG_REU_SIZE = 'reus';
+const uint32_t MSG_DISPLAY_TYPE = 'dspt';
 
-const uint32 MSG_OPEN = 'open';
-const uint32 MSG_SAVE = 'save';
-const uint32 MSG_SAVE_AS = 'svas';
-const uint32 MSG_REVERT = 'rvrt';
-const uint32 MSG_OPEN_PANEL_RETURNED = 'oprt';
-const uint32 MSG_SAVE_PANEL_RETURNED = 'svrt';
+const uint32_t MSG_OPEN = 'open';
+const uint32_t MSG_SAVE = 'save';
+const uint32_t MSG_SAVE_AS = 'svas';
+const uint32_t MSG_REVERT = 'rvrt';
+const uint32_t MSG_OPEN_PANEL_RETURNED = 'oprt';
+const uint32_t MSG_SAVE_PANEL_RETURNED = 'svrt';
 
 
 /*
@@ -73,16 +73,16 @@ public:
 	PrefsWindow(Prefs *p, bool start, char *path);
 	virtual void MessageReceived(BMessage *msg);
 	virtual bool QuitRequested(void);
-	virtual bool FilterKeyDown(uint32 *aChar, BView **target);
+	virtual bool FilterKeyDown(uint32_t *aChar, BView **target);
 
 private:
-	BCheckBox *make_checkbox(BRect frame, char *label, uint32 what, BView *parent);
+	BCheckBox *make_checkbox(BRect frame, char *label, uint32_t what, BView *parent);
 	NumberControl *make_number_entry(BRect frame, char *label_text, BView *parent);
 	PathControl *make_path_entry(BRect frame, char *label, BView *parent);
-	BPopUpMenu *make_sidtype_popup(BRect frame, char *label_text, uint32 what, BView *parent);
-	BPopUpMenu *make_reusize_popup(BRect frame, char *label_text, uint32 what, BView *parent);
-	BPopUpMenu *make_disptype_popup(BRect frame, char *label_text, uint32 what, BView *parent);
-	BPopUpMenu *make_joystick_popup(BRect frame, char *label_text, uint32 what, BView *parent);
+	BPopUpMenu *make_sidtype_popup(BRect frame, char *label_text, uint32_t what, BView *parent);
+	BPopUpMenu *make_reusize_popup(BRect frame, char *label_text, uint32_t what, BView *parent);
+	BPopUpMenu *make_disptype_popup(BRect frame, char *label_text, uint32_t what, BView *parent);
+	BPopUpMenu *make_joystick_popup(BRect frame, char *label_text, uint32_t what, BView *parent);
 	void set_values(void);
 	void get_values(void);
 	void ghost_controls(void);
@@ -378,7 +378,7 @@ PrefsWindow::PrefsWindow(Prefs *p, bool start, char *path) : BWindow(BRect(0, 0,
  *  Create checkbox
  */
 
-BCheckBox *PrefsWindow::make_checkbox(BRect frame, char *label, uint32 what, BView *parent)
+BCheckBox *PrefsWindow::make_checkbox(BRect frame, char *label, uint32_t what, BView *parent)
 {
 	BCheckBox *checkbox = new BCheckBox(frame, "", label, new BMessage(what));
 	parent->AddChild(checkbox);
@@ -425,7 +425,7 @@ PathControl *PrefsWindow::make_path_entry(BRect frame, char *label, BView *paren
  *  Create display type popup
  */
 
-BPopUpMenu *PrefsWindow::make_disptype_popup(BRect frame, char *label_text, uint32 what, BView *parent)
+BPopUpMenu *PrefsWindow::make_disptype_popup(BRect frame, char *label_text, uint32_t what, BView *parent)
 {
 	BPopUpMenu *popup = new BPopUpMenu("display_type popup", true, true);
 	popup->AddItem(new BMenuItem("Window", new BMessage(what)));
@@ -443,7 +443,7 @@ BPopUpMenu *PrefsWindow::make_disptype_popup(BRect frame, char *label_text, uint
  *  Create SID type popup
  */
 
-BPopUpMenu *PrefsWindow::make_sidtype_popup(BRect frame, char *label_text, uint32 what, BView *parent)
+BPopUpMenu *PrefsWindow::make_sidtype_popup(BRect frame, char *label_text, uint32_t what, BView *parent)
 {
 	BPopUpMenu *popup = new BPopUpMenu("sid_type popup", true, true);
 	popup->AddItem(new BMenuItem("None", new BMessage(what)));
@@ -461,7 +461,7 @@ BPopUpMenu *PrefsWindow::make_sidtype_popup(BRect frame, char *label_text, uint3
  *  Create REU size popup
  */
 
-BPopUpMenu *PrefsWindow::make_reusize_popup(BRect frame, char *label_text, uint32 what, BView *parent)
+BPopUpMenu *PrefsWindow::make_reusize_popup(BRect frame, char *label_text, uint32_t what, BView *parent)
 {
 	BPopUpMenu *popup = new BPopUpMenu("reu_size popup", true, true);
 	popup->AddItem(new BMenuItem("None", new BMessage(what)));
@@ -481,7 +481,7 @@ BPopUpMenu *PrefsWindow::make_reusize_popup(BRect frame, char *label_text, uint3
  *  Create joystick port popup
  */
 
-BPopUpMenu *PrefsWindow::make_joystick_popup(BRect frame, char *label_text, uint32 what, BView *parent)
+BPopUpMenu *PrefsWindow::make_joystick_popup(BRect frame, char *label_text, uint32_t what, BView *parent)
 {
 	BPopUpMenu *popup = new BPopUpMenu("joystick popup", true, true);
 	popup->AddItem(new BMenuItem("None", new BMessage(what)));
@@ -753,7 +753,7 @@ void PrefsWindow::MessageReceived(BMessage *msg)
  *  Intercept ESC key (works as clicking the Cancel button)
  */
 
-bool PrefsWindow::FilterKeyDown(uint32 *aChar, BView **target)
+bool PrefsWindow::FilterKeyDown(uint32_t *aChar, BView **target)
 {
 	if (*aChar == B_ESCAPE) {
 		// Flash Cancel button

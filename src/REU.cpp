@@ -107,7 +107,7 @@ void REU::open_close_reu(int old_size, int new_size)
 				break;
 		}
 		ram_mask = ram_size - 1;
-		ex_ram = new uint8[ram_size];
+		ex_ram = new uint8_t[ram_size];
 
 		// Set size bit in status register
 		if (ram_size > 0x20000)
@@ -142,14 +142,14 @@ void REU::Reset(void)
  *  Read from REU register
  */
 
-uint8 REU::ReadRegister(uint16 adr)
+uint8_t REU::ReadRegister(uint16_t adr)
 {
 	if (ex_ram == NULL)
 		return rand();
 
 	switch (adr) {
 		case 0:{
-			uint8 ret = regs[0];
+			uint8_t ret = regs[0];
 			regs[0] &= 0x1f;
 			return ret;
 		}
@@ -169,7 +169,7 @@ uint8 REU::ReadRegister(uint16 adr)
  *  Write to REU register
  */
 
-void REU::WriteRegister(uint16 adr, uint8 byte)
+void REU::WriteRegister(uint16_t adr, uint8_t byte)
 {
 	if (ex_ram == NULL)
 		return;
@@ -215,8 +215,8 @@ void REU::FF00Trigger(void)
 void REU::execute_dma(void)
 {
 	// Get C64 and REU transfer base addresses
-	uint16 c64_adr = regs[2] | (regs[3] << 8);
-	uint32 reu_adr = regs[4] | (regs[5] << 8) | (regs[6] << 16);
+	uint16_t c64_adr = regs[2] | (regs[3] << 8);
+	uint32_t reu_adr = regs[4] | (regs[5] << 8) | (regs[6] << 16);
 
 	// Calculate transfer length
 	int length = regs[7] | (regs[8] << 8);
@@ -224,8 +224,8 @@ void REU::execute_dma(void)
 		length = 0x10000;
 
 	// Calculate address increments
-	uint32 c64_inc = (regs[10] & 0x80) ? 0 : 1;
-	uint32 reu_inc = (regs[10] & 0x40) ? 0 : 1;
+	uint32_t c64_inc = (regs[10] & 0x80) ? 0 : 1;
+	uint32_t reu_inc = (regs[10] & 0x40) ? 0 : 1;
 
 	// Do transfer
 	switch (regs[1] & 3) {
@@ -242,7 +242,7 @@ void REU::execute_dma(void)
 
 		case 2:		// C64 <-> REU
 			for (; length--; c64_adr+=c64_inc, reu_adr+=reu_inc) {
-				uint8 tmp = the_cpu->REUReadByte(c64_adr);
+				uint8_t tmp = the_cpu->REUReadByte(c64_adr);
 				the_cpu->REUWriteByte(c64_adr, ex_ram[reu_adr & ram_mask]);
 				ex_ram[reu_adr & ram_mask] = tmp;
 			}

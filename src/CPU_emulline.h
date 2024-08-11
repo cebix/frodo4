@@ -33,7 +33,7 @@
 #endif
 
 // Read zeropage operand address
-#define read_adr_zero() ((uint16)read_byte_imm())
+#define read_adr_zero() ((uint16_t)read_byte_imm())
 
 // Read zeropage x-indexed operand address
 #define read_adr_zero_x() ((read_byte_imm() + x) & 0xff)
@@ -809,7 +809,7 @@
 #if PRECISE_CPU_CYCLES
 #define Branch(flag) \
 	if (flag) { \
-		pc += (int8)*pc + 1; \
+		pc += (int8_t)*pc + 1; \
 		if (((pc-pc_base) ^ (old_pc - pc_base)) & 0xff00) { \
 			ENDOP(4); \
 		} else { \
@@ -822,7 +822,7 @@
 #else
 #define Branch(flag) \
 	if (flag) { \
-		pc += (int8)*pc + 1; \
+		pc += (int8_t)*pc + 1; \
 		ENDOP(3); \
 	} else { \
 		pc++; \
@@ -832,8 +832,8 @@
 #else
 #define Branch(flag) \
 	if (flag) { \
-		uint16 old_pc = pc; \
-		pc += (int8)read_byte(pc) + 1; \
+		uint16_t old_pc = pc; \
+		pc += (int8_t)read_byte(pc) + 1; \
 		if ((pc ^ old_pc) & 0xff00) { \
 			ENDOP(4); \
 		} else { \

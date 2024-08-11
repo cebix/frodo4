@@ -45,7 +45,7 @@ public:
 
 	virtual void Reset(void);
 	virtual void EmulateLine(void) {}
-	virtual void WriteRegister(uint16 adr, uint8 byte);
+	virtual void WriteRegister(uint16_t adr, uint8_t byte);
 	virtual void NewPrefs(Prefs *prefs) {}
 	virtual void Pause(void) {}
 	virtual void Resume(void) {}
@@ -87,7 +87,7 @@ CatweaselRenderer::~CatweaselRenderer()
 void CatweaselRenderer::Reset(void)
 {
 	if (cwsid_fh >= 0) {
-		uint8 zero = 0;
+		uint8_t zero = 0;
 		ioctl(cwsid_fh, CWSID_IOCTL_RESET);
 		lseek(cwsid_fh, 24, SEEK_SET);
 		write(cwsid_fh, &zero, 1);
@@ -95,7 +95,7 @@ void CatweaselRenderer::Reset(void)
 }
 
 // Write to register
-void CatweaselRenderer::WriteRegister(uint16 adr, uint8 byte)
+void CatweaselRenderer::WriteRegister(uint16_t adr, uint8_t byte)
 {
 	if (cwsid_fh >= 0 && adr < 0x1a) {
 		lseek(cwsid_fh, adr, SEEK_SET);

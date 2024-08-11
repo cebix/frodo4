@@ -63,10 +63,10 @@ enum
 /*
   Load an 1 plane XBM into a 8 planes SDL_Surface.
 */
-static SDL_Surface *SDLGui_LoadXBM(int w, int h, Uint8 *srcbits)
+static SDL_Surface *SDLGui_LoadXBM(int w, int h, uint8_t *srcbits)
 {
   SDL_Surface *bitmap;
-  Uint8 *dstbits;
+  uint8_t *dstbits;
   int x, y, srcpitch;
 
   /* Allocate the bitmap */
@@ -78,7 +78,7 @@ static SDL_Surface *SDLGui_LoadXBM(int w, int h, Uint8 *srcbits)
   }
 
   srcpitch = ((w + 7) / 8);
-  dstbits = (Uint8 *)bitmap->pixels;
+  dstbits = (uint8_t *)bitmap->pixels;
   int mask = 1;
 
   /* Copy the pixels */
@@ -247,7 +247,7 @@ void SDLGui_UpdateRect(SDL_Rect *rect)
 /*
   Maps an SDL_Color to the screen format.
 */
-Uint32 SDLGui_MapColor(SDL_Color *color)
+uint32_t SDLGui_MapColor(SDL_Color *color)
 {
   return SDL_MapRGB(sdlscrn->format, color->r, color->g, color->b);
 }
@@ -395,9 +395,9 @@ void SDLGui_Draw3DAround(SDL_Rect *coord, SDL_Color *upleftc, SDL_Color *downrig
 {
   SDL_Rect rect;
   int i;
-  Uint32 upleftcol    = SDLGui_MapColor(upleftc);
-  Uint32 downrightcol = SDLGui_MapColor(downrightc);
-  Uint32 cornercol    = SDLGui_MapColor(cornerc);
+  uint32_t upleftcol    = SDLGui_MapColor(upleftc);
+  uint32_t downrightcol = SDLGui_MapColor(downrightc);
+  uint32_t cornercol    = SDLGui_MapColor(cornerc);
 
   screenlock();
 
@@ -457,7 +457,7 @@ void SDLGui_Draw3DAround(SDL_Rect *coord, SDL_Color *upleftc, SDL_Color *downrig
 void SDLGui_DrawBoxAround(SDL_Rect *coord, SDL_Color *color, int width)
 {
   SDL_Rect rect;
-  Uint32 col = SDLGui_MapColor(color);
+  uint32_t col = SDLGui_MapColor(color);
 
   screenlock();
 
@@ -640,7 +640,7 @@ void SDLGui_DrawButton(SGOBJ *bdlg, int objnum)
 */
 void SDLGui_DrawCheckBoxState(SGOBJ *cdlg, int objnum)
 {
-  Uint32 grey = SDLGui_MapColor(greyc);
+  uint32_t grey = SDLGui_MapColor(greyc);
   SDL_Rect coord;
   char str[2];
   SDL_Color *textc;
@@ -1068,8 +1068,8 @@ int SDLGui_MouseClick(SGOBJ *dlg, int fx, int fy, cursor_state *cursor)
           break;
 
         case SDL_MOUSEBUTTONUP:
-          x = reinterpret_cast<intptr>(evnt.user.data1);
-          y = reinterpret_cast<intptr>(evnt.user.data2);
+          x = reinterpret_cast<intptr_t>(evnt.user.data1);
+          y = reinterpret_cast<intptr_t>(evnt.user.data2);
           if (SDLGui_UpdateObjState(dlg, clicked_obj, original_state, x, y))
           {
             // true if mouse button is released over clicked object.
@@ -1374,8 +1374,8 @@ SDL_Event getEvent(SGOBJ *dlg, cursor_state *cursor)
       	case SDL_KEYDOWN:
 	case SDL_KEYUP:
 	  e.type = evnt.user.code;
-          e.key.keysym.sym = (SDLKey)reinterpret_cast<uintptr>(evnt.user.data1);
-          e.key.keysym.mod = (SDLMod)reinterpret_cast<uintptr>(evnt.user.data2);
+          e.key.keysym.sym = (SDLKey)reinterpret_cast<uintptr_t>(evnt.user.data1);
+          e.key.keysym.mod = (SDLMod)reinterpret_cast<uintptr_t>(evnt.user.data2);
 	  return e;
 
         case SDL_MOUSEBUTTONDOWN:
@@ -1385,8 +1385,8 @@ SDL_Event getEvent(SGOBJ *dlg, cursor_state *cursor)
 		fprintf(stderr, "Debug mouse down\n");
 	else
 		fprintf(stderr, "Debug mouse down\n");
-          e.button.x = reinterpret_cast<intptr>(evnt.user.data1);
-          e.button.y = reinterpret_cast<intptr>(evnt.user.data2);
+          e.button.x = reinterpret_cast<intptr_t>(evnt.user.data1);
+          e.button.y = reinterpret_cast<intptr_t>(evnt.user.data2);
 	  return e;
 
         case SDL_USEREVENT:

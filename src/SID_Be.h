@@ -97,6 +97,6 @@ void DigitalRenderer::Resume(void)
 
 void DigitalRenderer::buffer_proc(void *cookie, void *buffer, size_t size, const media_raw_audio_format &format)
 {
-	((DigitalRenderer *)cookie)->calc_buffer((int16 *)buffer, size);
+	((DigitalRenderer *)cookie)->calc_buffer((int16_t *)buffer, size);
 	((DigitalRenderer *)cookie)->the_c64->SoundSync();
 }

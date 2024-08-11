@@ -28,6 +28,8 @@
 #include <errno.h>
 #include <signal.h>
 
+#include <cstdint>
+
 #include <vector>
 using std::vector;
 
@@ -113,88 +115,13 @@ using std::vector;
 
 #include <assert.h>
 
-#if EEXIST == ENOTEMPTY
-#define BROKEN_OS_PROBABLY_AIX
-#endif
-
-#ifdef __NeXT__
-#define S_IRUSR S_IREAD
-#define S_IWUSR S_IWRITE
-#define S_IXUSR S_IEXEC
-#define S_ISDIR(val) (S_IFDIR & val)
-struct utimbuf
-{
-    time_t actime;
-    time_t modtime;
-};
-#endif
-
-#ifdef __DOS__
-#include <pc.h>
-#include <io.h>
-#else
-#undef O_BINARY
-#define O_BINARY 0
-#endif
-
 #ifdef WIN32
 #include <windows.h>
 #include <direct.h>
-#if !defined(M_PI)
-#define M_PI 3.14159265358979323846
-#endif
 #define S_ISDIR(m) (((m) & S_IFMT) == S_IFDIR)
-#if _MSC_VER < 1100
-#define bool char
-#endif
 #define LITTLE_ENDIAN_UNALIGNED 1
 #endif
 
-/* If char has more then 8 bits, good night. */
-#ifndef __BEOS__
-typedef unsigned char uint8;
-typedef signed char int8;
-
-#if SIZEOF_SHORT == 2
-typedef unsigned short uint16;
-typedef short int16;
-#elif SIZEOF_INT == 2
-typedef unsigned int uint16;
-typedef int int16;
-#else
-#error No 2 byte type, you lose.
-#endif
-
-#if SIZEOF_INT == 4
-typedef unsigned int uint32;
-typedef int int32;
-#elif SIZEOF_LONG == 4
-typedef unsigned long uint32;
-typedef long int32;
-#else
-#error No 4 byte type, you lose.
-#endif
-
-#if SIZEOF_LONG == 8
-typedef unsigned long uint64;
-typedef long int64;
-#elif SIZEOF_LONG_LONG == 8
-typedef unsigned long long uint64;
-typedef long long int64;
-#else
-#error No 8 byte type, you lose.
-#endif
-
-#if SIZEOF_VOID_P == 4
-typedef uint32 uintptr;
-typedef int32 intptr;
-#elif SIZEOF_VOID_P == 8
-typedef uint64 uintptr;
-typedef int64 intptr;
-#else
-#error Unsupported size of pointer
-#endif
-
-#else
+#ifdef __BEOS__
 #include <support/SupportDefs.h>
-#endif	// __BEOS__
+#endif

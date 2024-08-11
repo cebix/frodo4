@@ -176,7 +176,7 @@ void IEC::UpdateLEDs(void)
  *  Output one byte
  */
 
-uint8 IEC::Out(uint8 byte, bool eoi)
+uint8_t IEC::Out(uint8_t byte, bool eoi)
 {
 	if (listener_active) {
 		if (received_cmd == CMD_OPEN)
@@ -193,7 +193,7 @@ uint8 IEC::Out(uint8 byte, bool eoi)
  *  Output one byte with ATN (Talk/Listen/Untalk/Unlisten)
  */
 
-uint8 IEC::OutATN(uint8 byte)
+uint8_t IEC::OutATN(uint8_t byte)
 {
 	received_cmd = sec_addr = 0;	// Command is sent with secondary address
 	switch (byte & 0xf0) {
@@ -218,7 +218,7 @@ uint8 IEC::OutATN(uint8 byte)
  *  Output secondary address
  */
 
-uint8 IEC::OutSec(uint8 byte)
+uint8_t IEC::OutSec(uint8_t byte)
 {
 	if (listening) {
 		if (listener_active) {
@@ -241,7 +241,7 @@ uint8 IEC::OutSec(uint8 byte)
  *  Read one byte
  */
 
-uint8 IEC::In(uint8 &byte)
+uint8_t IEC::In(uint8_t &byte)
 {
 	if (talker_active && (received_cmd == CMD_DATA))
 		return data_in(byte);
@@ -295,7 +295,7 @@ void IEC::Release(void)
  *  Listen
  */
 
-uint8 IEC::listen(int device)
+uint8_t IEC::listen(int device)
 {
 	if ((device >= 8) && (device <= 11)) {
 		if ((listener = drive[device-8]) != NULL && listener->Ready) {
@@ -313,7 +313,7 @@ uint8 IEC::listen(int device)
  *  Talk
  */
 
-uint8 IEC::talk(int device)
+uint8_t IEC::talk(int device)
 {
 	if ((device >= 8) && (device <= 11)) {
 		if ((talker = drive[device-8]) != NULL && talker->Ready) {
@@ -331,7 +331,7 @@ uint8 IEC::talk(int device)
  *  Unlisten
  */
 
-uint8 IEC::unlisten(void)
+uint8_t IEC::unlisten(void)
 {
 	listener_active = false;
 	return ST_OK;
@@ -342,7 +342,7 @@ uint8 IEC::unlisten(void)
  *  Untalk
  */
 
-uint8 IEC::untalk(void)
+uint8_t IEC::untalk(void)
 {
 	talker_active = false;
 	return ST_OK;
@@ -353,7 +353,7 @@ uint8 IEC::untalk(void)
  *  Secondary address after Listen
  */
 
-uint8 IEC::sec_listen(void)
+uint8_t IEC::sec_listen(void)
 {
 	switch (received_cmd) {
 
@@ -377,7 +377,7 @@ uint8 IEC::sec_listen(void)
  *  Secondary address after Talk
  */
 
-uint8 IEC::sec_talk(void)
+uint8_t IEC::sec_talk(void)
 {
 	return ST_OK;
 }
@@ -387,7 +387,7 @@ uint8 IEC::sec_talk(void)
  *  Byte after Open command: Store character in file name, open file on EOI
  */
 
-uint8 IEC::open_out(uint8 byte, bool eoi)
+uint8_t IEC::open_out(uint8_t byte, bool eoi)
 {
 	if (name_len < NAMEBUF_LENGTH) {
 		*name_ptr++ = byte;
@@ -409,7 +409,7 @@ uint8 IEC::open_out(uint8 byte, bool eoi)
  *  Write byte to channel
  */
 
-uint8 IEC::data_out(uint8 byte, bool eoi)
+uint8_t IEC::data_out(uint8_t byte, bool eoi)
 {
 	return listener->Write(sec_addr, byte, eoi);
 }
@@ -419,7 +419,7 @@ uint8 IEC::data_out(uint8 byte, bool eoi)
  *  Read byte from channel
  */
 
-uint8 IEC::data_in(uint8 &byte)
+uint8_t IEC::data_in(uint8_t &byte)
 {
 	return talker->Read(sec_addr, byte);
 }
@@ -500,10 +500,10 @@ void Drive::set_error(int error, int track, int sector)
  *  Parse file name, determine access mode and file type
  */
 
-void Drive::parse_file_name(const uint8 *src, int src_len, uint8 *dest, int &dest_len, int &mode, int &type, int &rec_len, bool convert_charset)
+void Drive::parse_file_name(const uint8_t *src, int src_len, uint8_t *dest, int &dest_len, int &mode, int &type, int &rec_len, bool convert_charset)
 {
 	// If the string contains a ':', the file name starts after that
-	const uint8 *p = (const uint8 *)memchr(src, ':', src_len);
+	const uint8_t *p = (const uint8_t *)memchr(src, ':', src_len);
 	if (p) {
 		p++;
 		src_len -= p - src;
@@ -512,7 +512,7 @@ void Drive::parse_file_name(const uint8 *src, int src_len, uint8 *dest, int &des
 
 	// Transfer file name upto ','
 	dest_len = 0;
-	uint8 *q = dest;
+	uint8_t *q = dest;
 	while (*p != ',' && src_len-- > 0) {
 		if (convert_charset)
 			*q++ = petscii2ascii(*p++);
@@ -575,7 +575,7 @@ void Drive::parse_file_name(const uint8 *src, int src_len, uint8 *dest, int &des
  *  Execute DOS command (parse command and call appropriate routine)
  */
 
-static void parse_block_cmd_args(const uint8 *p, int &arg1, int &arg2, int &arg3, int &arg4)
+static void parse_block_cmd_args(const uint8_t *p, int &arg1, int &arg2, int &arg3, int &arg4)
 {
 	arg1 = arg2 = arg3 = arg4 = 0;
 
@@ -596,17 +596,17 @@ static void parse_block_cmd_args(const uint8 *p, int &arg1, int &arg2, int &arg3
 		arg4 = arg4 * 10 + (*p++ & 0x0f);
 }
 
-void Drive::execute_cmd(const uint8 *cmd, int cmd_len)
+void Drive::execute_cmd(const uint8_t *cmd, int cmd_len)
 {
 	// Strip trailing CRs
 	while (cmd_len > 0 && cmd[cmd_len - 1] == 0x0d)
 		cmd_len--;
 
 	// Find token delimiters
-	const uint8 *colon = (const uint8 *)memchr(cmd, ':', cmd_len);
-	const uint8 *equal = colon ? (const uint8 *)memchr(colon, '=', cmd_len - (colon - cmd)) : NULL;
-	const uint8 *comma = (const uint8 *)memchr(cmd, ',', cmd_len);
-	const uint8 *minus = (const uint8 *)memchr(cmd, '-', cmd_len);
+	const uint8_t *colon = (const uint8_t *)memchr(cmd, ':', cmd_len);
+	const uint8_t *equal = colon ? (const uint8_t *)memchr(colon, '=', cmd_len - (colon - cmd)) : NULL;
+	const uint8_t *comma = (const uint8_t *)memchr(cmd, ',', cmd_len);
+	const uint8_t *minus = (const uint8_t *)memchr(cmd, '-', cmd_len);
 
 	// Parse command name
 	set_error(ERR_OK);
@@ -617,7 +617,7 @@ void Drive::execute_cmd(const uint8 *cmd, int cmd_len)
 			else {
 				// Parse arguments (up to 4 decimal numbers separated by
 				// space, cursor right or comma)
-				const uint8 *p = colon ? colon + 1 : cmd + 3;
+				const uint8_t *p = colon ? colon + 1 : cmd + 3;
 				int arg1, arg2, arg3, arg4;
 				parse_block_cmd_args(p, arg1, arg2, arg3, arg4);
 
@@ -653,8 +653,8 @@ void Drive::execute_cmd(const uint8 *cmd, int cmd_len)
 				set_error(ERR_SYNTAX31);
 			else {
 				// Read parameters
-				uint16 adr = uint8(cmd[3]) | (uint8(cmd[4]) << 8);
-				uint8 len = uint8(cmd[5]);
+				uint16_t adr = uint8_t(cmd[3]) | (uint8_t(cmd[4]) << 8);
+				uint8_t len = uint8_t(cmd[5]);
 
 				// Switch on command
 				switch (cmd[2]) {
@@ -662,7 +662,7 @@ void Drive::execute_cmd(const uint8 *cmd, int cmd_len)
 						mem_read_cmd(adr, (cmd_len < 6) ? 1 : len);
 						break;
 					case 'W':
-						mem_write_cmd(adr, len, (uint8 *)cmd + 6);
+						mem_write_cmd(adr, len, (uint8_t *)cmd + 6);
 						break;
 					case 'E':
 						mem_execute_cmd(adr);
@@ -723,14 +723,14 @@ void Drive::execute_cmd(const uint8 *cmd, int cmd_len)
 				break;
 			switch (cmd[1] & 0x0f) {
 				case 1: {	// U1/UA: Read block
-					const uint8 *p = colon ? colon + 1 : cmd + 2;
+					const uint8_t *p = colon ? colon + 1 : cmd + 2;
 					int arg1, arg2, arg3, arg4;
 					parse_block_cmd_args(p, arg1, arg2, arg3, arg4);
 					block_read_cmd(arg1, arg3, arg4, true);
 					break;
 				}
 				case 2: {	// U2/UB: Write block
-					const uint8 *p = colon ? colon + 1 : cmd + 2;
+					const uint8_t *p = colon ? colon + 1 : cmd + 2;
 					int arg1, arg2, arg3, arg4;
 					parse_block_cmd_args(p, arg1, arg2, arg3, arg4);
 					block_write_cmd(arg1, arg3, arg4, true);
@@ -792,7 +792,7 @@ void Drive::buffer_pointer_cmd(int channel, int pos)
 }
 
 // M-R<adr low><adr high>[<number>]
-void Drive::mem_read_cmd(uint16 adr, uint8 len)
+void Drive::mem_read_cmd(uint16_t adr, uint8_t len)
 {
 	unsupp_cmd();
 	error_ptr = error_buf;
@@ -802,13 +802,13 @@ void Drive::mem_read_cmd(uint16 adr, uint8 len)
 }
 
 // M-W<adr low><adr high><number><data...>
-void Drive::mem_write_cmd(uint16 adr, uint8 len, uint8 *p)
+void Drive::mem_write_cmd(uint16_t adr, uint8_t len, uint8_t *p)
 {
 	set_error(ERR_UNIMPLEMENTED);
 }
 
 // M-E<adr low><adr high>
-void Drive::mem_execute_cmd(uint16 adr)
+void Drive::mem_execute_cmd(uint16_t adr)
 {
 	set_error(ERR_UNIMPLEMENTED);
 }
@@ -816,7 +816,7 @@ void Drive::mem_execute_cmd(uint16 adr)
 //   COPY:new=file1,file2,...
 //        ^   ^
 // new_file   old_files
-void Drive::copy_cmd(const uint8 *new_file, int new_file_len, const uint8 *old_files, int old_files_len)
+void Drive::copy_cmd(const uint8_t *new_file, int new_file_len, const uint8_t *old_files, int old_files_len)
 {
 	set_error(ERR_UNIMPLEMENTED);
 }
@@ -824,7 +824,7 @@ void Drive::copy_cmd(const uint8 *new_file, int new_file_len, const uint8 *old_f
 // RENAME:new=old
 //        ^   ^
 // new_file   old_file
-void Drive::rename_cmd(const uint8 *new_file, int new_file_len, const uint8 *old_file, int old_file_len)
+void Drive::rename_cmd(const uint8_t *new_file, int new_file_len, const uint8_t *old_file, int old_file_len)
 {
 	set_error(ERR_UNIMPLEMENTED);
 }
@@ -832,7 +832,7 @@ void Drive::rename_cmd(const uint8 *new_file, int new_file_len, const uint8 *old
 // SCRATCH:file1,file2,...
 //         ^
 //         files
-void Drive::scratch_cmd(const uint8 *files, int files_len)
+void Drive::scratch_cmd(const uint8_t *files, int files_len)
 {
 	set_error(ERR_UNIMPLEMENTED);
 }
@@ -840,7 +840,7 @@ void Drive::scratch_cmd(const uint8 *files, int files_len)
 // P<channel><record low><record high><byte>
 //  ^
 //  cmd
-void Drive::position_cmd(const uint8 *cmd, int cmd_len)
+void Drive::position_cmd(const uint8_t *cmd, int cmd_len)
 {
 	set_error(ERR_UNIMPLEMENTED);
 }
@@ -854,7 +854,7 @@ void Drive::initialize_cmd(void)
 // NEW:name,id
 //     ^   ^
 //  name   comma (or NULL)
-void Drive::new_cmd(const uint8 *name, int name_len, const uint8 *comma)
+void Drive::new_cmd(const uint8_t *name, int name_len, const uint8_t *comma)
 {
 	set_error(ERR_UNIMPLEMENTED);
 }
@@ -879,19 +879,19 @@ void Drive::unsupp_cmd(void)
  *  Convert PETSCII<->ASCII
  */
 
-uint8 ascii2petscii(char c)
+uint8_t ascii2petscii(char c)
 {
 	if ((c >= 'A') && (c <= 'Z') || (c >= 'a') && (c <= 'z'))
 		return c ^ 0x20;
 	return c;
 }
 
-void ascii2petscii(uint8 *dest, const char *src, int n)
+void ascii2petscii(uint8_t *dest, const char *src, int n)
 {
 	while (n-- && (*dest++ = ascii2petscii(*src++))) ;
 }
 
-char petscii2ascii(uint8 c)
+char petscii2ascii(uint8_t c)
 {
 	if ((c >= 'A') && (c <= 'Z') || (c >= 'a') && (c <= 'z'))
 		return c ^ 0x20;
@@ -900,7 +900,7 @@ char petscii2ascii(uint8 c)
 	return c;
 }
 
-void petscii2ascii(char *dest, const uint8 *src, int n)
+void petscii2ascii(char *dest, const uint8_t *src, int n)
 {
 	while (n-- && (*dest++ = petscii2ascii(*src++))) ;
 }
@@ -913,7 +913,7 @@ void petscii2ascii(char *dest, const uint8 *src, int n)
 bool IsMountableFile(const char *path, int &type)
 {
 	// Read header and determine file size
-	uint8 header[64];
+	uint8_t header[64];
 	memset(header, 0, sizeof(header));
 	FILE *f = fopen(path, "rb");
 	if (f == NULL)

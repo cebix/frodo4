@@ -41,8 +41,8 @@ public:
 	~MOS6581();
 
 	void Reset(void);
-	uint8 ReadRegister(uint16 adr);
-	void WriteRegister(uint16 adr, uint8 byte);
+	uint8_t ReadRegister(uint16_t adr);
+	void WriteRegister(uint16_t adr, uint8_t byte);
 	void NewPrefs(Prefs *prefs);
 	void PauseSound(void);
 	void ResumeSound(void);
@@ -55,8 +55,8 @@ private:
 
 	C64 *the_c64;				// Pointer to C64 object
 	SIDRenderer *the_renderer;	// Pointer to current renderer
-	uint8 regs[32];				// Copies of the 25 write-only SID registers
-	uint8 last_sid_byte;		// Last value written to SID
+	uint8_t regs[32];			// Copies of the 25 write-only SID registers
+	uint8_t last_sid_byte;		// Last value written to SID
 };
 
 
@@ -66,7 +66,7 @@ public:
 	virtual ~SIDRenderer() {}
 	virtual void Reset(void)=0;
 	virtual void EmulateLine(void)=0;
-	virtual void WriteRegister(uint16 adr, uint8 byte)=0;
+	virtual void WriteRegister(uint16_t adr, uint8_t byte)=0;
 	virtual void NewPrefs(Prefs *prefs)=0;
 	virtual void Pause(void)=0;
 	virtual void Resume(void)=0;
@@ -75,39 +75,39 @@ public:
 
 // SID state
 struct MOS6581State {
-	uint8 freq_lo_1;
-	uint8 freq_hi_1;
-	uint8 pw_lo_1;
-	uint8 pw_hi_1;
-	uint8 ctrl_1;
-	uint8 AD_1;
-	uint8 SR_1;
+	uint8_t freq_lo_1;
+	uint8_t freq_hi_1;
+	uint8_t pw_lo_1;
+	uint8_t pw_hi_1;
+	uint8_t ctrl_1;
+	uint8_t AD_1;
+	uint8_t SR_1;
 
-	uint8 freq_lo_2;
-	uint8 freq_hi_2;
-	uint8 pw_lo_2;
-	uint8 pw_hi_2;
-	uint8 ctrl_2;
-	uint8 AD_2;
-	uint8 SR_2;
+	uint8_t freq_lo_2;
+	uint8_t freq_hi_2;
+	uint8_t pw_lo_2;
+	uint8_t pw_hi_2;
+	uint8_t ctrl_2;
+	uint8_t AD_2;
+	uint8_t SR_2;
 
-	uint8 freq_lo_3;
-	uint8 freq_hi_3;
-	uint8 pw_lo_3;
-	uint8 pw_hi_3;
-	uint8 ctrl_3;
-	uint8 AD_3;
-	uint8 SR_3;
+	uint8_t freq_lo_3;
+	uint8_t freq_hi_3;
+	uint8_t pw_lo_3;
+	uint8_t pw_hi_3;
+	uint8_t ctrl_3;
+	uint8_t AD_3;
+	uint8_t SR_3;
 
-	uint8 fc_lo;
-	uint8 fc_hi;
-	uint8 res_filt;
-	uint8 mode_vol;
+	uint8_t fc_lo;
+	uint8_t fc_hi;
+	uint8_t res_filt;
+	uint8_t mode_vol;
 
-	uint8 pot_x;
-	uint8 pot_y;
-	uint8 osc_3;
-	uint8 env_3;
+	uint8_t pot_x;
+	uint8_t pot_y;
+	uint8_t osc_3;
+	uint8_t env_3;
 };
 
 
@@ -126,7 +126,7 @@ inline void MOS6581::EmulateLine(void)
  *  Read from register
  */
 
-inline uint8 MOS6581::ReadRegister(uint16 adr)
+inline uint8_t MOS6581::ReadRegister(uint16_t adr)
 {
 	// A/D converters
 	if (adr == 0x19 || adr == 0x1a) {
@@ -149,7 +149,7 @@ inline uint8 MOS6581::ReadRegister(uint16 adr)
  *  Write to register
  */
 
-inline void MOS6581::WriteRegister(uint16 adr, uint8 byte)
+inline void MOS6581::WriteRegister(uint16_t adr, uint8_t byte)
 {
 	// Keep a local copy of the register values
 	last_sid_byte = regs[adr] = byte;

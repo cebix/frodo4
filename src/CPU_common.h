@@ -82,9 +82,9 @@ enum {
 
 
 // Addressing mode for each opcode (first part of execution) (Frodo SC)
-extern const uint8 ModeTab[256];
+extern const uint8_t ModeTab[256];
 
 // Operation for each opcode (second part of execution) (Frodo SC)
-extern const uint8 OpTab[256];
+extern const uint8_t OpTab[256];
 
 #endif

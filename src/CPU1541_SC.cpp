@@ -84,7 +84,7 @@ enum {
  *  6502 constructor: Initialize registers
  */
 
-MOS6502_1541::MOS6502_1541(C64 *c64, Job1541 *job, C64Display *disp, uint8 *Ram, uint8 *Rom)
+MOS6502_1541::MOS6502_1541(C64 *c64, Job1541 *job, C64Display *disp, uint8_t *Ram, uint8_t *Rom)
  : ram(Ram), rom(Rom), the_c64(c64), the_display(disp), the_job(job)
 {
 	a = x = y = 0;
@@ -207,7 +207,7 @@ void MOS6502_1541::SetState(MOS6502State *s)
  *  Read a byte from I/O space
  */
 
-inline uint8 MOS6502_1541::read_byte_io(uint16 adr)
+inline uint8_t MOS6502_1541::read_byte_io(uint16_t adr)
 {
 	if ((adr & 0xfc00) == 0x1800)	// VIA 1
 		switch (adr & 0xf) {
@@ -303,7 +303,7 @@ inline uint8 MOS6502_1541::read_byte_io(uint16 adr)
  *  Read a byte from the CPU's address space
  */
 
-uint8 MOS6502_1541::read_byte(uint16 adr)
+uint8_t MOS6502_1541::read_byte(uint16_t adr)
 {
 	if (adr >= 0xc000)
 		return rom[adr & 0x3fff];
@@ -318,7 +318,7 @@ uint8 MOS6502_1541::read_byte(uint16 adr)
  *  Read a word (little-endian) from the CPU's address space
  */
 
-inline uint16 MOS6502_1541::read_word(uint16 adr)
+inline uint16_t MOS6502_1541::read_word(uint16_t adr)
 {
 	return read_byte(adr) | (read_byte(adr+1) << 8);
 }
@@ -328,7 +328,7 @@ inline uint16 MOS6502_1541::read_word(uint16 adr)
  *  Write a byte to I/O space
  */
 
-void MOS6502_1541::write_byte_io(uint16 adr, uint8 byte)
+void MOS6502_1541::write_byte_io(uint16_t adr, uint8_t byte)
 {
 	if ((adr & 0xfc00) == 0x1800)		// VIA 1
 		switch (adr & 0xf) {
@@ -459,7 +459,7 @@ void MOS6502_1541::write_byte_io(uint16 adr, uint8 byte)
  *  Write a byte to the CPU's address space
  */
 
-inline void MOS6502_1541::write_byte(uint16 adr, uint8 byte)
+inline void MOS6502_1541::write_byte(uint16_t adr, uint8_t byte)
 {
 	if (adr < 0x1000)
 		ram[adr & 0x7ff] = byte;
@@ -472,7 +472,7 @@ inline void MOS6502_1541::write_byte(uint16 adr, uint8 byte)
  *  Read byte from 6502/1541 address space (used by SAM)
  */
 
-uint8 MOS6502_1541::ExtReadByte(uint16 adr)
+uint8_t MOS6502_1541::ExtReadByte(uint16_t adr)
 {
 	return read_byte(adr);
 }
@@ -482,7 +482,7 @@ uint8 MOS6502_1541::ExtReadByte(uint16 adr)
  *  Write byte to 6502/1541 address space (used by SAM)
  */
 
-void MOS6502_1541::ExtWriteByte(uint16 adr, uint8 byte)
+void MOS6502_1541::ExtWriteByte(uint16_t adr, uint8_t byte)
 {
 	write_byte(adr, byte);
 }
@@ -492,10 +492,10 @@ void MOS6502_1541::ExtWriteByte(uint16 adr, uint8 byte)
  *  Adc instruction
  */
 
-inline void MOS6502_1541::do_adc(uint8 byte)
+inline void MOS6502_1541::do_adc(uint8_t byte)
 {
 	if (!d_flag) {
-		uint16 tmp;
+		uint16_t tmp;
 
 		// Binary mode
 		tmp = a + byte + (c_flag ? 1 : 0);
@@ -504,7 +504,7 @@ inline void MOS6502_1541::do_adc(uint8 byte)
 		z_flag = n_flag = a = tmp;
 
 	} else {
-		uint16 al, ah;
+		uint16_t al, ah;
 
 		// Decimal mode
 		al = (a & 0x0f) + (byte & 0x0f) + (c_flag ? 1 : 0);		// Calculate lower nybble
@@ -528,9 +528,9 @@ inline void MOS6502_1541::do_adc(uint8 byte)
  * Sbc instruction
  */
 
-inline void MOS6502_1541::do_sbc(uint8 byte)
+inline void MOS6502_1541::do_sbc(uint8_t byte)
 {
-	uint16 tmp = a - byte - (c_flag ? 0 : 1);
+	uint16_t tmp = a - byte - (c_flag ? 0 : 1);
 
 	if (!d_flag) {
 
@@ -540,7 +540,7 @@ inline void MOS6502_1541::do_sbc(uint8 byte)
 		z_flag = n_flag = a = tmp;
 
 	} else {
-		uint16 al, ah;
+		uint16_t al, ah;
 
 		// Decimal mode
 		al = (a & 0x0f) - (byte & 0x0f) - (c_flag ? 0 : 1);		// Calculate lower nybble
@@ -593,7 +593,7 @@ void MOS6502_1541::Reset(void)
  *  Illegal opcode encountered
  */
 
-void MOS6502_1541::illegal_op(uint8 op, uint16 at)
+void MOS6502_1541::illegal_op(uint8_t op, uint16_t at)
 {
 	char illop_msg[80];
 
@@ -618,7 +618,7 @@ void MOS6502_1541::illegal_op(uint8 op, uint16 at)
 
 void MOS6502_1541::EmulateCycle(void)
 {
-	uint8 data, tmp;
+	uint8_t data, tmp;
 
 	// Any pending interrupts in state 0 (opcode fetch)?
 	if (!state && interrupt.intr_any) {
@@ -626,7 +626,7 @@ void MOS6502_1541::EmulateCycle(void)
 			Reset();
 		} else if ((interrupt.intr[INT_VIA1IRQ] || interrupt.intr[INT_VIA2IRQ] || interrupt.intr[INT_IECIRQ]) &&
 				   (!i_flag || (opflags & OPFLAG_IRQ_DISABLED)) && !(opflags & OPFLAG_IRQ_ENABLED)) {
-			uint32 int_delay = (opflags & OPFLAG_INT_DELAYED) ? 1 : 0;  // Taken branches to the same page delay the IRQ
+			uint32_t int_delay = (opflags & OPFLAG_INT_DELAYED) ? 1 : 0;  // Taken branches to the same page delay the IRQ
 			if (the_c64->CycleCounter - first_irq_cycle - int_delay >= 2) {
 				state = 0x0008;
 				opflags = 0;

@@ -54,7 +54,7 @@ char AppDirPath[1024];	// Path of application directory
  *  Load C64 ROM files
  */
 
-void Frodo::load_rom(const char *which, const char *path, uint8 *where, size_t size, const uint8 *builtin)
+void Frodo::load_rom(const char *which, const char *path, uint8_t *where, size_t size, const uint8_t *builtin)
 {
 	FILE *f = fopen(path, "rb");
 	if (f) {

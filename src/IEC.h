@@ -107,7 +107,7 @@ enum {
 
 // Information about file in disk image/archive file
 struct c64_dir_entry {
-	c64_dir_entry(const uint8 *n, int t, bool o, bool p, size_t s, off_t ofs = 0, uint8 sal = 0, uint8 sah = 0)
+	c64_dir_entry(const uint8_t *n, int t, bool o, bool p, size_t s, off_t ofs = 0, uint8_t sal = 0, uint8_t sah = 0)
 		: type(t), is_open(o), is_protected(p), size(s), offset(ofs), sa_lo(sal), sa_hi(sah)
 	{
 		strncpy((char *)name, (const char *)n, 17);
@@ -115,15 +115,15 @@ struct c64_dir_entry {
 	}
 
 	// Basic information
-	uint8 name[17];		// File name (C64 charset, null-terminated)
-	int type;			// File type (see defines above)
-	bool is_open;		// Flag: file open
-	bool is_protected;	// Flag: file protected
-	size_t size;		// File size (may be approximated)
+	uint8_t name[17];		// File name (C64 charset, null-terminated)
+	int type;				// File type (see defines above)
+	bool is_open;			// Flag: file open
+	bool is_protected;		// Flag: file protected
+	size_t size;			// File size (may be approximated)
 
 	// Special information
-	off_t offset;		// Offset of file in archive file
-	uint8 sa_lo, sa_hi;	// C64 start address
+	off_t offset;			// Offset of file in archive file
+	uint8_t sa_lo, sa_hi;	// C64 start address
 };
 
 class Drive;
@@ -140,10 +140,10 @@ public:
 	void NewPrefs(Prefs *prefs);
 	void UpdateLEDs(void);
 
-	uint8 Out(uint8 byte, bool eoi);
-	uint8 OutATN(uint8 byte);
-	uint8 OutSec(uint8 byte);
-	uint8 In(uint8 &byte);
+	uint8_t Out(uint8_t byte, bool eoi);
+	uint8_t OutATN(uint8_t byte);
+	uint8_t OutSec(uint8_t byte);
+	uint8_t In(uint8_t &byte);
 	void SetATN(void);
 	void RelATN(void);
 	void Turnaround(void);
@@ -152,20 +152,20 @@ public:
 private:
 	Drive *create_drive(const char *path);
 
-	uint8 listen(int device);
-	uint8 talk(int device);
-	uint8 unlisten(void);
-	uint8 untalk(void);
-	uint8 sec_listen(void);
-	uint8 sec_talk(void);
-	uint8 open_out(uint8 byte, bool eoi);
-	uint8 data_out(uint8 byte, bool eoi);
-	uint8 data_in(uint8 &byte);
+	uint8_t listen(int device);
+	uint8_t talk(int device);
+	uint8_t unlisten(void);
+	uint8_t untalk(void);
+	uint8_t sec_listen(void);
+	uint8_t sec_talk(void);
+	uint8_t open_out(uint8_t byte, bool eoi);
+	uint8_t data_out(uint8_t byte, bool eoi);
+	uint8_t data_in(uint8_t &byte);
 
 	C64Display *the_display;	// Pointer to display object (for drive LEDs)
 
-	uint8 name_buf[NAMEBUF_LENGTH];	// Buffer for file names and command strings
-	uint8 *name_ptr;		// Pointer for reception of file name
+	uint8_t name_buf[NAMEBUF_LENGTH];	// Buffer for file names and command strings
+	uint8_t *name_ptr;		// Pointer for reception of file name
 	int name_len;			// Received length of file name
 
 	Drive *drive[4];		// 4 drives (8..11)
@@ -177,8 +177,8 @@ private:
 	bool talker_active;		// Talker selected, talker_data is valid
 	bool listening;			// Last ATN was listen (to decide between sec_listen/sec_talk)
 
-	uint8 received_cmd;		// Received command code ($x0)
-	uint8 sec_addr;			// Received secondary address ($0x)
+	uint8_t received_cmd;	// Received command code ($x0)
+	uint8_t sec_addr;		// Received secondary address ($0x)
 };
 
 // Abstract superclass for individual drives
@@ -187,10 +187,10 @@ public:
 	Drive(IEC *iec);
 	virtual ~Drive() {}
 
-	virtual uint8 Open(int channel, const uint8 *name, int name_len)=0;
-	virtual uint8 Close(int channel)=0;
-	virtual uint8 Read(int channel, uint8 &byte)=0;
-	virtual uint8 Write(int channel, uint8 byte, bool eoi)=0;
+	virtual uint8_t Open(int channel, const uint8_t *name, int name_len)=0;
+	virtual uint8_t Close(int channel)=0;
+	virtual uint8_t Read(int channel, uint8_t &byte)=0;
+	virtual uint8_t Write(int channel, uint8_t byte, bool eoi)=0;
 	virtual void Reset(void)=0;
 
 	int LED;			// Drive LED state
@@ -199,24 +199,24 @@ public:
 protected:
 	void set_error(int error, int track = 0, int sector = 0);
 
-	void parse_file_name(const uint8 *src, int src_len, uint8 *dest, int &dest_len, int &mode, int &type, int &rec_len, bool convert_charset = false);
+	void parse_file_name(const uint8_t *src, int src_len, uint8_t *dest, int &dest_len, int &mode, int &type, int &rec_len, bool convert_charset = false);
 
-	void execute_cmd(const uint8 *cmd, int cmd_len);
+	void execute_cmd(const uint8_t *cmd, int cmd_len);
 	virtual void block_read_cmd(int channel, int track, int sector, bool user_cmd = false);
 	virtual void block_write_cmd(int channel, int track, int sector, bool user_cmd = false);
 	virtual void block_execute_cmd(int channel, int track, int sector);
 	virtual void block_allocate_cmd(int track, int sector);
 	virtual void block_free_cmd(int track, int sector);
 	virtual void buffer_pointer_cmd(int channel, int pos);
-	virtual void mem_read_cmd(uint16 adr, uint8 len);
-	virtual void mem_write_cmd(uint16 adr, uint8 len, uint8 *p);
-	virtual void mem_execute_cmd(uint16 adr);
-	virtual void copy_cmd(const uint8 *new_file, int new_file_len, const uint8 *old_files, int old_files_len);
-	virtual void rename_cmd(const uint8 *new_file, int new_file_len, const uint8 *old_file, int old_file_len);
-	virtual void scratch_cmd(const uint8 *files, int files_len);
-	virtual void position_cmd(const uint8 *cmd, int cmd_len);
+	virtual void mem_read_cmd(uint16_t adr, uint8_t len);
+	virtual void mem_write_cmd(uint16_t adr, uint8_t len, uint8_t *p);
+	virtual void mem_execute_cmd(uint16_t adr);
+	virtual void copy_cmd(const uint8_t *new_file, int new_file_len, const uint8_t *old_files, int old_files_len);
+	virtual void rename_cmd(const uint8_t *new_file, int new_file_len, const uint8_t *old_file, int old_file_len);
+	virtual void scratch_cmd(const uint8_t *files, int files_len);
+	virtual void position_cmd(const uint8_t *cmd, int cmd_len);
 	virtual void initialize_cmd(void);
-	virtual void new_cmd(const uint8 *name, int name_len, const uint8 *comma);
+	virtual void new_cmd(const uint8_t *name, int name_len, const uint8_t *comma);
 	virtual void validate_cmd(void);
 	void unsupp_cmd(void);
 
@@ -225,7 +225,7 @@ protected:
 	int error_len;			// Remaining length of error message
 	int current_error;		// Number of current error
 
-	uint8 cmd_buf[64];		// Buffer for incoming command strings
+	uint8_t cmd_buf[64];	// Buffer for incoming command strings
 	int cmd_len;			// Length of received command
 
 private:
@@ -238,16 +238,16 @@ private:
  */
 
 // Convert ASCII character to PETSCII character
-extern uint8 ascii2petscii(char c);
+extern uint8_t ascii2petscii(char c);
 
 // Convert ASCII string to PETSCII string
-extern void ascii2petscii(uint8 *dest, const char *src, int max);
+extern void ascii2petscii(uint8_t *dest, const char *src, int max);
 
 // Convert PETSCII character to ASCII character
-extern char petscii2ascii(uint8 c);
+extern char petscii2ascii(uint8_t c);
 
 // Convert PETSCII string to ASCII string
-extern void petscii2ascii(char *dest, const uint8 *src, int max);
+extern void petscii2ascii(char *dest, const uint8_t *src, int max);
 
 // Check whether file is a mountable disk image or archive file, return type
 extern bool IsMountableFile(const char *path, int &type);

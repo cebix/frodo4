@@ -90,8 +90,8 @@ void DigitalRenderer::Resume(void)
  *  Callback function 
  */
 
-void DigitalRenderer::buffer_proc(void *cookie, uint8 *buffer, int size)
+void DigitalRenderer::buffer_proc(void *cookie, uint8_t *buffer, int size)
 {
 	DigitalRenderer * renderer = (DigitalRenderer *) cookie;
-	renderer->calc_buffer((int16 *) buffer, size);
+	renderer->calc_buffer((int16_t *) buffer, size);
 }

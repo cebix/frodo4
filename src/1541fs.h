@@ -29,17 +29,17 @@ public:
 	FSDrive(IEC *iec, const char *path);
 	virtual ~FSDrive();
 
-	virtual uint8 Open(int channel, const uint8 *name, int name_len);
-	virtual uint8 Close(int channel);
-	virtual uint8 Read(int channel, uint8 &byte);
-	virtual uint8 Write(int channel, uint8 byte, bool eoi);
+	virtual uint8_t Open(int channel, const uint8_t *name, int name_len);
+	virtual uint8_t Close(int channel);
+	virtual uint8_t Read(int channel, uint8_t &byte);
+	virtual uint8_t Write(int channel, uint8_t byte, bool eoi);
 	virtual void Reset(void);
 
 private:
 	bool change_dir(char *dirpath);
 
-	uint8 open_file(int channel, const uint8 *name, int name_len);
-	uint8 open_directory(int channel, const uint8 *pattern, int pattern_len);
+	uint8_t open_file(int channel, const uint8_t *name, int name_len);
+	uint8_t open_directory(int channel, const uint8_t *pattern, int pattern_len);
 	void find_first_file(char *pattern);
 	void close_all_channels(void);
 
@@ -51,7 +51,7 @@ private:
 	char dir_title[16];		// Directory title
 	FILE *file[16];			// File pointers for each of the 16 channels
 
-	uint8 read_char[16];	// Buffers for one-byte read-ahead
+	uint8_t read_char[16];	// Buffers for one-byte read-ahead
 };
 
 #endif

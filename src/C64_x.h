@@ -189,7 +189,7 @@ void C64::VBlank(bool draw_frame)
 	TheCIA1->Joystick2 = poll_joystick(1);
 
 	if (ThePrefs.JoystickSwap) {
-		uint8 tmp = TheCIA1->Joystick1;
+		uint8_t tmp = TheCIA1->Joystick1;
 		TheCIA1->Joystick1 = TheCIA1->Joystick2;
 		TheCIA1->Joystick2 = tmp;
 	}

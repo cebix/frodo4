@@ -554,9 +554,9 @@ void C64Display::Speedometer(int speed)
  *  Return pointer to bitmap data
  */
 
-uint8 *C64Display::BitmapBase(void)
+uint8_t *C64Display::BitmapBase(void)
 {
-	return (uint8 *)bufmem;
+	return (uint8_t *)bufmem;
 }
 
 
@@ -574,7 +574,7 @@ int C64Display::BitmapXMod(void)
  *  Poll the keyboard
  */
 
-void C64Display::PollKeyboard(uint8 *key_matrix, uint8 *rev_matrix, uint8 *joystick)
+void C64Display::PollKeyboard(uint8_t *key_matrix, uint8_t *rev_matrix, uint8_t *joystick)
 {
 	static bool auto_rep = true;
 	for(;;) {
@@ -771,7 +771,7 @@ void C64::open_close_joysticks(int oldjoy1, int oldjoy2, int newjoy1, int newjoy
  *  Poll joystick port, return CIA mask
  */
 
-uint8 C64::poll_joystick(int port)
+uint8_t C64::poll_joystick(int port)
 {
 	return 0xff;
 }
@@ -781,7 +781,7 @@ uint8 C64::poll_joystick(int port)
  *  Allocate C64 colors
  */
 
-void C64Display::InitColors(uint8 *colors)
+void C64Display::InitColors(uint8_t *colors)
 {
 	int i;
 	XColor col;

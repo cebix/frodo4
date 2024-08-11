@@ -82,9 +82,9 @@ public:
 	bool LoadSIDState(FILE *f);
 	bool LoadCIAState(FILE *f);
 
-	uint8 *RAM, *Basic, *Kernal,
-		  *Char, *Color;		// C64
-	uint8 *RAM1541, *ROM1541;	// 1541
+	uint8_t *RAM, *Basic, *Kernal,
+	        *Char, *Color;		// C64
+	uint8_t *RAM1541, *ROM1541;	// 1541
 
 	C64Display *TheDisplay;
 
@@ -99,25 +99,25 @@ public:
 	MOS6502_1541 *TheCPU1541;	// 1541
 	Job1541 *TheJob1541;
 
-	uint32 CycleCounter;  // Cycle counter for Frodo SC
+	uint32_t CycleCounter;		// Cycle counter for Frodo SC
 
 private:
 	void c64_ctor1(void);
 	void c64_ctor2(void);
 	void c64_dtor(void);
 	void open_close_joysticks(int oldjoy1, int oldjoy2, int newjoy1, int newjoy2);
-	uint8 poll_joystick(int port);
+	uint8_t poll_joystick(int port);
 	void thread_func(void);
 
-	bool thread_running;	// Emulation thread is running
-	bool quit_thyself;		// Emulation thread shall quit
-	bool have_a_break;		// Emulation thread shall pause
+	bool thread_running;		// Emulation thread is running
+	bool quit_thyself;			// Emulation thread shall quit
+	bool have_a_break;			// Emulation thread shall pause
 
 	int joy_minx[2], joy_maxx[2], joy_miny[2], joy_maxy[2]; // For dynamic joystick calibration
-	uint8 joykey;			// Joystick keyboard emulation mask value
+	uint8_t joykey;				// Joystick keyboard emulation mask value
 
-	uint8 orig_kernal_1d84,	// Original contents of kernal locations $1d84 and $1d85
-		  orig_kernal_1d85;	// (for undoing the Fast Reset patch)
+	uint8_t orig_kernal_1d84,	// Original contents of kernal locations $1d84 and $1d85
+	        orig_kernal_1d85;	// (for undoing the Fast Reset patch)
 
 #ifdef __BEOS__
 public:
@@ -127,8 +127,8 @@ private:
 	static long thread_invoc(void *obj);
 	void open_close_joystick(int port, int oldjoy, int newjoy);
 
-	void *joy[2];			// Joystick objects (BJoystick or BDigitalPort)
-	bool joy_geek_port[2];	// Flag: joystick on GeekPort?
+	void *joy[2];				// Joystick objects (BJoystick or BDigitalPort)
+	bool joy_geek_port[2];		// Flag: joystick on GeekPort?
 	thread_id the_thread;
 	sem_id pause_sem;
 	sem_id sound_sync_sem;
@@ -158,7 +158,7 @@ private:
 	HANDLE timer_semaphore;		// Timer semaphore for synch
 	MMRESULT timer_id;			// Timer identifier
 	int frame;					// current frame number
-	uint8 joy_state;			// Current state of joystick
+	uint8_t joy_state;			// Current state of joystick
 	bool state_change;
 #endif
 };

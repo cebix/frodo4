@@ -28,21 +28,6 @@
 /* Define if your <sys/time.h> declares struct tm.  */
 /* #undef TM_IN_SYS_TIME */
 
-/* The number of bytes in a char.  */
-#define SIZEOF_CHAR 1
-
-/* The number of bytes in a int.  */
-#define SIZEOF_INT 4
-
-/* The number of bytes in a long.  */
-#define SIZEOF_LONG 4
-
-/* The number of bytes in a long long.  */
-#define SIZEOF_LONG_LONG 8
-
-/* The number of bytes in a short.  */
-#define SIZEOF_SHORT 2
-
 /* Define if you have the gettimeofday function.  */
 #define HAVE_GETTIMEOFDAY 1
 

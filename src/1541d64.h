@@ -44,8 +44,8 @@ struct channel_desc {
 	int mode;			// Channel mode
 	bool writing;		// Flag: writing to file (for file channels)
 	int buf_num;		// Buffer number for direct access and file channels
-	uint8 *buf;			// Pointer to start of buffer
-	uint8 *buf_ptr;		// Pointer to current position in buffer
+	uint8_t *buf;		// Pointer to start of buffer
+	uint8_t *buf_ptr;	// Pointer to current position in buffer
 	int buf_len;		// Remaining bytes in buffer
 	int track, sector;	// Track and sector the buffer will be written to (for writing to file channels)
 	int num_blocks;		// Number of blocks in file (for writing to file channels)
@@ -59,8 +59,8 @@ struct image_file_desc {
 	int type;				// See definitions above
 	int header_size;		// Size of file header
 	int num_tracks;			// Number of tracks
-	uint8 id1, id2;			// Block header ID (as opposed to BAM ID)
-	uint8 error_info[NUM_SECTORS_40]; // Sector error information (1 byte/sector)
+	uint8_t id1, id2;		// Block header ID (as opposed to BAM ID)
+	uint8_t error_info[NUM_SECTORS_40]; // Sector error information (1 byte/sector)
 	bool has_error_info;	// Flag: error info present in file
 };
 
@@ -70,29 +70,29 @@ public:
 	ImageDrive(IEC *iec, const char *filepath);
 	virtual ~ImageDrive();
 
-	virtual uint8 Open(int channel, const uint8 *name, int name_len);
-	virtual uint8 Close(int channel);
-	virtual uint8 Read(int channel, uint8 &byte);
-	virtual uint8 Write(int channel, uint8 byte, bool eoi);
+	virtual uint8_t Open(int channel, const uint8_t *name, int name_len);
+	virtual uint8_t Close(int channel);
+	virtual uint8_t Read(int channel, uint8_t &byte);
+	virtual uint8_t Write(int channel, uint8_t byte, bool eoi);
 	virtual void Reset(void);
 
 private:
 	void close_image(void);
 	bool change_image(const char *path);
 
-	uint8 open_file(int channel, const uint8 *name, int name_len);
-	uint8 open_file_ts(int channel, int track, int sector);
-	uint8 create_file(int channel, const uint8 *name, int name_len, int type, bool overwrite = false);
-	uint8 open_directory(const uint8 *pattern, int pattern_len);
-	uint8 open_direct(int channel, const uint8 *filename);
+	uint8_t open_file(int channel, const uint8_t *name, int name_len);
+	uint8_t open_file_ts(int channel, int track, int sector);
+	uint8_t create_file(int channel, const uint8_t *name, int name_len, int type, bool overwrite = false);
+	uint8_t open_directory(const uint8_t *pattern, int pattern_len);
+	uint8_t open_direct(int channel, const uint8_t *filename);
 	void close_all_channels(void);
 
 	int alloc_buffer(int want);
 	void free_buffer(int buf);
 
-	bool find_file(const uint8 *pattern, int pattern_len, int &dir_track, int &dir_sector, int &entry, bool cont);
-	bool find_first_file(const uint8 *pattern, int pattern_len, int &dir_track, int &dir_sector, int &entry);
-	bool find_next_file(const uint8 *pattern, int pattern_len, int &dir_track, int &dir_sector, int &entry);
+	bool find_file(const uint8_t *pattern, int pattern_len, int &dir_track, int &dir_sector, int &entry, bool cont);
+	bool find_first_file(const uint8_t *pattern, int pattern_len, int &dir_track, int &dir_sector, int &entry);
+	bool find_next_file(const uint8_t *pattern, int pattern_len, int &dir_track, int &dir_sector, int &entry);
 	bool alloc_dir_entry(int &track, int &sector, int &entry);
 
 	bool is_block_free(int track, int sector);
@@ -103,8 +103,8 @@ private:
 	bool free_block_chain(int track, int sector);
 	bool alloc_next_block(int &track, int &sector, int interleave);
 
-	bool read_sector(int track, int sector, uint8 *buffer);
-	bool write_sector(int track, int sector, uint8 *buffer);
+	bool read_sector(int track, int sector, uint8_t *buffer);
+	bool write_sector(int track, int sector, uint8_t *buffer);
 	void write_error_info(void);
 
 	virtual void block_read_cmd(int channel, int track, int sector, bool user_cmd = false);
@@ -112,22 +112,22 @@ private:
 	virtual void block_allocate_cmd(int track, int sector);
 	virtual void block_free_cmd(int track, int sector);
 	virtual void buffer_pointer_cmd(int channel, int pos);
-	virtual void mem_read_cmd(uint16 adr, uint8 len);
-	virtual void mem_write_cmd(uint16 adr, uint8 len, uint8 *p);
-	virtual void copy_cmd(const uint8 *new_file, int new_file_len, const uint8 *old_files, int old_files_len);
-	virtual void rename_cmd(const uint8 *new_file, int new_file_len, const uint8 *old_file, int old_file_len);
-	virtual void scratch_cmd(const uint8 *files, int files_len);
+	virtual void mem_read_cmd(uint16_t adr, uint8_t len);
+	virtual void mem_write_cmd(uint16_t adr, uint8_t len, uint8_t *p);
+	virtual void copy_cmd(const uint8_t *new_file, int new_file_len, const uint8_t *old_files, int old_files_len);
+	virtual void rename_cmd(const uint8_t *new_file, int new_file_len, const uint8_t *old_file, int old_file_len);
+	virtual void scratch_cmd(const uint8_t *files, int files_len);
 	virtual void initialize_cmd(void);
-	virtual void new_cmd(const uint8 *name, int name_len, const uint8 *comma);
+	virtual void new_cmd(const uint8_t *name, int name_len, const uint8_t *comma);
 	virtual void validate_cmd(void);
 
 	FILE *the_file;			// File pointer for image file
 	image_file_desc desc;	// Image file descriptor
 	bool write_protected;	// Flag: image file write-protected
 
-	uint8 ram[0x800];		// 2k 1541 RAM
-	uint8 dir[258];			// Buffer for directory blocks
-	uint8 *bam;				// Pointer to BAM in 1541 RAM (buffer 4, upper 256 bytes)
+	uint8_t ram[0x800];		// 2k 1541 RAM
+	uint8_t dir[258];		// Buffer for directory blocks
+	uint8_t *bam;			// Pointer to BAM in 1541 RAM (buffer 4, upper 256 bytes)
 	bool bam_dirty;			// Flag: BAM modified, needs to be written back
 
 	channel_desc ch[18];	// Descriptors for channels 0..17 (16 = internal read, 17 = internal write)
@@ -141,7 +141,7 @@ private:
 
 // Check whether file with given header (64 bytes) and size looks like one
 // of the file types supported by this module
-extern bool IsImageFile(const char *path, const uint8 *header, long size);
+extern bool IsImageFile(const char *path, const uint8_t *header, long size);
 
 // Read directory of disk image file into (empty) c64_dir_entry vector
 extern bool ReadImageDirectory(const char *path, vector<c64_dir_entry> &vec);

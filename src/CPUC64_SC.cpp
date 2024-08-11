@@ -92,7 +92,7 @@ enum {
  *  6510 constructor: Initialize registers
  */
 
-MOS6510::MOS6510(C64 *c64, uint8 *Ram, uint8 *Basic, uint8 *Kernal, uint8 *Char, uint8 *Color)
+MOS6510::MOS6510(C64 *c64, uint8_t *Ram, uint8_t *Basic, uint8_t *Kernal, uint8_t *Char, uint8_t *Color)
  : the_c64(c64), ram(Ram), basic_rom(Basic), kernal_rom(Kernal), char_rom(Char), color_ram(Color)
 {
 	a = x = y = 0;
@@ -204,7 +204,7 @@ void MOS6510::SetState(MOS6510State *s)
 void MOS6510::new_config(void)
 {
 	pr_out = (pr_out & ~ddr) | (pr & ddr);
-	uint8 port = pr | ~ddr;
+	uint8_t port = pr | ~ddr;
 
 	basic_in = (port & 3) == 3;
 	kernal_in = port & 2;
@@ -217,7 +217,7 @@ void MOS6510::new_config(void)
  *  Read a byte from I/O / ROM space
  */
 
-inline uint8 MOS6510::read_byte_io(uint16 adr)
+inline uint8_t MOS6510::read_byte_io(uint16_t adr)
 {
 	switch (adr >> 12) {
 		case 0xa:
@@ -279,7 +279,7 @@ inline uint8 MOS6510::read_byte_io(uint16 adr)
  *  Read a byte from the CPU's address space
  */
 
-uint8 MOS6510::read_byte(uint16 adr)
+uint8_t MOS6510::read_byte(uint16_t adr)
 {
 	if (adr < 0xa000) {
 		if (adr >= 2) {
@@ -287,7 +287,7 @@ uint8 MOS6510::read_byte(uint16 adr)
 		} else if (adr == 0) {
 			return ddr;
 		} else {
-			uint8 byte = (pr | ~ddr) & (pr_out | 0x17);
+			uint8_t byte = (pr | ~ddr) & (pr_out | 0x17);
 			if (!(ddr & 0x20))
 				byte &= 0xdf;
 			return byte;
@@ -303,7 +303,7 @@ uint8 MOS6510::read_byte(uint16 adr)
 
 const char frodo_id[0x5c] = "FRODO\r(C) CHRISTIAN BAUER";
 
-uint8 MOS6510::read_emulator_id(uint16 adr)
+uint8_t MOS6510::read_emulator_id(uint16_t adr)
 {
 	switch (adr) {
 		case 0x7c:	// $dffc: revision
@@ -325,7 +325,7 @@ uint8 MOS6510::read_emulator_id(uint16 adr)
  *  Read a word (little-endian) from the CPU's address space
  */
 
-inline uint16 MOS6510::read_word(uint16 adr)
+inline uint16_t MOS6510::read_word(uint16_t adr)
 {
 	return read_byte(adr) | (read_byte(adr+1) << 8);
 }
@@ -335,7 +335,7 @@ inline uint16 MOS6510::read_word(uint16 adr)
  *  Write a byte to I/O space
  */
 
-inline void MOS6510::write_byte_io(uint16 adr, uint8 byte)
+inline void MOS6510::write_byte_io(uint16_t adr, uint8_t byte)
 {
 	if (adr >= 0xe000) {
 		ram[adr] = byte;
@@ -382,7 +382,7 @@ inline void MOS6510::write_byte_io(uint16 adr, uint8 byte)
  *  Write a byte to the CPU's address space
  */
 
-void MOS6510::write_byte(uint16 adr, uint8 byte)
+void MOS6510::write_byte(uint16_t adr, uint8_t byte)
 {
 	if (adr < 0xd000) {
 		if (adr >= 2)
@@ -405,7 +405,7 @@ void MOS6510::write_byte(uint16 adr, uint8 byte)
  *  Read byte from 6510 address space with special memory config (used by SAM)
  */
 
-uint8 MOS6510::ExtReadByte(uint16 adr)
+uint8_t MOS6510::ExtReadByte(uint16_t adr)
 {
 	// Save old memory configuration
 	bool bi = basic_in, ki = kernal_in, ci = char_in, ii = io_in;
@@ -417,7 +417,7 @@ uint8 MOS6510::ExtReadByte(uint16 adr)
 	io_in = (ExtConfig & 3) && (ExtConfig & 4);
 
 	// Read byte
-	uint8 byte = read_byte(adr);
+	uint8_t byte = read_byte(adr);
 
 	// Restore old configuration
 	basic_in = bi; kernal_in = ki; char_in = ci; io_in = ii;
@@ -430,7 +430,7 @@ uint8 MOS6510::ExtReadByte(uint16 adr)
  *  Write byte to 6510 address space with special memory config (used by SAM)
  */
 
-void MOS6510::ExtWriteByte(uint16 adr, uint8 byte)
+void MOS6510::ExtWriteByte(uint16_t adr, uint8_t byte)
 {
 	// Save old memory configuration
 	bool bi = basic_in, ki = kernal_in, ci = char_in, ii = io_in;
@@ -453,7 +453,7 @@ void MOS6510::ExtWriteByte(uint16 adr, uint8 byte)
  *  Read byte from 6510 address space with current memory config (used by REU)
  */
 
-uint8 MOS6510::REUReadByte(uint16 adr)
+uint8_t MOS6510::REUReadByte(uint16_t adr)
 {
 	return read_byte(adr);
 }
@@ -463,7 +463,7 @@ uint8 MOS6510::REUReadByte(uint16 adr)
  *  Write byte to 6510 address space with current memory config (used by REU)
  */
 
-void MOS6510::REUWriteByte(uint16 adr, uint8 byte)
+void MOS6510::REUWriteByte(uint16_t adr, uint8_t byte)
 {
 	write_byte(adr, byte);
 }
@@ -473,10 +473,10 @@ void MOS6510::REUWriteByte(uint16 adr, uint8 byte)
  *  Adc instruction
  */
 
-inline void MOS6510::do_adc(uint8 byte)
+inline void MOS6510::do_adc(uint8_t byte)
 {
 	if (!d_flag) {
-		uint16 tmp;
+		uint16_t tmp;
 
 		// Binary mode
 		tmp = a + byte + (c_flag ? 1 : 0);
@@ -485,7 +485,7 @@ inline void MOS6510::do_adc(uint8 byte)
 		z_flag = n_flag = a = tmp;
 
 	} else {
-		uint16 al, ah;
+		uint16_t al, ah;
 
 		// Decimal mode
 		al = (a & 0x0f) + (byte & 0x0f) + (c_flag ? 1 : 0);		// Calculate lower nybble
@@ -509,9 +509,9 @@ inline void MOS6510::do_adc(uint8 byte)
  * Sbc instruction
  */
 
-inline void MOS6510::do_sbc(uint8 byte)
+inline void MOS6510::do_sbc(uint8_t byte)
 {
-	uint16 tmp = a - byte - (c_flag ? 0 : 1);
+	uint16_t tmp = a - byte - (c_flag ? 0 : 1);
 
 	if (!d_flag) {
 
@@ -521,7 +521,7 @@ inline void MOS6510::do_sbc(uint8 byte)
 		z_flag = n_flag = a = tmp;
 
 	} else {
-		uint16 al, ah;
+		uint16_t al, ah;
 
 		// Decimal mode
 		al = (a & 0x0f) - (byte & 0x0f) - (c_flag ? 0 : 1);	// Calculate lower nybble
@@ -571,7 +571,7 @@ void MOS6510::Reset(void)
  *  Illegal opcode encountered
  */
 
-void MOS6510::illegal_op(uint8 op, uint16 at)
+void MOS6510::illegal_op(uint8_t op, uint16_t at)
 {
 	char illop_msg[80];
 
@@ -600,14 +600,14 @@ void MOS6510::illegal_op(uint8 op, uint16 at)
 
 void MOS6510::EmulateCycle(void)
 {
-	uint8 data, tmp;
+	uint8_t data, tmp;
 
 	// Any pending interrupts in state 0 (opcode fetch)?
 	if (!state && interrupt.intr_any) {
 		if (interrupt.intr[INT_RESET]) {
 			Reset();
 		} else if (interrupt.intr[INT_NMI]) {
-			uint32 int_delay = (opflags & OPFLAG_INT_DELAYED) ? 1 : 0;  // Taken branches to the same page delay the NMI
+			uint32_t int_delay = (opflags & OPFLAG_INT_DELAYED) ? 1 : 0;  // Taken branches to the same page delay the NMI
 			if (the_c64->CycleCounter - first_nmi_cycle - int_delay >= 2) {
 				interrupt.intr[INT_NMI] = false;	// Simulate an edge-triggered input
 				state = 0x0010;
@@ -615,7 +615,7 @@ void MOS6510::EmulateCycle(void)
 			}
 		} else if ((interrupt.intr[INT_VICIRQ] || interrupt.intr[INT_CIAIRQ]) &&
 				   (!i_flag || (opflags & OPFLAG_IRQ_DISABLED)) && !(opflags & OPFLAG_IRQ_ENABLED)) {
-			uint32 int_delay = (opflags & OPFLAG_INT_DELAYED) ? 1 : 0;  // Taken branches to the same page delay the IRQ
+			uint32_t int_delay = (opflags & OPFLAG_INT_DELAYED) ? 1 : 0;  // Taken branches to the same page delay the IRQ
 			if (the_c64->CycleCounter - first_irq_cycle - int_delay >= 2) {
 				state = 0x0008;
 				opflags = 0;

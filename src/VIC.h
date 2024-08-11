@@ -48,23 +48,23 @@ struct MOS6569State;
 
 class MOS6569 {
 public:
-	MOS6569(C64 *c64, C64Display *disp, MOS6510 *CPU, uint8 *RAM, uint8 *Char, uint8 *Color);
+	MOS6569(C64 *c64, C64Display *disp, MOS6510 *CPU, uint8_t *RAM, uint8_t *Char, uint8_t *Color);
 
-	uint8 ReadRegister(uint16 adr);
-	void WriteRegister(uint16 adr, uint8 byte);
+	uint8_t ReadRegister(uint16_t adr);
+	void WriteRegister(uint16_t adr, uint8_t byte);
 #ifdef FRODO_SC
 	bool EmulateCycle(void);
 #else
 	int EmulateLine(void);
 #endif
-	void ChangedVA(uint16 new_va);	// CIA VA14/15 has changed
-	void TriggerLightpen(void);		// Trigger lightpen interrupt
+	void ChangedVA(uint16_t new_va);	// CIA VA14/15 has changed
+	void TriggerLightpen(void);			// Trigger lightpen interrupt
 	void ReInitColors(void);
 	void GetState(MOS6569State *vd);
 	void SetState(MOS6569State *vd);
 
 #ifdef FRODO_SC
-	uint8 LastVICByte;
+	uint8_t LastVICByte;
 #endif
 
 private:
@@ -72,132 +72,132 @@ private:
 	void vblank(void);
 	void raster_irq(void);
 
-	uint16 mx[8];				// VIC registers
-	uint8 my[8];
-	uint8 mx8;
-	uint8 ctrl1, ctrl2;
-	uint8 lpx, lpy;
-	uint8 me, mxe, mye, mdp, mmc;
-	uint8 vbase;
-	uint8 irq_flag, irq_mask;
-	uint8 clx_spr, clx_bgr;
-	uint8 ec, b0c, b1c, b2c, b3c, mm0, mm1;
-	uint8 sc[8];
+	uint16_t mx[8];					// VIC registers
+	uint8_t my[8];
+	uint8_t mx8;
+	uint8_t ctrl1, ctrl2;
+	uint8_t lpx, lpy;
+	uint8_t me, mxe, mye, mdp, mmc;
+	uint8_t vbase;
+	uint8_t irq_flag, irq_mask;
+	uint8_t clx_spr, clx_bgr;
+	uint8_t ec, b0c, b1c, b2c, b3c, mm0, mm1;
+	uint8_t sc[8];
 
-	uint8 *ram, *char_rom, *color_ram; // Pointers to RAM and ROM
-	C64 *the_c64;				// Pointer to C64
-	C64Display *the_display;	// Pointer to C64Display
-	MOS6510 *the_cpu;			// Pointer to 6510
+	uint8_t *ram, *char_rom, *color_ram; // Pointers to RAM and ROM
+	C64 *the_c64;					// Pointer to C64
+	C64Display *the_display;		// Pointer to C64Display
+	MOS6510 *the_cpu;				// Pointer to 6510
 
-	uint8 colors[256];			// Indices of the 16 C64 colors (16 times mirrored to avoid "& 0x0f")
+	uint8_t colors[256];			// Indices of the 16 C64 colors (16 times mirrored to avoid "& 0x0f")
 
-	uint8 ec_color, b0c_color, b1c_color,
-	      b2c_color, b3c_color;	// Indices for exterior/background colors
-	uint8 mm0_color, mm1_color;	// Indices for MOB multicolors
-	uint8 spr_color[8];			// Indices for MOB colors
+	uint8_t ec_color, b0c_color, b1c_color,
+	        b2c_color, b3c_color;	// Indices for exterior/background colors
+	uint8_t mm0_color, mm1_color;	// Indices for MOB multicolors
+	uint8_t spr_color[8];			// Indices for MOB colors
 
-	uint32 ec_color_long;		// ec_color expanded to 32 bits
+	uint32_t ec_color_long;			// ec_color expanded to 32 bits
 
-	uint8 matrix_line[40];		// Buffer for video line, read in Bad Lines
-	uint8 color_line[40];		// Buffer for color line, read in Bad Lines
+	uint8_t matrix_line[40];		// Buffer for video line, read in Bad Lines
+	uint8_t color_line[40];			// Buffer for color line, read in Bad Lines
 
 #ifdef __POWERPC__
-	double chunky_tmp[0x180/8];	// Temporary line buffer for speedup
+	double chunky_tmp[0x180/8];		// Temporary line buffer for speedup
 #endif
-	uint8 *chunky_line_start;	// Pointer to start of current line in bitmap buffer
-	int xmod;					// Number of bytes per row
+	uint8_t *chunky_line_start;		// Pointer to start of current line in bitmap buffer
+	int xmod;						// Number of bytes per row
 
-	uint16 raster_y;				// Current raster line
-	uint16 irq_raster;			// Interrupt raster line
-	uint16 dy_start;				// Comparison values for border logic
-	uint16 dy_stop;
-	uint16 rc;					// Row counter
-	uint16 vc;					// Video counter
-	uint16 vc_base;				// Video counter base
-	uint16 x_scroll;				// X scroll value
-	uint16 y_scroll;				// Y scroll value
-	uint16 cia_vabase;			// CIA VA14/15 video base
+	uint16_t raster_y;				// Current raster line
+	uint16_t irq_raster;			// Interrupt raster line
+	uint16_t dy_start;				// Comparison values for border logic
+	uint16_t dy_stop;
+	uint16_t rc;					// Row counter
+	uint16_t vc;					// Video counter
+	uint16_t vc_base;				// Video counter base
+	uint16_t x_scroll;				// X scroll value
+	uint16_t y_scroll;				// Y scroll value
+	uint16_t cia_vabase;			// CIA VA14/15 video base
 
-	uint16 mc[8];				// Sprite data counters
+	uint16_t mc[8];					// Sprite data counters
 
-	int display_idx;			// Index of current display mode
-	int skip_counter;			// Counter for frame-skipping
+	int display_idx;				// Index of current display mode
+	int skip_counter;				// Counter for frame-skipping
 
 	long pad0;	// Keep buffers long-aligned
-	uint8 spr_coll_buf[0x180];	// Buffer for sprite-sprite collisions and priorities
-	uint8 fore_mask_buf[0x180/8];	// Foreground mask for sprite-graphics collisions and priorities
+	uint8_t spr_coll_buf[0x180];	// Buffer for sprite-sprite collisions and priorities
+	uint8_t fore_mask_buf[0x180/8];	// Foreground mask for sprite-graphics collisions and priorities
 #ifndef CAN_ACCESS_UNALIGNED
-	uint8 text_chunky_buf[40*8];	// Line graphics buffer
+	uint8_t text_chunky_buf[40*8];	// Line graphics buffer
 #endif
 
-	bool display_state;			// true: Display state, false: Idle state
-	bool border_on;				// Flag: Upper/lower border on (Frodo SC: Main border flipflop)
-	bool frame_skipped;			// Flag: Frame is being skipped
-	uint8 bad_lines_enabled;	// Flag: Bad Lines enabled for this frame
-	bool lp_triggered;			// Flag: Lightpen was triggered in this frame
+	bool display_state;				// true: Display state, false: Idle state
+	bool border_on;					// Flag: Upper/lower border on (Frodo SC: Main border flipflop)
+	bool frame_skipped;				// Flag: Frame is being skipped
+	uint8_t bad_lines_enabled;		// Flag: Bad Lines enabled for this frame
+	bool lp_triggered;				// Flag: Lightpen was triggered in this frame
 
 #ifdef FRODO_SC
-	uint8 read_byte(uint16 adr);
+	uint8_t read_byte(uint16_t adr);
 	void matrix_access(void);
 	void graphics_access(void);
 	void draw_graphics(void);
 	void draw_sprites(void);
 	void draw_background(void);
 
-	int cycle;					// Current cycle in line (1..63)
+	int cycle;						// Current cycle in line (1..63)
 
-	uint8 *chunky_ptr;			// Pointer in chunky bitmap buffer (this is where out output goes)
-	uint8 *fore_mask_ptr;		// Pointer in fore_mask_buf
+	uint8_t *chunky_ptr;			// Pointer in chunky bitmap buffer (this is where out output goes)
+	uint8_t *fore_mask_ptr;			// Pointer in fore_mask_buf
 
-	uint16 matrix_base;			// Video matrix base
-	uint16 char_base;			// Character generator base
-	uint16 bitmap_base;			// Bitmap base
+	uint16_t matrix_base;			// Video matrix base
+	uint16_t char_base;				// Character generator base
+	uint16_t bitmap_base;			// Bitmap base
 
-	bool is_bad_line;			// Flag: Current line is bad line
-	bool draw_this_line;		// Flag: This line is drawn on the screen
-	bool ud_border_on;			// Flag: Upper/lower border on
-	bool vblanking;				// Flag: VBlank in next cycle
+	bool is_bad_line;				// Flag: Current line is bad line
+	bool draw_this_line;			// Flag: This line is drawn on the screen
+	bool ud_border_on;				// Flag: Upper/lower border on
+	bool vblanking;					// Flag: VBlank in next cycle
 
-	bool border_on_sample[5];	// Samples of border state at different cycles (1, 17, 18, 56, 57)
-	uint8 border_color_sample[0x180/8];	// Samples of border color at each "displayed" cycle
+	bool border_on_sample[5];		// Samples of border state at different cycles (1, 17, 18, 56, 57)
+	uint8_t border_color_sample[0x180/8]; // Samples of border color at each "displayed" cycle
 
-	uint8 ref_cnt;				// Refresh counter
-	uint8 spr_exp_y;			// 8 sprite y expansion flipflops
-	uint8 spr_dma_on;			// 8 flags: Sprite DMA active
-	uint8 spr_disp_on;			// 8 flags: Sprite display active
-	uint8 spr_draw;				// 8 flags: Draw sprite in this line
-	uint16 spr_ptr[8];			// Sprite data pointers
-	uint16 mc_base[8];			// Sprite data counter bases
+	uint8_t ref_cnt;				// Refresh counter
+	uint8_t spr_exp_y;				// 8 sprite y expansion flipflops
+	uint8_t spr_dma_on;				// 8 flags: Sprite DMA active
+	uint8_t spr_disp_on;			// 8 flags: Sprite display active
+	uint8_t spr_draw;				// 8 flags: Draw sprite in this line
+	uint16_t spr_ptr[8];			// Sprite data pointers
+	uint16_t mc_base[8];			// Sprite data counter bases
 
-	uint16 raster_x;			// Current raster x position
+	uint16_t raster_x;				// Current raster x position
 
-	int ml_index;				// Index in matrix/color_line[]
-	uint8 gfx_data, char_data, color_data, last_char_data;
-	uint8 spr_data[8][4];		// Sprite data read
-	uint8 spr_draw_data[8][4];	// Sprite data for drawing
+	int ml_index;					// Index in matrix/color_line[]
+	uint8_t gfx_data, char_data, color_data, last_char_data;
+	uint8_t spr_data[8][4];			// Sprite data read
+	uint8_t spr_draw_data[8][4];	// Sprite data for drawing
 
-	uint32 first_ba_cycle;		// Cycle when BA first went low
+	uint32_t first_ba_cycle;		// Cycle when BA first went low
 #else
-	uint8 *get_physical(uint16 adr);
+	uint8_t *get_physical(uint16_t adr);
 	void make_mc_table(void);
-	void el_std_text(uint8 *p, uint8 *q, uint8 *r);
-	void el_mc_text(uint8 *p, uint8 *q, uint8 *r);
-	void el_std_bitmap(uint8 *p, uint8 *q, uint8 *r);
-	void el_mc_bitmap(uint8 *p, uint8 *q, uint8 *r);
-	void el_ecm_text(uint8 *p, uint8 *q, uint8 *r);
-	void el_std_idle(uint8 *p, uint8 *r);
-	void el_mc_idle(uint8 *p, uint8 *r);
-	void el_sprites(uint8 *chunky_ptr);
+	void el_std_text(uint8_t *p, uint8_t *q, uint8_t *r);
+	void el_mc_text(uint8_t *p, uint8_t *q, uint8_t *r);
+	void el_std_bitmap(uint8_t *p, uint8_t *q, uint8_t *r);
+	void el_mc_bitmap(uint8_t *p, uint8_t *q, uint8_t *r);
+	void el_ecm_text(uint8_t *p, uint8_t *q, uint8_t *r);
+	void el_std_idle(uint8_t *p, uint8_t *r);
+	void el_mc_idle(uint8_t *p, uint8_t *r);
+	void el_sprites(uint8_t *chunky_ptr);
 	int el_update_mc(int raster);
 
-	uint16 mc_color_lookup[4];
+	uint16_t mc_color_lookup[4];
 
-	bool border_40_col;			// Flag: 40 column border
-	uint8 sprite_on;			// 8 flags: Sprite display/DMA active
+	bool border_40_col;				// Flag: 40 column border
+	uint8_t sprite_on;				// 8 flags: Sprite display/DMA active
 
-	uint8 *matrix_base;			// Video matrix base
-	uint8 *char_base;			// Character generator base
-	uint8 *bitmap_base;			// Bitmap base
+	uint8_t *matrix_base;			// Video matrix base
+	uint8_t *char_base;				// Character generator base
+	uint8_t *bitmap_base;			// Bitmap base
 #endif
 #endif
 };
@@ -205,83 +205,83 @@ private:
 
 // VIC state
 struct MOS6569State {
-	uint8 m0x;				// Sprite coordinates
-	uint8 m0y;
-	uint8 m1x;
-	uint8 m1y;
-	uint8 m2x;
-	uint8 m2y;
-	uint8 m3x;
-	uint8 m3y;
-	uint8 m4x;
-	uint8 m4y;
-	uint8 m5x;
-	uint8 m5y;
-	uint8 m6x;
-	uint8 m6y;
-	uint8 m7x;
-	uint8 m7y;
-	uint8 mx8;
+	uint8_t m0x;			// Sprite coordinates
+	uint8_t m0y;
+	uint8_t m1x;
+	uint8_t m1y;
+	uint8_t m2x;
+	uint8_t m2y;
+	uint8_t m3x;
+	uint8_t m3y;
+	uint8_t m4x;
+	uint8_t m4y;
+	uint8_t m5x;
+	uint8_t m5y;
+	uint8_t m6x;
+	uint8_t m6y;
+	uint8_t m7x;
+	uint8_t m7y;
+	uint8_t mx8;
 
-	uint8 ctrl1;			// Control registers
-	uint8 raster;
-	uint8 lpx;
-	uint8 lpy;
-	uint8 me;
-	uint8 ctrl2;
-	uint8 mye;
-	uint8 vbase;
-	uint8 irq_flag;
-	uint8 irq_mask;
-	uint8 mdp;
-	uint8 mmc;
-	uint8 mxe;
-	uint8 mm;
-	uint8 md;
+	uint8_t ctrl1;			// Control registers
+	uint8_t raster;
+	uint8_t lpx;
+	uint8_t lpy;
+	uint8_t me;
+	uint8_t ctrl2;
+	uint8_t mye;
+	uint8_t vbase;
+	uint8_t irq_flag;
+	uint8_t irq_mask;
+	uint8_t mdp;
+	uint8_t mmc;
+	uint8_t mxe;
+	uint8_t mm;
+	uint8_t md;
 
-	uint8 ec;				// Color registers
-	uint8 b0c;
-	uint8 b1c;
-	uint8 b2c;
-	uint8 b3c;
-	uint8 mm0;
-	uint8 mm1;
-	uint8 m0c;
-	uint8 m1c;
-	uint8 m2c;
-	uint8 m3c;
-	uint8 m4c;
-	uint8 m5c;
-	uint8 m6c;
-	uint8 m7c;
+	uint8_t ec;				// Color registers
+	uint8_t b0c;
+	uint8_t b1c;
+	uint8_t b2c;
+	uint8_t b3c;
+	uint8_t mm0;
+	uint8_t mm1;
+	uint8_t m0c;
+	uint8_t m1c;
+	uint8_t m2c;
+	uint8_t m3c;
+	uint8_t m4c;
+	uint8_t m5c;
+	uint8_t m6c;
+	uint8_t m7c;
 							// Additional registers
-	uint8 pad0;
-	uint16 irq_raster;		// IRQ raster line
-	uint16 vc;				// Video counter
-	uint16 vc_base;			// Video counter base
-	uint8 rc;				// Row counter
-	uint8 spr_dma;			// 8 Flags: Sprite DMA active
-	uint8 spr_disp;			// 8 Flags: Sprite display active
-	uint8 mc[8];			// Sprite data counters
-	uint8 mc_base[8];		// Sprite data counter bases
+	uint8_t pad0;
+	uint16_t irq_raster;	// IRQ raster line
+	uint16_t vc;			// Video counter
+	uint16_t vc_base;		// Video counter base
+	uint8_t rc;				// Row counter
+	uint8_t spr_dma;		// 8 Flags: Sprite DMA active
+	uint8_t spr_disp;		// 8 Flags: Sprite display active
+	uint8_t mc[8];			// Sprite data counters
+	uint8_t mc_base[8];		// Sprite data counter bases
 	bool display_state;		// true: Display state, false: Idle state
 	bool bad_line;			// Flag: Bad Line state
 	bool bad_line_enable;	// Flag: Bad Lines enabled for this frame
 	bool lp_triggered;		// Flag: Lightpen was triggered in this frame
 	bool border_on;			// Flag: Upper/lower border on (Frodo SC: Main border flipflop)
 
-	uint16 bank_base;		// VIC bank base address
-	uint16 matrix_base;		// Video matrix base
-	uint16 char_base;		// Character generator base
-	uint16 bitmap_base;		// Bitmap base
-	uint16 sprite_base[8];	// Sprite bases
+	uint16_t bank_base;		// VIC bank base address
+	uint16_t matrix_base;	// Video matrix base
+	uint16_t char_base;		// Character generator base
+	uint16_t bitmap_base;	// Bitmap base
+	uint16_t sprite_base[8]; // Sprite bases
 
 							// Frodo SC:
 	int cycle;				// Current cycle in line (1..63)
-	uint16 raster_x;		// Current raster x position
+	uint16_t raster_x;		// Current raster x position
 	int ml_index;			// Index in matrix/color_line[]
-	uint8 ref_cnt;			// Refresh counter
-	uint8 last_vic_byte;	// Last byte read by VIC
+	uint8_t ref_cnt;		// Refresh counter
+	uint8_t last_vic_byte;	// Last byte read by VIC
 	bool ud_border_on;		// Flag: Upper/lower border on
 };
 

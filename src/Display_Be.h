@@ -37,7 +37,7 @@
 
 
 // Window thread messages
-const uint32 MSG_REDRAW = 1;
+const uint32_t MSG_REDRAW = 1;
 
 
 // C64 display and window frame
@@ -134,7 +134,7 @@ class BitmapView : public BView {
 public:
 	BitmapView(BRect frame, BBitmap *bitmap);
 	virtual void Draw(BRect update);
-	virtual void KeyDown(const char *bytes, int32 numBytes);
+	virtual void KeyDown(const char *bytes, int32_t numBytes);
 	void ChangeBitmap(BBitmap *bitmap);
 
 private:
@@ -162,7 +162,7 @@ public:
 	LEDView *LED[4];
 
 #if BIT_BANG
-	uint8 *bits;
+	uint8_t *bits;
 	int bytes_per_row;
 #endif
 
@@ -215,16 +215,16 @@ private:
 
 #if MGA_HACK
 	area_id mga_clone_area;
-	volatile uint8 *isa_io;
+	volatile uint8_t *isa_io;
 	bool mga_ready;
 
-	void CRTC_out(int reg, uint8 val) {isa_io[0x3d4] = reg; __eieio(); isa_io[0x3d5] = val; __eieio();}
-	uint8 CRTC_in(int reg) {isa_io[0x3d4] = reg; __eieio(); return isa_io[0x3d5];}
-	void SEQ_out(int reg, uint8 val) {isa_io[0x3c4] = reg; __eieio(); isa_io[0x3c5] = val; __eieio();}
-	uint8 SEQ_in(int reg) {isa_io[0x3c4] = reg; __eieio(); return isa_io[0x3c5];}
-	void GDC_out(int reg, uint8 val) {isa_io[0x3ce] = reg; __eieio(); isa_io[0x3cf] = val; __eieio();}
-	uint8 GDC_in(int reg) {isa_io[0x3ce] = reg; __eieio(); return isa_io[0x3cf];}
-	void ATC_out(int reg, uint8 val) {isa_io[0x3c0] = reg; __eieio(); isa_io[0x3c0] = val; __eieio();}
+	void CRTC_out(int reg, uint8_t val) {isa_io[0x3d4] = reg; __eieio(); isa_io[0x3d5] = val; __eieio();}
+	uint8_t CRTC_in(int reg) {isa_io[0x3d4] = reg; __eieio(); return isa_io[0x3d5];}
+	void SEQ_out(int reg, uint8_t val) {isa_io[0x3c4] = reg; __eieio(); isa_io[0x3c5] = val; __eieio();}
+	uint8_t SEQ_in(int reg) {isa_io[0x3c4] = reg; __eieio(); return isa_io[0x3c5];}
+	void GDC_out(int reg, uint8_t val) {isa_io[0x3ce] = reg; __eieio(); isa_io[0x3cf] = val; __eieio();}
+	uint8_t GDC_in(int reg) {isa_io[0x3ce] = reg; __eieio(); return isa_io[0x3cf];}
+	void ATC_out(int reg, uint8_t val) {isa_io[0x3c0] = reg; __eieio(); isa_io[0x3c0] = val; __eieio();}
 #endif
 };
 
@@ -355,20 +355,20 @@ void C64Display::Update(void)
 
 		// Update C64 display in dobule scan mode
 		if (ThePrefs.DoubleScan) {
-			uint8 *src = (uint8 *)the_screen->TheBitmap->Bits();
-			uint32 src_xmod = the_screen->TheBitmap->BytesPerRow();
+			uint8_t *src = (uint8_t *)the_screen->TheBitmap->Bits();
+			uint32_t src_xmod = the_screen->TheBitmap->BytesPerRow();
 			src += src_xmod * 16 + 32;
-			uint8 *dest = (uint8 *)the_screen->CardInfo()->frame_buffer;
-			uint32 dest_xmod = the_screen->CardInfo()->bytes_per_row;
+			uint8_t *dest = (uint8_t *)the_screen->CardInfo()->frame_buffer;
+			uint32_t dest_xmod = the_screen->CardInfo()->bytes_per_row;
 #ifdef __POWERPC__
 			double tmp[1];
 			for (int y=0; y<240; y++) {
-				uint32 *p = (uint32 *)src - 1;
+				uint32_t *p = (uint32_t *)src - 1;
 				double *q1 = (double *)dest - 1;
 				double *q2 = q1 + dest_xmod / sizeof(double);
 				for (int x=0; x<80; x++) {
-					uint32 val = *(++p);
-					uint8 *r = (uint8 *)&tmp[1];
+					uint32_t val = *(++p);
+					uint8_t *r = (uint8_t *)&tmp[1];
 					*(--r) = val;
 					*(--r) = val;
 					val >>= 8;
@@ -389,12 +389,12 @@ void C64Display::Update(void)
 			}
 #else
 			for (int y=0; y<240; y++) {
-				uint32 *p = (uint32 *)src;
-				uint32 *q1 = (uint32 *)dest;
-				uint32 *q2 = q1 + dest_xmod / sizeof(uint32);
+				uint32_t *p = (uint32_t *)src;
+				uint32_t *q1 = (uint32_t *)dest;
+				uint32_t *q2 = q1 + dest_xmod / sizeof(uint32_t);
 				for (int x=0; x<80; x++) {
-					uint32 val = *p++;
-					uint32 tmp = val & 0x000000ff;
+					uint32_t val = *p++;
+					uint32_t tmp = val & 0x000000ff;
 					tmp |= (val << 8) & 0x0000ff00;
 					tmp |= (val << 8) & 0x00ff0000;
 					tmp |= (val << 16) & 0xff000000;
@@ -451,18 +451,18 @@ void C64Display::Speedometer(int speed)
  *  Return pointer to bitmap data
  */
 
-uint8 *C64Display::BitmapBase(void)
+uint8_t *C64Display::BitmapBase(void)
 {
 	if (using_screen) {
 		if (ThePrefs.DoubleScan)
-			return (uint8 *)the_screen->TheBitmap->Bits();
+			return (uint8_t *)the_screen->TheBitmap->Bits();
 		else
-			return (uint8 *)the_screen->CardInfo()->frame_buffer;
+			return (uint8_t *)the_screen->CardInfo()->frame_buffer;
 	} else
 #if BIT_BANG
-		return (uint8 *)the_window->bits;
+		return (uint8_t *)the_window->bits;
 #else
-		return (uint8 *)the_window->TheBitmap[draw_bitmap]->Bits();
+		return (uint8_t *)the_window->TheBitmap[draw_bitmap]->Bits();
 #endif
 }
 
@@ -491,7 +491,7 @@ int C64Display::BitmapXMod(void)
  *  Poll the keyboard
  */
 
-void C64Display::PollKeyboard(uint8 *key_matrix, uint8 *rev_matrix, uint8 *joystick)
+void C64Display::PollKeyboard(uint8_t *key_matrix, uint8_t *rev_matrix, uint8_t *joystick)
 {
 	key_info the_key_info;
 	int be_code, be_byte, be_bit, c64_byte, c64_bit;
@@ -581,7 +581,7 @@ bool C64Display::NumLock(void)
  *  Allocate C64 colors
  */
 
-void C64Display::InitColors(uint8 *colors)
+void C64Display::InitColors(uint8_t *colors)
 {
 	BScreen scr(using_screen ? (BWindow *)the_screen : the_window);
 	for (int i=0; i<256; i++)
@@ -732,7 +732,7 @@ void C64Window::DirectConnected(direct_buffer_info *info)
 		case B_DIRECT_MODIFY:
 //			acquire_sem(drawing_sem);
 		case B_DIRECT_START:
-			bits = ((uint8 *)info->bits + info->window_bounds.top * info->bytes_per_row + info->window_bounds.left * info->bits_per_pixel / 8);
+			bits = ((uint8_t *)info->bits + info->window_bounds.top * info->bytes_per_row + info->window_bounds.left * info->bits_per_pixel / 8);
 			bytes_per_row = info->bytes_per_row;
 //			release_sem(drawing_sem);
 			break;
@@ -764,7 +764,7 @@ void C64Screen::ScreenConnected(bool active)
 			if (mga_area > 0) {
 
 				// Clone area, remove write protection
-				volatile uint8 *mga_io;
+				volatile uint8_t *mga_io;
 				mga_clone_area = clone_area("mga registers", (void **)&mga_io, B_ANY_ADDRESS, B_READ_AREA | B_WRITE_AREA, mga_area);
 				if (mga_clone_area > 0) {
 					isa_io = mga_io + 0x1c00;
@@ -815,9 +815,9 @@ void C64Screen::DispatchMessage(BMessage *msg, BHandler *handler)
 {
 	switch (msg->what) {
 		case B_KEY_DOWN: {
-			uint32 mods = msg->FindInt32("modifiers");
+			uint32_t mods = msg->FindInt32("modifiers");
 			if (mods & B_COMMAND_KEY) {
-				uint32 key = msg->FindInt32("raw_char");
+				uint32_t key = msg->FindInt32("raw_char");
 				switch (key) {
 					case 'p':
 						be_app->PostMessage(MSG_PREFS);
@@ -867,7 +867,7 @@ void C64Screen::DrawLED(int i, int state)
  *  Draw speedometer
  */
 
-static const int8 Digits[11][8] = {	// Digit images
+static const int8_t Digits[11][8] = {	// Digit images
 	{0x3c, 0x66, 0x6e, 0x76, 0x66, 0x66, 0x3c, 0x00},
 	{0x18, 0x18, 0x38, 0x18, 0x18, 0x18, 0x7e, 0x00},
 	{0x3c, 0x66, 0x06, 0x0c, 0x30, 0x60, 0x7e, 0x00},
@@ -899,7 +899,7 @@ void C64Screen::DrawSpeedometer()
 	char *s = SpeedoStr;
 	char c;
 	long xmod = CardInfo()->bytes_per_row;
-	uint8 *p = (uint8 *)CardInfo()->frame_buffer + maxx - 8*8 + (maxy-20) * xmod;
+	uint8_t *p = (uint8_t *)CardInfo()->frame_buffer + maxx - 8*8 + (maxy-20) * xmod;
 	while ((c = *s++) != 0) {
 		if (c == ' ')
 			continue;
@@ -907,9 +907,9 @@ void C64Screen::DrawSpeedometer()
 			c = 10;
 		else
 			c -= '0';
-		uint8 *q = p;
+		uint8_t *q = p;
 		for (int y=0; y<8; y++) {
-			uint8 data = Digits[c][y];
+			uint8_t data = Digits[c][y];
 			for (int x=0; x<8; x++) {
 				if (data & (1 << (7-x)))
 					q[x] = 255;
@@ -930,7 +930,7 @@ void C64Screen::DrawSpeedometer()
 void C64Screen::FillRect(int x1, int y1, int x2, int y2, int color)
 {
 	long xmod = CardInfo()->bytes_per_row;
-	uint8 *p = (uint8 *)CardInfo()->frame_buffer + y1 * xmod + x1;
+	uint8_t *p = (uint8_t *)CardInfo()->frame_buffer + y1 * xmod + x1;
 	int n = x2 - x1 + 1;
 	for(int y=y1; y<=y2; y++) {
 #ifdef __POWERPC__
@@ -968,7 +968,7 @@ void BitmapView::Draw(BRect update)
  *  Receive special key-down events (main C64 keyboard handling is done in PollKeyboard)
  */
 
-void BitmapView::KeyDown(const char *bytes, int32 numBytes)
+void BitmapView::KeyDown(const char *bytes, int32_t numBytes)
 {
 	if (bytes[0] == B_FUNCTION_KEY || bytes[0] == '+' || bytes[0] == '-' || bytes[0] == '*' || bytes[0] == '/') {
 		BMessage *msg = Window()->CurrentMessage();

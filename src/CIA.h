@@ -49,15 +49,15 @@ public:
 protected:
 	MOS6510 *the_cpu;	// Pointer to 6510
 
-	uint8 pra, prb, ddra, ddrb;
+	uint8_t pra, prb, ddra, ddrb;
 
-	uint16 ta, tb, latcha, latchb;
+	uint16_t ta, tb, latcha, latchb;
 
-	uint8 tod_10ths, tod_sec, tod_min, tod_hr;
-	uint8 alm_10ths, alm_sec, alm_min, alm_hr;
+	uint8_t tod_10ths, tod_sec, tod_min, tod_hr;
+	uint8_t alm_10ths, alm_sec, alm_min, alm_hr;
 
-	uint8 sdr, icr, cra, crb;
-	uint8 int_mask;
+	uint8_t sdr, icr, cra, crb;
+	uint8_t int_mask;
 
 	int tod_divider;	// TOD frequency divider
 
@@ -67,7 +67,7 @@ protected:
 	     tb_cnt_ta;		// Flag: Timer B is counting underflows of Timer A
 
 #ifdef FRODO_SC
-	uint8 timer_on_pb(uint8 prb);
+	uint8_t timer_on_pb(uint8_t prb);
 
 	bool ta_irq_next_cycle,		// Flag: Trigger TA IRQ in next cycle
 		 tb_irq_next_cycle,		// Flag: Trigger TB IRQ in next cycle
@@ -76,7 +76,7 @@ protected:
 		 ta_toggle,				// TA output to PB6 toggle state
 		 tb_toggle;				// TB output to PB7 toggle state
 	char ta_state, tb_state;	// Timer A/B states
-	uint8 new_cra, new_crb;		// New values for CRA/CRB
+	uint8_t new_cra, new_crb;	// New values for CRA/CRB
 #endif
 };
 
@@ -86,22 +86,22 @@ public:
 	MOS6526_1(MOS6510 *CPU, MOS6569 *VIC);
 
 	void Reset(void);
-	uint8 ReadRegister(uint16 adr);
-	void WriteRegister(uint16 adr, uint8 byte);
+	uint8_t ReadRegister(uint16_t adr);
+	void WriteRegister(uint16_t adr, uint8_t byte);
 	virtual void TriggerInterrupt(int bit);
 
-	uint8 KeyMatrix[8];	// C64 keyboard matrix, 1 bit/key (0: key down, 1: key up)
-	uint8 RevMatrix[8];	// Reversed keyboard matrix
+	uint8_t KeyMatrix[8];	// C64 keyboard matrix, 1 bit/key (0: key down, 1: key up)
+	uint8_t RevMatrix[8];	// Reversed keyboard matrix
 
-	uint8 Joystick1;	// Joystick 1 AND value
-	uint8 Joystick2;	// Joystick 2 AND value
+	uint8_t Joystick1;		// Joystick 1 AND value
+	uint8_t Joystick2;		// Joystick 2 AND value
 
 private:
 	void check_lp(void);
 
 	MOS6569 *the_vic;
 
-	uint8 prev_lp;		// Previous state of LP line (bit 4)
+	uint8_t prev_lp;		// Previous state of LP line (bit 4)
 };
 
 
@@ -110,11 +110,11 @@ public:
 	MOS6526_2(MOS6510 *CPU, MOS6569 *VIC, MOS6502_1541 *CPU1541);
 
 	void Reset(void);
-	uint8 ReadRegister(uint16 adr);
-	void WriteRegister(uint16 adr, uint8 byte);
+	uint8_t ReadRegister(uint16_t adr);
+	void WriteRegister(uint16_t adr, uint8_t byte);
 	virtual void TriggerInterrupt(int bit);
 
-	uint8 IECLines;		// State of IEC lines (bit 7 - DATA, bit 6 - CLK, bit 4 - ATN)
+	uint8_t IECLines;		// State of IEC lines (bit 7 - DATA, bit 6 - CLK, bit 4 - ATN)
 
 private:
 	MOS6569 *the_vic;
@@ -124,30 +124,30 @@ private:
 
 // CIA state
 struct MOS6526State {
-	uint8 pra;
-	uint8 ddra;
-	uint8 prb;
-	uint8 ddrb;
-	uint8 ta_lo;
-	uint8 ta_hi;
-	uint8 tb_lo;
-	uint8 tb_hi;
-	uint8 tod_10ths;
-	uint8 tod_sec;
-	uint8 tod_min;
-	uint8 tod_hr;
-	uint8 sdr;
-	uint8 int_data;		// Pending interrupts
-	uint8 cra;
-	uint8 crb;
+	uint8_t pra;
+	uint8_t ddra;
+	uint8_t prb;
+	uint8_t ddrb;
+	uint8_t ta_lo;
+	uint8_t ta_hi;
+	uint8_t tb_lo;
+	uint8_t tb_hi;
+	uint8_t tod_10ths;
+	uint8_t tod_sec;
+	uint8_t tod_min;
+	uint8_t tod_hr;
+	uint8_t sdr;
+	uint8_t int_data;	// Pending interrupts
+	uint8_t cra;
+	uint8_t crb;
 						// Additional registers
-	uint16 latcha;		// Timer latches
-	uint16 latchb;
-	uint8 alm_10ths;	// Alarm time
-	uint8 alm_sec;
-	uint8 alm_min;
-	uint8 alm_hr;
-	uint8 int_mask;		// Enabled interrupts
+	uint16_t latcha;	// Timer latches
+	uint16_t latchb;
+	uint8_t alm_10ths;	// Alarm time
+	uint8_t alm_sec;
+	uint8_t alm_min;
+	uint8_t alm_hr;
+	uint8_t int_mask;	// Enabled interrupts
 };
 
 

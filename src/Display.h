@@ -58,11 +58,11 @@ public:
 	void Update(void);
 	void UpdateLEDs(int l0, int l1, int l2, int l3);
 	void Speedometer(int speed);
-	uint8 *BitmapBase(void);
+	uint8_t *BitmapBase(void);
 	int BitmapXMod(void);
-	void PollKeyboard(uint8 *key_matrix, uint8 *rev_matrix, uint8 *joystick);
+	void PollKeyboard(uint8_t *key_matrix, uint8_t *rev_matrix, uint8_t *joystick);
 	bool NumLock(void);
-	void InitColors(uint8 *colors);
+	void InitColors(uint8_t *colors);
 	void NewPrefs(Prefs *prefs);
 
 	C64 *TheC64;
@@ -90,7 +90,7 @@ private:
 
 #ifdef HAVE_SDL
 	char speedometer_string[16];		// Speedometer text
-	void draw_string(SDL_Surface *s, int x, int y, const char *str, uint8 front_color, uint8 back_color);
+	void draw_string(SDL_Surface *s, int x, int y, const char *str, uint8_t front_color, uint8_t back_color);
 #endif
 
 #ifdef __unix

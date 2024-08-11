@@ -24,7 +24,7 @@
 
 
 // Addressing mode for each opcode (first part of execution) (Frodo SC)
-const uint8 ModeTab[256] = {
+const uint8_t ModeTab[256] = {
 	O_BRK,	A_INDX,	1,		M_INDX,	A_ZERO,	A_ZERO,	M_ZERO,	M_ZERO,	// 00
 	O_PHP,	O_ORA_I,O_ASL_A,O_ANC_I,A_ABS,	A_ABS,	M_ABS,	M_ABS,
 	O_BPL,	AE_INDY,1,		M_INDY,	A_ZEROX,A_ZEROX,M_ZEROX,M_ZEROX,// 10
@@ -61,7 +61,7 @@ const uint8 ModeTab[256] = {
 
 
 // Operation for each opcode (second part of execution) (Frodo SC)
-const uint8 OpTab[256] = {
+const uint8_t OpTab[256] = {
 	1,		O_ORA,	1,		O_SLO,	O_NOP_A,O_ORA,	O_ASL,	O_SLO,	// 00
 	1,		1,		1,		1,		O_NOP_A,O_ORA,	O_ASL,	O_SLO,
 	1,		O_ORA,	1,		O_SLO,	O_NOP_A,O_ORA,	O_ASL,	O_SLO,	// 10

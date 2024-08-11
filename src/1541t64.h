@@ -41,21 +41,21 @@ public:
 	ArchDrive(IEC *iec, const char *filepath);
 	virtual ~ArchDrive();
 
-	virtual uint8 Open(int channel, const uint8 *name, int name_len);
-	virtual uint8 Close(int channel);
-	virtual uint8 Read(int channel, uint8 &byte);
-	virtual uint8 Write(int channel, uint8 byte, bool eoi);
+	virtual uint8_t Open(int channel, const uint8_t *name, int name_len);
+	virtual uint8_t Close(int channel);
+	virtual uint8_t Read(int channel, uint8_t &byte);
+	virtual uint8_t Write(int channel, uint8_t byte, bool eoi);
 	virtual void Reset(void);
 
 private:
 	bool change_arch(const char *path);
 
-	uint8 open_file(int channel, const uint8 *name, int name_len);
-	uint8 open_directory(int channel, const uint8 *pattern, int pattern_len);
-	bool find_first_file(const uint8 *pattern, int pattern_len, int &num);
+	uint8_t open_file(int channel, const uint8_t *name, int name_len);
+	uint8_t open_directory(int channel, const uint8_t *pattern, int pattern_len);
+	bool find_first_file(const uint8_t *pattern, int pattern_len, int &num);
 	void close_all_channels(void);
 
-	virtual void rename_cmd(const uint8 *new_file, int new_file_len, const uint8 *old_file, int old_file_len);
+	virtual void rename_cmd(const uint8_t *new_file, int new_file_len, const uint8_t *old_file, int old_file_len);
 	virtual void initialize_cmd(void);
 	virtual void validate_cmd(void);
 
@@ -66,7 +66,7 @@ private:
 	char dir_title[16];		// Directory title
 	FILE *file[16];			// File pointers for each of the 16 channels (all temporary files)
 
-	uint8 read_char[16];	// Buffers for one-byte read-ahead
+	uint8_t read_char[16];	// Buffers for one-byte read-ahead
 };
 
 
@@ -76,7 +76,7 @@ private:
 
 // Check whether file with given header (64 bytes) and size looks like one
 // of the file types supported by this module
-extern bool IsArchFile(const char *path, const uint8 *header, long size);
+extern bool IsArchFile(const char *path, const uint8_t *header, long size);
 
 // Read directory of archive file into (empty) c64_dir_entry vector
 extern bool ReadArchDirectory(const char *path, vector<c64_dir_entry> &vec);

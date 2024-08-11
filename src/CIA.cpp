@@ -181,11 +181,11 @@ void MOS6526::SetState(MOS6526State *cs)
  *  Read from register (CIA 1)
  */
 
-uint8 MOS6526_1::ReadRegister(uint16 adr)
+uint8_t MOS6526_1::ReadRegister(uint16_t adr)
 {
 	switch (adr) {
 		case 0x00: {
-			uint8 ret = pra | ~ddra, tst = (prb | ~ddrb) & Joystick1;
+			uint8_t ret = pra | ~ddra, tst = (prb | ~ddrb) & Joystick1;
 			if (!(tst & 0x01)) ret &= RevMatrix[0];	// AND all active columns
 			if (!(tst & 0x02)) ret &= RevMatrix[1];
 			if (!(tst & 0x04)) ret &= RevMatrix[2];
@@ -197,7 +197,7 @@ uint8 MOS6526_1::ReadRegister(uint16 adr)
 			return ret & Joystick2;
 		}
 		case 0x01: {
-			uint8 ret = ~ddrb, tst = (pra | ~ddra) & Joystick2;
+			uint8_t ret = ~ddrb, tst = (pra | ~ddra) & Joystick2;
 			if (!(tst & 0x01)) ret &= KeyMatrix[0];	// AND all active rows
 			if (!(tst & 0x02)) ret &= KeyMatrix[1];
 			if (!(tst & 0x04)) ret &= KeyMatrix[2];
@@ -220,7 +220,7 @@ uint8 MOS6526_1::ReadRegister(uint16 adr)
 		case 0x0b: tod_halt = true; return tod_hr;
 		case 0x0c: return sdr;
 		case 0x0d: {
-			uint8 ret = icr;		// Read and clear ICR
+			uint8_t ret = icr;		// Read and clear ICR
 			icr = 0;
 			the_cpu->ClearCIAIRQ();	// Clear IRQ
 			return ret;
@@ -236,7 +236,7 @@ uint8 MOS6526_1::ReadRegister(uint16 adr)
  *  Read from register (CIA 2)
  */
 
-uint8 MOS6526_2::ReadRegister(uint16 adr)
+uint8_t MOS6526_2::ReadRegister(uint16_t adr)
 {
 	switch (adr) {
 		case 0x00:
@@ -255,7 +255,7 @@ uint8 MOS6526_2::ReadRegister(uint16 adr)
 		case 0x0b: tod_halt = true; return tod_hr;
 		case 0x0c: return sdr;
 		case 0x0d: {
-			uint8 ret = icr;		// Read and clear ICR
+			uint8_t ret = icr;		// Read and clear ICR
 			icr = 0;
 			the_cpu->ClearNMI();	// Clear NMI
 			return ret;
@@ -279,7 +279,7 @@ inline void MOS6526_1::check_lp(void)
 	prev_lp = (prb | ~ddrb) & 0x10;
 }
 
-void MOS6526_1::WriteRegister(uint16 adr, uint8 byte)
+void MOS6526_1::WriteRegister(uint16_t adr, uint8_t byte)
 {
 	switch (adr) {
 		case 0x0: pra = byte; break;
@@ -372,14 +372,14 @@ void MOS6526_1::WriteRegister(uint16 adr, uint8 byte)
  *  Write to register (CIA 2)
  */
 
-void MOS6526_2::WriteRegister(uint16 adr, uint8 byte)
+void MOS6526_2::WriteRegister(uint16_t adr, uint8_t byte)
 {
 	switch (adr) {
 		case 0x0:{
 			pra = byte;
 			byte = ~pra & ddra;
 			the_vic->ChangedVA(byte & 3);
-			uint8 old_lines = IECLines;
+			uint8_t old_lines = IECLines;
 			IECLines = (byte << 2) & 0x80	// DATA
 				| (byte << 2) & 0x40		// CLK
 				| (byte << 1) & 0x10;		// ATN
@@ -479,7 +479,7 @@ void MOS6526_2::WriteRegister(uint16 adr, uint8 byte)
 
 void MOS6526::CountTOD(void)
 {
-	uint8 lo, hi;
+	uint8_t lo, hi;
 
 	// Decrement frequency divider
 	if (tod_divider)

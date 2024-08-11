@@ -154,7 +154,7 @@ C64Display::C64Display(C64 *the_c64) : TheC64(the_c64)
 
 	// Open window
 	SDL_WM_SetCaption(VERSION_STRING, "Frodo");
-	uint32 flags = (ThePrefs.DisplayType == DISPTYPE_SCREEN ? SDL_FULLSCREEN : 0);
+	uint32_t flags = (ThePrefs.DisplayType == DISPTYPE_SCREEN ? SDL_FULLSCREEN : 0);
 
 #ifdef ENABLE_OPENGL
 
@@ -244,7 +244,7 @@ C64Display::C64Display(C64 *the_c64) : TheC64(the_c64)
 	glUseProgram(program);
 
 	// Create VIC display texture (8-bit color index in the red channel)
-	uint8 *tmp = (uint8 *)malloc(TEXTURE_SIZE * TEXTURE_SIZE);
+	uint8_t *tmp = (uint8_t *)malloc(TEXTURE_SIZE * TEXTURE_SIZE);
 	memset(tmp, 0, TEXTURE_SIZE * TEXTURE_SIZE);
 
 	glGenTextures(1, &vic_tex);
@@ -260,7 +260,7 @@ C64Display::C64Display(C64 *the_c64) : TheC64(the_c64)
 	free(tmp);
 
 	// Create VIC palette texture
-	tmp = (uint8 *)malloc(256 * 3);
+	tmp = (uint8_t *)malloc(256 * 3);
 	memset(tmp, 0xff, 256 * 3);
 	for (int i=0; i<16; ++i) {
 		tmp[i*3+0] = palette_red[i & 0x0f];
@@ -431,15 +431,15 @@ void C64Display::Update(void)
  *  Draw string into surface using the C64 ROM font
  */
 
-void C64Display::draw_string(SDL_Surface *s, int x, int y, const char *str, uint8 front_color, uint8 back_color)
+void C64Display::draw_string(SDL_Surface *s, int x, int y, const char *str, uint8_t front_color, uint8_t back_color)
 {
-	uint8 *pb = (uint8 *)s->pixels + s->pitch*y + x;
+	uint8_t *pb = (uint8_t *)s->pixels + s->pitch*y + x;
 	char c;
 	while ((c = *str++) != 0) {
-		uint8 *q = TheC64->Char + c*8 + 0x800;
-		uint8 *p = pb;
+		uint8_t *q = TheC64->Char + c*8 + 0x800;
+		uint8_t *p = pb;
 		for (int y=0; y<8; y++) {
-			uint8 v = *q++;
+			uint8_t v = *q++;
 			p[0] = (v & 0x80) ? front_color : back_color;
 			p[1] = (v & 0x40) ? front_color : back_color;
 			p[2] = (v & 0x20) ? front_color : back_color;
@@ -493,9 +493,9 @@ void C64Display::Speedometer(int speed)
  *  Return pointer to bitmap data
  */
 
-uint8 *C64Display::BitmapBase(void)
+uint8_t *C64Display::BitmapBase(void)
 {
-	return (uint8 *)screen->pixels;
+	return (uint8_t *)screen->pixels;
 }
 
 
@@ -513,7 +513,7 @@ int C64Display::BitmapXMod(void)
  *  Poll the keyboard
  */
 
-static void translate_key(SDLKey key, bool key_up, uint8 *key_matrix, uint8 *rev_matrix, uint8 *joystick)
+static void translate_key(SDLKey key, bool key_up, uint8_t *key_matrix, uint8_t *rev_matrix, uint8_t *joystick)
 {
 	int c64_key = -1;
 	switch (key) {
@@ -647,7 +647,7 @@ static void translate_key(SDLKey key, bool key_up, uint8 *key_matrix, uint8 *rev
 	}
 }
 
-void C64Display::PollKeyboard(uint8 *key_matrix, uint8 *rev_matrix, uint8 *joystick)
+void C64Display::PollKeyboard(uint8_t *key_matrix, uint8_t *rev_matrix, uint8_t *joystick)
 {
 	SDL_Event event;
 	while (SDL_PollEvent(&event)) {
@@ -780,9 +780,9 @@ void C64::open_close_joysticks(int oldjoy1, int oldjoy2, int newjoy1, int newjoy
  *  Poll joystick port, return CIA mask
  */
 
-uint8 C64::poll_joystick(int port)
+uint8_t C64::poll_joystick(int port)
 {
-	uint8 j = 0xff;
+	uint8_t j = 0xff;
 
 	if (port == 0 && (joy[0] || joy[1]))
 		SDL_JoystickUpdate();
@@ -824,7 +824,7 @@ uint8 C64::poll_joystick(int port)
  *  Allocate C64 colors
  */
 
-void C64Display::InitColors(uint8 *colors)
+void C64Display::InitColors(uint8_t *colors)
 {
 	SDL_Color palette[PALETTE_SIZE];
 	for (int i=0; i<16; i++) {

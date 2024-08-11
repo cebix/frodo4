@@ -100,7 +100,7 @@ enum {
  *  6510 constructor: Initialize registers
  */
 
-MOS6510::MOS6510(C64 *c64, uint8 *Ram, uint8 *Basic, uint8 *Kernal, uint8 *Char, uint8 *Color)
+MOS6510::MOS6510(C64 *c64, uint8_t *Ram, uint8_t *Basic, uint8_t *Kernal, uint8_t *Char, uint8_t *Color)
  : the_c64(c64), ram(Ram), basic_rom(Basic), kernal_rom(Kernal), char_rom(Char), color_ram(Color)
 {
 	a = x = y = 0;
@@ -140,7 +140,7 @@ void MOS6510::AsyncNMI(void)
 
 void MOS6510::new_config(void)
 {
-	uint8 port = ~ram[0] | ram[1];
+	uint8_t port = ~ram[0] | ram[1];
 
 	basic_in = (port & 3) == 3;
 	kernal_in = port & 2;
@@ -153,7 +153,7 @@ void MOS6510::new_config(void)
  *  Read a byte from I/O / ROM space
  */
 
-inline uint8 MOS6510::read_byte_io(uint16 adr)
+inline uint8_t MOS6510::read_byte_io(uint16_t adr)
 {
 	switch (adr >> 12) {
 		case 0xa:
@@ -215,7 +215,7 @@ inline uint8 MOS6510::read_byte_io(uint16 adr)
  *  Read a byte from the CPU's address space
  */
 
-uint8 MOS6510::read_byte(uint16 adr)
+uint8_t MOS6510::read_byte(uint16_t adr)
 {
 	if (adr < 0xa000)
 		return ram[adr];
@@ -230,7 +230,7 @@ uint8 MOS6510::read_byte(uint16 adr)
 
 const char frodo_id[0x5c] = "FRODO\r(C) 1994-1997 CHRISTIAN BAUER";
 
-uint8 MOS6510::read_emulator_id(uint16 adr)
+uint8_t MOS6510::read_emulator_id(uint16_t adr)
 {
 	switch (adr) {
 		case 0x7c:	// $dffc: revision
@@ -254,7 +254,7 @@ uint8 MOS6510::read_emulator_id(uint16 adr)
 
 #if LITTLE_ENDIAN_UNALIGNED
 
-inline uint16 MOS6510::read_word(uint16 adr)
+inline uint16_t MOS6510::read_word(uint16_t adr)
 {
 	switch (adr >> 12) {
 		case 0x0:
@@ -267,29 +267,29 @@ inline uint16 MOS6510::read_word(uint16 adr)
 		case 0x7:
 		case 0x8:
 		case 0x9:
-			return *(uint16*)&ram[adr];
+			return *(uint16_t*)&ram[adr];
 			break;
 		case 0xa:
 		case 0xb:
 			if (basic_in)
-				return *(uint16*)&basic_rom[adr & 0x1fff];
+				return *(uint16_t*)&basic_rom[adr & 0x1fff];
 			else
-				return *(uint16*)&ram[adr];
+				return *(uint16_t*)&ram[adr];
 		case 0xc:
-			return *(uint16*)&ram[adr];
+			return *(uint16_t*)&ram[adr];
 		case 0xd:
 			if (io_in)
 				return read_byte(adr) | (read_byte(adr+1) << 8);
 			else if (char_in)
-				return *(uint16*)&char_rom[adr & 0x0fff];
+				return *(uint16_t*)&char_rom[adr & 0x0fff];
 			else
-				return *(uint16*)&ram[adr];
+				return *(uint16_t*)&ram[adr];
 		case 0xe:
 		case 0xf:
 			if (kernal_in)
-				return *(uint16*)&kernal_rom[adr & 0x1fff];
+				return *(uint16_t*)&kernal_rom[adr & 0x1fff];
 			else
-				return *(uint16*)&ram[adr];
+				return *(uint16_t*)&ram[adr];
 		default:	// Can't happen
 			return 0;
 	}
@@ -297,7 +297,7 @@ inline uint16 MOS6510::read_word(uint16 adr)
 
 #else
 
-inline uint16 MOS6510::read_word(uint16 adr)
+inline uint16_t MOS6510::read_word(uint16_t adr)
 {
 	return read_byte(adr) | (read_byte(adr+1) << 8);
 }
@@ -309,7 +309,7 @@ inline uint16 MOS6510::read_word(uint16 adr)
  *  Write byte to I/O space
  */
 
-void MOS6510::write_byte_io(uint16 adr, uint8 byte)
+void MOS6510::write_byte_io(uint16_t adr, uint8_t byte)
 {
 	if (adr >= 0xe000) {
 		ram[adr] = byte;
@@ -356,7 +356,7 @@ void MOS6510::write_byte_io(uint16 adr, uint8 byte)
  *  Write a byte to the CPU's address space
  */
 
-inline void MOS6510::write_byte(uint16 adr, uint8 byte)
+inline void MOS6510::write_byte(uint16_t adr, uint8_t byte)
 {
 	if (adr < 0xd000) {
 		ram[adr] = byte;
@@ -371,7 +371,7 @@ inline void MOS6510::write_byte(uint16 adr, uint8 byte)
  *  Read a byte from the zeropage
  */
 
-inline uint8 MOS6510::read_zp(uint16 adr)
+inline uint8_t MOS6510::read_zp(uint16_t adr)
 {
 	return ram[adr];
 }
@@ -381,14 +381,10 @@ inline uint8 MOS6510::read_zp(uint16 adr)
  *  Read a word (little-endian) from the zeropage
  */
 
-inline uint16 MOS6510::read_zp_word(uint16 adr)
+inline uint16_t MOS6510::read_zp_word(uint16_t adr)
 {
-// !! zeropage word addressing wraps around !!
-#if LITTLE_ENDIAN_UNALIGNED
-	return *(uint16 *)&ram[adr & 0xff];
-#else
+    // Zeropage word addressing wraps around
 	return ram[adr & 0xff] | (ram[(adr+1) & 0xff] << 8);
-#endif
 }
 
 
@@ -396,7 +392,7 @@ inline uint16 MOS6510::read_zp_word(uint16 adr)
  *  Write a byte to the zeropage
  */
 
-inline void MOS6510::write_zp(uint16 adr, uint8 byte)
+inline void MOS6510::write_zp(uint16_t adr, uint8_t byte)
 {
 	ram[adr] = byte;
 
@@ -410,7 +406,7 @@ inline void MOS6510::write_zp(uint16 adr, uint8 byte)
  *  Read byte from 6510 address space with special memory config (used by SAM)
  */
 
-uint8 MOS6510::ExtReadByte(uint16 adr)
+uint8_t MOS6510::ExtReadByte(uint16_t adr)
 {
 	// Save old memory configuration
 	bool bi = basic_in, ki = kernal_in, ci = char_in, ii = io_in;
@@ -422,7 +418,7 @@ uint8 MOS6510::ExtReadByte(uint16 adr)
 	io_in = (ExtConfig & 3) && (ExtConfig & 4);
 
 	// Read byte
-	uint8 byte = read_byte(adr);
+	uint8_t byte = read_byte(adr);
 
 	// Restore old configuration
 	basic_in = bi; kernal_in = ki; char_in = ci; io_in = ii;
@@ -435,7 +431,7 @@ uint8 MOS6510::ExtReadByte(uint16 adr)
  *  Write byte to 6510 address space with special memory config (used by SAM)
  */
 
-void MOS6510::ExtWriteByte(uint16 adr, uint8 byte)
+void MOS6510::ExtWriteByte(uint16_t adr, uint8_t byte)
 {
 	// Save old memory configuration
 	bool bi = basic_in, ki = kernal_in, ci = char_in, ii = io_in;
@@ -458,7 +454,7 @@ void MOS6510::ExtWriteByte(uint16 adr, uint8 byte)
  *  Read byte from 6510 address space with current memory config (used by REU)
  */
 
-uint8 MOS6510::REUReadByte(uint16 adr)
+uint8_t MOS6510::REUReadByte(uint16_t adr)
 {
 	return read_byte(adr);
 }
@@ -468,7 +464,7 @@ uint8 MOS6510::REUReadByte(uint16 adr)
  *  Write byte to 6510 address space with current memory config (used by REU)
  */
 
-void MOS6510::REUWriteByte(uint16 adr, uint8 byte)
+void MOS6510::REUWriteByte(uint16_t adr, uint8_t byte)
 {
 	write_byte(adr, byte);
 }
@@ -531,15 +527,15 @@ void MOS6510::REUWriteByte(uint16 adr, uint8 byte)
  *  Adc instruction
  */
 
-void MOS6510::do_adc(uint8 byte)
+void MOS6510::do_adc(uint8_t byte)
 {
 	if (!d_flag) {
-		uint16 tmp = a + (byte) + (c_flag ? 1 : 0);
+		uint16_t tmp = a + (byte) + (c_flag ? 1 : 0);
 		c_flag = tmp > 0xff;
 		v_flag = !((a ^ (byte)) & 0x80) && ((a ^ tmp) & 0x80);
 		z_flag = n_flag = a = tmp;
 	} else {
-		uint16 al, ah;
+		uint16_t al, ah;
 		al = (a & 0x0f) + ((byte) & 0x0f) + (c_flag ? 1 : 0);
 		if (al > 9) al += 6;
 		ah = (a >> 4) + ((byte) >> 4);
@@ -558,15 +554,15 @@ void MOS6510::do_adc(uint8 byte)
  * Sbc instruction
  */
 
-void MOS6510::do_sbc(uint8 byte)
+void MOS6510::do_sbc(uint8_t byte)
 {
-	uint16 tmp = a - (byte) - (c_flag ? 0 : 1);
+	uint16_t tmp = a - (byte) - (c_flag ? 0 : 1);
 	if (!d_flag) {
 		c_flag = tmp < 0x100;
 		v_flag = ((a ^ tmp) & 0x80) && ((a ^ (byte)) & 0x80);
 		z_flag = n_flag = a = tmp;
 	} else {
-		uint16 al, ah;
+		uint16_t al, ah;
 		al = (a & 0x0f) - ((byte) & 0x0f) - (c_flag ? 0 : 1);
 		ah = (a >> 4) - ((byte) >> 4);
 		if (al & 0x10) {
@@ -680,7 +676,7 @@ void MOS6510::Reset(void)
  *  Illegal opcode encountered
  */
 
-void MOS6510::illegal_op(uint8 op, uint16 at)
+void MOS6510::illegal_op(uint8_t op, uint16_t at)
 {
 	char illop_msg[80];
 
@@ -695,7 +691,7 @@ void MOS6510::illegal_op(uint8 op, uint16 at)
  *  Jump to illegal address space (PC_IS_POINTER only)
  */
 
-void MOS6510::illegal_jump(uint16 at, uint16 to)
+void MOS6510::illegal_jump(uint16_t at, uint16_t to)
 {
 	char illop_msg[80];
 
@@ -744,8 +740,8 @@ void MOS6510::illegal_jump(uint16 at, uint16 to)
 
 int MOS6510::EmulateLine(int cycles_left)
 {
-	uint8 tmp, tmp2;
-	uint16 adr;		// Used by read_adr_abs()!
+	uint8_t tmp, tmp2;
+	uint16_t adr;		// Used by read_adr_abs()!
 	int last_cycles = 0;
 
 	// Any pending interrupts?

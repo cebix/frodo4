@@ -102,7 +102,7 @@ bool FSDrive::change_dir(char *dirpath)
  *  Open channel
  */
 
-uint8 FSDrive::Open(int channel, const uint8 *name, int name_len)
+uint8_t FSDrive::Open(int channel, const uint8_t *name, int name_len)
 {
 	set_error(ERR_OK);
 
@@ -134,14 +134,14 @@ uint8 FSDrive::Open(int channel, const uint8 *name, int name_len)
  *  Open file
  */
 
-uint8 FSDrive::open_file(int channel, const uint8 *name, int name_len)
+uint8_t FSDrive::open_file(int channel, const uint8_t *name, int name_len)
 {
 	char plain_name[NAMEBUF_LENGTH];
 	int plain_name_len;
 	int mode = FMODE_READ;
 	int type = FTYPE_PRG;
 	int rec_len = 0;
-	parse_file_name(name, name_len, (uint8 *)plain_name, plain_name_len, mode, type, rec_len, true);
+	parse_file_name(name, name_len, (uint8_t *)plain_name, plain_name_len, mode, type, rec_len, true);
 
 	// Channel 0 is READ, channel 1 is WRITE
 	if (channel == 0 || channel == 1) {
@@ -246,7 +246,7 @@ void FSDrive::find_first_file(char *pattern)
  *  Open directory, create temporary file
  */
 
-uint8 FSDrive::open_directory(int channel, const uint8 *pattern, int pattern_len)
+uint8_t FSDrive::open_directory(int channel, const uint8_t *pattern, int pattern_len)
 {
 	char buf[] = "\001\004\001\001\0\0\022\042                \042 00 2A";
 	char str[NAMEBUF_LENGTH];
@@ -267,7 +267,7 @@ uint8 FSDrive::open_directory(int channel, const uint8 *pattern, int pattern_len
 	}
 
 	// Skip everything before the ':' in the pattern
-	uint8 *t = (uint8 *)memchr(pattern, ':', pattern_len);
+	uint8_t *t = (uint8_t *)memchr(pattern, ':', pattern_len);
 	if (t)
 		pattern = t + 1;
 
@@ -370,7 +370,7 @@ uint8 FSDrive::open_directory(int channel, const uint8 *pattern, int pattern_len
  *  Close channel
  */
 
-uint8 FSDrive::Close(int channel)
+uint8_t FSDrive::Close(int channel)
 {
 	if (channel == 15) {
 		close_all_channels();
@@ -403,7 +403,7 @@ void FSDrive::close_all_channels(void)
  *  Read from channel
  */
 
-uint8 FSDrive::Read(int channel, uint8 &byte)
+uint8_t FSDrive::Read(int channel, uint8_t &byte)
 {
 	int c;
 
@@ -437,7 +437,7 @@ uint8 FSDrive::Read(int channel, uint8 &byte)
  *  Write to channel
  */
 
-uint8 FSDrive::Write(int channel, uint8 byte, bool eoi)
+uint8_t FSDrive::Write(int channel, uint8_t byte, bool eoi)
 {
 	// Channel 15: Collect chars and execute command on EOI
 	if (channel == 15) {

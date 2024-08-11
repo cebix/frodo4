@@ -55,7 +55,7 @@
 #define Branch(flag) \
 		read_to(pc++, data);  \
 		if (flag) { \
-			ar = pc + (int8)data; \
+			ar = pc + (int8_t)data; \
 			if ((ar >> 8) != (pc >> 8)) { \
 				if (data & 0x80) \
 					state = O_BRANCH_BP; \

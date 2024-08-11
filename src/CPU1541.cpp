@@ -91,7 +91,7 @@ enum {
  *  6502 constructor: Initialize registers
  */
 
-MOS6502_1541::MOS6502_1541(C64 *c64, Job1541 *job, C64Display *disp, uint8 *Ram, uint8 *Rom)
+MOS6502_1541::MOS6502_1541(C64 *c64, Job1541 *job, C64Display *disp, uint8_t *Ram, uint8_t *Rom)
  : ram(Ram), rom(Rom), the_c64(c64), the_display(disp), the_job(job)
 {
 	a = x = y = 0;
@@ -126,7 +126,7 @@ void MOS6502_1541::AsyncReset(void)
  *  Read a byte from I/O space
  */
 
-inline uint8 MOS6502_1541::read_byte_io(uint16 adr)
+inline uint8_t MOS6502_1541::read_byte_io(uint16_t adr)
 {
 	if ((adr & 0xfc00) == 0x1800)	// VIA 1
 		switch (adr & 0xf) {
@@ -222,7 +222,7 @@ inline uint8 MOS6502_1541::read_byte_io(uint16 adr)
  *  Read a byte from the CPU's address space
  */
 
-uint8 MOS6502_1541::read_byte(uint16 adr)
+uint8_t MOS6502_1541::read_byte(uint16_t adr)
 {
 	if (adr >= 0xc000)
 		return rom[adr & 0x3fff];
@@ -237,7 +237,7 @@ uint8 MOS6502_1541::read_byte(uint16 adr)
  *  Read a word (little-endian) from the CPU's address space
  */
 
-inline uint16 MOS6502_1541::read_word(uint16 adr)
+inline uint16_t MOS6502_1541::read_word(uint16_t adr)
 {
 	return read_byte(adr) | (read_byte(adr+1) << 8);
 }
@@ -247,7 +247,7 @@ inline uint16 MOS6502_1541::read_word(uint16 adr)
  *  Write a byte to I/O space
  */
 
-void MOS6502_1541::write_byte_io(uint16 adr, uint8 byte)
+void MOS6502_1541::write_byte_io(uint16_t adr, uint8_t byte)
 {
 	if ((adr & 0xfc00) == 0x1800)	// VIA 1
 		switch (adr & 0xf) {
@@ -378,7 +378,7 @@ void MOS6502_1541::write_byte_io(uint16 adr, uint8 byte)
  *  Write a byte to the CPU's address space
  */
 
-inline void MOS6502_1541::write_byte(uint16 adr, uint8 byte)
+inline void MOS6502_1541::write_byte(uint16_t adr, uint8_t byte)
 {
 	if (adr < 0x1000)
 		ram[adr & 0x7ff] = byte;
@@ -391,7 +391,7 @@ inline void MOS6502_1541::write_byte(uint16 adr, uint8 byte)
  *  Read a byte from the zeropage
  */
 
-inline uint8 MOS6502_1541::read_zp(uint16 adr)
+inline uint8_t MOS6502_1541::read_zp(uint16_t adr)
 {
 	return ram[adr];
 }
@@ -401,7 +401,7 @@ inline uint8 MOS6502_1541::read_zp(uint16 adr)
  *  Read a word (little-endian) from the zeropage
  */
 
-inline uint16 MOS6502_1541::read_zp_word(uint16 adr)
+inline uint16_t MOS6502_1541::read_zp_word(uint16_t adr)
 {
 	return ram[adr & 0xff] | (ram[(adr+1) & 0xff] << 8);
 }
@@ -411,7 +411,7 @@ inline uint16 MOS6502_1541::read_zp_word(uint16 adr)
  *  Write a byte to the zeropage
  */
 
-inline void MOS6502_1541::write_zp(uint16 adr, uint8 byte)
+inline void MOS6502_1541::write_zp(uint16_t adr, uint8_t byte)
 {
 	ram[adr] = byte;
 }
@@ -421,7 +421,7 @@ inline void MOS6502_1541::write_zp(uint16 adr, uint8 byte)
  *  Read byte from 6502/1541 address space (used by SAM)
  */
 
-uint8 MOS6502_1541::ExtReadByte(uint16 adr)
+uint8_t MOS6502_1541::ExtReadByte(uint16_t adr)
 {
 	return read_byte(adr);
 }
@@ -431,7 +431,7 @@ uint8 MOS6502_1541::ExtReadByte(uint16 adr)
  *  Write byte to 6502/1541 address space (used by SAM)
  */
 
-void MOS6502_1541::ExtWriteByte(uint16 adr, uint8 byte)
+void MOS6502_1541::ExtWriteByte(uint16_t adr, uint8_t byte)
 {
 	write_byte(adr, byte);
 }
@@ -442,7 +442,7 @@ void MOS6502_1541::ExtWriteByte(uint16 adr, uint8 byte)
  */
 
 #if PC_IS_POINTER
-void MOS6502_1541::jump(uint16 adr)
+void MOS6502_1541::jump(uint16_t adr)
 {
 	if (adr >= 0xc000) {
 		pc = rom + (adr & 0x3fff);
@@ -454,7 +454,7 @@ void MOS6502_1541::jump(uint16 adr)
 		illegal_jump(pc-pc_base, adr);
 }
 #else
-inline void MOS6502_1541::jump(uint16 adr)
+inline void MOS6502_1541::jump(uint16_t adr)
 {
 	pc = adr;
 }
@@ -465,10 +465,10 @@ inline void MOS6502_1541::jump(uint16 adr)
  *  Adc instruction
  */
 
-void MOS6502_1541::do_adc(uint8 byte)
+void MOS6502_1541::do_adc(uint8_t byte)
 {
 	if (!d_flag) {
-		uint16 tmp;
+		uint16_t tmp;
 
 		// Binary mode
 		tmp = a + byte + (c_flag ? 1 : 0);
@@ -477,7 +477,7 @@ void MOS6502_1541::do_adc(uint8 byte)
 		z_flag = n_flag = a = tmp;
 
 	} else {
-		uint16 al, ah;
+		uint16_t al, ah;
 
 		// Decimal mode
 		al = (a & 0x0f) + (byte & 0x0f) + (c_flag ? 1 : 0);	// Calculate lower nybble
@@ -501,9 +501,9 @@ void MOS6502_1541::do_adc(uint8 byte)
  * Sbc instruction
  */
 
-void MOS6502_1541::do_sbc(uint8 byte)
+void MOS6502_1541::do_sbc(uint8_t byte)
 {
-	uint16 tmp = a - byte - (c_flag ? 0 : 1);
+	uint16_t tmp = a - byte - (c_flag ? 0 : 1);
 
 	if (!d_flag) {
 
@@ -513,7 +513,7 @@ void MOS6502_1541::do_sbc(uint8 byte)
 		z_flag = n_flag = a = tmp;
 
 	} else {
-		uint16 al, ah;
+		uint16_t al, ah;
 
 		// Decimal mode
 		al = (a & 0x0f) - (byte & 0x0f) - (c_flag ? 0 : 1);		// Calculate lower nybble
@@ -657,7 +657,7 @@ void MOS6502_1541::Reset(void)
  *  Illegal opcode encountered
  */
 
-void MOS6502_1541::illegal_op(uint8 op, uint16 at)
+void MOS6502_1541::illegal_op(uint8_t op, uint16_t at)
 {
 	char illop_msg[80];
 
@@ -672,7 +672,7 @@ void MOS6502_1541::illegal_op(uint8 op, uint16 at)
  *  Jump to illegal address space (PC_IS_POINTER only)
  */
 
-void MOS6502_1541::illegal_jump(uint16 at, uint16 to)
+void MOS6502_1541::illegal_jump(uint16_t at, uint16_t to)
 {
 	char illop_msg[80];
 
@@ -721,8 +721,8 @@ void MOS6502_1541::illegal_jump(uint16 at, uint16 to)
 
 int MOS6502_1541::EmulateLine(int cycles_left)
 {
-	uint8 tmp, tmp2;
-	uint16 adr;
+	uint8_t tmp, tmp2;
+	uint16_t adr;
 	int last_cycles = 0;
 
 	// Any pending interrupts?

@@ -44,7 +44,7 @@ static MOS6502State R1541;
 static bool access_1541;	// false: accessing C64, true: accessing 1541
 
 // Access to 6510/6502 address space
-static inline uint8 SAMReadByte(uint16 adr)
+static inline uint8_t SAMReadByte(uint16_t adr)
 {
 	if (access_1541)
 		return TheCPU1541->ExtReadByte(adr);
@@ -52,7 +52,7 @@ static inline uint8 SAMReadByte(uint16 adr)
 		return TheCPU->ExtReadByte(adr);
 }
 
-static inline void SAMWriteByte(uint16 adr, uint8 byte)
+static inline void SAMWriteByte(uint16_t adr, uint8_t byte)
 {
 	if (access_1541)
 		TheCPU1541->ExtWriteByte(adr, byte);
@@ -69,7 +69,7 @@ static FILE *fin, *fout, *ferr;
 static char input[INPUT_LENGTH];
 static char *in_ptr;
 
-static uint16 address, end_address;
+static uint16_t address, end_address;
 
 
 // Input tokens
@@ -97,7 +97,7 @@ enum Token {
 };
 
 static enum Token the_token;			// Last token read
-static uint16 the_number;				// Contains the number if the_token==T_NUMBER
+static uint16_t the_number;				// Contains the number if the_token==T_NUMBER
 static char the_string[INPUT_LENGTH];	// Contains the string if the_token==T_STRING
 
 
@@ -224,22 +224,22 @@ static void init_abort(void);
 static void exit_abort(void);
 static bool aborted(void);
 
-static void read_line(void);			// Scanner
+static void read_line(void);				// Scanner
 static char get_char(void);
 static void put_back(char c);
 static enum Token get_token(void);
 static enum Token get_reg_token(void);
-static uint16 get_number(void);
+static uint16_t get_number(void);
 static enum Token get_string(char *str);
 
-static bool expression(uint16 *number);	// Parser
-static bool term(uint16 *number);
-static bool factor(uint16 *number);
+static bool expression(uint16_t *number);	// Parser
+static bool term(uint16_t *number);
+static bool factor(uint16_t *number);
 static bool address_args(void);
 static bool range_args(int def_range);
-static bool instr_args(uint16 *number, char *mode);
+static bool instr_args(uint16_t *number, char *mode);
 
-static void help(void);				// Routines for commands
+static void help(void);						// Routines for commands
 static void registers(void);
 static void display_registers(void);
 static void memory_dump(void);
@@ -249,12 +249,12 @@ static void screen_dump(void);
 static char conv_from_scode(char c);
 static void binary_dump(void);
 static void sprite_dump(void);
-static void byte_to_bin(uint8 byte, char *str);
+static void byte_to_bin(uint8_t byte, char *str);
 static void disassemble(void);
-static int disass_line(uint16 adr, uint8 op, uint8 lo, uint8 hi);
+static int disass_line(uint16_t adr, uint8_t op, uint8_t lo, uint8_t hi);
 static void assemble(void);
 static char find_mnemonic(char op1, char op2, char op3);
-static bool find_opcode(char mnem, char mode, uint8 *opcode);
+static bool find_opcode(char mnem, char mode, uint8_t *opcode);
 static void mem_config(void);
 static void fill(void);
 static void compare(void);
@@ -265,14 +265,14 @@ static void redir_output(void);
 static void int_vectors(void);
 static void view_state(void);
 static void view_cia_state(void);
-static void dump_cia_ints(uint8 i);
+static void dump_cia_ints(uint8_t i);
 static void view_sid_state(void);
-static void dump_sid_waveform(uint8 wave);
+static void dump_sid_waveform(uint8_t wave);
 static void view_vic_state(void);
-static void dump_spr_flags(uint8 f);
-static void dump_vic_ints(uint8 i);
+static void dump_spr_flags(uint8_t f);
+static void dump_vic_ints(uint8_t i);
 static void view_1541_state(void);
-static void dump_via_ints(uint8 i);
+static void dump_via_ints(uint8_t i);
 static void load_data(void);
 static void save_data(void);
 
@@ -646,10 +646,10 @@ static enum Token get_reg_token(void)
 	}
 }
 
-static uint16 get_number(void)
+static uint16_t get_number(void)
 {
 	char c;
-	uint16 i = 0;
+	uint16_t i = 0;
 
 	while (((c = get_char()) >= '0') && (c <= '9') || (c >= 'a') && (c <= 'f'))
 		if (c < 'a')
@@ -683,9 +683,9 @@ static enum Token get_string(char *str)
  *  true: OK, false: Error
  */
 
-static bool expression(uint16 *number)
+static bool expression(uint16_t *number)
 {
-	uint16 accu, trm;
+	uint16_t accu, trm;
 
 	if (!term(&accu))
 		return false;
@@ -718,9 +718,9 @@ static bool expression(uint16 *number)
  *  true: OK, false: Error
  */
 
-static bool term(uint16 *number)
+static bool term(uint16_t *number)
 {
-	uint16 accu, fact;
+	uint16_t accu, fact;
 
 	if (!factor(&accu))
 		return false;
@@ -757,7 +757,7 @@ static bool term(uint16 *number)
  *  true: OK, false: Error
  */
 
-static bool factor(uint16 *number)
+static bool factor(uint16_t *number)
 {
 	switch (the_token) {
 		case T_NUMBER:
@@ -862,7 +862,7 @@ static bool range_args(int def_range)
  *  true: OK, false: Error
  */
 
-static bool instr_args(uint16 *number, char *mode)
+static bool instr_args(uint16_t *number, char *mode)
 {
 	switch (the_token) {
 
@@ -1031,7 +1031,7 @@ static void help(void)
 static void registers(void)
 {
 	enum Token the_reg;
-	uint16 value;
+	uint16_t value;
 
 	if (the_token != T_END)
 		switch (the_reg = the_token) {
@@ -1128,8 +1128,8 @@ static void memory_dump(void)
 {
 	bool done = false;
 	short i;
-	uint8 mem[MEMDUMP_BPL + 2];
-	uint8 byte;
+	uint8_t mem[MEMDUMP_BPL + 2];
+	uint8_t byte;
 
 	mem[MEMDUMP_BPL] = 0;
 
@@ -1163,8 +1163,8 @@ static void ascii_dump(void)
 {
 	bool done = false;
 	short i;
-	uint8 mem[ASCIIDUMP_BPL + 2];
-	uint8 byte;
+	uint8_t mem[ASCIIDUMP_BPL + 2];
+	uint8_t byte;
 
 	mem[ASCIIDUMP_BPL] = 0;
 
@@ -1211,8 +1211,8 @@ static void screen_dump(void)
 {
 	bool done = false;
 	short i;
-	uint8 mem[SCRDUMP_BPL + 2];
-	uint8 byte;
+	uint8_t mem[SCRDUMP_BPL + 2];
+	uint8_t byte;
 
 	mem[SCRDUMP_BPL] = 0;
 
@@ -1310,7 +1310,7 @@ static void sprite_dump(void)
  *  Convert byte to binary representation
  */
 
-static void byte_to_bin(uint8 byte, char *str)
+static void byte_to_bin(uint8_t byte, char *str)
 {
 	short i;
 
@@ -1331,8 +1331,8 @@ static void disassemble(void)
 {
 	bool done = false;
 	short i;
-	uint8 op[3];
-	uint16 adr;
+	uint8_t op[3];
+	uint16_t adr;
 
 	if (!range_args(31))  // 32 bytes unless end address specified
 		return;
@@ -1352,7 +1352,7 @@ static void disassemble(void)
  *  Disassemble one instruction, return length
  */
 
-static int disass_line(uint16 adr, uint8 op, uint8 lo, uint8 hi)
+static int disass_line(uint16_t adr, uint8_t op, uint8_t lo, uint8_t hi)
 {
 	char mode = adr_mode[op], mnem = mnemonic[op];
 
@@ -1394,7 +1394,7 @@ static int disass_line(uint16 adr, uint8 op, uint8 lo, uint8 hi)
 			break;
 
 		case A_REL:
-			fprintf(fout, "%04lx", ((adr + 2) + (int8)lo) & 0xffff);
+			fprintf(fout, "%04lx", ((adr + 2) + (int8_t)lo) & 0xffff);
 			break;
 
 		case A_ZERO:
@@ -1449,9 +1449,9 @@ static void assemble(void)
 	bool done = false;
 	char c1, c2, c3;
 	char mnem, mode;
-	uint8 opcode;
-	uint16 arg;
-	int16 rel;
+	uint8_t opcode;
+	uint16_t arg;
+	int16_t rel;
 
 	// Read parameters
 	if (!address_args())
@@ -1552,7 +1552,7 @@ static char find_mnemonic(char op1, char op2, char op3)
  *  true: OK, false: Mnemonic can't have specified addressing mode
  */
 
-static bool find_opcode(char mnem, char mode, uint8 *opcode)
+static bool find_opcode(char mnem, char mode, uint8_t *opcode)
 {
 	int i;
 
@@ -1573,7 +1573,7 @@ static bool find_opcode(char mnem, char mode, uint8 *opcode)
 
 static void mem_config(void)
 {
-	uint16 con;
+	uint16_t con;
 
 	if (the_token != T_END)
 		if (!expression(&con))
@@ -1598,7 +1598,7 @@ static void mem_config(void)
 static void fill(void)
 {
 	bool done = false;
-	uint16 adr, end_adr, value;
+	uint16_t adr, end_adr, value;
 
 	if (!expression(&adr))
 		return;
@@ -1623,7 +1623,7 @@ static void fill(void)
 static void compare(void)
 {
 	bool done = false;
-	uint16 adr, end_adr, dest;
+	uint16_t adr, end_adr, dest;
 	int num = 0;
 
 	if (!expression(&adr))
@@ -1659,7 +1659,7 @@ static void compare(void)
 static void transfer(void)
 {
 	bool done = false;
-	uint16 adr, end_adr, dest;
+	uint16_t adr, end_adr, dest;
 
 	if (!expression(&adr))
 		return;
@@ -1690,7 +1690,7 @@ static void transfer(void)
 
 static void modify(void)
 {
-	uint16 adr, val;
+	uint16_t adr, val;
 
 	if (!expression(&adr))
 		return;
@@ -1710,7 +1710,7 @@ static void modify(void)
 
 static void print_expr(void)
 {
-	uint16 val;
+	uint16_t val;
 
 	if (!expression(&val))
 		return;
@@ -1870,7 +1870,7 @@ static void view_cia_state(void)
 	dump_cia_ints(cs.int_mask);
 }
 
-static void dump_cia_ints(uint8 i)
+static void dump_cia_ints(uint8_t i)
 {
 	if (i & 0x1f) {
 		if (i & 1) fprintf(fout, "TA ");
@@ -1932,7 +1932,7 @@ static void view_sid_state(void)
 	fprintf(fout, "\n Volume   : %lx\n", ss.mode_vol & 0x0f);
 }
 
-static void dump_sid_waveform(uint8 wave)
+static void dump_sid_waveform(uint8_t wave)
 {
 	if (wave & 0xf0) {
 		if (wave & 0x10) fprintf(fout, "Triangle ");
@@ -2032,7 +2032,7 @@ static void view_vic_state(void)
 	dump_vic_ints(vs.irq_mask);
 }
 
-static void dump_spr_flags(uint8 f)
+static void dump_spr_flags(uint8_t f)
 {
 	short i;
 
@@ -2045,7 +2045,7 @@ static void dump_spr_flags(uint8 f)
 	fputc('\n', fout);
 }
 
-static void dump_vic_ints(uint8 i)
+static void dump_vic_ints(uint8_t i)
 {
 	if (i & 0x1f) {
 		if (i & 1) fprintf(fout, "Raster ");
@@ -2080,7 +2080,7 @@ static void view_1541_state(void)
 	dump_via_ints(R1541.via2_ier);
 }
 
-static void dump_via_ints(uint8 i)
+static void dump_via_ints(uint8_t i)
 {
 	if (i & 0x7f) {
 		if (i & 0x40) fprintf(fout, "T1 ");
@@ -2103,7 +2103,7 @@ static void dump_via_ints(uint8 i)
 
 static void load_data(void)
 {
-	uint16 adr;
+	uint16_t adr;
 	FILE *file;
 	int fc;
 
@@ -2136,7 +2136,7 @@ static void load_data(void)
 static void save_data(void)
 {
 	bool done = false;
-	uint16 adr, end_adr;
+	uint16_t adr, end_adr;
 	FILE *file;
 
 	if (!expression(&adr))

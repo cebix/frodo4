@@ -162,7 +162,7 @@ void C64::VBlank(bool draw_frame)
 	TheCIA1->Joystick2 = poll_joystick(1);
 
 	if (ThePrefs.JoystickSwap) {
-		uint8 tmp = TheCIA1->Joystick1;
+		uint8_t tmp = TheCIA1->Joystick1;
 		TheCIA1->Joystick1 = TheCIA1->Joystick2;
 		TheCIA1->Joystick2 = tmp;
 	}
@@ -273,9 +273,9 @@ void C64::open_close_joysticks(int oldjoy1, int oldjoy2, int newjoy1, int newjoy
  *  Poll joystick port, return CIA mask
  */
 
-uint8 C64::poll_joystick(int port)
+uint8_t C64::poll_joystick(int port)
 {
-	uint8 j = 0xff;
+	uint8_t j = 0xff;
 
 	if (joy[port] == NULL)
 		return j;
@@ -283,7 +283,7 @@ uint8 C64::poll_joystick(int port)
 	if (joy_geek_port[port]) {
 
 		// GeekPort
-		uint8 val;
+		uint8_t val;
 		if (((BDigitalPort *)joy[port])->Read(&val) == 1)
 			j = val | 0xe0;
 

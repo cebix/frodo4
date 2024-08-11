@@ -70,10 +70,10 @@ class DigitalPlayer;
  *  Random number generator for noise waveform
  */
 
-static uint8 sid_random(void);
-static uint8 sid_random(void)
+static uint8_t sid_random(void);
+static uint8_t sid_random(void)
 {
-	static uint32 seed = 1;
+	static uint32_t seed = 1;
 	seed = seed * 1103515245 + 12345;
 	return seed >> 16;
 }
@@ -243,11 +243,11 @@ void MOS6581::SetState(MOS6581State *ss)
  **  Renderer for digital SID emulation (SIDTYPE_DIGITAL)
  **/
 
-const uint32 SAMPLE_FREQ = 44100;	// Sample output frequency in Hz
-const uint32 SID_FREQ = 985248;		// SID frequency in Hz
-const uint32 CALC_FREQ = 50;			// Frequency at which calc_buffer is called in Hz (should be 50Hz)
-const uint32 SID_CYCLES = SID_FREQ/SAMPLE_FREQ;	// # of SID clocks per sample frame
-const int SAMPLE_BUF_SIZE = 0x138*2;// Size of buffer for sampled voice (double buffered)
+const uint32_t SAMPLE_FREQ = 44100;		// Sample output frequency in Hz
+const uint32_t SID_FREQ = 985248;		// SID frequency in Hz
+const uint32_t CALC_FREQ = 50;			// Frequency at which calc_buffer is called in Hz (should be 50Hz)
+const uint32_t SID_CYCLES = SID_FREQ/SAMPLE_FREQ;	// # of SID clocks per sample frame
+const int SAMPLE_BUF_SIZE = 0x138*2;	// Size of buffer for sampled voice (double buffered)
 
 // SID waveforms (some of them :-)
 enum {
@@ -284,34 +284,34 @@ enum {
 
 // Structure for one voice
 struct DRVoice {
-	int wave;		// Selected waveform
-	int eg_state;	// Current state of EG
+	int wave;			// Selected waveform
+	int eg_state;		// Current state of EG
 	DRVoice *mod_by;	// Voice that modulates this one
 	DRVoice *mod_to;	// Voice that is modulated by this one
 
-	uint32 count;	// Counter for waveform generator, 8.16 fixed
-	uint32 add;		// Added to counter in every frame
+	uint32_t count;		// Counter for waveform generator, 8.16 fixed
+	uint32_t add;		// Added to counter in every frame
 
-	uint16 freq;		// SID frequency value
-	uint16 pw;		// SID pulse-width value
+	uint16_t freq;		// SID frequency value
+	uint16_t pw;		// SID pulse-width value
 
-	uint32 a_add;	// EG parameters
-	uint32 d_sub;
-	uint32 s_level;
-	uint32 r_sub;
-	uint32 eg_level;	// Current EG level, 8.16 fixed
+	uint32_t a_add;		// EG parameters
+	uint32_t d_sub;
+	uint32_t s_level;
+	uint32_t r_sub;
+	uint32_t eg_level;	// Current EG level, 8.16 fixed
 
-	uint32 noise;	// Last noise generator output value
+	uint32_t noise;		// Last noise generator output value
 
-	bool gate;		// EG gate bit
-	bool ring;		// Ring modulation bit
-	bool test;		// Test bit
-	bool filter;	// Flag: Voice filtered
+	bool gate;			// EG gate bit
+	bool ring;			// Ring modulation bit
+	bool test;			// Test bit
+	bool filter;		// Flag: Voice filtered
 
-					// The following bit is set for the modulating
-					// voice, not for the modulated one (as the SID bits)
-	bool sync;		// Sync modulation bit
-	bool mute;		// Voice muted (voice 3 only)
+						// The following bit is set for the modulating
+						// voice, not for the modulated one (as the SID bits)
+	bool sync;			// Sync modulation bit
+	bool mute;			// Voice muted (voice 3 only)
 };
 
 // Renderer class
@@ -322,7 +322,7 @@ public:
 
 	virtual void Reset(void);
 	virtual void EmulateLine(void);
-	virtual void WriteRegister(uint16 adr, uint8 byte);
+	virtual void WriteRegister(uint16_t adr, uint8_t byte);
 	virtual void NewPrefs(Prefs *prefs);
 	virtual void Pause(void);
 	virtual void Resume(void);
@@ -330,27 +330,27 @@ public:
 private:
 	void init_sound(void);
 	void calc_filter(void);
-	void calc_buffer(int16 *buf, long count);
+	void calc_buffer(int16_t *buf, long count);
 
 	C64 *the_c64;					// Pointer to C64 object
 
 	bool ready;						// Flag: Renderer has initialized and is ready
-	uint8 volume;					// Master volume
+	uint8_t volume;					// Master volume
 
-	static uint16 TriTable[0x1000*2];	// Tables for certain waveforms
-	static const uint16 TriSawTable[0x100];
-	static const uint16 TriRectTable[0x100];
-	static const uint16 SawRectTable[0x100];
-	static const uint16 TriSawRectTable[0x100];
-	static const uint32 EGTable[16];	// Increment/decrement values for all A/D/R settings
-	static const uint8 EGDRShift[256]; // For exponential approximation of D/R
-	static const int16 SampleTab[16]; // Table for sampled voice
+	static uint16_t TriTable[0x1000*2];	// Tables for certain waveforms
+	static const uint16_t TriSawTable[0x100];
+	static const uint16_t TriRectTable[0x100];
+	static const uint16_t SawRectTable[0x100];
+	static const uint16_t TriSawRectTable[0x100];
+	static const uint32_t EGTable[16];	// Increment/decrement values for all A/D/R settings
+	static const uint8_t EGDRShift[256]; // For exponential approximation of D/R
+	static const int16_t SampleTab[16];	// Table for sampled voice
 
 	DRVoice voice[3];				// Data for 3 voices
 
-	uint8 f_type;					// Filter type
-	uint8 f_freq;					// SID filter frequency (upper 8 bits)
-	uint8 f_res;					// Filter resonance (0..15)
+	uint8_t f_type;					// Filter type
+	uint8_t f_freq;					// SID filter frequency (upper 8 bits)
+	uint8_t f_res;					// Filter resonance (0..15)
 	float f_ampl;					// IIR filter input attenuation
 	float d1, d2, g1, g2;			// IIR filter coefficients
 	float xn1, xn2, yn1, yn2;		// IIR filter previous input/output signal
@@ -359,7 +359,7 @@ private:
 	float resonanceHP[256];
 #endif
 
-	uint8 sample_buf[SAMPLE_BUF_SIZE]; // Buffer for sampled voice
+	uint8_t sample_buf[SAMPLE_BUF_SIZE]; // Buffer for sampled voice
 	int sample_in_ptr;				// Index in sample_buf for writing
 
 #ifdef __BEOS__
@@ -369,7 +369,7 @@ private:
 #endif
 
 #ifdef HAVE_SDL
-	static void buffer_proc(void *cookie, uint8 *buffer, int size);
+	static void buffer_proc(void *cookie, uint8_t *buffer, int size);
 #endif
 
 #ifdef WIN32
@@ -392,11 +392,11 @@ private:
 };
 
 // Static data members
-uint16 DigitalRenderer::TriTable[0x1000*2];
+uint16_t DigitalRenderer::TriTable[0x1000*2];
 
 #ifndef EMUL_MOS8580
 // Sampled from a 6581R4
-const uint16 DigitalRenderer::TriSawTable[0x100] = {
+const uint16_t DigitalRenderer::TriSawTable[0x100] = {
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
@@ -431,7 +431,7 @@ const uint16 DigitalRenderer::TriSawTable[0x100] = {
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x1010, 0x3C3C
 };
 
-const uint16 DigitalRenderer::TriRectTable[0x100] = {
+const uint16_t DigitalRenderer::TriRectTable[0x100] = {
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
@@ -466,7 +466,7 @@ const uint16 DigitalRenderer::TriRectTable[0x100] = {
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000
 };
 
-const uint16 DigitalRenderer::SawRectTable[0x100] = {
+const uint16_t DigitalRenderer::SawRectTable[0x100] = {
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
@@ -501,7 +501,7 @@ const uint16 DigitalRenderer::SawRectTable[0x100] = {
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x7878
 };
 
-const uint16 DigitalRenderer::TriSawRectTable[0x100] = {
+const uint16_t DigitalRenderer::TriSawRectTable[0x100] = {
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
@@ -537,7 +537,7 @@ const uint16 DigitalRenderer::TriSawRectTable[0x100] = {
 };
 #else
 // Sampled from an 8580R5
-const uint16 DigitalRenderer::TriSawTable[0x100] = {
+const uint16_t DigitalRenderer::TriSawTable[0x100] = {
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
@@ -572,7 +572,7 @@ const uint16 DigitalRenderer::TriSawTable[0x100] = {
 	0xF0F0, 0xF0F0, 0xF0F0, 0xF0F0, 0xF8F8, 0xF8F8, 0xFCFC, 0xFEFE
 };
 
-const uint16 DigitalRenderer::TriRectTable[0x100] = {
+const uint16_t DigitalRenderer::TriRectTable[0x100] = {
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
@@ -607,7 +607,7 @@ const uint16 DigitalRenderer::TriRectTable[0x100] = {
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000
 };
 
-const uint16 DigitalRenderer::SawRectTable[0x100] = {
+const uint16_t DigitalRenderer::SawRectTable[0x100] = {
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
@@ -642,7 +642,7 @@ const uint16 DigitalRenderer::SawRectTable[0x100] = {
 	0xF0F0, 0xF0F0, 0xF8F8, 0xF8F8, 0xF8F8, 0xFCFC, 0xFEFE, 0xFFFF
 };
 
-const uint16 DigitalRenderer::TriSawRectTable[0x100] = {
+const uint16_t DigitalRenderer::TriSawRectTable[0x100] = {
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
@@ -678,7 +678,7 @@ const uint16 DigitalRenderer::TriSawRectTable[0x100] = {
 };
 #endif
 
-const uint32 DigitalRenderer::EGTable[16] = {
+const uint32_t DigitalRenderer::EGTable[16] = {
 	(SID_CYCLES << 16) / 9, (SID_CYCLES << 16) / 32,
 	(SID_CYCLES << 16) / 63, (SID_CYCLES << 16) / 95,
 	(SID_CYCLES << 16) / 149, (SID_CYCLES << 16) / 220,
@@ -689,7 +689,7 @@ const uint32 DigitalRenderer::EGTable[16] = {
 	(SID_CYCLES << 16) / 19531, (SID_CYCLES << 16) / 31251
 };
 
-const uint8 DigitalRenderer::EGDRShift[256] = {
+const uint8_t DigitalRenderer::EGDRShift[256] = {
 	5,5,5,5,5,5,5,5,4,4,4,4,4,4,4,4,
 	3,3,3,3,3,3,3,3,3,3,3,3,2,2,2,2,
 	2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,
@@ -708,7 +708,7 @@ const uint8 DigitalRenderer::EGDRShift[256] = {
 	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 };
 
-const int16 DigitalRenderer::SampleTab[16] = {
+const int16_t DigitalRenderer::SampleTab[16] = {
 	-0x7fff, -0x6eee, -0x5ddd, -0x4ccc, -0x3bbb, -0x2aaa, -0x1999, -0x0888,
 	 0x0888,  0x1999,  0x2aaa,  0x3bbb,  0x4ccc,  0x5ddd,  0x6eee,  0x7fff,
 };
@@ -782,7 +782,7 @@ void DigitalRenderer::Reset(void)
  *  Write to register
  */
 
-void DigitalRenderer::WriteRegister(uint16 adr, uint8 byte)
+void DigitalRenderer::WriteRegister(uint16_t adr, uint8_t byte)
 {
 	if (!ready)
 		return;
@@ -797,7 +797,7 @@ void DigitalRenderer::WriteRegister(uint16 adr, uint8 byte)
 #ifdef USE_FIXPOINT_MATHS
 			voice[v].add = sidquot.imul((int)voice[v].freq);
 #else
-			voice[v].add = (uint32)((float)voice[v].freq * SID_FREQ / SAMPLE_FREQ);
+			voice[v].add = (uint32_t)((float)voice[v].freq * SID_FREQ / SAMPLE_FREQ);
 #endif
 			break;
 
@@ -808,7 +808,7 @@ void DigitalRenderer::WriteRegister(uint16 adr, uint8 byte)
 #ifdef USE_FIXPOINT_MATHS
 			voice[v].add = sidquot.imul((int)voice[v].freq);
 #else
-			voice[v].add = (uint32)((float)voice[v].freq * SID_FREQ / SAMPLE_FREQ);
+			voice[v].add = (uint32_t)((float)voice[v].freq * SID_FREQ / SAMPLE_FREQ);
 #endif
 			break;
 
@@ -1046,7 +1046,7 @@ void DigitalRenderer::calc_filter(void)
  *  Fill one audio buffer with calculated SID sound
  */
 
-void DigitalRenderer::calc_buffer(int16 *buf, long count)
+void DigitalRenderer::calc_buffer(int16_t *buf, long count)
 {
 	// Get filter coefficients, so the emulator won't change
 	// them in the middle of our calculations
@@ -1059,23 +1059,23 @@ void DigitalRenderer::calc_buffer(int16 *buf, long count)
 #endif
 
 	// Index in sample_buf for reading, 16.16 fixed
-	uint32 sample_count = (sample_in_ptr + SAMPLE_BUF_SIZE/2) << 16;
+	uint32_t sample_count = (sample_in_ptr + SAMPLE_BUF_SIZE/2) << 16;
 
 	count >>= 1;	// 16 bit mono output, count is in bytes
 	while (count--) {
 		// Get current master volume from sample buffer,
 		// calculate sampled voice
-		uint8 master_volume = sample_buf[(sample_count >> 16) % SAMPLE_BUF_SIZE];
+		uint8_t master_volume = sample_buf[(sample_count >> 16) % SAMPLE_BUF_SIZE];
 		sample_count += ((0x138 * 50) << 16) / SAMPLE_FREQ;
-		int32 sum_output = SampleTab[master_volume] << 8;
-		int32 sum_output_filter = 0;
+		int32_t sum_output = SampleTab[master_volume] << 8;
+		int32_t sum_output_filter = 0;
 
 		// Loop for all three voices
 		for (int j=0; j<3; j++) {
 			DRVoice *v = &voice[j];
 
 			// Envelope generators
-			uint16 envelope;
+			uint16_t envelope;
 
 			switch (v->eg_state) {
 				case EG_ATTACK:
@@ -1110,7 +1110,7 @@ void DigitalRenderer::calc_buffer(int16 *buf, long count)
 			// Waveform generator
 			if (v->mute)
 				continue;
-			uint16 output;
+			uint16_t output;
 
 			if (!v->test)
 				v->count += v->add;
@@ -1131,7 +1131,7 @@ void DigitalRenderer::calc_buffer(int16 *buf, long count)
 					output = v->count >> 8;
 					break;
 				case WAVE_RECT:
-					if (v->count > (uint32)(v->pw << 12))
+					if (v->count > (uint32_t)(v->pw << 12))
 						output = 0xffff;
 					else
 						output = 0;
@@ -1140,19 +1140,19 @@ void DigitalRenderer::calc_buffer(int16 *buf, long count)
 					output = TriSawTable[v->count >> 16];
 					break;
 				case WAVE_TRIRECT:
-					if (v->count > (uint32)(v->pw << 12))
+					if (v->count > (uint32_t)(v->pw << 12))
 						output = TriRectTable[v->count >> 16];
 					else
 						output = 0;
 					break;
 				case WAVE_SAWRECT:
-					if (v->count > (uint32)(v->pw << 12))
+					if (v->count > (uint32_t)(v->pw << 12))
 						output = SawRectTable[v->count >> 16];
 					else
 						output = 0;
 					break;
 				case WAVE_TRISAWRECT:
-					if (v->count > (uint32)(v->pw << 12))
+					if (v->count > (uint32_t)(v->pw << 12))
 						output = TriSawRectTable[v->count >> 16];
 					else
 						output = 0;
@@ -1169,23 +1169,23 @@ void DigitalRenderer::calc_buffer(int16 *buf, long count)
 					break;
 			}
 			if (v->filter)
-				sum_output_filter += (int16)(output ^ 0x8000) * envelope;
+				sum_output_filter += (int16_t)(output ^ 0x8000) * envelope;
 			else
-				sum_output += (int16)(output ^ 0x8000) * envelope;
+				sum_output += (int16_t)(output ^ 0x8000) * envelope;
 		}
 
 		// Filter
 		if (ThePrefs.SIDFilters) {
 #ifdef USE_FIXPOINT_MATHS
-			int32 xn = cf_ampl.imul(sum_output_filter);
-			int32 yn = xn+cd1.imul(xn1)+cd2.imul(xn2)-cg1.imul(yn1)-cg2.imul(yn2);
+			int32_t xn = cf_ampl.imul(sum_output_filter);
+			int32_t yn = xn+cd1.imul(xn1)+cd2.imul(xn2)-cg1.imul(yn1)-cg2.imul(yn2);
 			yn2 = yn1; yn1 = yn; xn2 = xn1; xn1 = xn;
 			sum_output_filter = yn;
 #else
 			float xn = (float)sum_output_filter * cf_ampl;
 			float yn = xn + cd1 * xn1 + cd2 * xn2 - cg1 * yn1 - cg2 * yn2;
 			yn2 = yn1; yn1 = yn; xn2 = xn1; xn1 = xn;
-			sum_output_filter = (int32)yn;
+			sum_output_filter = (int32_t)yn;
 #endif
 		}
 

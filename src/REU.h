@@ -32,8 +32,8 @@ public:
 
 	void NewPrefs(Prefs *prefs);
 	void Reset(void);
-	uint8 ReadRegister(uint16 adr);
-	void WriteRegister(uint16 adr, uint8 byte);
+	uint8_t ReadRegister(uint16_t adr);
+	void WriteRegister(uint16_t adr, uint8_t byte);
 	void FF00Trigger(void);
 
 private:
@@ -42,12 +42,12 @@ private:
 
 	MOS6510 *the_cpu;	// Pointer to 6510
 
-	uint8 *ex_ram;		// REU expansion RAM
+	uint8_t *ex_ram;	// REU expansion RAM
 
-	uint32 ram_size;		// Size of expansion RAM
-	uint32 ram_mask;		// Expansion RAM address bit mask
+	uint32_t ram_size;	// Size of expansion RAM
+	uint32_t ram_mask;	// Expansion RAM address bit mask
 
-	uint8 regs[16];		// REU registers
+	uint8_t regs[16];	// REU registers
 };
 
 #endif

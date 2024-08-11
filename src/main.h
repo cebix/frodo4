@@ -42,18 +42,18 @@ extern BEntry AppDirectory;		// Application directory
 
 
 // Message codes
-const uint32 MSG_STARTUP = 'strt';			// Start emulation
-const uint32 MSG_PREFS = 'pref';			// Show preferences editor
-const uint32 MSG_PREFS_DONE = 'pdon';		// Preferences editor closed
-const uint32 MSG_RESET = 'rset';			// Reset C64
-const uint32 MSG_NMI = 'nmi ';				// Raise NMI
-const uint32 MSG_SAM = 'sam ';				// Invoke SAM
-const uint32 MSG_NEXTDISK = 'ndsk';		// Insert next disk in drive 8
-const uint32 MSG_TOGGLE_1541 = '1541';		// Toggle processor-level 1541 emulation
-const uint32 MSG_OPEN_SNAPSHOT = 'opss';	// Open snapshot file
-const uint32 MSG_SAVE_SNAPSHOT = 'svss';	// Save snapshot file
-const uint32 MSG_OPEN_SNAPSHOT_RETURNED = 'opsr';	// Open snapshot file panel returned
-const uint32 MSG_SAVE_SNAPSHOT_RETURNED = 'svsr';	// Save snapshot file panel returned
+const uint32_t MSG_STARTUP = 'strt';			// Start emulation
+const uint32_t MSG_PREFS = 'pref';			// Show preferences editor
+const uint32_t MSG_PREFS_DONE = 'pdon';		// Preferences editor closed
+const uint32_t MSG_RESET = 'rset';			// Reset C64
+const uint32_t MSG_NMI = 'nmi ';				// Raise NMI
+const uint32_t MSG_SAM = 'sam ';				// Invoke SAM
+const uint32_t MSG_NEXTDISK = 'ndsk';		// Insert next disk in drive 8
+const uint32_t MSG_TOGGLE_1541 = '1541';		// Toggle processor-level 1541 emulation
+const uint32_t MSG_OPEN_SNAPSHOT = 'opss';	// Open snapshot file
+const uint32_t MSG_SAVE_SNAPSHOT = 'svss';	// Save snapshot file
+const uint32_t MSG_OPEN_SNAPSHOT_RETURNED = 'opsr';	// Open snapshot file panel returned
+const uint32_t MSG_SAVE_SNAPSHOT_RETURNED = 'svsr';	// Save snapshot file panel returned
 
 
 // Application signature
@@ -64,7 +64,7 @@ const char APP_SIGNATURE[] = "application/x-vnd.cebix-Frodo";
 class Frodo : public BApplication {
 public:
 	Frodo();
-	virtual void ArgvReceived(int32 argc, char **argv);
+	virtual void ArgvReceived(int32_t argc, char **argv);
 	virtual void RefsReceived(BMessage *message);
 	virtual void ReadyToRun(void);
 	virtual void MessageReceived(BMessage *msg);
@@ -72,7 +72,7 @@ public:
 	virtual void AboutRequested(void);
 
 private:
-	void load_rom(const char *which, const char *path, uint8 *where, size_t size, const uint8 *builtin);
+	void load_rom(const char *which, const char *path, uint8_t *where, size_t size, const uint8_t *builtin);
 	void load_rom_files();
 
 	char prefs_path[1024];	// Pathname of current preferences file
@@ -104,7 +104,7 @@ public:
     static const char *get_prefs_path() { return prefs_path; }
 
 private:
-	void load_rom(const char *which, const char *path, uint8 *where, size_t size, const uint8 *builtin);
+	void load_rom(const char *which, const char *path, uint8_t *where, size_t size, const uint8_t *builtin);
 	void load_rom_files();
 
 	static char prefs_path[256];	// Pathname of current preferences file
@@ -132,7 +132,7 @@ public:
 	char prefs_path[256];	// Pathname of current preferences file
 
 private:
-	void load_rom(const char *which, const char *path, uint8 *where, size_t size, const uint8 *builtin);
+	void load_rom(const char *which, const char *path, uint8_t *where, size_t size, const uint8_t *builtin);
 	void load_rom_files();
 };
 

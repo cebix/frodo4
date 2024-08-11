@@ -76,7 +76,7 @@ Frodo::Frodo() : BApplication(APP_SIGNATURE), this_messenger(this)
  *  Process command line arguments
  */
 
-void Frodo::ArgvReceived(int32 argc, char **argv)
+void Frodo::ArgvReceived(int32_t argc, char **argv)
 {
 	if (argc == 2) {
 		strncpy(prefs_path, argv[1], 1023);

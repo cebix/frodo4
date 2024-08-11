@@ -61,14 +61,6 @@ AC_HEADER_DIRENT
 AC_CHECK_HEADERS(unistd.h fcntl.h sys/time.h sys/types.h utime.h string.h strings.h values.h ncurses.h)
 AC_CHECK_HEADERS(sys/vfs.h sys/mount.h sys/select.h sys/param.h sys/statfs.h sys/statvfs.h sys/stat.h)
 
-dnl Checks for types.
-AC_CHECK_SIZEOF(char)
-AC_CHECK_SIZEOF(short)
-AC_CHECK_SIZEOF(int)
-AC_CHECK_SIZEOF(long)
-AC_CHECK_SIZEOF(long long)
-AC_CHECK_SIZEOF(void *)
-
 dnl Checks for typedefs, structures, and compiler characteristics.
 AC_TYPE_MODE_T
 AC_TYPE_OFF_T
