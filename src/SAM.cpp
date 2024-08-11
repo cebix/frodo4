@@ -514,7 +514,8 @@ static bool aborted(void)
 
 static void read_line(void)
 {
-	fgets(in_ptr = input, INPUT_LENGTH, fin);
+	while (fgets(in_ptr = input, INPUT_LENGTH, fin) == NULL && 
+	       errno == EINTR) { }
 }
 
 
