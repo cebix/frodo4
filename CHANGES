@@ -1,7 +1,10 @@
 Changes from V4.2 to V4.3:
  - Removed AmigaOS support
+ - Removed RiscOS support
  - Unix: removed SVGAlib support
  - Unix: removed HP-UX sound support (use SDL)
+ - Unix: removed Solaris sound support (use SDL)
+ - Linux: removed OSS sound support (use SDL)
 
 Changes from V4.1b to V4.2:
  - Changed license to GPL
