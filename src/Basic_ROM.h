@@ -1,7 +1,7 @@
 /*
  *  Basic_ROM.h - C64 BASIC ROM
  *
- *  Frodo (C) 1994-1997,2002-2005 Christian Bauer
+ *  Frodo Copyright (C) Christian Bauer
  *  C64/1541 ROMs (C) Commodore Business Machines
  */
 

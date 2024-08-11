@@ -2,7 +2,7 @@
  *  DisplayEmbeddedSDL.h - C64 graphics display, emulator window handling
  *  for embedded Linux devices (Qtopia, Maemo)
  *
- *  Frodo (C) 1994-1997,2002-2009 Christian Bauer
+ *  Frodo Copyright (C) Christian Bauer
  *  Changes for embedded Linux devices (Qtopia, Maemo) (C) 2006 Bernd Lachner
  *
  *  This program is free software; you can redistribute it and/or modify

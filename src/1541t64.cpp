@@ -1,7 +1,7 @@
 /*
  *  1541t64.cpp - 1541 emulation in archive-type files (.t64/LYNX/.p00)
  *
- *  Frodo (C) 1994-1997,2002-2005 Christian Bauer
+ *  Frodo Copyright (C) Christian Bauer
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by

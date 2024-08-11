@@ -1,7 +1,7 @@
 /*
  *  dlgFileSelect.h - SDL GUI dialog for file selection
  *
- *  (C) 2006 Bernd Lachner
+ *  Copyright (C) 2006 Bernd Lachner
  *
  *  Originally taken from the hatari project,
  *

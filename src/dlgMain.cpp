@@ -1,7 +1,7 @@
 /*
  *  dlgMain.cpp - Main SDL GUI dialog
  *
- *  (C) 2006 Bernd Lachner
+ *  Copyright (C) 2006 Bernd Lachner
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
