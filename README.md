@@ -9,9 +9,8 @@ but far more compatible.
 
 ## Installation on Unix-like systems
 Prerequisites:
-* SDL (Simple DirectMedia Layer) 1.2.x
-* OpenGL 2.0 or higher
-* GLEW
+* A C++20 compiler
+* SDL (Simple DirectMedia Layer) 2.x
 * libglade2 and libgnomeui 2.x
 
 Frodo can be compiled and installed in the usual way:

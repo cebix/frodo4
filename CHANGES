@@ -1,7 +1,10 @@
 Changes from V4.2 to V4.3:
  - Removed AmigaOS support
  - Removed RiscOS support
+ - Unix: ported to SDL2
+ - Unix: numeric keypad Enter key now toggles speed limiter
  - Unix: removed SVGAlib support
+ - Unix: removed Qtopia/Maemo support
  - Unix: removed HP-UX sound support (use SDL)
  - Unix: removed Solaris sound support (use SDL)
  - Linux: removed OSS sound support (use SDL)

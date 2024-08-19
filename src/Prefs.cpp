@@ -356,18 +356,15 @@ bool Prefs::Save(const char *filename)
 }
 
 
-#ifdef __BEOS__
+#if defined(__BEOS__)
 #include "Prefs_Be.h"
-#endif
 
-#ifdef WIN32
-#include "Prefs_WIN32.h"
-#endif
-
-#ifdef __unix
-#ifdef HAVE_GLADE
+#elif defined(HAVE_GLADE)
 #include "Prefs_glade.h"
+
+#elif defined(WIN32)
+#include "Prefs_WIN32.h"
+
 #else
-#include "Prefs_x.h"
-#endif
+#include "Prefs_none.h"
 #endif

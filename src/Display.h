@@ -26,7 +26,7 @@
 #endif
 
 #ifdef HAVE_SDL
-struct SDL_Surface;
+#include <SDL.h>
 #endif
 
 #ifdef WIN32
@@ -72,8 +72,9 @@ public:
 	void Resume(void);
 #endif
 
-#ifdef __unix
-	bool quit_requested;
+#ifdef HAVE_SDL
+	bool quit_requested = false;
+	SDL_Window * GetSDLWindow() const { return the_window; }
 #endif
 
 private:
@@ -89,12 +90,15 @@ private:
 #endif
 
 #ifdef HAVE_SDL
+	SDL_Window *the_window = nullptr;
+	SDL_Renderer *the_renderer = nullptr;
+	SDL_Texture *the_texture = nullptr;
+	uint8_t * pixel_buffer = nullptr;	// Buffer for VIC to draw into
+	uint32_t palette[256];				// Mapping of VIC color values to native ARGB
 	char speedometer_string[16];		// Speedometer text
-	void draw_string(SDL_Surface *s, int x, int y, const char *str, uint8_t front_color, uint8_t back_color);
-#endif
 
-#ifdef __unix
-	void draw_led(int num, int state);	// Draw one LED
+	void fill_rect(const SDL_Rect & r, uint8_t color);
+	void draw_string(int x, int y, const char *str, uint8_t front_color, uint8_t back_color);
 	static void pulse_handler(...);		// LED error blinking
 #endif
 

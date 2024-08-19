@@ -1205,9 +1205,6 @@ void DigitalRenderer::calc_buffer(int16_t *buf, long count)
 # include "SID_catweasel.h"
 # endif
 
-#elif defined(__linux__)
-#include "SID_catweasel.h"
-
 #elif defined(WIN32)
 #include "SID_WIN32.h"
 

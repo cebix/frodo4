@@ -1,122 +1,52 @@
-dnl Process this file with autoconf to produce a configure script.
-
+dnl Information on the package.
+AC_PREREQ([2.71])
 AC_INIT([Frodo],[4.2], [], [Frodo])
 AC_CONFIG_SRCDIR([src/main.cpp])
-AC_PREREQ([2.71])
-AM_INIT_AUTOMAKE([foreign])
-AC_CONFIG_FILES([src/Makefile docs/Makefile])
-AC_CONFIG_HEADERS([src/sysconfig.h])
+AM_INIT_AUTOMAKE([1.12 foreign])
 
 dnl Checks for programs.
-AC_PROG_CC
 AC_PROG_CXX
-AC_PROG_CPP
-AC_PROG_MAKE_SET
-AC_PROG_INSTALL
+AX_CXX_COMPILE_STDCXX(20, noext, mandatory)
 PKG_PROG_PKG_CONFIG
 
-dnl Configure options.
-AC_ARG_ENABLE(opengl, [  --enable-opengl         use SDL/OpenGL for rendering [default=yes]], , enable_opengl=yes)
-
-AC_USE_SYSTEM_EXTENSIONS
-AC_SEARCH_LIBS([strerror],[cposix])
-
 dnl Checks for libraries.
-AM_PATH_SDL(1.2.0, HAVE_SDL=yes, HAVE_SDL=no)
+AM_PATH_SDL2(2.30.0, AC_DEFINE(HAVE_SDL, 1, [SDL support is enabled]), AC_MSG_ERROR([*** Required SDL version not found]))
+CPPFLAGS="$CPPFLAGS $SDL_CFLAGS"
+LIBS="$LIBS $SDL_LIBS"
 
-EMBEDDED_EXTENSION=none
-AC_MSG_CHECKING([if Frodo should be compiled with extensions for an embedded device])
-AC_ARG_WITH([embedded-extension], [AS_HELP_STRING([--with-embedded-extension=qtopia|maemo],[Specify which extension for Frodo on an embedded device should be used.])])
-if [[ x"$with_embedded_extension" == "xqtopia" ]]; then
-  EMBEDDED_EXTENSION=$with_embedded_extension
-  AC_DEFINE(QTOPIA, 1, [Extension for Qtopia is enabled])
-elif [[ x"$with_embedded_extension" == "xmaemo" ]]; then
-  EMBEDDED_EXTENSION=$with_embedded_extension
-  AC_DEFINE(MAEMO, 1, [Extension for Maemo is enabled])
+HAVE_GLADE=no
+PKG_CHECK_MODULES(GLADE, [libglade-2.0 libgnomeui-2.0 >= 1.110.0], HAVE_GLADE=yes)
+if [[ $HAVE_GLADE = yes ]]; then
+  AC_DEFINE(HAVE_GLADE, 1, [Glade support is enabled])
+  CPPFLAGS="$CPPFLAGS $GLADE_CFLAGS"
+  LIBS="$LIBS $GLADE_LIBS"
+  LDFLAGS="$LDFLAGS -Wl,-E"
 fi
-AC_MSG_RESULT([$EMBEDDED_EXTENSION])
+GUI_OBJS=""
+dnl GUI_OBJS="sdlgui.o file.o dlgFileSelect.o dlgMain.o dlgDrives.o dlgOptions.o dlgVideoSound.o dlgAdvanced.o dlgInput.o"
 
-if [[ x"$EMBEDDED_EXTENSION" == "xmaemo" ]]; then
-  PKG_CHECK_MODULES(OSSO, [libosso >= 0.9.19], AC_DEFINE(HAVE_LIBOSSO, [], [Weather libosso is present on the system]), [AC_MSG_NOTICE([libosso not present.])])
-fi
-
-if [[ x"$EMBEDDED_EXTENSION" == "xnone" ]]; then
-  HAVE_GLADE=no
-  PKG_CHECK_MODULES(GLADE, [libglade-2.0 libgnomeui-2.0 >= 1.110.0], HAVE_GLADE=yes)
-  if [[ $HAVE_GLADE = yes ]]; then
-    AC_DEFINE(HAVE_GLADE, 1, [Glade support is enabled])
-    CPPFLAGS="$CPPFLAGS $GLADE_CFLAGS"
-    LIBS="$LIBS $GLADE_LIBS"
-    LDFLAGS="$LDFLAGS -Wl,-E"
-  fi
-  GUI_OBJS=""
-else
-  GUI_OBJS="sdlgui.o file.o dlgFileSelect.o dlgMain.o dlgDrives.o dlgOptions.o dlgVideoSound.o dlgAdvanced.o dlgInput.o"
-fi
-
-AC_PATH_XTRA
-
+dnl Checks for headers.
 AC_HEADER_DIRENT
 
-AC_CHECK_HEADERS(unistd.h fcntl.h sys/time.h sys/types.h utime.h string.h strings.h values.h ncurses.h)
+AC_CHECK_HEADERS(unistd.h fcntl.h sys/time.h sys/types.h utime.h string.h)
 AC_CHECK_HEADERS(sys/vfs.h sys/mount.h sys/select.h sys/param.h sys/statfs.h sys/statvfs.h sys/stat.h)
 
 dnl Checks for typedefs, structures, and compiler characteristics.
-AC_TYPE_MODE_T
 AC_TYPE_OFF_T
-AC_TYPE_PID_T
-AC_STRUCT_ST_BLOCKS
 AC_CHECK_HEADERS_ONCE([sys/time.h])
 
 AC_STRUCT_TM
 
 dnl Checks for library functions.
-AC_PROG_GCC_TRADITIONAL
-
 AC_FUNC_UTIME_NULL
 AC_CHECK_FUNCS(gettimeofday sigaction mkdir rmdir select strerror strstr statfs usleep)
 
-KBD_LANG=0
-AC_ARG_ENABLE(kbd-lang-de,[  --enable-kbd-lang-de    Use german keyboard layout],[KBD_LANG=1],[])
-AC_ARG_ENABLE(kbd-lang-us,[  --enable-kbd-lang-us    Use american keyboard layout],[KBD_LANG=0],[])
-
-AC_MSG_CHECKING(which target to use)
-if [[ x"$HAVE_SDL" = "xyes" ]]; then
-  AC_MSG_RESULT([SDL])
-  TARGET=sdl
-  GUI_CFLAGS="$SDL_CFLAGS -DHAVE_SDL"
-  LIBS="$LIBS $SDL_LIBS"
-  if [[ "x$enable_opengl" = "xyes" ]]; then
-    AC_MSG_CHECKING(for OpenGL support)
-    have_opengl=no
-    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
-     #include <GL/glew.h>
-    ]], [[
-    ]])],[
-    have_opengl=yes
-    ],[])
-    AC_MSG_RESULT($have_opengl)
-    if test x$have_opengl = xyes; then
-      AC_DEFINE(ENABLE_OPENGL, 1, [OpenGL support is enabled])
-      LIBS="$LIBS -lGL -lGLEW"
-    else
-      AC_MSG_WARN([Could not find OpenGL, ignoring --enable-opengl.])
-    fi
-  fi
-else
-  AC_MSG_RESULT([X Window System])
-  TARGET=x11
-  GUI_CFLAGS="$X_CFLAGS -I$ac_cv_x_include"
-  LIBS="$LIBS $X_LIBS $X_PRE_LIBS -lXext -lX11 $X_EXTRA_LIBS"
-fi
-
-AC_SUBST(TARGET)
-AC_SUBST(KBD_LANG)
-AC_SUBST(GUI_CFLAGS)
+AC_CONFIG_HEADERS([src/sysconfig.h])
+AC_SUBST(HAVE_SDL)
 AC_SUBST(GUI_OBJS)
 
 dnl Generate Makefile.
-AC_CONFIG_FILES([Makefile])
+AC_CONFIG_FILES([Makefile src/Makefile docs/Makefile])
 AC_OUTPUT
 
 dnl Print summary.

@@ -1,5 +1,5 @@
 /*
- *  C64_x.h - Put the pieces together, X specific stuff
+ *  C64_x.h - Put the pieces together, Unix specific stuff
  *
  *  Frodo Copyright (C) Christian Bauer
  *

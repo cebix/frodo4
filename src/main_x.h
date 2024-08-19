@@ -24,14 +24,6 @@
 #include <gnome.h>
 #endif
 
-// Qtopia Windowing System
-#ifdef QTOPIA
-extern "C" int main(int argc, char *argv[]);
-#include <SDL.h>
-#endif
-
-extern int init_graphics(void);
-
 
 // Global variables
 Frodo *TheApp = NULL;
@@ -47,27 +39,34 @@ int main(int argc, char **argv)
 #ifdef HAVE_GLADE
 	gnome_program_init(PACKAGE_NAME, PACKAGE_VERSION, LIBGNOMEUI_MODULE, argc, argv,
 	                   GNOME_PARAM_APP_DATADIR, DATADIR, NULL);
+#else
+	printf(
+		"%s Copyright (C) Christian Bauer\n"
+		"This is free software with ABSOLUTELY NO WARRANTY.\n"
+		, VERSION_STRING
+	);
+	fflush(stdout);
+#endif
+
+#ifdef HAVE_SDL
+	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) < 0) {
+		fprintf(stderr, "Couldn't initialize SDL (%s)\n", SDL_GetError());
+		return 1;
+	}
 #endif
 
 	timeval tv;
 	gettimeofday(&tv, NULL);
 	srand(tv.tv_usec);
 
-#ifndef HAVE_GLADE
-	printf(
-		"%s Copyright (C) Christian Bauer\n"
-		"This is free software with ABSOLUTELY NO WARRANTY.\n"
-		, VERSION_STRING
-	);
-#endif
-	if (!init_graphics())
-		return 1;
-	fflush(stdout);
-
 	TheApp = new Frodo();
 	TheApp->ArgvReceived(argc, argv);
 	TheApp->ReadyToRun();
 	delete TheApp;
+
+#ifdef HAVE_SDL
+	SDL_Quit();
+#endif
 
 	return 0;
 }

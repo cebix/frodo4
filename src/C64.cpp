@@ -675,18 +675,12 @@ bool C64::LoadSnapshot(char *filename)
 }
 
 
-#ifdef __BEOS__
+#if defined(__BEOS__)
 #include "C64_Be.h"
-#endif
 
-#ifdef __unix
-# if defined(QTOPIA) or defined(MAEMO)
-#  include "C64_Embedded.h"
-# else
-#  include "C64_x.h"
-# endif
-#endif
+#elif defined(__unix)
+#include "C64_x.h"
 
-#ifdef WIN32
+#elif defined(WIN32)
 #include "C64_WIN32.h"
 #endif

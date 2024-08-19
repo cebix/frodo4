@@ -1,5 +1,5 @@
 /*
- *  Prefs_x.h - Global preferences, dummy module for non-existing preferences editor
+ *  Prefs_none.h - Global preferences, dummy module for non-existing preferences editor
  *
  *  Frodo Copyright (C) Christian Bauer
  *

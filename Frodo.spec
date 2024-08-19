@@ -10,6 +10,10 @@ License: GPLv2
 Group: Applications/Emulators
 Source: %{name}-%{version}.tar.gz
 URL: https://frodo.cebix.net
+BuildRequires: gcc-c++
+BuildRequires: SDL2-devel >= 2.30.0
+BuildRequires: libglade2-devel
+BuildRequires: libgnomeui-devel
 BuildRoot: %{_tmppath}/%{name}-root
 Prefix: %{_prefix}
 

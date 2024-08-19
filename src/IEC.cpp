@@ -167,8 +167,12 @@ void IEC::NewPrefs(Prefs *prefs)
 
 void IEC::UpdateLEDs(void)
 {
-	if (drive[0] != NULL && drive[1] != NULL && drive[2] != NULL && drive[3] != NULL)
-		the_display->UpdateLEDs(drive[0]->LED, drive[1]->LED, drive[2]->LED, drive[3]->LED);
+	int l0 = drive[0] ? drive[0]->LED : DRVLED_OFF;
+	int l1 = drive[1] ? drive[1]->LED : DRVLED_OFF;
+	int l2 = drive[2] ? drive[2]->LED : DRVLED_OFF;
+	int l3 = drive[3] ? drive[3]->LED : DRVLED_OFF;
+
+	the_display->UpdateLEDs(l0, l1, l2, l3);
 }
 
 
