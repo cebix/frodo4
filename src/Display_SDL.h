@@ -81,7 +81,11 @@ C64Display::C64Display(C64 *the_c64) : TheC64(the_c64)
 	    flags |= SDL_WINDOW_RESIZABLE;
 	}
 
-	int result = SDL_CreateWindowAndRenderer(DISPLAY_X * 4, DISPLAY_Y * 4, flags, &the_window, &the_renderer);
+	int result = SDL_CreateWindowAndRenderer(
+		DISPLAY_X * ThePrefs.ScalingNumerator / ThePrefs.ScalingDenominator,
+		DISPLAY_Y * ThePrefs.ScalingNumerator / ThePrefs.ScalingDenominator,
+		flags, &the_window, &the_renderer
+	);
 	if (result < 0) {
 		error_and_quit(std::format("Couldn't initialize video output ({})\n", SDL_GetError()));
 	}

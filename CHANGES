@@ -2,7 +2,9 @@ Changes from V4.2 to V4.3:
  - Removed AmigaOS support
  - Removed RiscOS support
  - Unix: ported to SDL2
- - Unix: numeric keypad Enter key now toggles speed limiter
+ - Unix: numeric keypad Enter key toggles speed limiter
+ - Unix: numeric keypad Plus key toggles fullscreen mode
+ - Unix: replaced status bar with overlay
  - Unix: removed SVGAlib support
  - Unix: removed Qtopia/Maemo support
  - Unix: removed HP-UX sound support (use SDL)

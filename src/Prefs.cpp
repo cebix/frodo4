@@ -47,8 +47,8 @@ Prefs::Prefs()
 	LatencyMin = 80;
 	LatencyMax = 120;
 	LatencyAvg = 280;
-	ScalingNumerator = 2;
-	ScalingDenominator = 2;
+	ScalingNumerator = 4;
+	ScalingDenominator = 1;
 
 	strcpy(DrivePath[0], "64prgs");
 	strcpy(DrivePath[1], "");

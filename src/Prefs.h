@@ -81,8 +81,8 @@ public:
 	int LatencyMin;			// Min msecs ahead of sound buffer (Win32)
 	int LatencyMax;			// Max msecs ahead of sound buffer (Win32)
 	int LatencyAvg;			// Averaging interval in msecs (Win32)
-	int ScalingNumerator;	// Window scaling numerator (Win32)
-	int ScalingDenominator;	// Window scaling denominator (Win32)
+	int ScalingNumerator;	// Window scaling numerator
+	int ScalingDenominator;	// Window scaling denominator
 
 	bool SpritesOn;			// Sprite display is on
 	bool SpriteCollisions;	// Sprite collision detection is on
@@ -94,7 +94,7 @@ public:
 	bool Emul1541Proc;		// Enable processor-level 1541 emulation
 	bool SIDFilters;		// Emulate SID filters
 	bool DoubleScan;		// Double scan lines (BeOS, if DisplayType == DISPTYPE_SCREEN)
-	bool JoystickGeekPort;	// Enable GeekPort joystick adapter
+	bool JoystickGeekPort;	// Enable GeekPort joystick adapter (BeOS)
 	bool HideCursor;		// Hide mouse cursor when visible (Win32)
 	bool DirectSound;		// Use direct sound (instead of wav) (Win32)
 	bool ExclusiveSound;	// Use exclusive mode with direct sound (Win32)
