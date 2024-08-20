@@ -109,6 +109,8 @@ private:
 
 	static uint32_t pulse_handler_static(uint32_t interval, void * arg);
 	void pulse_handler();
+
+	void toggle_fullscreen(bool full);
 #endif
 
 #ifdef WIN32

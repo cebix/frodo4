@@ -159,7 +159,7 @@ void C64Display::error_and_quit(const std::string & msg) const
 
 void C64Display::NewPrefs(Prefs *prefs)
 {
-	// Unused, we handle fullscreen/window mode switches in PollKeyboard()
+	// Unused
 }
 
 
@@ -184,7 +184,7 @@ void C64Display::Update(void)
 				draw_string(DISPLAY_X * (i+1)/5 + 8, DISPLAY_Y - 8, drive_str[i], black);
 				draw_string(DISPLAY_X * (i+1)/5 + 7, DISPLAY_Y - 9, drive_str[i], shine_gray);
 
-				SDL_Rect r = {DISPLAY_X * (i+2) / 5 - 24, DISPLAY_Y - 8, 16, 6};
+				SDL_Rect r = {(int)(DISPLAY_X * (i+2) / 5 - 24), DISPLAY_Y - 8, 16, 6};
 				fill_rect(r, shadow_gray);
 				r.x += 1; r.y += 1; r.w -=1; r.h -= 1;
 				fill_rect(r, shine_gray);
@@ -336,6 +336,22 @@ uint8_t *C64Display::BitmapBase(void)
 int C64Display::BitmapXMod(void)
 {
 	return DISPLAY_X;
+}
+
+
+/*
+ *  Toggle fullscreen mode
+ */
+
+void C64Display::toggle_fullscreen(bool full)
+{
+	if (full) {
+		SDL_SetWindowFullscreen(the_window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+		SDL_ShowCursor(SDL_DISABLE);
+	} else {
+		SDL_SetWindowFullscreen(the_window, 0);
+		SDL_ShowCursor(SDL_ENABLE);
+	}
 }
 
 
@@ -495,16 +511,14 @@ void C64Display::PollKeyboard(uint8_t *key_matrix, uint8_t *rev_matrix, uint8_t 
 					case SDL_SCANCODE_F10:	// F10: Prefs/Quit
 						TheC64->Pause();
 						if (ThePrefs.DisplayType == DISPTYPE_SCREEN) {  // exit fullscreen mode
-							SDL_SetWindowFullscreen(the_window, 0);
-							SDL_ShowCursor(SDL_ENABLE);
+							toggle_fullscreen(false);
 						}
 
 						if (!TheApp->RunPrefsEditor()) {
 							quit_requested = true;
 						} else {
 							if (ThePrefs.DisplayType == DISPTYPE_SCREEN) {  // enter fullscreen mode
-								SDL_ShowCursor(SDL_DISABLE);
-								SDL_SetWindowFullscreen(the_window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+								toggle_fullscreen(true);
 							}
 						}
 
@@ -521,6 +535,16 @@ void C64Display::PollKeyboard(uint8_t *key_matrix, uint8_t *rev_matrix, uint8_t 
 
 					case SDL_SCANCODE_NUMLOCKCLEAR:
 						num_locked = true;
+						break;
+
+					case SDL_SCANCODE_KP_PLUS:	// Plus on keypad: Toggle fullscreen
+						if (ThePrefs.DisplayType == DISPTYPE_WINDOW) {
+							ThePrefs.DisplayType = DISPTYPE_SCREEN;
+							toggle_fullscreen(true);
+						} else {
+							ThePrefs.DisplayType = DISPTYPE_WINDOW;
+							toggle_fullscreen(false);
+						}
 						break;
 
 					case SDL_SCANCODE_KP_ENTER:	// Enter on keypad: Toggle speed limiter
@@ -570,7 +594,7 @@ void C64Display::InitColors(uint8_t *colors)
 	// Palette for indexed-to-ARGB conversion
 	memset(palette, 0, sizeof(palette));
 
-	for (int i = 0; i < 16; ++i) {
+	for (unsigned i = 0; i < 16; ++i) {
 		palette[i] = (palette_red[i & 0x0f] << 16)
 		           | (palette_green[i & 0x0f] << 8)
 		           | (palette_blue[i & 0x0f] << 0);
@@ -583,7 +607,7 @@ void C64Display::InitColors(uint8_t *colors)
 	palette[green]       = (0x00 << 16) | (0xf0 << 8) | (0x00 << 0);
 
 	// One-to-one Palette for VIC
-	for (int i = 0; i < 256; ++i) {
+	for (unsigned i = 0; i < 256; ++i) {
 		colors[i] = i & 0x0f;
 	}
 }
