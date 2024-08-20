@@ -12,7 +12,7 @@ FrodoSC_SOURCES = $(common_SOURCES) \
     C64_SC.cpp CPUC64_SC.cpp VIC_SC.cpp CIA_SC.cpp CPU1541_SC.cpp CPU_common.cpp CPU_common.h CPU_emulcycle.h
 
 EXTRA_Frodo_SOURCES = sysdeps.h debug.h file.cpp file.h \
-    main_x.h C64_x.h Display_SDL.h SID_SDL.h SID_catweasel.h Prefs_glade.h Prefs_none.h \
+    main_x.h C64_SDL.h Display_SDL.h SID_SDL.h SID_catweasel.h Prefs_glade.h Prefs_none.h \
     sdlgui.cpp sdlgui.h dlgFileSelect.cpp dlgFileSelect.h dlgMain.cpp dlgDrives.cpp dlgOptions.cpp dlgVideoSound.cpp dlgAdvanced.cpp dlgInput.cpp
 
 common_CPPFLAGS = -DDATADIR=\"$(pkgdatadir)/\"

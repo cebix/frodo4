@@ -1,5 +1,5 @@
 /*
- *  C64_x.h - Put the pieces together, Unix specific stuff
+ *  C64_SDL.h - Put the pieces together, SDL specific stuff
  *
  *  Frodo Copyright (C) Christian Bauer
  *
@@ -20,101 +20,16 @@
 
 #include "main.h"
 
+#include <SDL.h>
 
-static struct timeval tv_start;
+#include <chrono>
+#include <thread>
+namespace chrono = std::chrono;
 
-#ifndef HAVE_USLEEP
-/*
- *  NAME:
- *      usleep     -- This is the precision timer for Test Set
- *                    Automation. It uses the select(2) system
- *                    call to delay for the desired number of
- *                    micro-seconds. This call returns ZERO
- *                    (which is usually ignored) on successful
- *                    completion, -1 otherwise.
- *
- *  ALGORITHM:
- *      1) We range check the passed in microseconds and log a
- *         warning message if appropriate. We then return without
- *         delay, flagging an error.
- *      2) Load the Seconds and micro-seconds portion of the
- *         interval timer structure.
- *      3) Call select(2) with no file descriptors set, just the
- *         timer, this results in either delaying the proper
- *         ammount of time or being interupted early by a signal.
- *
- *  HISTORY:
- *      Added when the need for a subsecond timer was evident.
- *
- *  AUTHOR:
- *      Michael J. Dyer                   Telephone:   AT&T 414.647.4044
- *      General Electric Medical Systems        GE DialComm  8 *767.4044
- *      P.O. Box 414  Mail Stop 12-27         Sect'y   AT&T 414.647.4584
- *      Milwaukee, Wisconsin  USA 53201                      8 *767.4584
- *      internet:  mike@sherlock.med.ge.com     GEMS WIZARD e-mail: DYER
- */
 
-#include <unistd.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <errno.h>
-#include <time.h>
-#include <sys/time.h>
-#include <sys/param.h>
-#include <sys/types.h>
-
-int usleep(unsigned long int microSeconds)
-{
-        unsigned int            Seconds, uSec;
-        int                     nfds, readfds, writefds, exceptfds;
-        struct  timeval         Timer;
-
-        nfds = readfds = writefds = exceptfds = 0;
-
-        if( (microSeconds == (unsigned long) 0)
-                || microSeconds > (unsigned long) 4000000 )
-        {
-                errno = ERANGE;         /* value out of range */
-                perror( "usleep time out of range ( 0 -> 4000000 ) " );
-                return -1;
-        }
-
-        Seconds = microSeconds / (unsigned long) 1000000;
-        uSec    = microSeconds % (unsigned long) 1000000;
-
-        Timer.tv_sec            = Seconds;
-        Timer.tv_usec           = uSec;
-
-        if( select( nfds, &readfds, &writefds, &exceptfds, &Timer ) < 0 )
-        {
-                perror( "usleep (select) failed" );
-                return -1;
-        }
-
-        return 0;
-}
-#endif
-
-#ifdef __linux__
-// select() timing is much more accurate under Linux
-static void Delay_usec(unsigned long usec)
-{
-	int was_error;
-	struct timeval tv;
-
-	tv.tv_sec = 0;
-	tv.tv_usec = usec;
-	do {
-		errno = 0;
-		was_error = select(0, NULL, NULL, NULL, &tv);
-	} while (was_error && (errno == EINTR));
-}
-#else
-static void Delay_usec(unsigned long usec)
-{
-	usleep(usec);
-}
-#endif
+// For speed limiting to 50 fps
+static chrono::time_point<chrono::steady_clock> frame_start;
+static constexpr int FRAME_TIME_us = 20000;  // 20 ms for 50 fps
 
 
 /*
@@ -137,7 +52,7 @@ void C64::c64_ctor2(void)
    	       "F11 to cause an NMI (RESTORE key) and\n"
    	       "F12 to reset the C64.\n\n");
   
-	gettimeofday(&tv_start, NULL);
+	frame_start = chrono::steady_clock::now();
 }
 
 
@@ -181,8 +96,9 @@ void C64::VBlank(bool draw_frame)
 {
 	// Poll keyboard
 	TheDisplay->PollKeyboard(TheCIA1->KeyMatrix, TheCIA1->RevMatrix, &joykey);
-	if (TheDisplay->quit_requested)
+	if (TheDisplay->quit_requested) {
 		quit_thyself = true;
+	}
 
 	// Poll joysticks
 	TheCIA1->Joystick1 = poll_joystick(0);
@@ -195,10 +111,11 @@ void C64::VBlank(bool draw_frame)
 	}
 
 	// Joystick keyboard emulation
-	if (TheDisplay->NumLock())
+	if (TheDisplay->NumLock()) {
 		TheCIA1->Joystick1 &= joykey;
-	else
+	} else {
 		TheCIA1->Joystick2 &= joykey;
+	}
        
 	// Count TOD clocks
 	TheCIA1->CountTOD();
@@ -207,28 +124,24 @@ void C64::VBlank(bool draw_frame)
 	// Update window if needed
 	if (draw_frame) {
     	TheDisplay->Update();
-
-		// Calculate time between VBlanks, display speedometer
-		struct timeval tv;
-		gettimeofday(&tv, NULL);
-		if ((tv.tv_usec -= tv_start.tv_usec) < 0) {
-			tv.tv_usec += 1000000;
-			tv.tv_sec -= 1;
-		}
-		tv.tv_sec -= tv_start.tv_sec;
-		double elapsed_time = (double)tv.tv_sec * 1000000 + tv.tv_usec;
-		speed_index = 20000 / (elapsed_time + 1) * ThePrefs.SkipFrames * 100;
-
-		// Limit speed to 100% if desired
-		if ((speed_index > 100) && ThePrefs.LimitSpeed) {
-			Delay_usec((unsigned long)(ThePrefs.SkipFrames * 20000 - elapsed_time));
-			speed_index = 100;
-		}
-
-		gettimeofday(&tv_start, NULL);
-
-		TheDisplay->Speedometer((int)speed_index);
 	}
+
+	// Calculate time between frames, display speedometer
+	chrono::time_point<chrono::steady_clock> now = chrono::steady_clock::now();
+
+	int elapsed_us = chrono::duration_cast<chrono::microseconds>(now - frame_start).count();
+	int speed_index = FRAME_TIME_us / double(elapsed_us + 1) * 100;
+
+	// Limit speed to 100% if desired
+	if ((elapsed_us < FRAME_TIME_us) && ThePrefs.LimitSpeed) {
+		std::this_thread::sleep_until(frame_start);
+		frame_start += chrono::microseconds(FRAME_TIME_us);
+		speed_index = 100;
+	} else {
+		frame_start = now;
+	}
+
+	TheDisplay->Speedometer(speed_index);
 }
 
 
@@ -252,8 +165,9 @@ void C64::thread_func(void)
 
 		if (ThePrefs.Emul1541Proc) {
 			TheCPU1541->CountVIATimers(1);
-			if (!TheCPU1541->Idle)
+			if (!TheCPU1541->Idle) {
 				TheCPU1541->EmulateCycle();
+			}
 		}
 		CycleCounter++;
 #else
@@ -276,15 +190,18 @@ void C64::thread_func(void)
 				//  6502 and 6510 instructions until both have
 				//  used up their cycles
 				while (cycles >= 0 || cycles_1541 >= 0)
-					if (cycles > cycles_1541)
+					if (cycles > cycles_1541) {
 						cycles -= TheCPU->EmulateLine(1);
-					else
+					} else {
 						cycles_1541 -= TheCPU1541->EmulateLine(1);
-			} else
+					}
+			} else {
 				TheCPU->EmulateLine(cycles);
-		} else
+			}
+		} else {
 			// 1541 processor disabled, only emulate 6510
 			TheCPU->EmulateLine(cycles);
+		}
 #endif
 	}
 }
@@ -307,4 +224,80 @@ void C64::Pause(void)
 void C64::Resume(void)
 {
 	TheSID->ResumeSound();
+}
+
+
+/*
+ *  Open/close joystick drivers given old and new state of
+ *  joystick preferences
+ */
+
+void C64::open_close_joystick(int port, int oldjoy, int newjoy)
+{
+	if (oldjoy != newjoy) {
+		joy_minx[port] = joy_miny[port] = 32767;	// Reset calibration
+		joy_maxx[port] = joy_maxy[port] = -32768;
+		if (newjoy) {
+			joy[port] = SDL_JoystickOpen(newjoy - 1);
+			if (joy[port] == nullptr) {
+				fprintf(stderr, "Couldn't open joystick %d\n", port + 1);
+			}
+		} else {
+			if (joy[port]) {
+				SDL_JoystickClose(joy[port]);
+				joy[port] = nullptr;
+			}
+		}
+	}
+}
+
+void C64::open_close_joysticks(int oldjoy1, int oldjoy2, int newjoy1, int newjoy2)
+{
+	open_close_joystick(0, oldjoy1, newjoy1);
+	open_close_joystick(1, oldjoy2, newjoy2);
+}
+
+
+/*
+ *  Poll joystick port, return CIA mask
+ */
+
+uint8_t C64::poll_joystick(int port)
+{
+	uint8_t j = 0xff;
+
+	if (port == 0 && (joy[0] || joy[1])) {
+		SDL_JoystickUpdate();
+	}
+
+	if (joy[port]) {
+		int x = SDL_JoystickGetAxis(joy[port], 0), y = SDL_JoystickGetAxis(joy[port], 1);
+
+		if (x > joy_maxx[port])
+			joy_maxx[port] = x;
+		if (x < joy_minx[port])
+			joy_minx[port] = x;
+		if (y > joy_maxy[port])
+			joy_maxy[port] = y;
+		if (y < joy_miny[port])
+			joy_miny[port] = y;
+
+		if (joy_maxx[port] - joy_minx[port] < 100 || joy_maxy[port] - joy_miny[port] < 100)
+			return 0xff;
+
+		if (x < (joy_minx[port] + (joy_maxx[port]-joy_minx[port])/3))
+			j &= 0xfb;							// Left
+		else if (x > (joy_minx[port] + 2*(joy_maxx[port]-joy_minx[port])/3))
+			j &= 0xf7;							// Right
+
+		if (y < (joy_miny[port] + (joy_maxy[port]-joy_miny[port])/3))
+			j &= 0xfe;							// Up
+		else if (y > (joy_miny[port] + 2*(joy_maxy[port]-joy_miny[port])/3))
+			j &= 0xfd;							// Down
+
+		if (SDL_JoystickGetButton(joy[port], 0))
+			j &= 0xef;							// Button
+	}
+
+	return j;
 }

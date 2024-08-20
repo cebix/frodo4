@@ -678,8 +678,8 @@ bool C64::LoadSnapshot(char *filename)
 #if defined(__BEOS__)
 #include "C64_Be.h"
 
-#elif defined(__unix)
-#include "C64_x.h"
+#elif defined(HAVE_SDL)
+#include "C64_SDL.h"
 
 #elif defined(WIN32)
 #include "C64_WIN32.h"

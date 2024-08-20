@@ -33,14 +33,16 @@
 #include <ddraw.h>
 #endif
 
+#include <string>
+
 
 // Display dimensions
 #if defined(SMALL_DISPLAY)
-const int DISPLAY_X = 0x168;
-const int DISPLAY_Y = 0x110;
+constexpr int DISPLAY_X = 0x168;
+constexpr int DISPLAY_Y = 0x110;
 #else
-const int DISPLAY_X = 0x180;
-const int DISPLAY_Y = 0x110;
+constexpr int DISPLAY_X = 0x180;
+constexpr int DISPLAY_Y = 0x110;
 #endif
 
 
@@ -74,7 +76,6 @@ public:
 
 #ifdef HAVE_SDL
 	bool quit_requested = false;
-	SDL_Window * GetSDLWindow() const { return the_window; }
 #endif
 
 private:
@@ -95,11 +96,19 @@ private:
 	SDL_Texture *the_texture = nullptr;
 	uint8_t * pixel_buffer = nullptr;	// Buffer for VIC to draw into
 	uint32_t palette[256];				// Mapping of VIC color values to native ARGB
-	char speedometer_string[16];		// Speedometer text
 
-	void fill_rect(const SDL_Rect & r, uint8_t color);
-	void draw_string(int x, int y, const char *str, uint8_t front_color, uint8_t back_color);
-	static void pulse_handler(...);		// LED error blinking
+	char speedometer_string[16];		// Speedometer text
+	SDL_TimerID pulse_timer = 0;		// Timer for LED error blinking
+
+	bool num_locked = false;
+
+	void error_and_quit(const std::string & msg) const;
+
+	void fill_rect(const SDL_Rect & r, uint8_t color) const;
+	void draw_string(int x, int y, const char *str, uint8_t front_color, uint8_t back_color) const;
+
+	static uint32_t pulse_handler_static(uint32_t interval, void * arg);
+	void pulse_handler();
 #endif
 
 #ifdef WIN32

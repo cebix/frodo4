@@ -26,25 +26,19 @@
 #include <SDL.h>
 
 #include <format>
-#include <string>
 
 #include <stdlib.h>
 
 
 // Display dimensions including drive LEDs etc.
-static const int FRAME_WIDTH = DISPLAY_X;
-static const int FRAME_HEIGHT = DISPLAY_Y + 16;
-
-// Keyboard
-static bool num_locked = false;
+static constexpr int FRAME_WIDTH = DISPLAY_X;
+static constexpr int FRAME_HEIGHT = DISPLAY_Y + 16;
 
 // For LED error blinking
-static C64Display *c64_disp;
-static struct sigaction pulse_sa;
-static itimerval pulse_tv;
+static constexpr uint32_t PULSE_ms = 400;
 
-// SDL joysticks
-static SDL_Joystick *joy[2] = {NULL, NULL};
+// For requester
+static SDL_Window * c64_window = nullptr;
 
 // Colors for speedometer/drive LEDs
 enum {
@@ -55,7 +49,6 @@ enum {
 	shadow_gray = 18,
 	red = 19,
 	green = 20,
-	PALETTE_SIZE = 21
 };
 
 
@@ -77,24 +70,11 @@ enum {
 
 
 /*
- *  Show an error message and quit
- */
-
-static void error_and_quit(const std::string & msg)
-{
-	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, VERSION_STRING, msg.c_str(), c64_disp->GetSDLWindow());
-	SDL_Quit();
-	exit(1);
-}
-
-
-/*
  *  Display constructor
  */
 
 C64Display::C64Display(C64 *the_c64) : TheC64(the_c64)
 {
-	c64_disp = this;
 	speedometer_string[0] = 0;
 
 	// Create window and renderer
@@ -114,6 +94,8 @@ C64Display::C64Display(C64 *the_c64) : TheC64(the_c64)
 	SDL_SetWindowMinimumSize(the_window, FRAME_WIDTH, FRAME_HEIGHT);
 //	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 	SDL_RenderSetLogicalSize(the_renderer, FRAME_WIDTH, FRAME_HEIGHT);
+
+	c64_window = the_window;
 
 	// Clear screen to black
 	SDL_SetRenderDrawColor(the_renderer, 0, 0, 0, 255);
@@ -140,15 +122,10 @@ C64Display::C64Display(C64 *the_c64) : TheC64(the_c64)
 	}
 
 	// Start timer for LED error blinking
-	pulse_sa.sa_handler = (void (*)(int))pulse_handler;
-	pulse_sa.sa_flags = SA_RESTART;
-	sigemptyset(&pulse_sa.sa_mask);
-	sigaction(SIGALRM, &pulse_sa, NULL);
-	pulse_tv.it_interval.tv_sec = 0;
-	pulse_tv.it_interval.tv_usec = 400000;
-	pulse_tv.it_value.tv_sec = 0;
-	pulse_tv.it_value.tv_usec = 400000;
-	setitimer(ITIMER_REAL, &pulse_tv, NULL);
+	pulse_timer = SDL_AddTimer(PULSE_ms, pulse_handler_static, this);
+	if (pulse_timer == 0) {
+		error_and_quit(std::format("Couldn't create SDL pulse timer ({})\n", SDL_GetError()));
+	}
 }
 
 
@@ -158,15 +135,25 @@ C64Display::C64Display(C64 *the_c64) : TheC64(the_c64)
 
 C64Display::~C64Display()
 {
-	pulse_tv.it_interval.tv_sec = 0;
-	pulse_tv.it_interval.tv_usec = 0;
-	pulse_tv.it_value.tv_sec = 0;
-	pulse_tv.it_value.tv_usec = 0;
-	setitimer(ITIMER_REAL, &pulse_tv, NULL);
+	if (pulse_timer) {
+		SDL_RemoveTimer(pulse_timer);
+	}
 
 	delete[] pixel_buffer;
 
-	c64_disp = NULL;
+	c64_window = nullptr;
+}
+
+
+/*
+ *  Show an error message and quit
+ */
+
+void C64Display::error_and_quit(const std::string & msg) const
+{
+	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, VERSION_STRING, msg.c_str(), the_window);
+	SDL_Quit();
+	exit(1);
 }
 
 
@@ -242,7 +229,7 @@ void C64Display::Update(void)
 	uint32_t * texture_buffer;
 	int texture_pitch;
 
-	SDL_LockTexture(the_texture, NULL, (void **) &texture_buffer, &texture_pitch);
+	SDL_LockTexture(the_texture, nullptr, (void **) &texture_buffer, &texture_pitch);
 
 	uint8_t  * inPixel  = pixel_buffer;
 	uint32_t * outPixel = texture_buffer;
@@ -258,7 +245,7 @@ void C64Display::Update(void)
 
 	// Update display
 	SDL_RenderClear(the_renderer);
-	SDL_RenderCopy(the_renderer, the_texture, NULL, NULL);
+	SDL_RenderCopy(the_renderer, the_texture, nullptr, nullptr);
 	SDL_RenderPresent(the_renderer);
 }
 
@@ -267,7 +254,7 @@ void C64Display::Update(void)
  *  Fill rectangle in pixel buffer
  */
 
-void C64Display::fill_rect(const SDL_Rect & r, uint8_t color)
+void C64Display::fill_rect(const SDL_Rect & r, uint8_t color) const
 {
 	uint8_t * p = pixel_buffer + FRAME_WIDTH*r.y + r.x;
 	for (unsigned y = 0; y < r.h; ++y) {
@@ -282,7 +269,7 @@ void C64Display::fill_rect(const SDL_Rect & r, uint8_t color)
  *  Draw string into pixel buffer using the C64 ROM font
  */
 
-void C64Display::draw_string(int x, int y, const char *str, uint8_t front_color, uint8_t back_color)
+void C64Display::draw_string(int x, int y, const char *str, uint8_t front_color, uint8_t back_color) const
 {
 	uint8_t *pb = pixel_buffer + FRAME_WIDTH*y + x;
 	char c;
@@ -310,17 +297,25 @@ void C64Display::draw_string(int x, int y, const char *str, uint8_t front_color,
  *  LED error blink
  */
 
-void C64Display::pulse_handler(...)
+uint32_t C64Display::pulse_handler_static(uint32_t interval, void * arg)
 {
-	for (int i=0; i<4; i++)
-		switch (c64_disp->led_state[i]) {
+	C64Display * disp = static_cast<C64Display *>(arg);
+	disp->pulse_handler();
+	return interval;
+}
+
+void C64Display::pulse_handler()
+{
+	for (int i = 0; i < 4; ++i) {
+		switch (led_state[i]) {
 			case LED_ERROR_ON:
-				c64_disp->led_state[i] = LED_ERROR_OFF;
+				led_state[i] = LED_ERROR_OFF;
 				break;
 			case LED_ERROR_OFF:
-				c64_disp->led_state[i] = LED_ERROR_ON;
+				led_state[i] = LED_ERROR_ON;
 				break;
 		}
+	}
 }
 
 
@@ -469,10 +464,11 @@ static void translate_key(SDL_Scancode key, bool key_up, uint8_t *key_matrix, ui
 	// Handle joystick emulation
 	if (c64_key & 0x40) {
 		c64_key &= 0x1f;
-		if (key_up)
+		if (key_up) {
 			*joystick |= c64_key;
-		else
+		} else {
 			*joystick &= ~c64_key;
+		}
 		return;
 	}
 
@@ -583,85 +579,12 @@ bool C64Display::NumLock(void)
 
 
 /*
- *  Open/close joystick drivers given old and new state of
- *  joystick preferences
- */
-
-void C64::open_close_joystick(int port, int oldjoy, int newjoy)
-{
-	if (oldjoy != newjoy) {
-		joy_minx[port] = joy_miny[port] = 32767;	// Reset calibration
-		joy_maxx[port] = joy_maxy[port] = -32768;
-		if (newjoy) {
-			joy[port] = SDL_JoystickOpen(newjoy - 1);
-			if (joy[port] == NULL)
-				fprintf(stderr, "Couldn't open joystick %d\n", port + 1);
-		} else {
-			if (joy[port]) {
-				SDL_JoystickClose(joy[port]);
-				joy[port] = NULL;
-			}
-		}
-	}
-}
-
-void C64::open_close_joysticks(int oldjoy1, int oldjoy2, int newjoy1, int newjoy2)
-{
-	open_close_joystick(0, oldjoy1, newjoy1);
-	open_close_joystick(1, oldjoy2, newjoy2);
-}
-
-
-/*
- *  Poll joystick port, return CIA mask
- */
-
-uint8_t C64::poll_joystick(int port)
-{
-	uint8_t j = 0xff;
-
-	if (port == 0 && (joy[0] || joy[1]))
-		SDL_JoystickUpdate();
-
-	if (joy[port]) {
-		int x = SDL_JoystickGetAxis(joy[port], 0), y = SDL_JoystickGetAxis(joy[port], 1);
-
-		if (x > joy_maxx[port])
-			joy_maxx[port] = x;
-		if (x < joy_minx[port])
-			joy_minx[port] = x;
-		if (y > joy_maxy[port])
-			joy_maxy[port] = y;
-		if (y < joy_miny[port])
-			joy_miny[port] = y;
-
-		if (joy_maxx[port] - joy_minx[port] < 100 || joy_maxy[port] - joy_miny[port] < 100)
-			return 0xff;
-
-		if (x < (joy_minx[port] + (joy_maxx[port]-joy_minx[port])/3))
-			j &= 0xfb;							// Left
-		else if (x > (joy_minx[port] + 2*(joy_maxx[port]-joy_minx[port])/3))
-			j &= 0xf7;							// Right
-
-		if (y < (joy_miny[port] + (joy_maxy[port]-joy_miny[port])/3))
-			j &= 0xfe;							// Up
-		else if (y > (joy_miny[port] + 2*(joy_maxy[port]-joy_miny[port])/3))
-			j &= 0xfd;							// Down
-
-		if (SDL_JoystickGetButton(joy[port], 0))
-			j &= 0xef;							// Button
-	}
-
-	return j;
-}
-
-
-/*
  *  Allocate C64 colors
  */
 
 void C64Display::InitColors(uint8_t *colors)
 {
+	// Palette for indexed-to-ARGB conversion
 	memset(palette, 0, sizeof(palette));
 
 	for (int i = 0; i < 16; ++i) {
@@ -676,6 +599,7 @@ void C64Display::InitColors(uint8_t *colors)
 	palette[red]         = (0xf0 << 16) | (0x00 << 8) | (0x00 << 0);
 	palette[green]       = (0x00 << 16) | (0xf0 << 8) | (0x00 << 0);
 
+	// One-to-one Palette for VIC
 	for (int i = 0; i < 256; ++i) {
 		colors[i] = i & 0x0f;
 	}
@@ -688,6 +612,6 @@ void C64Display::InitColors(uint8_t *colors)
 
 long int ShowRequester(const char *a, const char *b, const char *)
 {
-	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_WARNING, VERSION_STRING, a, c64_disp->GetSDLWindow());
+	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_WARNING, VERSION_STRING, a, c64_window);
 	return 1;
 }
