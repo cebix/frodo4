@@ -50,7 +50,11 @@ enum {
 class Prefs {
 public:
 	Prefs();
+#ifdef HAVE_GLADE
+	bool ShowEditor(bool startup, const char *prefs_name);
+#else
 	bool ShowEditor(bool startup, char *prefs_name);
+#endif
 	void Check(void);
 	void Load(const char *filename);
 	bool Save(const char *filename);

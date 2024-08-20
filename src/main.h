@@ -21,6 +21,8 @@
 #ifndef _MAIN_H
 #define _MAIN_H
 
+#include <string>
+
 
 class C64;
 
@@ -87,10 +89,10 @@ private:
 
 
 /*
- *  X specific stuff
+ *  SDL specific stuff
  */
 
-#ifdef __unix
+#ifdef HAVE_SDL
 
 class Prefs;
 
@@ -101,13 +103,11 @@ public:
 	void ReadyToRun();
 	bool RunPrefsEditor();
 
-    static const char *get_prefs_path() { return prefs_path; }
-
 private:
 	void load_rom(const char *which, const char *path, uint8_t *where, size_t size, const uint8_t *builtin);
 	void load_rom_files();
 
-	static char prefs_path[256];	// Pathname of current preferences file
+	std::string prefs_path;	// Pathname of current preferences file
 };
 
 extern Frodo *TheApp;  // Pointer to Frodo object

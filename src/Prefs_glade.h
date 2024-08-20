@@ -36,7 +36,7 @@ static bool result = false;
 static Prefs *prefs = NULL;
 
 // Prefs file name
-static char *prefs_path = NULL;
+static const char *prefs_path = NULL;
 
 // Prototypes
 static void set_values();
@@ -49,7 +49,7 @@ static void ghost_widgets();
  *  prefs_name points to the file name of the preferences (which may be changed)
  */
 
-bool Prefs::ShowEditor(bool startup, char *prefs_name)
+bool Prefs::ShowEditor(bool startup, const char *prefs_name)
 {
 	prefs = this;
 	prefs_path = prefs_name;

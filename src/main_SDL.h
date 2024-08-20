@@ -1,5 +1,5 @@
 /*
- *  main_x.h - Main program, Unix specific stuff
+ *  main_SDL.h - Main program, SDL specific stuff
  *
  *  Frodo Copyright (C) Christian Bauer
  *
@@ -24,10 +24,16 @@
 #include <gnome.h>
 #endif
 
+#include <SDL.h>
+
+#include <cstdlib>
+#include <ctime>
+
+#include <iostream>
+
 
 // Global variables
-Frodo *TheApp = NULL;
-char Frodo::prefs_path[256] = "";
+Frodo * TheApp = nullptr;
 
 
 /*
@@ -38,7 +44,7 @@ int main(int argc, char **argv)
 {
 #ifdef HAVE_GLADE
 	gnome_program_init(PACKAGE_NAME, PACKAGE_VERSION, LIBGNOMEUI_MODULE, argc, argv,
-	                   GNOME_PARAM_APP_DATADIR, DATADIR, NULL);
+	                   GNOME_PARAM_APP_DATADIR, DATADIR, nullptr);
 #else
 	printf(
 		"%s Copyright (C) Christian Bauer\n"
@@ -48,25 +54,22 @@ int main(int argc, char **argv)
 	fflush(stdout);
 #endif
 
-#ifdef HAVE_SDL
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) < 0) {
 		fprintf(stderr, "Couldn't initialize SDL (%s)\n", SDL_GetError());
 		return 1;
 	}
-#endif
 
-	timeval tv;
-	gettimeofday(&tv, NULL);
-	srand(tv.tv_usec);
+	// Seed RNG
+	std::srand(std::time(0));
 
+	// Run Frodo application
 	TheApp = new Frodo();
 	TheApp->ArgvReceived(argc, argv);
 	TheApp->ReadyToRun();
-	delete TheApp;
 
-#ifdef HAVE_SDL
+	// Shutdown
+	delete TheApp;
 	SDL_Quit();
-#endif
 
 	return 0;
 }
@@ -78,7 +81,7 @@ int main(int argc, char **argv)
 
 Frodo::Frodo()
 {
-	TheC64 = NULL;
+	TheC64 = nullptr;
 }
 
 
@@ -88,8 +91,9 @@ Frodo::Frodo()
 
 void Frodo::ArgvReceived(int argc, char **argv)
 {
-	if (argc == 2)
-		strncpy(prefs_path, argv[1], 255);
+	if (argc == 2) {
+		prefs_path = argv[1];
+	}
 }
 
 
@@ -102,19 +106,15 @@ void Frodo::ReadyToRun()
 	getcwd(AppDirPath, 256);
 
 	// Load preferences
-	if (!prefs_path[0]) {
-		char *home = getenv("HOME");
-		if (home != NULL && strlen(home) < 240) {
-			strncpy(prefs_path, home, 200);
-			strcat(prefs_path, "/");
-		}
-		strcat(prefs_path, ".frodorc");
+	if (prefs_path.empty()) {
+		prefs_path = SDL_GetPrefPath("cebix", "Frodo");
+		prefs_path += "config";
 	}
-	ThePrefs.Load(prefs_path);
+	ThePrefs.Load(prefs_path.c_str());
 
 	// Show preferences editor
 #ifdef HAVE_GLADE
-	if (!ThePrefs.ShowEditor(true, prefs_path))
+	if (!ThePrefs.ShowEditor(true, prefs_path.c_str()))
 		return;  // "Quit" clicked
 #endif
 
@@ -133,7 +133,7 @@ void Frodo::ReadyToRun()
 bool Frodo::RunPrefsEditor(void)
 {
 	Prefs *prefs = new Prefs(ThePrefs);
-	bool result = prefs->ShowEditor(false, prefs_path);
+	bool result = prefs->ShowEditor(false, prefs_path.c_str());
 	if (result) {
 		TheC64->NewPrefs(prefs);
 		ThePrefs = *prefs;

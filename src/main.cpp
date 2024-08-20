@@ -78,14 +78,12 @@ void Frodo::load_rom_files()
 }
 
 
-#ifdef __BEOS__
+#if defined(__BEOS__)
 #include "main_Be.h"
-#endif
 
-#ifdef __unix
-#include "main_x.h"
-#endif
+#elif defined(HAVE_SDL)
+#include "main_SDL.h"
 
-#ifdef WIN32
+#elif defined(WIN32)
 #include "main_WIN32.h"
 #endif
