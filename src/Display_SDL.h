@@ -30,11 +30,7 @@
 #include <stdlib.h>
 
 
-// Display dimensions including drive LEDs etc.
-static constexpr int FRAME_WIDTH = DISPLAY_X;
-static constexpr int FRAME_HEIGHT = DISPLAY_Y + 16;
-
-// For LED error blinking
+// Period of LED error blinking
 static constexpr uint32_t PULSE_ms = 400;
 
 // For requester
@@ -85,15 +81,15 @@ C64Display::C64Display(C64 *the_c64) : TheC64(the_c64)
 	    flags |= SDL_WINDOW_RESIZABLE;
 	}
 
-	int result = SDL_CreateWindowAndRenderer(FRAME_WIDTH * 4, FRAME_HEIGHT * 4, flags, &the_window, &the_renderer);
+	int result = SDL_CreateWindowAndRenderer(DISPLAY_X * 4, DISPLAY_Y * 4, flags, &the_window, &the_renderer);
 	if (result < 0) {
 		error_and_quit(std::format("Couldn't initialize video output ({})\n", SDL_GetError()));
 	}
 
 	SDL_SetWindowTitle(the_window, VERSION_STRING);
-	SDL_SetWindowMinimumSize(the_window, FRAME_WIDTH, FRAME_HEIGHT);
+	SDL_SetWindowMinimumSize(the_window, DISPLAY_X, DISPLAY_Y);
 //	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
-	SDL_RenderSetLogicalSize(the_renderer, FRAME_WIDTH, FRAME_HEIGHT);
+	SDL_RenderSetLogicalSize(the_renderer, DISPLAY_X, DISPLAY_Y);
 
 	c64_window = the_window;
 
@@ -103,13 +99,13 @@ C64Display::C64Display(C64 *the_c64) : TheC64(the_c64)
 	SDL_RenderPresent(the_renderer);
 
 	// Create 32-bit display texture
-	the_texture = SDL_CreateTexture(the_renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, FRAME_WIDTH, FRAME_HEIGHT);
+	the_texture = SDL_CreateTexture(the_renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, DISPLAY_X, DISPLAY_Y);
 	if (! the_texture) {
 		error_and_quit(std::format("Couldn't create SDL texture ({})\n", SDL_GetError()));
 	}
 
 	// Create 8-bit pixel buffer for VIC to draw into
-	pixel_buffer = new uint8_t[FRAME_WIDTH * FRAME_HEIGHT];
+	pixel_buffer = new uint8_t[DISPLAY_X * DISPLAY_Y];
 
 	// Hide mouse pointer in fullscreen mode
 	if (ThePrefs.DisplayType == DISPTYPE_SCREEN) {
@@ -173,57 +169,44 @@ void C64Display::NewPrefs(Prefs *prefs)
 
 void C64Display::Update(void)
 {
-	// Draw speedometer/LEDs
-	SDL_Rect r = {0, DISPLAY_Y, DISPLAY_X, 15};
-	fill_rect(r, fill_gray);
-	r.w = DISPLAY_X; r.h = 1;
-	fill_rect(r, shine_gray);
-	r.y = DISPLAY_Y + 14;
-	fill_rect(r, shadow_gray);
-	r.w = 16;
-	for (int i=2; i<6; i++) {
-		r.x = DISPLAY_X * i/5 - 24; r.y = DISPLAY_Y + 4;
-		fill_rect(r, shadow_gray);
-		r.y = DISPLAY_Y + 10;
-		fill_rect(r, shine_gray);
-	}
-	r.y = DISPLAY_Y; r.w = 1; r.h = 15;
-	for (int i=0; i<5; i++) {
-		r.x = DISPLAY_X * i / 5;
-		fill_rect(r, shine_gray);
-		r.x = DISPLAY_X * (i+1) / 5 - 1;
-		fill_rect(r, shadow_gray);
-	}
-	r.y = DISPLAY_Y + 4; r.h = 7;
-	for (int i=2; i<6; i++) {
-		r.x = DISPLAY_X * i/5 - 24;
-		fill_rect(r, shadow_gray);
-		r.x = DISPLAY_X * i/5 - 9;
-		fill_rect(r, shine_gray);
-	}
-	r.y = DISPLAY_Y + 5; r.w = 14; r.h = 5;
-	for (int i=0; i<4; i++) {
-		r.x = DISPLAY_X * (i+2) / 5 - 23;
-		int c;
-		switch (led_state[i]) {
-			case LED_ON:
-				c = green;
-				break;
-			case LED_ERROR_ON:
-				c = red;
-				break;
-			default:
-				c = black;
-				break;
-		}
-		fill_rect(r, c);
-	}
+	if (ThePrefs.ShowLEDs) {
 
-	draw_string(DISPLAY_X * 1/5 + 8, DISPLAY_Y + 4, "D\x12 8", black, fill_gray);
-	draw_string(DISPLAY_X * 2/5 + 8, DISPLAY_Y + 4, "D\x12 9", black, fill_gray);
-	draw_string(DISPLAY_X * 3/5 + 8, DISPLAY_Y + 4, "D\x12 10", black, fill_gray);
-	draw_string(DISPLAY_X * 4/5 + 8, DISPLAY_Y + 4, "D\x12 11", black, fill_gray);
-	draw_string(24, DISPLAY_Y + 4, speedometer_string, black, fill_gray);
+		// Draw speedometer/LEDs
+		draw_string(8, DISPLAY_Y - 8, speedometer_string, black);
+		draw_string(8, DISPLAY_Y - 9, speedometer_string, shine_gray);
+
+		for (unsigned i = 0; i < 4; ++i) {
+			if (led_state[i] != LED_OFF) {
+				static const char * drive_str[4] = {
+					"D\x12 8", "D\x12 9", "D\x12 10", "D\x12 11"
+				};
+
+				draw_string(DISPLAY_X * (i+1)/5 + 8, DISPLAY_Y - 8, drive_str[i], black);
+				draw_string(DISPLAY_X * (i+1)/5 + 7, DISPLAY_Y - 9, drive_str[i], shine_gray);
+
+				SDL_Rect r = {DISPLAY_X * (i+2) / 5 - 24, DISPLAY_Y - 8, 16, 6};
+				fill_rect(r, shadow_gray);
+				r.x += 1; r.y += 1; r.w -=1; r.h -= 1;
+				fill_rect(r, shine_gray);
+
+				uint8_t c;
+				switch (led_state[i]) {
+					case LED_ON:
+						c = green;
+						break;
+					case LED_ERROR_ON:
+						c = red;
+						break;
+					default:
+						c = black;
+						break;
+				}
+
+				r.w -= 1; r.h -= 1;
+				fill_rect(r, c);
+			}
+		}
+	}
 
 	// Convert 8-bit pixel buffer to 32-bit texture
 	uint32_t * texture_buffer;
@@ -234,11 +217,11 @@ void C64Display::Update(void)
 	uint8_t  * inPixel  = pixel_buffer;
 	uint32_t * outPixel = texture_buffer;
 
-	for (unsigned y = 0; y < FRAME_HEIGHT; ++y) {
-		for (unsigned x = 0; x < FRAME_WIDTH; ++x) {
+	for (unsigned y = 0; y < DISPLAY_Y; ++y) {
+		for (unsigned x = 0; x < DISPLAY_X; ++x) {
 			outPixel[x] = palette[inPixel[x]];
 		}
-		inPixel  += FRAME_WIDTH;
+		inPixel  += DISPLAY_X;
 		outPixel += texture_pitch / sizeof(uint32_t);
 	}
 	SDL_UnlockTexture(the_texture);
@@ -256,12 +239,12 @@ void C64Display::Update(void)
 
 void C64Display::fill_rect(const SDL_Rect & r, uint8_t color) const
 {
-	uint8_t * p = pixel_buffer + FRAME_WIDTH*r.y + r.x;
+	uint8_t * p = pixel_buffer + DISPLAY_X*r.y + r.x;
 	for (unsigned y = 0; y < r.h; ++y) {
 		for (unsigned x = 0; x < r.w; ++x) {
 			p[x] = color;
 		}
-		p += FRAME_WIDTH;
+		p += DISPLAY_X;
 	}
 }
 
@@ -269,24 +252,20 @@ void C64Display::fill_rect(const SDL_Rect & r, uint8_t color) const
  *  Draw string into pixel buffer using the C64 ROM font
  */
 
-void C64Display::draw_string(int x, int y, const char *str, uint8_t front_color, uint8_t back_color) const
+void C64Display::draw_string(unsigned x, unsigned y, const char *str, uint8_t front_color) const
 {
-	uint8_t *pb = pixel_buffer + FRAME_WIDTH*y + x;
+	uint8_t *pb = pixel_buffer + DISPLAY_X*y + x;
 	char c;
 	while ((c = *str++) != 0) {
 		uint8_t *q = TheC64->Char + c*8 + 0x800;
 		uint8_t *p = pb;
-		for (int y=0; y<8; y++) {
+		for (unsigned y = 0; y < 8; y++) {
 			uint8_t v = *q++;
-			p[0] = (v & 0x80) ? front_color : back_color;
-			p[1] = (v & 0x40) ? front_color : back_color;
-			p[2] = (v & 0x20) ? front_color : back_color;
-			p[3] = (v & 0x10) ? front_color : back_color;
-			p[4] = (v & 0x08) ? front_color : back_color;
-			p[5] = (v & 0x04) ? front_color : back_color;
-			p[6] = (v & 0x02) ? front_color : back_color;
-			p[7] = (v & 0x01) ? front_color : back_color;
-			p += FRAME_WIDTH;
+			for (unsigned x = 0; x < 8; ++x) {
+				if (v & 0x80) { p[x] = front_color; }
+				v <<= 1;
+			}
+			p += DISPLAY_X;
 		}
 		pb += 8;
 	}
@@ -329,7 +308,11 @@ void C64Display::Speedometer(int speed)
 
 	if (delay >= 20) {
 		delay = 0;
-		sprintf(speedometer_string, "%d%%", speed);
+		if (speed == 100) {
+			speedometer_string[0] = '\0';  // hide if speed = 100%
+		} else {
+			sprintf(speedometer_string, "%d%%", speed);
+		}
 	} else {
 		delay++;
 	}
@@ -352,7 +335,7 @@ uint8_t *C64Display::BitmapBase(void)
 
 int C64Display::BitmapXMod(void)
 {
-	return FRAME_WIDTH;
+	return DISPLAY_X;
 }
 
 

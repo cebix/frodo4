@@ -105,7 +105,7 @@ private:
 	void error_and_quit(const std::string & msg) const;
 
 	void fill_rect(const SDL_Rect & r, uint8_t color) const;
-	void draw_string(int x, int y, const char *str, uint8_t front_color, uint8_t back_color) const;
+	void draw_string(unsigned x, unsigned y, const char *str, uint8_t front_color) const;
 
 	static uint32_t pulse_handler_static(uint32_t interval, void * arg);
 	void pulse_handler();

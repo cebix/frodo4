@@ -103,7 +103,7 @@ public:
 	bool SystemMemory;		// Put view work surface in system mem (Win32)
 	bool AlwaysCopy;		// Always use a work surface (Win32)
 	bool SystemKeys;		// Enable system keys and menu keys (Win32)
-	bool ShowLEDs;			// Show LEDs (Win32)
+	bool ShowLEDs;			// Show LEDs
 
 #ifdef WIN32
 private:
