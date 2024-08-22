@@ -172,7 +172,7 @@ void Prefs::Load(const char *filename)
 
 	if ((file = fopen(filename, "r")) != NULL) {
 		while(fgets(line, 255, file)) {
-			if (sscanf(line, "%s = %s\n", keyword, value) == 2) {
+			if (sscanf(line, "%s = %[^\n]\n", keyword, value) == 2) {
 				if (!strcmp(keyword, "NormalCycles"))
 					NormalCycles = atoi(value);
 				else if (!strcmp(keyword, "BadLineCycles"))
