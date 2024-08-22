@@ -11,9 +11,8 @@ Group: Applications/Emulators
 Source: %{name}-%{version}.tar.gz
 URL: https://frodo.cebix.net
 BuildRequires: gcc-c++
-BuildRequires: SDL2-devel >= 2.30.0
-BuildRequires: libglade2-devel
-BuildRequires: libgnomeui-devel
+BuildRequires: SDL2-devel >= 2.30
+BuildRequires: gtk3-devel >= 3.24
 BuildRoot: %{_tmppath}/%{name}-root
 Prefix: %{_prefix}
 
@@ -46,4 +45,5 @@ rm -rf ${RPM_BUILD_ROOT}
 %doc docs/*.html
 %{_bindir}/Frodo
 %{_bindir}/FrodoSC
-%{_datadir}/Frodo/Frodo.glade
+%{_datadir}/Frodo/Frodo.ui
+%{_datadir}/Frodo/Frodo_Logo.png

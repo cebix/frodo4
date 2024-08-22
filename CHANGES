@@ -1,9 +1,11 @@
 Changes from V4.2 to V4.3:
  - Removed AmigaOS support
  - Removed RiscOS support
- - Unix: ported to SDL2
+ - Unix: ported to SDL2 and GTK 3
  - Unix: numeric keypad Enter key toggles speed limiter
  - Unix: numeric keypad Plus key toggles fullscreen mode
+ - Unix: settings are now stored in ~/.local/share/cebix/Frodo/config
+   instead of ~/.frodorc
  - Unix: replaced status bar with overlay
  - Unix: removed SVGAlib support
  - Unix: removed Qtopia/Maemo support

@@ -15,12 +15,12 @@ CPPFLAGS="$CPPFLAGS $SDL_CFLAGS"
 LIBS="$LIBS $SDL_LIBS"
 
 HAVE_GLADE=no
-PKG_CHECK_MODULES(GLADE, [libglade-2.0 libgnomeui-2.0 >= 1.110.0], HAVE_GLADE=yes)
+PKG_CHECK_MODULES(GLADE, [gtk+-3.0 >= 3.24], HAVE_GLADE=yes)
 if [[ $HAVE_GLADE = yes ]]; then
-  AC_DEFINE(HAVE_GLADE, 1, [Glade support is enabled])
+  AC_DEFINE(HAVE_GLADE, 1, [GTK preferences GUI is enabled])
   CPPFLAGS="$CPPFLAGS $GLADE_CFLAGS"
   LIBS="$LIBS $GLADE_LIBS"
-  LDFLAGS="$LDFLAGS -Wl,-E"
+  LDFLAGS="$LDFLAGS -rdynamic"
 fi
 GUI_OBJS=""
 dnl GUI_OBJS="sdlgui.o file.o dlgFileSelect.o dlgMain.o dlgDrives.o dlgOptions.o dlgVideoSound.o dlgAdvanced.o dlgInput.o"

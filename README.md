@@ -11,7 +11,7 @@ but far more compatible.
 Prerequisites:
 * A C++20 compiler
 * SDL (Simple DirectMedia Layer) 2.x
-* libglade2 and libgnomeui 2.x
+* GTK 3
 
 Frodo can be compiled and installed in the usual way:
 ```
@@ -19,5 +19,5 @@ $ ./autogen.sh
 $ make
 $ sudo make install
 ```
-Installation is only necessary if you intend to use the Gtk-based
+Installation is only necessary if you intend to use the GTK-based
 preferences GUI.

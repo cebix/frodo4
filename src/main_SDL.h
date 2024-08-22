@@ -21,7 +21,7 @@
 #include "Version.h"
 
 #ifdef HAVE_GLADE
-#include <gnome.h>
+#include <gtk/gtk.h>
 #endif
 
 #include <SDL.h>
@@ -43,8 +43,7 @@ Frodo * TheApp = nullptr;
 int main(int argc, char **argv)
 {
 #ifdef HAVE_GLADE
-	gnome_program_init(PACKAGE_NAME, PACKAGE_VERSION, LIBGNOMEUI_MODULE, argc, argv,
-	                   GNOME_PARAM_APP_DATADIR, DATADIR, nullptr);
+	gtk_init(&argc, &argv);
 #else
 	printf(
 		"%s Copyright (C) Christian Bauer\n"

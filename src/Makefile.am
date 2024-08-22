@@ -25,4 +25,4 @@ common_LDADD = $(GUI_OBJS)
 Frodo_LDADD = $(common_LDADD)
 FrodoSC_LDADD = $(common_LDADD)
 
-dist_pkgdata_DATA = glade/Frodo.glade
+dist_pkgdata_DATA = Frodo.ui Frodo_Logo.png
