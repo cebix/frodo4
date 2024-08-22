@@ -1,3 +1,0 @@
-[D-BUS Service]
-Name=de.lachner_net.frodo
-Exec=/usr/bin/Frodo
