@@ -44,7 +44,6 @@ static const char *prefs_path = nullptr;
 static void set_values();
 static void get_values();
 static void ghost_widgets();
-extern "C" gboolean on_prefs_win_delete_event(GtkWidget *widget, GdkEvent *event, gpointer user_data);
 
 
 /*
@@ -68,7 +67,6 @@ bool Prefs::ShowEditor(bool startup, const char *prefs_name)
 			builder = nullptr;
 		} else {
 			gtk_builder_connect_signals(builder, nullptr);
-			g_signal_connect(GTK_WINDOW(gtk_builder_get_object(builder, "prefs_win")), "delete_event", G_CALLBACK(on_prefs_win_delete_event), nullptr);
 			set_values();
 		}
 	}
@@ -124,6 +122,7 @@ static void set_values()
 	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "drive11_path")), prefs->DrivePath[3]);
 
 	gtk_combo_box_set_active(GTK_COMBO_BOX(gtk_builder_get_object(builder, "display_type")), prefs->DisplayType);
+	gtk_combo_box_set_active(GTK_COMBO_BOX(gtk_builder_get_object(builder, "scaling_numerator")), prefs->ScalingNumerator - 1);
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "sprites_on")), prefs->SpritesOn);
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "sprite_collisions")), prefs->SpriteCollisions);
 
@@ -180,6 +179,8 @@ static void get_values()
 	get_drive_path(3, "drive11_path");
 
 	prefs->DisplayType = gtk_combo_box_get_active(GTK_COMBO_BOX(gtk_builder_get_object(builder, "display_type")));
+	prefs->ScalingNumerator = gtk_combo_box_get_active(GTK_COMBO_BOX(gtk_builder_get_object(builder, "scaling_numerator"))) + 1;
+	prefs->ScalingDenominator = 1;  // for now...
 	prefs->SpritesOn = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "sprites_on")));
 	prefs->SpriteCollisions = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "sprite_collisions")));
 
@@ -219,6 +220,8 @@ static void ghost_widgets()
 	ghost_widget("drive9_path", prefs->Emul1541Proc);
 	ghost_widget("drive10_path", prefs->Emul1541Proc);
 	ghost_widget("drive11_path", prefs->Emul1541Proc);
+
+	ghost_widget("scaling_numerator", prefs->DisplayType == DISPTYPE_SCREEN);
 
 	ghost_widget("sid_filters", prefs->SIDType != SIDTYPE_DIGITAL);
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "sid_filters")), prefs->SIDType == SIDTYPE_DIGITAL ? prefs->SIDFilters : (prefs->SIDType == SIDTYPE_SIDCARD ? true : false));
@@ -278,6 +281,12 @@ extern "C" void on_about_activate(GtkMenuItem *menuitem, gpointer user_data)
 extern "C" void on_emul1541_proc_toggled(GtkToggleButton *button, gpointer user_data)
 {
 	prefs->Emul1541Proc = gtk_toggle_button_get_active(button);
+	ghost_widgets();
+}
+
+extern "C" void on_display_type_changed(GtkComboBox *box, gpointer user_data)
+{
+	prefs->DisplayType = gtk_combo_box_get_active(box);
 	ghost_widgets();
 }
 

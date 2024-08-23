@@ -148,16 +148,29 @@ bool Prefs::operator!=(const Prefs &rhs) const
 
 void Prefs::Check(void)
 {
-	if (SkipFrames <= 0) SkipFrames = 1;
+	if (SkipFrames <= 0) {
+		SkipFrames = 1;
+	}
 
-	if (SIDType < SIDTYPE_NONE || SIDType > SIDTYPE_SIDCARD)
+	if (ScalingNumerator <= 0) {
+		ScalingNumerator = 1;
+	}
+
+	if (ScalingDenominator <= 0) {
+		ScalingDenominator = 1;
+	}
+
+	if (SIDType < SIDTYPE_NONE || SIDType > SIDTYPE_SIDCARD) {
 		SIDType = SIDTYPE_NONE;
+	}
 
-	if (REUSize < REU_NONE || REUSize > REU_512K)
+	if (REUSize < REU_NONE || REUSize > REU_512K) {
 		REUSize = REU_NONE;
+	}
 
-	if (DisplayType < DISPTYPE_WINDOW || DisplayType > DISPTYPE_SCREEN)
+	if (DisplayType < DISPTYPE_WINDOW || DisplayType > DISPTYPE_SCREEN) {
 		DisplayType = DISPTYPE_WINDOW;
+	}
 }
 
 
