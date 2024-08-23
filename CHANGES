@@ -1,18 +1,17 @@
 Changes from V4.2 to V4.3:
- - Removed AmigaOS support
- - Removed RiscOS support
- - Unix: ported to SDL2 and GTK 3
- - Unix: numeric keypad Enter key toggles speed limiter
- - Unix: numeric keypad Plus key toggles fullscreen mode
+ - Ported to SDL2 and GTK 3
  - Unix: settings are now stored in ~/.local/share/cebix/Frodo/config
    instead of ~/.frodorc
- - Unix: add setting for initial window size (ScalingNumerator)
- - Unix: replaced status bar with overlay
- - Unix: removed SVGAlib support
- - Unix: removed Qtopia/Maemo support
- - Unix: removed HP-UX sound support (use SDL)
- - Unix: removed Solaris sound support (use SDL)
- - Linux: removed OSS sound support (use SDL)
+ - Removed Unix display and sound support, main target is now SDL
+ - Removed AmigaOS support
+ - Removed RiscOS support
+ - Removed classic MacOS support
+ - Removed Qtopia/Maemo support
+ - SDL: numeric keypad Enter key toggles speed limiter
+ - SDL: numeric keypad Plus key toggles fullscreen mode
+ - SDL: replaced status bar with overlay
+ - SDL: added setting for status overlay display (ScalingNumerator)
+ - SDL: added setting for initial window size (ScalingNumerator)
 
 Changes from V4.1b to V4.2:
  - Changed license to GPL
