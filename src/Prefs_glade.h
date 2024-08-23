@@ -28,6 +28,9 @@
 // GTK builder object
 static GtkBuilder *builder = nullptr;
 
+// Parameter of ShowEditor()
+static bool in_startup = true;
+
 // Result of ShowEditor()
 static bool result = false;
 
@@ -41,6 +44,7 @@ static const char *prefs_path = nullptr;
 static void set_values();
 static void get_values();
 static void ghost_widgets();
+extern "C" gboolean on_prefs_win_delete_event(GtkWidget *widget, GdkEvent *event, gpointer user_data);
 
 
 /*
@@ -50,6 +54,7 @@ static void ghost_widgets();
 
 bool Prefs::ShowEditor(bool startup, const char *prefs_name)
 {
+	in_startup = startup;
 	prefs = this;
 	prefs_path = prefs_name;
 
@@ -63,6 +68,7 @@ bool Prefs::ShowEditor(bool startup, const char *prefs_name)
 			builder = nullptr;
 		} else {
 			gtk_builder_connect_signals(builder, nullptr);
+			g_signal_connect(GTK_WINDOW(gtk_builder_get_object(builder, "prefs_win")), "delete_event", G_CALLBACK(on_prefs_win_delete_event), nullptr);
 			set_values();
 		}
 	}
@@ -70,6 +76,8 @@ bool Prefs::ShowEditor(bool startup, const char *prefs_name)
 	// No UI means no prefs editor
 	if (builder == nullptr)
 		return startup;
+
+	GtkWindow * prefs_win = GTK_WINDOW(gtk_builder_get_object(builder, "prefs_win"));
 
 	if (startup) {
 		gtk_menu_item_set_label(GTK_MENU_ITEM(gtk_builder_get_object(builder, "ok_menu")), "Start");
@@ -82,7 +90,7 @@ bool Prefs::ShowEditor(bool startup, const char *prefs_name)
 	// Run editor
 	result = false;
 
-	gtk_window_present(GTK_WINDOW(gtk_builder_get_object(builder, "prefs_win")));
+	gtk_window_present(prefs_win);
 	gtk_main();
 
 	return result;
@@ -224,24 +232,13 @@ static void ghost_widgets()
  *  Signal handlers
  */
 
-extern "C" gboolean on_prefs_win_delete_event(GtkWidget *widget, GdkEvent *event, gpointer user_data)
-{
-	return false;
-}
-
-extern "C" gboolean on_about_win_delete_event(GtkWidget *widget, GdkEvent *event, gpointer user_data)
-{
-	// Prevent destruction
-	gtk_widget_hide(widget);
-	return true;
-}
-
 extern "C" void on_ok_clicked(GtkButton *button, gpointer user_data)
 {
 	result = true;
 	get_values();
 	prefs->Save(prefs_path);
 	gtk_widget_hide(GTK_WIDGET(gtk_builder_get_object(builder, "prefs_win")));
+	gtk_widget_hide(GTK_WIDGET(gtk_builder_get_object(builder, "about_win")));
 	gtk_main_quit();
 }
 
@@ -249,6 +246,26 @@ extern "C" void on_quit_clicked(GtkButton *button, gpointer user_data)
 {
 	result = false;
 	gtk_main_quit();
+}
+
+extern "C" gboolean on_prefs_win_delete_event(GtkWidget *widget, GdkEvent *event, gpointer user_data)
+{
+	// Closing the prefs editor behaves like "Quit" on startup,
+	// "Continue" otherwise
+	if (in_startup) {
+		on_quit_clicked(nullptr, user_data);
+	} else {
+		on_ok_clicked(nullptr, user_data);
+	}
+
+	// Prevent destruction
+	return gtk_widget_hide_on_delete(widget);
+}
+
+extern "C" gboolean on_about_win_delete_event(GtkWidget *widget, GdkEvent *event, gpointer user_data)
+{
+	// Prevent destruction
+	return gtk_widget_hide_on_delete(widget);
 }
 
 extern "C" void on_about_activate(GtkMenuItem *menuitem, gpointer user_data)
