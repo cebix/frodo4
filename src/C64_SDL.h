@@ -31,6 +31,10 @@ namespace chrono = std::chrono;
 static chrono::time_point<chrono::steady_clock> frame_start;
 static constexpr int FRAME_TIME_us = 20000;  // 20 ms for 50 fps
 
+// Joystick dead zone around center (+/-), and hysteresis to prevent jitter
+static constexpr int JOYSTICK_DEAD_ZONE = 12000;
+static constexpr int JOYSTICK_HYSTERESIS = 1000;
+
 
 /*
  *  Constructor, system-dependent things
@@ -39,10 +43,10 @@ static constexpr int FRAME_TIME_us = 20000;  // 20 ms for 50 fps
 void C64::c64_ctor1(void)
 {
 	// Initialize joystick variables
-	joy_minx[0] = joy_miny[0] = 32767;
-	joy_maxx[0] = joy_maxy[0] = -32768;
-	joy_minx[1] = joy_miny[1] = 32767;
-	joy_maxx[1] = joy_maxy[1] = -32768;
+	joy_minx[0] = joy_miny[0] = -JOYSTICK_DEAD_ZONE;
+	joy_maxx[0] = joy_maxy[0] = +JOYSTICK_DEAD_ZONE;
+	joy_minx[1] = joy_miny[1] = -JOYSTICK_DEAD_ZONE;
+	joy_maxx[1] = joy_maxy[1] = +JOYSTICK_DEAD_ZONE;
 }
 
 void C64::c64_ctor2(void)
@@ -235,8 +239,6 @@ void C64::Resume(void)
 void C64::open_close_joystick(int port, int oldjoy, int newjoy)
 {
 	if (oldjoy != newjoy) {
-		joy_minx[port] = joy_miny[port] = 32767;	// Reset calibration
-		joy_maxx[port] = joy_maxy[port] = -32768;
 		if (newjoy) {
 			joy[port] = SDL_JoystickOpen(newjoy - 1);
 			if (joy[port] == nullptr) {
@@ -273,30 +275,37 @@ uint8_t C64::poll_joystick(int port)
 	if (joy[port]) {
 		int x = SDL_JoystickGetAxis(joy[port], 0), y = SDL_JoystickGetAxis(joy[port], 1);
 
-		if (x > joy_maxx[port])
-			joy_maxx[port] = x;
-		if (x < joy_minx[port])
-			joy_minx[port] = x;
-		if (y > joy_maxy[port])
-			joy_maxy[port] = y;
-		if (y < joy_miny[port])
-			joy_miny[port] = y;
-
-		if (joy_maxx[port] - joy_minx[port] < 100 || joy_maxy[port] - joy_miny[port] < 100)
-			return 0xff;
-
-		if (x < (joy_minx[port] + (joy_maxx[port]-joy_minx[port])/3))
+		if (x < joy_minx[port]) {
 			j &= 0xfb;							// Left
-		else if (x > (joy_minx[port] + 2*(joy_maxx[port]-joy_minx[port])/3))
+			joy_minx[port] = -(JOYSTICK_DEAD_ZONE - JOYSTICK_HYSTERESIS);
+		} else {
+			joy_minx[port] = -JOYSTICK_DEAD_ZONE;
+		}
+
+		if (x > joy_maxx[port]) {
 			j &= 0xf7;							// Right
+			joy_maxx[port] = +(JOYSTICK_DEAD_ZONE - JOYSTICK_HYSTERESIS);
+		} else {
+			joy_maxx[port] = +JOYSTICK_DEAD_ZONE;
+		}
 
-		if (y < (joy_miny[port] + (joy_maxy[port]-joy_miny[port])/3))
+		if (y < joy_miny[port]) {
 			j &= 0xfe;							// Up
-		else if (y > (joy_miny[port] + 2*(joy_maxy[port]-joy_miny[port])/3))
-			j &= 0xfd;							// Down
+			joy_miny[port] = -(JOYSTICK_DEAD_ZONE - JOYSTICK_HYSTERESIS);
+		} else {
+			joy_miny[port] = -JOYSTICK_DEAD_ZONE;
+		}
 
-		if (SDL_JoystickGetButton(joy[port], 0))
+		if (y > joy_maxy[port]) {
+			j &= 0xfd;							// Down
+			joy_maxy[port] = +(JOYSTICK_DEAD_ZONE - JOYSTICK_HYSTERESIS);
+		} else {
+			joy_maxy[port] = +JOYSTICK_DEAD_ZONE;
+		}
+
+		if (SDL_JoystickGetButton(joy[port], 0)) {
 			j &= 0xef;							// Button
+		}
 	}
 
 	return j;

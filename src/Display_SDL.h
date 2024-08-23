@@ -538,7 +538,7 @@ void C64Display::PollKeyboard(uint8_t *key_matrix, uint8_t *rev_matrix, uint8_t 
 						break;
 
 					case SDL_SCANCODE_NUMLOCKCLEAR:
-						num_locked = true;
+						num_locked = !num_locked;
 						break;
 
 					case SDL_SCANCODE_KP_PLUS:	// Plus on keypad: Toggle fullscreen
@@ -563,11 +563,7 @@ void C64Display::PollKeyboard(uint8_t *key_matrix, uint8_t *rev_matrix, uint8_t 
 
 			// Key released
 			case SDL_KEYUP:
-				if (event.key.keysym.sym == SDL_SCANCODE_NUMLOCKCLEAR) {
-					num_locked = false;
-				} else {
-					translate_key(event.key.keysym.scancode, true, key_matrix, rev_matrix, joystick);
-				}
+				translate_key(event.key.keysym.scancode, true, key_matrix, rev_matrix, joystick);
 				break;
 
 			// Quit Frodo
