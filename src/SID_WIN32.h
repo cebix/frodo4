@@ -2,6 +2,7 @@
  *  SID_WIN32.h - 6581 emulation, WIN32 specific stuff
  *
  *  Frodo Copyright (C) Christian Bauer
+ *  WIN32 port Copyright (C) J. Richard Sladkey
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
