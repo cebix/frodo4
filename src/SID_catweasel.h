@@ -20,9 +20,10 @@
 
 
 #include <unistd.h>
+#include <fcntl.h>
 
 // Catweasel ioctls (included here for convenience)
-#include <linux/ioctl.h>
+#include <sys/ioctl.h>
 #define CWSID_IOCTL_TYPE ('S')
 #define CWSID_IOCTL_RESET        _IO(CWSID_IOCTL_TYPE, 0)
 #define CWSID_IOCTL_CARDTYPE	 _IOR(CWSID_IOCTL_TYPE, 4, int)

@@ -27,6 +27,8 @@
 #include <ctype.h>
 #include <errno.h>
 #include <signal.h>
+#include <string.h>
+#include <time.h>
 
 #include <cstdint>
 
@@ -37,76 +39,13 @@ using std::vector;
 #include <sys/types.h>
 #endif
 
-#ifdef HAVE_STRING_H
-#include <string.h>
-#endif
-
-#ifdef HAVE_UNISTD_H
-#include <unistd.h>
-#endif
-#ifdef HAVE_FCNTL_H
-#include <fcntl.h>
-#endif
-
-#ifdef HAVE_UTIME_H
-#include <utime.h>
-#endif
-
-#ifdef HAVE_SYS_PARAM_H
-#include <sys/param.h>
-#endif
-
-#ifdef HAVE_SYS_SELECT_H
-#include <sys/select.h>
-#endif
-
-#ifdef HAVE_SYS_VFS_H
-#include <sys/vfs.h>
-#endif
-
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
 #endif
 
-#ifdef HAVE_SYS_MOUNT_H
-#include <sys/mount.h>
-#endif
-
-#ifdef HAVE_SYS_STATFS_H
-#include <sys/statfs.h>
-#endif
-
-#ifdef HAVE_SYS_STATVFS_H
-#include <sys/statvfs.h>
-#endif
-
-#if TIME_WITH_SYS_TIME
-# include <sys/time.h>
-# include <time.h>
-#else
-# if HAVE_SYS_TIME_H
-#  include <sys/time.h>
-# else
-#  include <time.h>
-# endif
-#endif
-
 #if HAVE_DIRENT_H
-# include <dirent.h>
-#else
-# define dirent direct
-# if HAVE_SYS_NDIR_H
-#  include <sys/ndir.h>
-# endif
-# if HAVE_SYS_DIR_H
-#  include <sys/dir.h>
-# endif
-# if HAVE_NDIR_H
-#  include <ndir.h>
-# endif
+#include <dirent.h>
 #endif
-
-#include <assert.h>
 
 #ifdef WIN32
 #include <windows.h>
