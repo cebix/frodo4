@@ -239,12 +239,19 @@ void C64::Resume(void)
 void C64::open_close_joystick(int port, int oldjoy, int newjoy)
 {
 	if (oldjoy != newjoy) {
-		if (newjoy) {
-			joy[port] = SDL_JoystickOpen(newjoy - 1);
+		if (newjoy > 0) {
+			int index = newjoy - 1;
+			joy[port] = SDL_JoystickOpen(index);
 			if (joy[port] == nullptr) {
-				fprintf(stderr, "Couldn't open joystick %d\n", port + 1);
+				fprintf(stderr, "Couldn't open joystick %d: %s\n", port + 1, SDL_GetError());
+			} else if (SDL_IsGameController(index)) {
+				controller[port] = SDL_GameControllerOpen(index);
 			}
 		} else {
+			if (controller[port]) {
+				SDL_GameControllerClose(controller[port]);
+				controller[port] = nullptr;
+			}
 			if (joy[port]) {
 				SDL_JoystickClose(joy[port]);
 				joy[port] = nullptr;
@@ -268,44 +275,72 @@ uint8_t C64::poll_joystick(int port)
 {
 	uint8_t j = 0xff;
 
-	if (port == 0 && (joy[0] || joy[1])) {
-		SDL_JoystickUpdate();
-	}
+	int x = 0;
+	int y = 0;
 
-	if (joy[port]) {
-		int x = SDL_JoystickGetAxis(joy[port], 0), y = SDL_JoystickGetAxis(joy[port], 1);
+	if (controller[port]) {
 
-		if (x < joy_minx[port]) {
+		// Use Game Controller API
+		if (SDL_GameControllerGetButton(controller[port], SDL_CONTROLLER_BUTTON_DPAD_LEFT)) {
 			j &= 0xfb;							// Left
-			joy_minx[port] = -(JOYSTICK_DEAD_ZONE - JOYSTICK_HYSTERESIS);
-		} else {
-			joy_minx[port] = -JOYSTICK_DEAD_ZONE;
 		}
-
-		if (x > joy_maxx[port]) {
+		if (SDL_GameControllerGetButton(controller[port], SDL_CONTROLLER_BUTTON_DPAD_RIGHT)) {
 			j &= 0xf7;							// Right
-			joy_maxx[port] = +(JOYSTICK_DEAD_ZONE - JOYSTICK_HYSTERESIS);
-		} else {
-			joy_maxx[port] = +JOYSTICK_DEAD_ZONE;
 		}
-
-		if (y < joy_miny[port]) {
+		if (SDL_GameControllerGetButton(controller[port], SDL_CONTROLLER_BUTTON_DPAD_UP)) {
 			j &= 0xfe;							// Up
-			joy_miny[port] = -(JOYSTICK_DEAD_ZONE - JOYSTICK_HYSTERESIS);
-		} else {
-			joy_miny[port] = -JOYSTICK_DEAD_ZONE;
 		}
-
-		if (y > joy_maxy[port]) {
+		if (SDL_GameControllerGetButton(controller[port], SDL_CONTROLLER_BUTTON_DPAD_DOWN)) {
 			j &= 0xfd;							// Down
-			joy_maxy[port] = +(JOYSTICK_DEAD_ZONE - JOYSTICK_HYSTERESIS);
-		} else {
-			joy_maxy[port] = +JOYSTICK_DEAD_ZONE;
+		}
+		if (SDL_GameControllerGetButton(controller[port], SDL_CONTROLLER_BUTTON_A) ||
+		    SDL_GameControllerGetButton(controller[port], SDL_CONTROLLER_BUTTON_B) ||
+		    SDL_GameControllerGetButton(controller[port], SDL_CONTROLLER_BUTTON_X) ||
+		    SDL_GameControllerGetButton(controller[port], SDL_CONTROLLER_BUTTON_Y)) {
+			j &= 0xef;							// Button
 		}
 
+		// Left stick is an alternative to D-pad
+		x = SDL_GameControllerGetAxis(controller[port], SDL_CONTROLLER_AXIS_LEFTX);
+		y = SDL_GameControllerGetAxis(controller[port], SDL_CONTROLLER_AXIS_LEFTY);
+
+	} else if (joy[port]) {
+
+		// Not a Game Controller, use joystick API
 		if (SDL_JoystickGetButton(joy[port], 0)) {
 			j &= 0xef;							// Button
 		}
+
+		x = SDL_JoystickGetAxis(joy[port], 0);
+		y = SDL_JoystickGetAxis(joy[port], 1);
+	}
+
+	if (x < joy_minx[port]) {
+		j &= 0xfb;							// Left
+		joy_minx[port] = -(JOYSTICK_DEAD_ZONE - JOYSTICK_HYSTERESIS);
+	} else {
+		joy_minx[port] = -JOYSTICK_DEAD_ZONE;
+	}
+
+	if (x > joy_maxx[port]) {
+		j &= 0xf7;							// Right
+		joy_maxx[port] = +(JOYSTICK_DEAD_ZONE - JOYSTICK_HYSTERESIS);
+	} else {
+		joy_maxx[port] = +JOYSTICK_DEAD_ZONE;
+	}
+
+	if (y < joy_miny[port]) {
+		j &= 0xfe;							// Up
+		joy_miny[port] = -(JOYSTICK_DEAD_ZONE - JOYSTICK_HYSTERESIS);
+	} else {
+		joy_miny[port] = -JOYSTICK_DEAD_ZONE;
+	}
+
+	if (y > joy_maxy[port]) {
+		j &= 0xfd;							// Down
+		joy_maxy[port] = +(JOYSTICK_DEAD_ZONE - JOYSTICK_HYSTERESIS);
+	} else {
+		joy_maxy[port] = +JOYSTICK_DEAD_ZONE;
 	}
 
 	return j;

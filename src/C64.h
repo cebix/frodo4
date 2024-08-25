@@ -27,6 +27,7 @@
 
 #ifdef HAVE_SDL
 #include <SDL_joystick.h>
+#include <SDL_gamecontroller.h>
 #endif
 
 
@@ -143,6 +144,7 @@ private:
 	void open_close_joystick(int port, int oldjoy, int newjoy);
 
 	SDL_Joystick * joy[2] = { nullptr, nullptr };
+	SDL_GameController * controller[2] = { nullptr, nullptr };
 #endif
 
 #ifdef WIN32
