@@ -71,7 +71,7 @@ public:
 	void NewPrefs(Prefs *prefs);
 	void PatchKernal(bool fast_reset, bool emul_1541_proc);
 	void SaveRAM(char *filename);
-	void SaveSnapshot(char *filename);
+	bool SaveSnapshot(char *filename);
 	bool LoadSnapshot(char *filename);
 	int SaveCPUState(FILE *f);
 	int Save1541State(FILE *f);

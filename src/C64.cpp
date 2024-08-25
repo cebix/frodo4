@@ -509,7 +509,7 @@ bool C64::Load1541JobState(FILE *f)
  *  snapshot is loaded into FrodoSC again.
  */
 
-void C64::SaveSnapshot(char *filename)
+bool C64::SaveSnapshot(char *filename)
 {
 	FILE *f;
 	uint8_t flags;
@@ -518,7 +518,7 @@ void C64::SaveSnapshot(char *filename)
 
 	if ((f = fopen(filename, "wb")) == NULL) {
 		ShowRequester("Unable to open snapshot file", "OK", NULL);
-		return;
+		return false;
 	}
 
 	fprintf(f, "%s%c", SNAPSHOT_HEADER, 10);
@@ -563,6 +563,7 @@ void C64::SaveSnapshot(char *filename)
 		Save1541JobState(f);
 	}
 	fclose(f);
+	return true;
 }
 
 

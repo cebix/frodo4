@@ -40,6 +40,10 @@ static Prefs *prefs = nullptr;
 // Prefs file name
 static const char *prefs_path = nullptr;
 
+// Dialog for selecting snapshot file
+static GtkWidget *snapshot_dialog = nullptr;
+static GtkWidget *snapshot_accept_button = nullptr;
+
 // Prototypes
 static void set_values();
 static void get_values();
@@ -78,11 +82,33 @@ bool Prefs::ShowEditor(bool startup, const char *prefs_name)
 	GtkWindow * prefs_win = GTK_WINDOW(gtk_builder_get_object(builder, "prefs_win"));
 
 	if (startup) {
+		snapshot_dialog = gtk_file_chooser_dialog_new("", prefs_win,
+			GTK_FILE_CHOOSER_ACTION_SAVE, "Cancel", GTK_RESPONSE_CANCEL, nullptr
+		);
+		snapshot_accept_button = gtk_dialog_add_button(GTK_DIALOG(snapshot_dialog), "Save", GTK_RESPONSE_ACCEPT);
+
+		gtk_file_chooser_set_current_name(GTK_FILE_CHOOSER(snapshot_dialog), "Untitled.snap");
+		gtk_file_chooser_set_do_overwrite_confirmation(GTK_FILE_CHOOSER(snapshot_dialog), true);
+
+		GtkFileFilter * filter;
+		filter = gtk_file_filter_new();
+		gtk_file_filter_add_pattern(filter, "*.snap");
+		gtk_file_filter_set_name(filter, "Snapshot Files (*.snap)");
+		gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(snapshot_dialog), filter);
+		filter = gtk_file_filter_new();
+		gtk_file_filter_add_pattern(filter, "*");
+		gtk_file_filter_set_name(filter, "All Files (*.*)");
+		gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(snapshot_dialog), filter);
+
 		gtk_menu_item_set_label(GTK_MENU_ITEM(gtk_builder_get_object(builder, "ok_menu")), "Start");
 		gtk_button_set_label(GTK_BUTTON(gtk_builder_get_object(builder, "ok_button")), "Start");
+		gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object(builder, "load_snapshot_menu")), false);
+		gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object(builder, "save_snapshot_menu")), false);
 	} else {
 		gtk_menu_item_set_label(GTK_MENU_ITEM(gtk_builder_get_object(builder, "ok_menu")), "Continue");
 		gtk_button_set_label(GTK_BUTTON(gtk_builder_get_object(builder, "ok_button")), "Continue");
+		gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object(builder, "load_snapshot_menu")), true);
+		gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object(builder, "save_snapshot_menu")), true);
 	}
 
 	// Run editor
@@ -253,24 +279,66 @@ extern "C" void on_quit_clicked(GtkButton *button, gpointer user_data)
 	gtk_main_quit();
 }
 
-extern "C" gboolean on_prefs_win_delete_event(GtkWidget *widget, GdkEvent *event, gpointer user_data)
+extern "C" void on_load_snapshot(GtkMenuItem *menuitem, gpointer user_data)
 {
-	// Closing the prefs editor behaves like "Quit" on startup,
-	// "Continue" otherwise
-	if (in_startup) {
-		on_quit_clicked(nullptr, user_data);
-	} else {
-		on_ok_clicked(nullptr, user_data);
+	gtk_window_set_title(GTK_WINDOW(snapshot_dialog), "Frodo: Load Snapshot");
+	gtk_file_chooser_set_action(GTK_FILE_CHOOSER(snapshot_dialog), GTK_FILE_CHOOSER_ACTION_OPEN);
+	gtk_button_set_label(GTK_BUTTON(snapshot_accept_button), "Load");
+
+	bool load_ok = false;
+	char * filename = nullptr;
+
+	gint res = gtk_dialog_run(GTK_DIALOG(snapshot_dialog));
+	if (res == GTK_RESPONSE_ACCEPT) {
+		filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(snapshot_dialog));
+		load_ok = TheC64->LoadSnapshot(filename);
 	}
 
-	// Prevent destruction
-	return gtk_widget_hide_on_delete(widget);
+	gtk_widget_hide(snapshot_dialog);
+
+	if (load_ok) {
+		GtkWidget * msg = gtk_message_dialog_new(GTK_WINDOW(gtk_builder_get_object(builder, "prefs_win")),
+			GTK_DIALOG_MODAL, GTK_MESSAGE_INFO, GTK_BUTTONS_OK,
+			"Snapshot file '%s' loaded.", filename
+		);
+		gtk_dialog_run(GTK_DIALOG(msg));
+		gtk_widget_destroy(msg);
+	}
+
+	if (filename) {
+		g_free(filename);
+	}
 }
 
-extern "C" gboolean on_about_win_delete_event(GtkWidget *widget, GdkEvent *event, gpointer user_data)
+extern "C" void on_save_snapshot(GtkMenuItem *menuitem, gpointer user_data)
 {
-	// Prevent destruction
-	return gtk_widget_hide_on_delete(widget);
+	gtk_window_set_title(GTK_WINDOW(snapshot_dialog), "Frodo: Save Snapshot");
+	gtk_file_chooser_set_action(GTK_FILE_CHOOSER(snapshot_dialog), GTK_FILE_CHOOSER_ACTION_SAVE);
+	gtk_button_set_label(GTK_BUTTON(snapshot_accept_button), "Save");
+
+	bool save_ok = false;
+	char * filename = nullptr;
+
+	gint res = gtk_dialog_run(GTK_DIALOG(snapshot_dialog));
+	if (res == GTK_RESPONSE_ACCEPT) {
+		filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(snapshot_dialog));
+		save_ok = TheC64->SaveSnapshot(filename);
+	}
+
+	gtk_widget_hide(snapshot_dialog);
+
+	if (save_ok) {
+		GtkWidget * msg = gtk_message_dialog_new(GTK_WINDOW(gtk_builder_get_object(builder, "prefs_win")),
+			GTK_DIALOG_MODAL, GTK_MESSAGE_INFO, GTK_BUTTONS_OK,
+			"Snapshot file '%s' saved.", filename
+		);
+		gtk_dialog_run(GTK_DIALOG(msg));
+		gtk_widget_destroy(msg);
+	}
+
+	if (filename) {
+		g_free(filename);
+	}
 }
 
 extern "C" void on_about_activate(GtkMenuItem *menuitem, gpointer user_data)
@@ -301,4 +369,24 @@ extern "C" void on_sid_type_changed(GtkComboBox *box, gpointer user_data)
 extern "C" void on_sid_filters_toggled(GtkToggleButton *button, gpointer user_data)
 {
 	prefs->SIDFilters = gtk_toggle_button_get_active(button);
+}
+
+extern "C" gboolean on_prefs_win_delete_event(GtkWidget *widget, GdkEvent *event, gpointer user_data)
+{
+	// Closing the prefs editor behaves like "Quit" on startup,
+	// "Continue" otherwise
+	if (in_startup) {
+		on_quit_clicked(nullptr, user_data);
+	} else {
+		on_ok_clicked(nullptr, user_data);
+	}
+
+	// Prevent destruction
+	return gtk_widget_hide_on_delete(widget);
+}
+
+extern "C" gboolean on_about_win_delete_event(GtkWidget *widget, GdkEvent *event, gpointer user_data)
+{
+	// Prevent destruction
+	return gtk_widget_hide_on_delete(widget);
 }
