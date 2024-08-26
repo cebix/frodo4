@@ -486,8 +486,8 @@ void MOS6569::GetState(MOS6569State *vd)
 	for (i=0; i<8; i++)
 		vd->sprite_base[i] = (matrix_base[0x3f8 + i] << 6) | cia_vabase;
 
-	vd->cycle = 1;
 	vd->raster_x = 0;
+	vd->cycle = 1;
 	vd->ml_index = 0;
 	vd->ref_cnt = 0xff;
 	vd->last_vic_byte = 0;
@@ -499,7 +499,7 @@ void MOS6569::GetState(MOS6569State *vd)
  *  Set VIC state (only works if in VBlank)
  */
 
-void MOS6569::SetState(MOS6569State *vd)
+void MOS6569::SetState(const MOS6569State *vd)
 {
 	int i, j;
 

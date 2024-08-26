@@ -163,7 +163,7 @@ void MOS6502_1541::GetState(MOS6502State *s)
  *  Restore 6502 state
  */
 
-void MOS6502_1541::SetState(MOS6502State *s)
+void MOS6502_1541::SetState(const MOS6502State *s)
 {
 	a = s->a;
 	x = s->x;

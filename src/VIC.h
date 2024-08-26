@@ -61,7 +61,7 @@ public:
 	void TriggerLightpen(void);			// Trigger lightpen interrupt
 	void ReInitColors(void);
 	void GetState(MOS6569State *vd);
-	void SetState(MOS6569State *vd);
+	void SetState(const MOS6569State *vd);
 
 #ifdef FRODO_SC
 	uint8_t LastVICByte;
@@ -144,7 +144,7 @@ private:
 	void draw_sprites(void);
 	void draw_background(void);
 
-	int cycle;						// Current cycle in line (1..63)
+	unsigned cycle;					// Current cycle in line (1..63)
 
 	uint8_t *chunky_ptr;			// Pointer in chunky bitmap buffer (this is where out output goes)
 	uint8_t *fore_mask_ptr;			// Pointer in fore_mask_buf
@@ -171,7 +171,7 @@ private:
 
 	uint16_t raster_x;				// Current raster x position
 
-	int ml_index;					// Index in matrix/color_line[]
+	unsigned ml_index;				// Index in matrix/color_line[]
 	uint8_t gfx_data, char_data, color_data, last_char_data;
 	uint8_t spr_data[8][4];			// Sprite data read
 	uint8_t spr_draw_data[8][4];	// Sprite data for drawing
@@ -277,9 +277,9 @@ struct MOS6569State {
 	uint16_t sprite_base[8]; // Sprite bases
 
 							// Frodo SC:
-	int cycle;				// Current cycle in line (1..63)
 	uint16_t raster_x;		// Current raster x position
-	int ml_index;			// Index in matrix/color_line[]
+	uint8_t cycle;			// Current cycle in line (1..63)
+	uint8_t ml_index;		// Index in matrix/color_line[]
 	uint8_t ref_cnt;		// Refresh counter
 	uint8_t last_vic_byte;	// Last byte read by VIC
 	bool ud_border_on;		// Flag: Upper/lower border on

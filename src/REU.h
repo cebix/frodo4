@@ -30,7 +30,7 @@ public:
 	REU(MOS6510 *CPU);
 	~REU();
 
-	void NewPrefs(Prefs *prefs);
+	void NewPrefs(const Prefs *prefs);
 	void Reset(void);
 	uint8_t ReadRegister(uint16_t adr);
 	void WriteRegister(uint16_t adr, uint8_t byte);

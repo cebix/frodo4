@@ -161,7 +161,7 @@ void C64Display::error_and_quit(const std::string & msg) const
  *  Prefs may have changed
  */
 
-void C64Display::NewPrefs(Prefs *prefs)
+void C64Display::NewPrefs(const Prefs *prefs)
 {
 	// Unused
 }

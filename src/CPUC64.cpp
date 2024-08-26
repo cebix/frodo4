@@ -595,15 +595,16 @@ void MOS6510::GetState(MOS6510State *s)
 	if (!z_flag) s->p |= 0x02;
 	if (c_flag) s->p |= 0x01;
 
-	s->ddr = ram[0];
-	s->pr = ram[1] & 0x3f;
-
 #if PC_IS_POINTER
 	s->pc = pc - pc_base;
 #else
 	s->pc = pc;
 #endif
 	s->sp = sp | 0x0100;
+
+	s->ddr = ram[0];
+	s->pr = ram[1] & 0x3f;
+	s->pr_out = s->pr & s->ddr;
 
 	s->intr[INT_VICIRQ] = interrupt.intr[INT_VICIRQ];
 	s->intr[INT_CIAIRQ] = interrupt.intr[INT_CIAIRQ];
@@ -619,7 +620,7 @@ void MOS6510::GetState(MOS6510State *s)
  *  Restore 6510 state
  */
 
-void MOS6510::SetState(MOS6510State *s)
+void MOS6510::SetState(const MOS6510State *s)
 {
 	a = s->a;
 	x = s->x;

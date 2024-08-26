@@ -74,7 +74,7 @@ public:
 	void AsyncReset(void);				// Reset the CPU asynchronously
 	void AsyncNMI(void);				// Raise NMI asynchronously (NMI pulse)
 	void GetState(MOS6510State *s);
-	void SetState(MOS6510State *s);
+	void SetState(const MOS6510State *s);
 	uint8_t ExtReadByte(uint16_t adr);
 	void ExtWriteByte(uint16_t adr, uint8_t byte);
 	uint8_t REUReadByte(uint16_t adr);
@@ -166,10 +166,10 @@ private:
 // 6510 state
 struct MOS6510State {
 	uint8_t a, x, y;
-	uint8_t p;			// Processor flags
-	uint8_t ddr, pr;	// Port
+	uint8_t p;					// Processor flags
 	uint16_t pc, sp;
-	uint8_t intr[4];	// Interrupt state
+	uint8_t ddr, pr, pr_out;	// Port
+	uint8_t intr[4];			// Interrupt state
 	bool nmi_state;	
 	uint8_t dfff_byte;
 	bool instruction_complete;

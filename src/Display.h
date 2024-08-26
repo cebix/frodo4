@@ -65,7 +65,7 @@ public:
 	void PollKeyboard(uint8_t *key_matrix, uint8_t *rev_matrix, uint8_t *joystick);
 	bool NumLock(void);
 	void InitColors(uint8_t *colors);
-	void NewPrefs(Prefs *prefs);
+	void NewPrefs(const Prefs *prefs);
 
 	C64 *TheC64;
 

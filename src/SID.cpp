@@ -125,7 +125,7 @@ void MOS6581::Reset(void)
  *  Preferences may have changed
  */
 
-void MOS6581::NewPrefs(Prefs *prefs)
+void MOS6581::NewPrefs(const Prefs *prefs)
 {
 	open_close_renderer(ThePrefs.SIDType, prefs->SIDType);
 	if (the_renderer != NULL)
@@ -201,7 +201,7 @@ void MOS6581::GetState(MOS6581State *ss)
  *  Restore SID state
  */
 
-void MOS6581::SetState(MOS6581State *ss)
+void MOS6581::SetState(const MOS6581State *ss)
 {
 	regs[0] = ss->freq_lo_1;
 	regs[1] = ss->freq_hi_1;
@@ -323,7 +323,7 @@ public:
 	virtual void Reset(void);
 	virtual void EmulateLine(void);
 	virtual void WriteRegister(uint16_t adr, uint8_t byte);
-	virtual void NewPrefs(Prefs *prefs);
+	virtual void NewPrefs(const Prefs *prefs);
 	virtual void Pause(void);
 	virtual void Resume(void);
 
@@ -896,7 +896,7 @@ void DigitalRenderer::WriteRegister(uint16_t adr, uint8_t byte)
  *  Preferences may have changed
  */
 
-void DigitalRenderer::NewPrefs(Prefs *prefs)
+void DigitalRenderer::NewPrefs(const Prefs *prefs)
 {
 	calc_filter();
 }

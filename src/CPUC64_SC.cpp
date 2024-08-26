@@ -145,11 +145,12 @@ void MOS6510::GetState(MOS6510State *s)
 	if (!z_flag) s->p |= 0x02;
 	if (c_flag) s->p |= 0x01;
 	
-	s->ddr = ddr;
-	s->pr = pr;
-
 	s->pc = pc;
 	s->sp = sp | 0x0100;
+
+	s->ddr = ddr;
+	s->pr = pr;
+	s->pr_out = pr_out;
 
 	s->intr[INT_VICIRQ] = interrupt.intr[INT_VICIRQ];
 	s->intr[INT_CIAIRQ] = interrupt.intr[INT_CIAIRQ];
@@ -165,7 +166,7 @@ void MOS6510::GetState(MOS6510State *s)
  *  Restore 6510 state
  */
 
-void MOS6510::SetState(MOS6510State *s)
+void MOS6510::SetState(const MOS6510State *s)
 {
 	a = s->a;
 	x = s->x;
@@ -180,7 +181,7 @@ void MOS6510::SetState(MOS6510State *s)
 
 	ddr = s->ddr;
 	pr = s->pr;
-	pr_out = 0;  // FIXME: should be saved in MOS6510State
+	pr_out = s->pr_out;
 	new_config();
 
 	pc = s->pc;

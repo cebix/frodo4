@@ -56,6 +56,8 @@ class IEC;
 class REU;
 class MOS6502_1541;
 class Job1541;
+struct Snapshot;
+
 
 class C64 {
 public:
@@ -69,23 +71,12 @@ public:
 	void Reset(void);
 	void NMI(void);
 	void VBlank(bool draw_frame);
-	void NewPrefs(Prefs *prefs);
+	void NewPrefs(const Prefs *prefs);
 	void PatchKernal(bool fast_reset, bool emul_1541_proc);
-	void SaveRAM(char *filename);
-	bool SaveSnapshot(char *filename);
-	bool LoadSnapshot(char *filename);
-	int SaveCPUState(FILE *f);
-	int Save1541State(FILE *f);
-	bool Save1541JobState(FILE *f);
-	bool SaveVICState(FILE *f);
-	bool SaveSIDState(FILE *f);
-	bool SaveCIAState(FILE *f);
-	bool LoadCPUState(FILE *f);
-	bool Load1541State(FILE *f);
-	bool Load1541JobState(FILE *f);
-	bool LoadVICState(FILE *f);
-	bool LoadSIDState(FILE *f);
-	bool LoadCIAState(FILE *f);
+	void MakeSnapshot(Snapshot * s);
+	void RestoreSnapshot(const Snapshot * s);
+	bool SaveSnapshot(const char * filename);
+	bool LoadSnapshot(const char * filename);
 
 	uint8_t *RAM, *Basic, *Kernal,
 	        *Char, *Color;		// C64

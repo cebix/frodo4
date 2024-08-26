@@ -162,7 +162,7 @@ void MOS6526::GetState(MOS6526State *cs)
  *  Restore CIA state
  */
 
-void MOS6526::SetState(MOS6526State *cs)
+void MOS6526::SetState(const MOS6526State *cs)
 {
 	pra = cs->pra;
 	prb = cs->prb;

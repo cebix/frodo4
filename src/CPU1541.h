@@ -66,7 +66,7 @@ public:
 	void Reset(void);
 	void AsyncReset(void);				// Reset the CPU asynchronously
 	void GetState(MOS6502State *s);
-	void SetState(MOS6502State *s);
+	void SetState(const MOS6502State *s);
 	uint8_t ExtReadByte(uint16_t adr);
 	void ExtWriteByte(uint16_t adr, uint8_t byte);
 	void CountVIATimers(int cycles);
@@ -165,7 +165,7 @@ private:
 	uint8_t via2_ier;		// IER of VIA 2
 };
 
-// 6502 state
+// 6502 and VIA state
 struct MOS6502State {
 	uint8_t a, x, y;
 	uint8_t p;				// Processor flags
@@ -203,7 +203,6 @@ struct MOS6502State {
 	uint8_t via2_ifr;
 	uint8_t via2_ier;
 };
-
 
 
 /*

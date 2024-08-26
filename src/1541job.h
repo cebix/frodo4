@@ -32,8 +32,8 @@ public:
 	~Job1541();
 
 	void GetState(Job1541State *state);
-	void SetState(Job1541State *state);
-	void NewPrefs(Prefs *prefs);
+	void SetState(const Job1541State *state);
+	void NewPrefs(const Prefs *prefs);
 	void MoveHeadOut(void);
 	void MoveHeadIn(void);
 	bool SyncFound(void);
@@ -43,7 +43,7 @@ public:
 	void FormatTrack(void);
 
 private:
-	void open_d64_file(char *filepath);
+	void open_d64_file(const char *filepath);
 	void close_d64_file(void);
 	bool read_sector(int track, int sector, uint8_t *buffer);
 	bool write_sector(int track, int sector, uint8_t *buffer);
@@ -65,7 +65,7 @@ private:
 	uint8_t *gcr_ptr;			// Pointer to GCR data under R/W head
 	uint8_t *gcr_track_start;	// Pointer to start of GCR data of current track
 	uint8_t *gcr_track_end;		// Pointer to end of GCR data of current track
-	int current_halftrack;		// Current halftrack number (2..70)
+	unsigned current_halftrack;	// Current halftrack number (2..70)
 
 	bool write_protected;		// Flag: Disk write-protected
 	bool disk_changed;			// Flag: Disk changed (WP sensor strobe control)
@@ -73,8 +73,8 @@ private:
 
 // 1541 GCR state
 struct Job1541State {
-	int current_halftrack;
 	uint32_t gcr_ptr;
+	uint16_t current_halftrack;
 	bool write_protected;
 	bool disk_changed;
 };

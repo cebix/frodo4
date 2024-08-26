@@ -137,7 +137,7 @@ public:
 	~IEC();
 
 	void Reset(void);
-	void NewPrefs(Prefs *prefs);
+	void NewPrefs(const Prefs *prefs);
 	void UpdateLEDs(void);
 
 	uint8_t Out(uint8_t byte, bool eoi);

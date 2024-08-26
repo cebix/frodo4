@@ -32,12 +32,47 @@
 #include "Display.h"
 #include "Prefs.h"
 
+#include <memory>
+
 
 #ifdef FRODO_SC
 bool IsFrodoSC = true;
 #else
 bool IsFrodoSC = false;
 #endif
+
+
+// Snapshot magic header
+#define SNAPSHOT_HEADER "FrodoSnapshot4\0\0"
+
+// Snapshot flags
+#define SNAPSHOT_FLAG_1541_PROC 1
+
+// Snapshot data structure
+struct Snapshot {
+	uint8_t magic[16];
+	uint16_t flags;
+	uint8_t delay;		// Frodo SC: Number of cycles the saved C64 CPU lags behind the other state
+	uint8_t driveDelay;	// Frodo SC: Number of cycles the saved 1541 CPU lags behind the other state
+
+	char drive8Path[256];
+
+	uint8_t ram[C64_RAM_SIZE];
+	uint8_t color[COLOR_RAM_SIZE];
+
+	uint8_t driveRam[DRIVE_RAM_SIZE];
+
+	MOS6510State cpu;
+	MOS6569State vic;
+	MOS6581State sid;
+	MOS6526State cia1;
+	MOS6526State cia2;
+
+	MOS6502State driveCpu;
+	Job1541State driveJob;
+
+	// TODO: REU state is not saved
+};
 
 
 /*
@@ -167,11 +202,11 @@ void C64::NMI(void)
 
 /*
  *  The preferences have changed. prefs is a pointer to the new
- *   preferences, ThePrefs still holds the previous ones.
- *   The emulation must be in the paused state!
+ *  preferences, ThePrefs still holds the previous ones.
+ *  The emulation must be in the paused state!
  */
 
-void C64::NewPrefs(Prefs *prefs)
+void C64::NewPrefs(const Prefs *prefs)
 {
 	open_close_joysticks(ThePrefs.Joystick1Port, ThePrefs.Joystick2Port, prefs->Joystick1Port, prefs->Joystick2Port);
 	PatchKernal(prefs->FastReset, prefs->Emul1541Proc);
@@ -258,421 +293,207 @@ void C64::PatchKernal(bool fast_reset, bool emul_1541_proc)
 
 
 /*
- *  Save RAM contents
- */
-
-void C64::SaveRAM(char *filename)
-{
-	FILE *f;
-
-	if ((f = fopen(filename, "wb")) == NULL)
-		ShowRequester("RAM save failed.", "OK", NULL);
-	else {
-		fwrite((void*)RAM, 1, 0x10000, f);
-		fwrite((void*)Color, 1, 0x400, f);
-		if (ThePrefs.Emul1541Proc)
-			fwrite((void*)RAM1541, 1, 0x800, f);
-		fclose(f);
-	}
-}
-
-
-/*
- *  Save CPU state to snapshot
+ *  Save state to snapshot (emulation must be paused and in VBlank)
  *
- *  0: Error
- *  1: OK
- *  -1: Instruction not completed
+ *  To be able to use SC snapshots with SL, the state of the SC C64 and 1541
+ *  CPUs are not saved in the middle of an instruction. Instead the state is
+ *  advanced cycle by cycle until the current instruction has finished. The
+ *  number of cycles this takes is saved in the snapshot and will be
+ *  reconstructed when the snapshot is loaded into FrodoSC again.
  */
 
-int C64::SaveCPUState(FILE *f)
+void C64::MakeSnapshot(Snapshot * s)
 {
-	MOS6510State state;
-	TheCPU->GetState(&state);
+	memset(s, 0, sizeof(*s));
 
-	if (!state.instruction_complete)
-		return -1;
+	memcpy(s->magic, SNAPSHOT_HEADER, sizeof(s->magic));
 
-	int i = fwrite(RAM, 0x10000, 1, f);
-	i += fwrite(Color, 0x400, 1, f);
-	i += fwrite((void*)&state, sizeof(state), 1, f);
+	strcpy(s->drive8Path, ThePrefs.DrivePath[0]);
 
-	return i == 3;
-}
-
-
-/*
- *  Load CPU state from snapshot
- */
-
-bool C64::LoadCPUState(FILE *f)
-{
-	MOS6510State state;
-
-	int i = fread(RAM, 0x10000, 1, f);
-	i += fread(Color, 0x400, 1, f);
-	i += fread((void*)&state, sizeof(state), 1, f);
-
-	if (i == 3) {
-		TheCPU->SetState(&state);
-		return true;
-	} else
-		return false;
-}
-
-
-/*
- *  Save 1541 state to snapshot
- *
- *  0: Error
- *  1: OK
- *  -1: Instruction not completed
- */
-
-int C64::Save1541State(FILE *f)
-{
-	MOS6502State state;
-	TheCPU1541->GetState(&state);
-
-	if (!state.idle && !state.instruction_complete)
-		return -1;
-
-	int i = fwrite(RAM1541, 0x800, 1, f);
-	i += fwrite((void*)&state, sizeof(state), 1, f);
-
-	return i == 2;
-}
-
-
-/*
- *  Load 1541 state from snapshot
- */
-
-bool C64::Load1541State(FILE *f)
-{
-	MOS6502State state;
-
-	int i = fread(RAM1541, 0x800, 1, f);
-	i += fread((void*)&state, sizeof(state), 1, f);
-
-	if (i == 2) {
-		TheCPU1541->SetState(&state);
-		return true;
-	} else
-		return false;
-}
-
-
-/*
- *  Save VIC state to snapshot
- */
-
-bool C64::SaveVICState(FILE *f)
-{
-	MOS6569State state;
-	TheVIC->GetState(&state);
-	return fwrite((void*)&state, sizeof(state), 1, f) == 1;
-}
-
-
-/*
- *  Load VIC state from snapshot
- */
-
-bool C64::LoadVICState(FILE *f)
-{
-	MOS6569State state;
-
-	if (fread((void*)&state, sizeof(state), 1, f) == 1) {
-		TheVIC->SetState(&state);
-		return true;
-	} else
-		return false;
-}
-
-
-/*
- *  Save SID state to snapshot
- */
-
-bool C64::SaveSIDState(FILE *f)
-{
-	MOS6581State state;
-	TheSID->GetState(&state);
-	return fwrite((void*)&state, sizeof(state), 1, f) == 1;
-}
-
-
-/*
- *  Load SID state from snapshot
- */
-
-bool C64::LoadSIDState(FILE *f)
-{
-	MOS6581State state;
-
-	if (fread((void*)&state, sizeof(state), 1, f) == 1) {
-		TheSID->SetState(&state);
-		return true;
-	} else
-		return false;
-}
-
-
-/*
- *  Save CIA states to snapshot
- */
-
-bool C64::SaveCIAState(FILE *f)
-{
-	MOS6526State state;
-	TheCIA1->GetState(&state);
-
-	if (fwrite((void*)&state, sizeof(state), 1, f) == 1) {
-		TheCIA2->GetState(&state);
-		return fwrite((void*)&state, sizeof(state), 1, f) == 1;
-	} else
-		return false;
-}
-
-
-/*
- *  Load CIA states from snapshot
- */
-
-bool C64::LoadCIAState(FILE *f)
-{
-	MOS6526State state;
-
-	if (fread((void*)&state, sizeof(state), 1, f) == 1) {
-		TheCIA1->SetState(&state);
-		if (fread((void*)&state, sizeof(state), 1, f) == 1) {
-			TheCIA2->SetState(&state);
-			return true;
-		} else
-			return false;
-	} else
-		return false;
-}
-
-
-/*
- *  Save 1541 GCR state to snapshot
- */
-
-bool C64::Save1541JobState(FILE *f)
-{
-	Job1541State state;
-	TheJob1541->GetState(&state);
-	return fwrite((void*)&state, sizeof(state), 1, f) == 1;
-}
-
-
-/*
- *  Load 1541 GCR state from snapshot
- */
-
-bool C64::Load1541JobState(FILE *f)
-{
-	Job1541State state;
-
-	if (fread((void*)&state, sizeof(state), 1, f) == 1) {
-		TheJob1541->SetState(&state);
-		return true;
-	} else
-		return false;
-}
-
-
-#define SNAPSHOT_HEADER "FrodoSnapshot"
-#define SNAPSHOT_1541 1
-
-#define ADVANCE_CYCLES	\
-	TheVIC->EmulateCycle(); \
-	TheCIA1->EmulateCycle(); \
-	TheCIA2->EmulateCycle(); \
-	TheCPU->EmulateCycle(); \
-	if (ThePrefs.Emul1541Proc) { \
-		TheCPU1541->CountVIATimers(1); \
-		if (!TheCPU1541->Idle) \
-			TheCPU1541->EmulateCycle(); \
-	}
-
-
-/*
- *  Save snapshot (emulation must be paused and in VBlank)
- *
- *  To be able to use SC snapshots with SL, SC snapshots are made thus that no
- *  partially dealt with instructions are saved. Instead all devices are advanced
- *  cycle by cycle until the current instruction has been finished. The number of
- *  cycles this takes is saved in the snapshot and will be reconstructed if the
- *  snapshot is loaded into FrodoSC again.
- */
-
-bool C64::SaveSnapshot(char *filename)
-{
-	FILE *f;
-	uint8_t flags;
-	uint8_t delay;
-	int stat;
-
-	if ((f = fopen(filename, "wb")) == NULL) {
-		ShowRequester("Unable to open snapshot file", "OK", NULL);
-		return false;
-	}
-
-	fprintf(f, "%s%c", SNAPSHOT_HEADER, 10);
-	fputc(0, f);	// Version number 0
-	flags = 0;
-	if (ThePrefs.Emul1541Proc)
-		flags |= SNAPSHOT_1541;
-	fputc(flags, f);
-	SaveVICState(f);
-	SaveSIDState(f);
-	SaveCIAState(f);
+	TheVIC->GetState(&(s->vic));
+	TheSID->GetState(&(s->sid));
+	TheCIA1->GetState(&(s->cia1));
+	TheCIA2->GetState(&(s->cia2));
 
 #ifdef FRODO_SC
-	delay = 0;
-	do {
-		if ((stat = SaveCPUState(f)) == -1) {	// -1 -> Instruction not finished yet
-			ADVANCE_CYCLES;	// Advance everything by one cycle
-			delay++;
+	while (true) {
+		TheCPU->GetState(&(s->cpu));
+
+		if (s->cpu.instruction_complete)
+			break;
+
+		// Advance C64 state by one cycle
+		if (TheVIC->EmulateCycle()) {
+			TheSID->EmulateLine();
 		}
-	} while (stat == -1);
-	fputc(delay, f);	// Number of cycles the saved CPUC64 lags behind the previous chips
+		TheCIA1->CheckIRQs();
+		TheCIA2->CheckIRQs();
+		TheCIA1->EmulateCycle();
+		TheCIA2->EmulateCycle();
+		TheCPU->EmulateCycle();
+
+		s->delay++;
+	}
 #else
-	SaveCPUState(f);
-	fputc(0, f);		// No delay
+	TheCPU->GetState(&(s->cpu));
 #endif
+
+	memcpy(s->ram, RAM, C64_RAM_SIZE);
+	memcpy(s->color, Color, COLOR_RAM_SIZE);
 
 	if (ThePrefs.Emul1541Proc) {
-		fwrite(ThePrefs.DrivePath[0], 256, 1, f);
+		s->flags |= SNAPSHOT_FLAG_1541_PROC;
+
+		TheJob1541->GetState(&(s->driveJob));
+
 #ifdef FRODO_SC
-		delay = 0;
-		do {
-			if ((stat = Save1541State(f)) == -1) {
-				ADVANCE_CYCLES;
-				delay++;
+		while (true) {
+			TheCPU1541->GetState(&(s->driveCpu));
+
+			if (s->driveCpu.idle || s->driveCpu.instruction_complete)
+				break;
+
+			// Advance 1541 state by one cycle
+			TheCPU1541->CountVIATimers(1);
+			if (!TheCPU1541->Idle) {
+				TheCPU1541->EmulateCycle();
 			}
-		} while (stat == -1);
-		fputc(delay, f);
+
+			s->driveDelay++;
+		}
 #else
-		Save1541State(f);
-		fputc(0, f);	// No delay
+		TheCPU1541->GetState(&(s->driveCpu));
 #endif
-		Save1541JobState(f);
 	}
+
+	memcpy(s->driveRam, RAM1541, DRIVE_RAM_SIZE);
+}
+
+
+/*
+ *  Restore state from snapshot (emulation must be paused and in VBlank)
+ *
+ *  Note: The magic header is not checked by this function.
+ */
+
+void C64::RestoreSnapshot(const Snapshot * s)
+{
+	// SL CPU64::SetState() overwrites ram[0/1], so we need to restore that
+	// first in case we're loading an SC snapshot
+	memcpy(RAM, s->ram, C64_RAM_SIZE);
+	memcpy(Color, s->color, COLOR_RAM_SIZE);
+
+	TheCPU->SetState(&(s->cpu));
+	TheVIC->SetState(&(s->vic));
+	TheSID->SetState(&(s->sid));
+	TheCIA1->SetState(&(s->cia1));
+	TheCIA2->SetState(&(s->cia2));
+
+#ifdef FRODO_SC
+	// Advance C64 to saved CPU state
+	for (unsigned i = 0; i < s->delay; ++i) {
+		if (TheVIC->EmulateCycle()) {
+			TheSID->EmulateLine();
+		}
+		TheCIA1->CheckIRQs();
+		TheCIA2->CheckIRQs();
+		TheCIA1->EmulateCycle();
+		TheCIA2->EmulateCycle();
+	}
+#endif
+
+	if (s->flags & SNAPSHOT_FLAG_1541_PROC) {
+
+		memcpy(RAM1541, s->driveRam, DRIVE_RAM_SIZE);
+
+		// Switch on 1541 processor emulation if it is off
+		if (! ThePrefs.Emul1541Proc) {
+			auto prefs = std::make_unique<Prefs>(ThePrefs);
+			strcpy(prefs->DrivePath[0], s->drive8Path);
+			prefs->Emul1541Proc = true;
+			NewPrefs(prefs.get());
+			ThePrefs = *prefs;
+		}
+
+		TheCPU1541->SetState(&(s->driveCpu));
+		TheJob1541->SetState(&(s->driveJob));
+
+#ifdef FRODO_SC
+		// Advance 1541 to saved CPU state
+		for (unsigned i = 0; i < s->driveDelay; ++i) {
+			TheCPU1541->CountVIATimers(1);
+		}
+#endif
+
+	} else {
+
+		// Switch off 1541 processor emulation if it is on
+		if (ThePrefs.Emul1541Proc) {
+			auto prefs = std::make_unique<Prefs>(ThePrefs);
+			prefs->Emul1541Proc = false;
+			NewPrefs(prefs.get());
+			ThePrefs = *prefs;
+		}
+	}
+}
+
+
+/*
+ *  Save snapshot file (emulation must be paused and in VBlank)
+ */
+
+bool C64::SaveSnapshot(const char * filename)
+{
+	FILE * f = fopen(filename, "wb");
+	if (f == nullptr) {
+		ShowRequester("Can't create snapshot file", "OK", nullptr);
+		return false;
+	}
+
+	auto s = std::make_unique<Snapshot>();
+	MakeSnapshot(s.get());
+
+	if (fwrite(s.get(), sizeof(Snapshot), 1, f) != 1) {
+		ShowRequester("Error writing to snapshot file", "OK", nullptr);
+		fclose(f);
+		return false;
+	}
+
 	fclose(f);
 	return true;
 }
 
 
 /*
- *  Load snapshot (emulation must be paused and in VBlank)
+ *  Load snapshot file (emulation must be paused and in VBlank)
  */
 
-bool C64::LoadSnapshot(char *filename)
+bool C64::LoadSnapshot(const char * filename)
 {
-	FILE *f;
-
-	if ((f = fopen(filename, "rb")) != NULL) {
-		char Header[] = SNAPSHOT_HEADER;
-		char *b = Header, c = 0;
-		uint8_t delay, i;
-
-		// For some reason memcmp()/strcmp() and so forth utterly fail here.
-		while (*b > 32) {
-			if ((c = fgetc(f)) != *b++) {
-				b = NULL;
-				break;
-			}
-		}
-		if (b != NULL) {
-			uint8_t flags;
-			bool error = false;
-#ifndef FRODO_SC
-			long vicptr;	// File offset of VIC data
-#endif
-
-			while (c != 10)
-				c = fgetc(f);	// Shouldn't be necessary
-			if (fgetc(f) != 0) {
-				ShowRequester("Unknown snapshot format", "OK", NULL);
-				fclose(f);
-				return false;
-			}
-			flags = fgetc(f);
-#ifndef FRODO_SC
-			vicptr = ftell(f);
-#endif
-
-			error |= !LoadVICState(f);
-			error |= !LoadSIDState(f);
-			error |= !LoadCIAState(f);
-			error |= !LoadCPUState(f);
-
-			delay = fgetc(f);	// Number of cycles the 6510 is ahead of the previous chips
-#ifdef FRODO_SC
-			// Make the other chips "catch up" with the 6510
-			for (i=0; i<delay; i++) {
-				TheVIC->EmulateCycle();
-				TheCIA1->EmulateCycle();
-				TheCIA2->EmulateCycle();
-			}
-#endif
-			if ((flags & SNAPSHOT_1541) != 0) {
-				Prefs *prefs = new Prefs(ThePrefs);
-	
-				// First switch on emulation
-				error |= (fread(prefs->DrivePath[0], 256, 1, f) != 1);
-				prefs->Emul1541Proc = true;
-				NewPrefs(prefs);
-				ThePrefs = *prefs;
-				delete prefs;
-	
-				// Then read the context
-				error |= !Load1541State(f);
-	
-				delay = fgetc(f);	// Number of cycles the 6502 is ahead of the previous chips
-#ifdef FRODO_SC
-				// Make the other chips "catch up" with the 6502
-				for (i=0; i<delay; i++) {
-					TheVIC->EmulateCycle();
-					TheCIA1->EmulateCycle();
-					TheCIA2->EmulateCycle();
-					TheCPU->EmulateCycle();
-				}
-#endif
-				Load1541JobState(f);
-			} else if (ThePrefs.Emul1541Proc) {	// No emulation in snapshot, but currently active?
-				Prefs *prefs = new Prefs(ThePrefs);
-				prefs->Emul1541Proc = false;
-				NewPrefs(prefs);
-				ThePrefs = *prefs;
-				delete prefs;
-			}
-
-#ifndef FRODO_SC
-			fseek(f, vicptr, SEEK_SET);
-			LoadVICState(f);	// Load VIC data twice in SL (is REALLY necessary sometimes!)
-#endif
-			fclose(f);
-	
-			if (error) {
-				ShowRequester("Error reading snapshot file", "OK", NULL);
-				Reset();
-				return false;
-			} else
-				return true;
-		} else {
-			fclose(f);
-			ShowRequester("Not a Frodo snapshot file", "OK", NULL);
-			return false;
-		}
-	} else {
-		ShowRequester("Can't open snapshot file", "OK", NULL);
+	FILE * f = f = fopen(filename, "rb");
+	if (f == nullptr) {
+		ShowRequester("Can't open snapshot file", "OK", nullptr);
 		return false;
 	}
+
+	auto s = std::make_unique<Snapshot>();
+
+	if (fread(s.get(), sizeof(Snapshot), 1, f) != 1) {
+		ShowRequester("Error reading snapshot file", "OK", nullptr);
+		fclose(f);
+		return false;
+	}
+
+	if (memcmp(s->magic, SNAPSHOT_HEADER, sizeof(s->magic)) != 0) {
+		ShowRequester("Not a Frodo snapshot file", "OK", nullptr);
+		fclose(f);
+		return false;
+	}
+
+	RestoreSnapshot(s.get());
+
+	fclose(f);
+	return true;
 }
 
 

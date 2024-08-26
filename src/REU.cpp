@@ -72,7 +72,7 @@ REU::~REU()
  *  Prefs may have changed, reallocate expansion RAM
  */
 
-void REU::NewPrefs(Prefs *prefs)
+void REU::NewPrefs(const Prefs *prefs)
 {
 	open_close_reu(ThePrefs.REUSize, prefs->REUSize);
 }

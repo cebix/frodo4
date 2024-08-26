@@ -113,7 +113,7 @@ Job1541::~Job1541()
  *  Preferences may have changed
  */
 
-void Job1541::NewPrefs(Prefs *prefs)
+void Job1541::NewPrefs(const Prefs *prefs)
 {
 	// 1541 emulation turned off?
 	if (!prefs->Emul1541Proc)
@@ -136,7 +136,7 @@ void Job1541::NewPrefs(Prefs *prefs)
  *  Open .d64 file
  */
 
-void Job1541::open_d64_file(char *filepath)
+void Job1541::open_d64_file(const char *filepath)
 {
 	long size;
 	uint8_t magic[4];
@@ -438,8 +438,8 @@ void Job1541::MoveHeadIn(void)
 
 void Job1541::GetState(Job1541State *state)
 {
-	state->current_halftrack = current_halftrack;
 	state->gcr_ptr = gcr_ptr - gcr_data;
+	state->current_halftrack = current_halftrack;
 	state->write_protected = write_protected;
 	state->disk_changed = disk_changed;
 }
@@ -449,10 +449,10 @@ void Job1541::GetState(Job1541State *state)
  *  Set state
  */
 
-void Job1541::SetState(Job1541State *state)
+void Job1541::SetState(const Job1541State *state)
 {
-	current_halftrack = state->current_halftrack;
 	gcr_ptr = gcr_data + state->gcr_ptr;
+	current_halftrack = state->current_halftrack;
 	gcr_track_start = gcr_data + ((current_halftrack >> 1) - 1) * GCR_TRACK_SIZE;
 	gcr_track_end = gcr_track_start + num_sectors[current_halftrack >> 1] * GCR_SECTOR_SIZE;
 	write_protected = state->write_protected;

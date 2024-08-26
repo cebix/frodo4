@@ -47,7 +47,7 @@ public:
 	virtual void Reset(void);
 	virtual void EmulateLine(void) {}
 	virtual void WriteRegister(uint16_t adr, uint8_t byte);
-	virtual void NewPrefs(Prefs *prefs) {}
+	virtual void NewPrefs(const Prefs *prefs) {}
 	virtual void Pause(void) {}
 	virtual void Resume(void) {}
 

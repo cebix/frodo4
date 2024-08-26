@@ -145,7 +145,7 @@ void IEC::Reset(void)
  *  have changed.
  */
 
-void IEC::NewPrefs(Prefs *prefs)
+void IEC::NewPrefs(const Prefs *prefs)
 {
 	// Delete and recreate all changed drives
 	for (int i=0; i<4; i++) {

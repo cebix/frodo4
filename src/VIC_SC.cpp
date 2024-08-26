@@ -189,10 +189,10 @@ static uint16_t x_scroll;				// X scroll value
 static uint16_t y_scroll;				// Y scroll value
 static uint16_t cia_vabase;				// CIA VA14/15 video base
 
-static int cycle;						// Current cycle in line (1..63)
+static unsigned cycle;					// Current cycle in line (1..63)
 
 static int display_idx;					// Index of current display mode
-static int ml_index;					// Index in matrix/color_line[]
+static unsigned ml_index;				// Index in matrix/color_line[]
 static int skip_counter;				// Counter for frame-skipping
 
 static uint16_t mc[8];					// Sprite data counters
@@ -419,8 +419,8 @@ void MOS6569::GetState(MOS6569State *vd)
 	for (i=0; i<8; i++)
 		vd->sprite_base[i] = spr_ptr[i] | cia_vabase;
 
-	vd->cycle = cycle;
 	vd->raster_x = raster_x;
+	vd->cycle = cycle;
 	vd->ml_index = ml_index;
 	vd->ref_cnt = ref_cnt;
 	vd->last_vic_byte = LastVICByte;
@@ -432,7 +432,7 @@ void MOS6569::GetState(MOS6569State *vd)
  *  Set VIC state (only works if in VBlank)
  */
 
-void MOS6569::SetState(MOS6569State *vd)
+void MOS6569::SetState(const MOS6569State *vd)
 {
 	int i, j;
 
@@ -516,8 +516,8 @@ void MOS6569::SetState(MOS6569State *vd)
 	lp_triggered = vd->lp_triggered;
 	border_on = vd->border_on;
 
-	cycle = vd->cycle;
 	raster_x = vd->raster_x;
+	cycle = vd->cycle;
 	ml_index = vd->ml_index;
 	ref_cnt = vd->ref_cnt;
 	LastVICByte = vd->last_vic_byte;

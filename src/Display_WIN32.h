@@ -305,7 +305,7 @@ C64Display::~C64Display()
  *  Prefs may have changed
  */
 
-void C64Display::NewPrefs(Prefs *prefs)
+void C64Display::NewPrefs(const Prefs *prefs)
 {
 }
 

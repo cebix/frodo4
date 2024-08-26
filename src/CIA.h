@@ -36,7 +36,7 @@ public:
 
 	void Reset(void);
 	void GetState(MOS6526State *cs);
-	void SetState(MOS6526State *cs);
+	void SetState(const MOS6526State *cs);
 #ifdef FRODO_SC
 	void CheckIRQs(void);
 	void EmulateCycle(void);

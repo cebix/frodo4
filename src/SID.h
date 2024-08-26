@@ -43,11 +43,11 @@ public:
 	void Reset(void);
 	uint8_t ReadRegister(uint16_t adr);
 	void WriteRegister(uint16_t adr, uint8_t byte);
-	void NewPrefs(Prefs *prefs);
+	void NewPrefs(const Prefs *prefs);
 	void PauseSound(void);
 	void ResumeSound(void);
 	void GetState(MOS6581State *ss);
-	void SetState(MOS6581State *ss);
+	void SetState(const MOS6581State *ss);
 	void EmulateLine(void);
 
 private:
@@ -67,7 +67,7 @@ public:
 	virtual void Reset(void)=0;
 	virtual void EmulateLine(void)=0;
 	virtual void WriteRegister(uint16_t adr, uint8_t byte)=0;
-	virtual void NewPrefs(Prefs *prefs)=0;
+	virtual void NewPrefs(const Prefs *prefs)=0;
 	virtual void Pause(void)=0;
 	virtual void Resume(void)=0;
 };
