@@ -541,7 +541,7 @@ void C64Display::PollKeyboard(uint8_t *key_matrix, uint8_t *rev_matrix, uint8_t 
 						num_locked = !num_locked;
 						break;
 
-					case SDL_SCANCODE_KP_PLUS:	// Plus on keypad: Toggle fullscreen
+					case SDL_SCANCODE_KP_ENTER:	// Enter on keypad: Toggle fullscreen
 						if (ThePrefs.DisplayType == DISPTYPE_WINDOW) {
 							ThePrefs.DisplayType = DISPTYPE_SCREEN;
 							toggle_fullscreen(true);
@@ -551,7 +551,7 @@ void C64Display::PollKeyboard(uint8_t *key_matrix, uint8_t *rev_matrix, uint8_t 
 						}
 						break;
 
-					case SDL_SCANCODE_KP_ENTER:	// Enter on keypad: Toggle speed limiter
+					case SDL_SCANCODE_KP_PLUS:	// Plus on keypad: Toggle speed limiter
 						ThePrefs.LimitSpeed = !ThePrefs.LimitSpeed;
 						break;
 
