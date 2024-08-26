@@ -40,7 +40,7 @@ static constexpr int JOYSTICK_HYSTERESIS = 1000;
  *  Constructor, system-dependent things
  */
 
-void C64::c64_ctor1(void)
+void C64::c64_ctor1()
 {
 	// Initialize joystick variables
 	joy_minx[0] = joy_miny[0] = -JOYSTICK_DEAD_ZONE;
@@ -49,7 +49,7 @@ void C64::c64_ctor1(void)
 	joy_maxx[1] = joy_maxy[1] = +JOYSTICK_DEAD_ZONE;
 }
 
-void C64::c64_ctor2(void)
+void C64::c64_ctor2()
 {
    	printf("Use F9 to enter the SAM machine language monitor,\n"
    	       "F10 to edit preferences or quit,\n"
@@ -64,7 +64,7 @@ void C64::c64_ctor2(void)
  *  Destructor, system-dependent things
  */
 
-void C64::c64_dtor(void)
+void C64::c64_dtor()
 {
 }
 
@@ -73,7 +73,7 @@ void C64::c64_dtor(void)
  *  Start main emulation thread
  */
 
-void C64::Run(void)
+void C64::Run()
 {
 	// Reset chips
 	TheCPU->Reset();
@@ -120,7 +120,7 @@ void C64::VBlank(bool draw_frame)
 	} else {
 		TheCIA1->Joystick2 &= joykey;
 	}
-       
+
 	// Count TOD clocks
 	TheCIA1->CountTOD();
 	TheCIA2->CountTOD();
@@ -129,6 +129,9 @@ void C64::VBlank(bool draw_frame)
 	if (draw_frame) {
     	TheDisplay->Update();
 	}
+
+	// Handle rewind feature
+	handle_rewind();
 
 	// Calculate time between frames, display speedometer
 	chrono::time_point<chrono::steady_clock> now = chrono::steady_clock::now();
@@ -153,11 +156,11 @@ void C64::VBlank(bool draw_frame)
  * The emulation's main loop
  */
 
-void C64::thread_func(void)
+void C64::thread_func()
 {
-#ifdef FRODO_SC
 	while (!quit_thyself) {
 
+#ifdef FRODO_SC
 		// The order of calls is important here
 		if (TheVIC->EmulateCycle())
 			TheSID->EmulateLine();
@@ -175,8 +178,6 @@ void C64::thread_func(void)
 		}
 		CycleCounter++;
 #else
-	while (!quit_thyself) {
-
 		// The order of calls is important here
 		int cycles = TheVIC->EmulateLine();
 		TheSID->EmulateLine();
@@ -215,7 +216,7 @@ void C64::thread_func(void)
  *  Pause main emulation thread
  */
 
-void C64::Pause(void)
+void C64::Pause()
 {
 	TheSID->PauseSound();
 }
@@ -225,9 +226,13 @@ void C64::Pause(void)
  *  Resume main emulation thread
  */
 
-void C64::Resume(void)
+void C64::Resume()
 {
 	TheSID->ResumeSound();
+
+	// Flush event queue
+	SDL_PumpEvents();
+	SDL_FlushEvents(SDL_FIRSTEVENT, SDL_LASTEVENT);
 }
 
 

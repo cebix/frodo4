@@ -75,6 +75,10 @@ struct Snapshot {
 };
 
 
+// Length of rewind buffer
+static constexpr size_t REWIND_LENGTH = 50 * 30;  // 50 fps * 30 seconds
+
+
 /*
  *  Constructor: Allocate objects and memory
  */
@@ -119,16 +123,19 @@ C64::C64()
 	// Initialize RAM with powerup pattern
 	p = RAM;
 	for (unsigned i=0; i<512; i++) {
-		for (unsigned j=0; j<64; j++)
+		for (unsigned j=0; j<64; j++) {
 			*p++ = 0;
-		for (unsigned j=0; j<64; j++)
+		}
+		for (unsigned j=0; j<64; j++) {
 			*p++ = 0xff;
+		}
 	}
 
 	// Initialize color RAM with random values
 	p = Color;
-	for (unsigned i=0; i<COLOR_RAM_SIZE; i++)
+	for (unsigned i=0; i<COLOR_RAM_SIZE; i++) {
 		*p++ = rand() & 0x0f;
+	}
 
 	// Clear 1541 RAM
 	memset(RAM1541, 0, DRIVE_RAM_SIZE);
@@ -138,6 +145,8 @@ C64::C64()
 	joykey = 0xff;
 
 	CycleCounter = 0;
+
+	rewind_buffer = new Snapshot[REWIND_LENGTH];
 
 	// System-dependent things
 	c64_ctor2();
@@ -171,6 +180,8 @@ C64::~C64()
 	delete[] RAM1541;
 	delete[] ROM1541;
 
+	delete[] rewind_buffer;
+
 	c64_dtor();
 }
 
@@ -179,7 +190,7 @@ C64::~C64()
  *  Reset C64
  */
 
-void C64::Reset(void)
+void C64::Reset()
 {
 	TheCPU->AsyncReset();
 	TheCPU1541->AsyncReset();
@@ -187,6 +198,8 @@ void C64::Reset(void)
 	TheCIA1->Reset();
 	TheCIA2->Reset();
 	TheIEC->Reset();
+
+	ResetRewind();
 }
 
 
@@ -194,7 +207,7 @@ void C64::Reset(void)
  *  NMI C64
  */
 
-void C64::NMI(void)
+void C64::NMI()
 {
 	TheCPU->AsyncNMI();
 }
@@ -220,8 +233,11 @@ void C64::NewPrefs(const Prefs *prefs)
 	TheSID->NewPrefs(prefs);
 
 	// Reset 1541 processor if turned on
-	if (!ThePrefs.Emul1541Proc && prefs->Emul1541Proc)
+	if (!ThePrefs.Emul1541Proc && prefs->Emul1541Proc) {
 		TheCPU1541->AsyncReset();
+	}
+
+	ResetRewind();
 }
 
 
@@ -491,9 +507,69 @@ bool C64::LoadSnapshot(const char * filename)
 	}
 
 	RestoreSnapshot(s.get());
+	ResetRewind();
 
 	fclose(f);
 	return true;
+}
+
+
+/*
+ *  Stop rewind mode and clear rewind buffer
+ */
+
+void C64::ResetRewind()
+{
+	SetRewindMode(false);
+	rewind_start = 0;
+	rewind_fill = 0;
+}
+
+
+/*
+ *  Start or stop rewind mode
+ */
+
+void C64::SetRewindMode(bool on)
+{
+	rewinding = on;
+}
+
+
+/*
+ *  Handle rewind recording and replay (to be called in VBlank)
+ */
+
+void C64::handle_rewind()
+{
+	if (rewind_buffer != nullptr) {
+		if (! rewinding) {
+
+			// Add snapshot to ring buffer
+			size_t write_index = (rewind_start + rewind_fill) % REWIND_LENGTH;
+			MakeSnapshot(rewind_buffer + write_index);
+
+			if (rewind_fill < REWIND_LENGTH) {
+				++rewind_fill;
+			} else {
+				rewind_start = (rewind_start + 1) % REWIND_LENGTH;
+			}
+
+		} else {
+
+			// Pop snapshot from ring buffer
+			if (rewind_fill > 0) {
+				size_t read_index = (rewind_start + rewind_fill - 1) % REWIND_LENGTH;
+				RestoreSnapshot(rewind_buffer + read_index);
+
+				// Keep first snapshot in buffer so we can repeat it when
+				// reaching the end of the buffer
+				if (rewind_fill > 1) {
+					--rewind_fill;
+				}
+			}
+		}
+	}
 }
 
 

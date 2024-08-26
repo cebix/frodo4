@@ -116,6 +116,7 @@ void C64::Pause()
 {
 	StopTimer();
 	TheSID->PauseSound();
+	ResetRewind();
 	have_a_break = TRUE;
 	state_change = TRUE;
 }

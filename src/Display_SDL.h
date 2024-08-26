@@ -182,13 +182,13 @@ void C64Display::Update(void)
 		for (unsigned i = 0; i < 4; ++i) {
 			if (led_state[i] != LED_OFF) {
 				static const char * drive_str[4] = {
-					"D\x12 8", "D\x12 9", "D\x12 10", "D\x12 11"
+					"D\x12 8", "D\x12 9", "D\x12 10", "D\x12 11"	// \x12 = "r"
 				};
 
-				draw_string(DISPLAY_X * (i+1)/5 + 8, DISPLAY_Y - 8, drive_str[i], black);
-				draw_string(DISPLAY_X * (i+1)/5 + 7, DISPLAY_Y - 9, drive_str[i], shine_gray);
+				draw_string(DISPLAY_X * (i+1) / 6 + 8, DISPLAY_Y - 8, drive_str[i], black);
+				draw_string(DISPLAY_X * (i+1) / 6 + 7, DISPLAY_Y - 9, drive_str[i], shine_gray);
 
-				SDL_Rect r = {(int)(DISPLAY_X * (i+2) / 5 - 24), DISPLAY_Y - 8, 16, 6};
+				SDL_Rect r = {(int)(DISPLAY_X * (i+2) / 6 - 16), DISPLAY_Y - 8, 14, 6};
 				fill_rect(r, shadow_gray);
 				r.x += 1; r.y += 1; r.w -=1; r.h -= 1;
 				fill_rect(r, shine_gray);
@@ -209,6 +209,12 @@ void C64Display::Update(void)
 				r.w -= 1; r.h -= 1;
 				fill_rect(r, c);
 			}
+		}
+
+		// Draw rewind marker
+		if (TheC64->Rewinding()) {
+			draw_string(DISPLAY_X - 24, DISPLAY_Y - 8, "<<", black);
+			draw_string(DISPLAY_X - 24, DISPLAY_Y - 9, "<<", shine_gray);
 		}
 	}
 
@@ -555,6 +561,10 @@ void C64Display::PollKeyboard(uint8_t *key_matrix, uint8_t *rev_matrix, uint8_t 
 						ThePrefs.LimitSpeed = !ThePrefs.LimitSpeed;
 						break;
 
+					case SDL_SCANCODE_KP_MINUS:	// Minus on keypad: Rewind while pressed
+						TheC64->SetRewindMode(true);
+						break;
+
 					default:
 						translate_key(event.key.keysym.scancode, false, key_matrix, rev_matrix, joystick);
 						break;
@@ -563,7 +573,11 @@ void C64Display::PollKeyboard(uint8_t *key_matrix, uint8_t *rev_matrix, uint8_t 
 
 			// Key released
 			case SDL_KEYUP:
-				translate_key(event.key.keysym.scancode, true, key_matrix, rev_matrix, joystick);
+				if (event.key.keysym.scancode == SDL_SCANCODE_KP_MINUS) {
+					TheC64->SetRewindMode(false);
+				} else {
+					translate_key(event.key.keysym.scancode, true, key_matrix, rev_matrix, joystick);
+				}
 				break;
 
 			// Quit Frodo

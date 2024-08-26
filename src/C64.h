@@ -64,12 +64,12 @@ public:
 	C64();
 	~C64();
 
-	void Run(void);
-	void Quit(void);
-	void Pause(void);
-	void Resume(void);
-	void Reset(void);
-	void NMI(void);
+	void Run();
+	void Quit();
+	void Pause();
+	void Resume();
+	void Reset();
+	void NMI();
 	void VBlank(bool draw_frame);
 	void NewPrefs(const Prefs *prefs);
 	void PatchKernal(bool fast_reset, bool emul_1541_proc);
@@ -77,6 +77,9 @@ public:
 	void RestoreSnapshot(const Snapshot * s);
 	bool SaveSnapshot(const char * filename);
 	bool LoadSnapshot(const char * filename);
+	void SetRewindMode(bool on);
+	void ResetRewind();
+	bool Rewinding() { return rewinding; }
 
 	uint8_t *RAM, *Basic, *Kernal,
 	        *Char, *Color;		// C64
@@ -98,12 +101,13 @@ public:
 	uint32_t CycleCounter;		// Cycle counter for Frodo SC
 
 private:
-	void c64_ctor1(void);
-	void c64_ctor2(void);
-	void c64_dtor(void);
+	void c64_ctor1();
+	void c64_ctor2();
+	void c64_dtor();
 	void open_close_joysticks(int oldjoy1, int oldjoy2, int newjoy1, int newjoy2);
 	uint8_t poll_joystick(int port);
-	void thread_func(void);
+	void thread_func();
+	void handle_rewind();
 
 	bool thread_running;		// Emulation thread is running
 	bool quit_thyself;			// Emulation thread shall quit
@@ -115,9 +119,14 @@ private:
 	uint8_t orig_kernal_1d84,	// Original contents of kernal locations $1d84 and $1d85
 	        orig_kernal_1d85;	// (for undoing the Fast Reset patch)
 
+	Snapshot * rewind_buffer = nullptr;	// Snapshot buffer for rewinding
+	size_t rewind_start = 0;			// Index of first recorded snapshot
+	size_t rewind_fill = 0;				// Number of recorded snapshots
+	bool rewinding = false;				// Whether in rewind mode
+
 #ifdef __BEOS__
 public:
-	void SoundSync(void);
+	void SoundSync();
 
 private:
 	static long thread_invoc(void *obj);

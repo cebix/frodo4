@@ -29,13 +29,13 @@
  *  Constructor, system-dependent things
  */
 
-void C64::c64_ctor1(void)
+void C64::c64_ctor1()
 {
 	joy[0] = joy[1] = NULL;
 	joy_geek_port[0] = joy_geek_port[1] = false;
 }
 
-void C64::c64_ctor2(void)
+void C64::c64_ctor2()
 {
 	// Initialize joystick variables
 	joy_minx = joy_miny = 32767;
@@ -54,7 +54,7 @@ void C64::c64_ctor2(void)
  *  Destructor, system-dependent things
  */
 
-void C64::c64_dtor(void)
+void C64::c64_dtor()
 {
 	delete_sem(pause_sem);
 	delete_sem(sound_sync_sem);
@@ -65,7 +65,7 @@ void C64::c64_dtor(void)
  *  Start main emulation thread
  */
 
-void C64::Run(void)
+void C64::Run()
 {
 	// Reset chips
 	TheCPU->Reset();
@@ -92,7 +92,7 @@ void C64::Run(void)
  *  Stop main emulation thread
  */
 
-void C64::Quit(void)
+void C64::Quit()
 {
 	long ret;
 
@@ -111,7 +111,7 @@ void C64::Quit(void)
  *  Pause main emulation thread
  */
 
-void C64::Pause(void)
+void C64::Pause()
 {
 	// Ask the thread to pause and wait for acknowledge
 	if (thread_running && !have_a_break) {
@@ -126,7 +126,7 @@ void C64::Pause(void)
  *  Resume main emulation thread
  */
 
-void C64::Resume(void)
+void C64::Resume()
 {
 	if (thread_running && have_a_break) {
 		have_a_break = false;
@@ -211,7 +211,7 @@ void C64::VBlank(bool draw_frame)
  *  Called by SID after playing 1/50 sec of sound
  */
 
-void C64::SoundSync(void)
+void C64::SoundSync()
 {
 	release_sem(sound_sync_sem);
 }
@@ -332,7 +332,7 @@ long C64::thread_invoc(void *obj)
 	return 0;
 }
 
-void C64::thread_func(void)
+void C64::thread_func()
 {
 #ifdef PROFILING
 static bigtime_t vic_time_acc = 0;
