@@ -62,7 +62,7 @@ MOS6526_2::MOS6526_2(MOS6510 *CPU, MOS6569 *VIC, MOS6502_1541 *CPU1541) : MOS652
  *  Reset the CIA
  */
 
-void MOS6526::Reset(void)
+void MOS6526::Reset()
 {
 	pra = prb = ddra = ddrb = 0;
 
@@ -78,19 +78,20 @@ void MOS6526::Reset(void)
 	tod_divider = 0;
 }
 
-void MOS6526_1::Reset(void)
+void MOS6526_1::Reset()
 {
 	MOS6526::Reset();
 
 	// Clear keyboard matrix and joystick states
-	for (int i=0; i<8; i++)
+	for (int i=0; i<8; i++) {
 		KeyMatrix[i] = RevMatrix[i] = 0xff;
+	}
 
 	Joystick1 = Joystick2 = 0xff;
 	prev_lp = 0x10;
 }
 
-void MOS6526_2::Reset(void)
+void MOS6526_2::Reset()
 {
 	MOS6526::Reset();
 
@@ -272,7 +273,7 @@ uint8_t MOS6526_2::ReadRegister(uint16_t adr)
  */
 
 // Write to port B, check for lightpen interrupt
-inline void MOS6526_1::check_lp(void)
+inline void MOS6526_1::check_lp()
 {
 	if ((prb | ~ddrb) & 0x10 != prev_lp)
 		the_vic->TriggerLightpen();
@@ -296,40 +297,46 @@ void MOS6526_1::WriteRegister(uint16_t adr, uint8_t byte)
 		case 0x4: latcha = (latcha & 0xff00) | byte; break;
 		case 0x5:
 			latcha = (latcha & 0xff) | (byte << 8);
-			if (!(cra & 1))	// Reload timer if stopped
+			if (!(cra & 1)) {	// Reload timer if stopped
 				ta = latcha;
+			}
 			break;
 
 		case 0x6: latchb = (latchb & 0xff00) | byte; break;
 		case 0x7:
 			latchb = (latchb & 0xff) | (byte << 8);
-			if (!(crb & 1))	// Reload timer if stopped
+			if (!(crb & 1)) {	// Reload timer if stopped
 				tb = latchb;
+			}
 			break;
 
 		case 0x8:
-			if (crb & 0x80)
+			if (crb & 0x80) {
 				alm_10ths = byte & 0x0f;
-			else
+			} else {
 				tod_10ths = byte & 0x0f;
+			}
 			break;
 		case 0x9:
-			if (crb & 0x80)
+			if (crb & 0x80) {
 				alm_sec = byte & 0x7f;
-			else
+			} else {
 				tod_sec = byte & 0x7f;
+			}
 			break;
 		case 0xa:
-			if (crb & 0x80)
+			if (crb & 0x80) {
 				alm_min = byte & 0x7f;
-			else
+			} else {
 				tod_min = byte & 0x7f;
+			}
 			break;
 		case 0xb:
-			if (crb & 0x80)
+			if (crb & 0x80) {
 				alm_hr = byte & 0x9f;
-			else
+			} else {
 				tod_hr = byte & 0x9f;
+			}
 			break;
 
 		case 0xc:
@@ -338,29 +345,33 @@ void MOS6526_1::WriteRegister(uint16_t adr, uint8_t byte)
 			break;
 
 		case 0xd:
-			if (ThePrefs.CIAIRQHack)	// Hack for addressing modes that read from the address
+			if (ThePrefs.CIAIRQHack) {	// Hack for addressing modes that read from the address
 				icr = 0;
+			}
 			if (byte & 0x80) {
 				int_mask |= byte & 0x7f;
 				if (icr & int_mask & 0x1f) { // Trigger IRQ if pending
 					icr |= 0x80;
 					the_cpu->TriggerCIAIRQ();
 				}
-			} else
+			} else {
 				int_mask &= ~byte;
+			}
 			break;
 
 		case 0xe:
 			cra = byte & 0xef;
-			if (byte & 0x10) // Force load
+			if (byte & 0x10) { // Force load
 				ta = latcha;
+			}
 			ta_cnt_phi2 = ((byte & 0x21) == 0x01);
 			break;
 
 		case 0xf:
 			crb = byte & 0xef;
-			if (byte & 0x10) // Force load
+			if (byte & 0x10) { // Force load
 				tb = latchb;
+			}
 			tb_cnt_phi2 = ((byte & 0x61) == 0x01);
 			tb_cnt_ta = ((byte & 0x61) == 0x41);
 			break;
@@ -385,8 +396,9 @@ void MOS6526_2::WriteRegister(uint16_t adr, uint8_t byte)
 				| (byte << 1) & 0x10;		// ATN
 			if ((IECLines ^ old_lines) & 0x10) {	// ATN changed
 				the_cpu_1541->NewATNState();
-				if (old_lines & 0x10)				// ATN 1->0
+				if (old_lines & 0x10) {				// ATN 1->0
 					the_cpu_1541->IECInterrupt();
+				}
 			}
 			break;
 		}
@@ -401,40 +413,46 @@ void MOS6526_2::WriteRegister(uint16_t adr, uint8_t byte)
 		case 0x4: latcha = (latcha & 0xff00) | byte; break;
 		case 0x5:
 			latcha = (latcha & 0xff) | (byte << 8);
-			if (!(cra & 1))	// Reload timer if stopped
+			if (!(cra & 1)) {	// Reload timer if stopped
 				ta = latcha;
+			}
 			break;
 
 		case 0x6: latchb = (latchb & 0xff00) | byte; break;
 		case 0x7:
 			latchb = (latchb & 0xff) | (byte << 8);
-			if (!(crb & 1))	// Reload timer if stopped
+			if (!(crb & 1)) {	// Reload timer if stopped
 				tb = latchb;
+			}
 			break;
 
 		case 0x8:
-			if (crb & 0x80)
+			if (crb & 0x80) {
 				alm_10ths = byte & 0x0f;
-			else
+			} else {
 				tod_10ths = byte & 0x0f;
+			}
 			break;
 		case 0x9:
-			if (crb & 0x80)
+			if (crb & 0x80) {
 				alm_sec = byte & 0x7f;
-			else
+			} else {
 				tod_sec = byte & 0x7f;
+			}
 			break;
 		case 0xa:
-			if (crb & 0x80)
+			if (crb & 0x80) {
 				alm_min = byte & 0x7f;
-			else
+			} else {
 				tod_min = byte & 0x7f;
+			}
 			break;
 		case 0xb:
-			if (crb & 0x80)
+			if (crb & 0x80) {
 				alm_hr = byte & 0x9f;
-			else
+			} else {
 				tod_hr = byte & 0x9f;
+			}
 			break;
 
 		case 0xc:
@@ -443,29 +461,33 @@ void MOS6526_2::WriteRegister(uint16_t adr, uint8_t byte)
 			break;
 
 		case 0xd:
-			if (ThePrefs.CIAIRQHack)
+			if (ThePrefs.CIAIRQHack) {
 				icr = 0;
+			}
 			if (byte & 0x80) {
 				int_mask |= byte & 0x7f;
 				if (icr & int_mask & 0x1f) { // Trigger NMI if pending
 					icr |= 0x80;
 					the_cpu->TriggerNMI();
 				}
-			} else
+			} else {
 				int_mask &= ~byte;
+			}
 			break;
 
 		case 0xe:
 			cra = byte & 0xef;
-			if (byte & 0x10) // Force load
+			if (byte & 0x10) { // Force load
 				ta = latcha;
+			}
 			ta_cnt_phi2 = ((byte & 0x21) == 0x01);
 			break;
 
 		case 0xf:
 			crb = byte & 0xef;
-			if (byte & 0x10) // Force load
+			if (byte & 0x10) { // Force load
 				tb = latchb;
+			}
 			tb_cnt_phi2 = ((byte & 0x61) == 0x01);
 			tb_cnt_ta = ((byte & 0x61) == 0x41);
 			break;
@@ -477,20 +499,21 @@ void MOS6526_2::WriteRegister(uint16_t adr, uint8_t byte)
  *  Count CIA TOD clock (called during VBlank)
  */
 
-void MOS6526::CountTOD(void)
+void MOS6526::CountTOD()
 {
 	uint8_t lo, hi;
 
 	// Decrement frequency divider
-	if (tod_divider)
+	if (tod_divider) {
 		tod_divider--;
-	else {
+	} else {
 
 		// Reload divider according to 50/60 Hz flag
-		if (cra & 0x80)
+		if (cra & 0x80) {
 			tod_divider = 4;
-		else
+		} else {
 			tod_divider = 5;
+		}
 
 		// 1/10 seconds
 		tod_10ths++;
@@ -526,18 +549,22 @@ void MOS6526::CountTOD(void)
 						hi++;
 					}
 					tod_hr |= (hi << 4) | lo;
-					if ((tod_hr & 0x1f) > 0x11)
+					if ((tod_hr & 0x1f) > 0x11) {
 						tod_hr = tod_hr & 0x80 ^ 0x80;
-				} else
+					}
+				} else {
 					tod_min = (hi << 4) | lo;
-			} else
+				}
+			} else {
 				tod_sec = (hi << 4) | lo;
+			}
 		}
 
 		// Alarm time reached? Trigger interrupt if enabled
 		if (tod_10ths == alm_10ths && tod_sec == alm_sec &&
-			tod_min == alm_min && tod_hr == alm_hr)
+			tod_min == alm_min && tod_hr == alm_hr) {
 			TriggerInterrupt(4);
+		}
 	}
 }
 

@@ -312,7 +312,7 @@ MOS6569::MOS6569(C64 *c64, C64Display *disp, MOS6510 *CPU, uint8_t *RAM, uint8_t
  *  Reinitialize the colors table for when the palette has changed
  */
 
-void MOS6569::ReInitColors(void)
+void MOS6569::ReInitColors()
 {
 	int i;
 
@@ -530,9 +530,9 @@ void MOS6569::SetState(const MOS6569State *vd)
  */
 
 #ifdef GLOBAL_VARS
-static inline void raster_irq(void)
+static inline void raster_irq()
 #else
-inline void MOS6569::raster_irq(void)
+inline void MOS6569::raster_irq()
 #endif
 {
 	irq_flag |= 0x01;
@@ -779,7 +779,7 @@ void MOS6569::ChangedVA(uint16_t new_va)
  *  Trigger lightpen interrupt, latch lightpen coordinates
  */
 
-void MOS6569::TriggerLightpen(void)
+void MOS6569::TriggerLightpen()
 {
 	if (!lp_triggered) {		// Lightpen triggers only once per frame
 		lp_triggered = true;
@@ -840,9 +840,9 @@ inline void memset8(uint8_t *p, uint8_t c)
 inline
 #endif
 #ifdef GLOBAL_VARS
-static void matrix_access(void)
+static void matrix_access()
 #else
-void MOS6569::matrix_access(void)
+void MOS6569::matrix_access()
 #endif
 {
 	if (the_cpu->BALow) {
@@ -865,9 +865,9 @@ void MOS6569::matrix_access(void)
 inline
 #endif
 #ifdef GLOBAL_VARS
-static void graphics_access(void)
+static void graphics_access()
 #else
-void MOS6569::graphics_access(void)
+void MOS6569::graphics_access()
 #endif
 {
 	if (display_state) {
@@ -899,9 +899,9 @@ void MOS6569::graphics_access(void)
  */
 
 #ifdef GLOBAL_VARS
-static void draw_background(void)
+static void draw_background()
 #else
-void MOS6569::draw_background(void)
+void MOS6569::draw_background()
 #endif
 {
 	uint8_t *p = chunky_ptr;
@@ -947,9 +947,9 @@ void MOS6569::draw_background(void)
 inline
 #endif
 #ifdef GLOBAL_VARS
-static void draw_graphics(void)
+static void draw_graphics()
 #else
-void MOS6569::draw_graphics(void)
+void MOS6569::draw_graphics()
 #endif
 {
 	uint8_t *p = chunky_ptr + x_scroll;
@@ -1070,9 +1070,9 @@ draw_multi:
  */
 
 #ifdef GLOBAL_VARS
-inline static void draw_sprites(void)
+inline static void draw_sprites()
 #else
-inline void MOS6569::draw_sprites(void)
+inline void MOS6569::draw_sprites()
 #endif
 {
 	int i;
@@ -1506,7 +1506,7 @@ static asm void fastcopy(register uchar *dst, register uchar *src)
 	}
 
 
-bool MOS6569::EmulateCycle(void)
+bool MOS6569::EmulateCycle()
 {
 	uint8_t mask;
 	int i;
@@ -1572,9 +1572,9 @@ bool MOS6569::EmulateCycle(void)
 				xmod = the_display->BitmapXMod();
 
 				// Trigger raster IRQ if IRQ in line 0
-				if (irq_raster == 0)
+				if (irq_raster == 0) {
 					raster_irq();
-
+				}
 			}
 
 			// Our output goes here

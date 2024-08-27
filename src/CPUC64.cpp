@@ -117,7 +117,7 @@ MOS6510::MOS6510(C64 *c64, uint8_t *Ram, uint8_t *Basic, uint8_t *Kernal, uint8_
  *  Reset CPU asynchronously
  */
 
-void MOS6510::AsyncReset(void)
+void MOS6510::AsyncReset()
 {
 	interrupt.intr[INT_RESET] = true;
 }
@@ -127,10 +127,11 @@ void MOS6510::AsyncReset(void)
  *  Raise NMI asynchronously (Restore key)
  */
 
-void MOS6510::AsyncNMI(void)
+void MOS6510::AsyncNMI()
 {
-	if (!nmi_state)
+	if (!nmi_state) {
 		interrupt.intr[INT_NMI] = true;
+	}
 }
 
 
@@ -138,7 +139,7 @@ void MOS6510::AsyncNMI(void)
  *  Memory configuration has probably changed
  */
 
-void MOS6510::new_config(void)
+void MOS6510::new_config()
 {
 	uint8_t port = ~ram[0] | ram[1];
 
@@ -158,14 +159,15 @@ inline uint8_t MOS6510::read_byte_io(uint16_t adr)
 	switch (adr >> 12) {
 		case 0xa:
 		case 0xb:
-			if (basic_in)
+			if (basic_in) {
 				return basic_rom[adr & 0x1fff];
-			else
+			} else {
 				return ram[adr];
+			}
 		case 0xc:
 			return ram[adr];
 		case 0xd:
-			if (io_in)
+			if (io_in) {
 				switch ((adr >> 8) & 0x0f) {
 					case 0x0:	// VIC
 					case 0x1:
@@ -195,16 +197,18 @@ inline uint8_t MOS6510::read_byte_io(uint16_t adr)
 						else
 							return read_emulator_id(adr & 0x7f);
 				}
-			else if (char_in)
+			} else if (char_in) {
 				return char_rom[adr & 0x0fff];
-			else
+			} else {
 				return ram[adr];
+			}
 		case 0xe:
 		case 0xf:
-			if (kernal_in)
+			if (kernal_in) {
 				return kernal_rom[adr & 0x1fff];
-			else
+			} else {
 				return ram[adr];
+			}
 		default:	// Can't happen
 			return 0;
 	}
@@ -217,10 +221,11 @@ inline uint8_t MOS6510::read_byte_io(uint16_t adr)
 
 uint8_t MOS6510::read_byte(uint16_t adr)
 {
-	if (adr < 0xa000)
+	if (adr < 0xa000) {
 		return ram[adr];
-	else
+	} else {
 		return read_byte_io(adr);
+	}
 }
 
 
@@ -271,25 +276,28 @@ inline uint16_t MOS6510::read_word(uint16_t adr)
 			break;
 		case 0xa:
 		case 0xb:
-			if (basic_in)
+			if (basic_in) {
 				return *(uint16_t*)&basic_rom[adr & 0x1fff];
-			else
+			} else {
 				return *(uint16_t*)&ram[adr];
+			}
 		case 0xc:
 			return *(uint16_t*)&ram[adr];
 		case 0xd:
-			if (io_in)
+			if (io_in) {
 				return read_byte(adr) | (read_byte(adr+1) << 8);
-			else if (char_in)
+			} else if (char_in) {
 				return *(uint16_t*)&char_rom[adr & 0x0fff];
-			else
+			} else {
 				return *(uint16_t*)&ram[adr];
+			}
 		case 0xe:
 		case 0xf:
-			if (kernal_in)
+			if (kernal_in) {
 				return *(uint16_t*)&kernal_rom[adr & 0x1fff];
-			else
+			} else {
 				return *(uint16_t*)&ram[adr];
+			}
 		default:	// Can't happen
 			return 0;
 	}
@@ -313,9 +321,10 @@ void MOS6510::write_byte_io(uint16_t adr, uint8_t byte)
 {
 	if (adr >= 0xe000) {
 		ram[adr] = byte;
-		if (adr == 0xff00)
+		if (adr == 0xff00) {
 			TheREU->FF00Trigger();
-	} else if (io_in)
+		}
+	} else if (io_in) {
 		switch ((adr >> 8) & 0x0f) {
 			case 0x0:	// VIC
 			case 0x1:
@@ -343,12 +352,14 @@ void MOS6510::write_byte_io(uint16_t adr, uint8_t byte)
 				return;
 			case 0xe:	// REU/Open I/O
 			case 0xf:
-				if ((adr & 0xfff0) == 0xdf00)
+				if ((adr & 0xfff0) == 0xdf00) {
 					TheREU->WriteRegister(adr & 0x0f, byte);
+				}
 				return;
 		}
-	else
-		ram[adr] = byte;	
+	} else {
+		ram[adr] = byte;
+	}
 }
 
 
@@ -360,10 +371,12 @@ inline void MOS6510::write_byte(uint16_t adr, uint8_t byte)
 {
 	if (adr < 0xd000) {
 		ram[adr] = byte;
-		if (adr < 2)
+		if (adr < 2) {
 			new_config();
-	} else
+		}
+	} else {
 		write_byte_io(adr, byte);
+	}
 }
 
 
@@ -397,8 +410,9 @@ inline void MOS6510::write_zp(uint16_t adr, uint8_t byte)
 	ram[adr] = byte;
 
 	// Check if memory configuration may have changed.
-	if (adr < 2)
+	if (adr < 2) {
 		new_config();
+	}
 }
 
 
@@ -653,12 +667,13 @@ void MOS6510::SetState(const MOS6510State *s)
  *  Reset CPU
  */
 
-void MOS6510::Reset(void)
+void MOS6510::Reset()
 {
 	// Delete 'CBM80' if present
 	if (ram[0x8004] == 0xc3 && ram[0x8005] == 0xc2 && ram[0x8006] == 0xcd
-	 && ram[0x8007] == 0x38 && ram[0x8008] == 0x30)
+	 && ram[0x8007] == 0x38 && ram[0x8008] == 0x30) {
 		ram[0x8004] = 0;
+	}
 
 	// Initialize extra 6510 registers and memory configuration
 	ram[0] = ram[1] = 0;

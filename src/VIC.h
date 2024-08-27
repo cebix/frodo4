@@ -53,13 +53,13 @@ public:
 	uint8_t ReadRegister(uint16_t adr);
 	void WriteRegister(uint16_t adr, uint8_t byte);
 #ifdef FRODO_SC
-	bool EmulateCycle(void);
+	bool EmulateCycle();
 #else
-	int EmulateLine(void);
+	int EmulateLine();
 #endif
 	void ChangedVA(uint16_t new_va);	// CIA VA14/15 has changed
-	void TriggerLightpen(void);			// Trigger lightpen interrupt
-	void ReInitColors(void);
+	void TriggerLightpen();				// Trigger lightpen interrupt
+	void ReInitColors();
 	void GetState(MOS6569State *vd);
 	void SetState(const MOS6569State *vd);
 
@@ -69,8 +69,8 @@ public:
 
 private:
 #ifndef GLOBAL_VARS
-	void vblank(void);
-	void raster_irq(void);
+	void vblank();
+	void raster_irq();
 
 	uint16_t mx[8];					// VIC registers
 	uint8_t my[8];
@@ -138,11 +138,11 @@ private:
 
 #ifdef FRODO_SC
 	uint8_t read_byte(uint16_t adr);
-	void matrix_access(void);
-	void graphics_access(void);
-	void draw_graphics(void);
-	void draw_sprites(void);
-	void draw_background(void);
+	void matrix_access();
+	void graphics_access();
+	void draw_graphics();
+	void draw_sprites();
+	void draw_background();
 
 	unsigned cycle;					// Current cycle in line (1..63)
 
@@ -179,7 +179,7 @@ private:
 	uint32_t first_ba_cycle;		// Cycle when BA first went low
 #else
 	uint8_t *get_physical(uint16_t adr);
-	void make_mc_table(void);
+	void make_mc_table();
 	void el_std_text(uint8_t *p, uint8_t *q, uint8_t *r);
 	void el_mc_text(uint8_t *p, uint8_t *q, uint8_t *r);
 	void el_std_bitmap(uint8_t *p, uint8_t *q, uint8_t *r);

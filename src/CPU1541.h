@@ -59,21 +59,21 @@ public:
 	MOS6502_1541(C64 *c64, Job1541 *job, C64Display *disp, uint8_t *Ram, uint8_t *Rom);
 
 #ifdef FRODO_SC
-	void EmulateCycle(void);			// Emulate one clock cycle
+	void EmulateCycle();				// Emulate one clock cycle
 #else
 	int EmulateLine(int cycles_left);	// Emulate until cycles_left underflows
 #endif
-	void Reset(void);
-	void AsyncReset(void);				// Reset the CPU asynchronously
+	void Reset();
+	void AsyncReset();					// Reset the CPU asynchronously
 	void GetState(MOS6502State *s);
 	void SetState(const MOS6502State *s);
 	uint8_t ExtReadByte(uint16_t adr);
 	void ExtWriteByte(uint16_t adr, uint8_t byte);
 	void CountVIATimers(int cycles);
-	void NewATNState(void);
-	void IECInterrupt(void);
-	void TriggerJobIRQ(void);
-	bool InterruptEnabled(void);
+	void NewATNState();
+	void IECInterrupt();
+	void TriggerJobIRQ();
+	bool InterruptEnabled();
 
 	MOS6526_2 *TheCIA2;		// Pointer to C64 CIA 2
 
@@ -210,15 +210,16 @@ struct MOS6502State {
  */
 
 #ifdef FRODO_SC
-inline void MOS6502_1541::TriggerJobIRQ(void)
+inline void MOS6502_1541::TriggerJobIRQ()
 {
-	if (!(interrupt.intr[INT_VIA2IRQ]))
+	if (!(interrupt.intr[INT_VIA2IRQ])) {
 		first_irq_cycle = the_c64->CycleCounter;
+	}
 	interrupt.intr[INT_VIA2IRQ] = true;
 	Idle = false;
 }
 #else
-inline void MOS6502_1541::TriggerJobIRQ(void)
+inline void MOS6502_1541::TriggerJobIRQ()
 {
 	interrupt.intr[INT_VIA2IRQ] = true;
 	Idle = false;
@@ -236,30 +237,35 @@ inline void MOS6502_1541::CountVIATimers(int cycles)
 
 	via1_t1c = tmp = via1_t1c - cycles;
 	if (tmp > 0xffff) {
-		if (via1_acr & 0x40)	// Reload from latch in free-run mode
+		if (via1_acr & 0x40) {	// Reload from latch in free-run mode
 			via1_t1c = via1_t1l;
+		}
 		via1_ifr |= 0x40;
 	}
 
 	if (!(via1_acr & 0x20)) {	// Only count in one-shot mode
 		via1_t2c = tmp = via1_t2c - cycles;
-		if (tmp > 0xffff)
+		if (tmp > 0xffff) {
 			via1_ifr |= 0x20;
+		}
 	}
 
 	via2_t1c = tmp = via2_t1c - cycles;
 	if (tmp > 0xffff) {
-		if (via2_acr & 0x40)	// Reload from latch in free-run mode
+		if (via2_acr & 0x40) {	// Reload from latch in free-run mode
 			via2_t1c = via2_t1l;
+		}
 		via2_ifr |= 0x40;
-		if (via2_ier & 0x40)
+		if (via2_ier & 0x40) {
 			TriggerJobIRQ();
+		}
 	}
 
 	if (!(via2_acr & 0x20)) {	// Only count in one-shot mode
 		via2_t2c = tmp = via2_t2c - cycles;
-		if (tmp > 0xffff)
+		if (tmp > 0xffff) {
 			via2_ifr |= 0x20;
+		}
 	}
 }
 
@@ -268,7 +274,7 @@ inline void MOS6502_1541::CountVIATimers(int cycles)
  *  ATN line probably changed state, recalc IECLines
  */
 
-inline void MOS6502_1541::NewATNState(void)
+inline void MOS6502_1541::NewATNState()
 {
 	uint8_t byte = ~via1_prb & via1_ddrb;
 	IECLines = (byte << 6) & ((~byte ^ TheCIA2->IECLines) << 3) & 0x80	// DATA (incl. ATN acknowledge)
@@ -280,7 +286,7 @@ inline void MOS6502_1541::NewATNState(void)
  *  Interrupt by negative edge of ATN on IEC bus
  */
 
-inline void MOS6502_1541::IECInterrupt(void)
+inline void MOS6502_1541::IECInterrupt()
 {
 	ram[0x7c] = 1;
 
@@ -293,7 +299,7 @@ inline void MOS6502_1541::IECInterrupt(void)
  *  Test if interrupts are enabled (for job loop)
  */
 
-inline bool MOS6502_1541::InterruptEnabled(void)
+inline bool MOS6502_1541::InterruptEnabled()
 {
 	return !i_flag;
 }

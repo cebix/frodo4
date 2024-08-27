@@ -31,14 +31,14 @@ public:
 	~REU();
 
 	void NewPrefs(const Prefs *prefs);
-	void Reset(void);
+	void Reset();
 	uint8_t ReadRegister(uint16_t adr);
 	void WriteRegister(uint16_t adr, uint8_t byte);
-	void FF00Trigger(void);
+	void FF00Trigger();
 
 private:
 	void open_close_reu(int old_size, int new_size);
-	void execute_dma(void);
+	void execute_dma();
 
 	MOS6510 *the_cpu;	// Pointer to 6510
 

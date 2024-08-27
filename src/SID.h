@@ -40,15 +40,15 @@ public:
 	MOS6581(C64 *c64);
 	~MOS6581();
 
-	void Reset(void);
+	void Reset();
 	uint8_t ReadRegister(uint16_t adr);
 	void WriteRegister(uint16_t adr, uint8_t byte);
 	void NewPrefs(const Prefs *prefs);
-	void PauseSound(void);
-	void ResumeSound(void);
+	void PauseSound();
+	void ResumeSound();
 	void GetState(MOS6581State *ss);
 	void SetState(const MOS6581State *ss);
-	void EmulateLine(void);
+	void EmulateLine();
 
 private:
 	void open_close_renderer(int old_type, int new_type);
@@ -64,12 +64,12 @@ private:
 class SIDRenderer {
 public:
 	virtual ~SIDRenderer() {}
-	virtual void Reset(void)=0;
-	virtual void EmulateLine(void)=0;
+	virtual void Reset()=0;
+	virtual void EmulateLine()=0;
 	virtual void WriteRegister(uint16_t adr, uint8_t byte)=0;
 	virtual void NewPrefs(const Prefs *prefs)=0;
-	virtual void Pause(void)=0;
-	virtual void Resume(void)=0;
+	virtual void Pause()=0;
+	virtual void Resume()=0;
 };
 
 
@@ -115,10 +115,11 @@ struct MOS6581State {
  * Fill buffer (for Unix sound routines), sample volume (for sampled voice)
  */
 
-inline void MOS6581::EmulateLine(void)
+inline void MOS6581::EmulateLine()
 {
-	if (the_renderer != NULL)
+	if (the_renderer != NULL) {
 		the_renderer->EmulateLine();
+	}
 }
 
 
@@ -154,8 +155,9 @@ inline void MOS6581::WriteRegister(uint16_t adr, uint8_t byte)
 	// Keep a local copy of the register values
 	last_sid_byte = regs[adr] = byte;
 
-	if (the_renderer != NULL)
+	if (the_renderer != NULL) {
 		the_renderer->WriteRegister(adr, byte);
+	}
 }
 
 #endif

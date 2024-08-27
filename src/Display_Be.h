@@ -153,7 +153,7 @@ class C64Window : public BDirectWindow {
 public:
 	C64Window();
 
-	virtual bool QuitRequested(void);
+	virtual bool QuitRequested();
 	virtual void MessageReceived(BMessage *msg);
 	virtual void DirectConnected(direct_buffer_info *info);
 
@@ -199,7 +199,7 @@ public:
 	virtual void ScreenConnected(bool active);
 	virtual void DispatchMessage(BMessage *msg, BHandler *handler);
 	void DrawLED(int i, int state);
-	void DrawSpeedometer(void);
+	void DrawSpeedometer();
 	void FillRect(int x1, int y1, int x2, int y2, int color);
 
 	bool Connected;			// Flag: screen connected
@@ -237,7 +237,7 @@ class SpeedoView : public BView {
 public:
 	SpeedoView(BRect frame);
 	virtual void Draw(BRect update);
-	virtual void Pulse(void);
+	virtual void Pulse();
 	void SetValue(int percent);
 
 private:
@@ -254,8 +254,8 @@ class LEDView : public BView {
 public:
 	LEDView(BRect frame, const char *label);
 	virtual void Draw(BRect update);
-	virtual void Pulse(void);
-	void DrawLED(void);
+	virtual void Pulse();
+	void DrawLED();
 	void SetState(int state);
 
 private:
@@ -344,7 +344,7 @@ void C64Display::NewPrefs(const Prefs *prefs)
  *  Redraw bitmap (let the window thread do it)
  */
 
-void C64Display::Update(void)
+void C64Display::Update()
 {
 	if (using_screen) {
 
@@ -451,7 +451,7 @@ void C64Display::Speedometer(int speed)
  *  Return pointer to bitmap data
  */
 
-uint8_t *C64Display::BitmapBase(void)
+uint8_t *C64Display::BitmapBase()
 {
 	if (using_screen) {
 		if (ThePrefs.DoubleScan)
@@ -471,7 +471,7 @@ uint8_t *C64Display::BitmapBase(void)
  *  Return number of bytes per row
  */
 
-int C64Display::BitmapXMod(void)
+int C64Display::BitmapXMod()
 {
 	if (using_screen) {
 		if (ThePrefs.DoubleScan)
@@ -571,7 +571,7 @@ void C64Display::PollKeyboard(uint8_t *key_matrix, uint8_t *rev_matrix, uint8_t 
  *  Check if NumLock is down (for switching the joystick keyboard emulation)
  */
 
-bool C64Display::NumLock(void)
+bool C64Display::NumLock()
 {
 	return modifiers() & B_NUM_LOCK;
 }
@@ -593,7 +593,7 @@ void C64Display::InitColors(uint8_t *colors)
  *  Pause display (GameKit only)
  */
 
-void C64Display::Pause(void)
+void C64Display::Pause()
 {
 	if (using_screen)
 		the_screen->Hide();
@@ -604,7 +604,7 @@ void C64Display::Pause(void)
  *  Resume display (GameKit only)
  */
 
-void C64Display::Resume(void)
+void C64Display::Resume()
 {
 	if (using_screen)
 		the_screen->Show();
@@ -683,7 +683,7 @@ C64Window::C64Window() : BDirectWindow(WindowFrame, "Frodo", B_TITLED_WINDOW, B_
  *  Closing the window quits Frodo
  */
 
-bool C64Window::QuitRequested(void)
+bool C64Window::QuitRequested()
 {
 	be_app->PostMessage(B_QUIT_REQUESTED);
 	return false;
@@ -1053,7 +1053,7 @@ void SpeedoView::Draw(BRect update)
  *  Update speedometer at regular intervals
  */
 
-void SpeedoView::Pulse(void)
+void SpeedoView::Pulse()
 {
 	Invalidate(BRect(1, 1, bounds.right-1, 15));
 }
@@ -1116,7 +1116,7 @@ void LEDView::Draw(BRect update)
  *  Redraw just the LED
  */
 
-void LEDView::DrawLED(void)
+void LEDView::DrawLED()
 {
 	Window()->Lock();
 	switch (current_state) {
@@ -1153,7 +1153,7 @@ void LEDView::SetState(int state)
  *  Toggle red error LED
  */
 
-void LEDView::Pulse(void)
+void LEDView::Pulse()
 {
 	switch (current_state) {
 		case LED_ERROR_ON:

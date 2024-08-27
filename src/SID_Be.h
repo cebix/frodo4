@@ -31,7 +31,7 @@ const media_raw_audio_format audio_format = {SAMPLE_FREQ, 1, media_raw_audio_for
 const media_raw_audio_format audio_format = {SAMPLE_FREQ, 1, media_raw_audio_format::B_AUDIO_SHORT, B_MEDIA_BIG_ENDIAN, SAMPLE_FREQ / CALC_FREQ * 2};
 #endif
 
-void DigitalRenderer::init_sound(void)
+void DigitalRenderer::init_sound()
 {
 	the_player = new BSoundPlayer(&audio_format, "Frodo", buffer_proc, NULL, this);
 	the_player->SetHasData(true);
@@ -58,7 +58,7 @@ DigitalRenderer::~DigitalRenderer()
  *  Sample volume (for sampled voice)
  */
 
-void DigitalRenderer::EmulateLine(void)
+void DigitalRenderer::EmulateLine()
 {
 	sample_buf[sample_in_ptr] = volume;
 	sample_in_ptr = (sample_in_ptr + 1) % SAMPLE_BUF_SIZE;
@@ -69,7 +69,7 @@ void DigitalRenderer::EmulateLine(void)
  *  Pause sound output
  */
 
-void DigitalRenderer::Pause(void)
+void DigitalRenderer::Pause()
 {
 	if (!player_stopped) {
 		the_player->Stop();
@@ -82,7 +82,7 @@ void DigitalRenderer::Pause(void)
  *  Resume sound output
  */
 
-void DigitalRenderer::Resume(void)
+void DigitalRenderer::Resume()
 {
 	if (player_stopped) {
 		the_player->Start();

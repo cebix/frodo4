@@ -44,10 +44,12 @@ REU::REU(MOS6510 *CPU) : the_cpu(CPU)
 
 	// Init registers
 	regs[0] = 0x40;
-	for (i=1; i<11; i++)
+	for (i=1; i<11; i++) {
 		regs[i] = 0;
-	for (i=11; i<16; i++)
+	}
+	for (i=11; i<16; i++) {
 		regs[i] = 0xff;
+	}
 
 	ex_ram = NULL;
 	ram_size = ram_mask = 0;
@@ -110,10 +112,11 @@ void REU::open_close_reu(int old_size, int new_size)
 		ex_ram = new uint8_t[ram_size];
 
 		// Set size bit in status register
-		if (ram_size > 0x20000)
+		if (ram_size > 0x20000) {
 			regs[0] |= 0x10;
-		else
+		} else {
 			regs[0] &= 0xef;
+		}
 	}
 }
 
@@ -122,19 +125,22 @@ void REU::open_close_reu(int old_size, int new_size)
  *  Reset the REU
  */
 
-void REU::Reset(void)
+void REU::Reset()
 {
 	int i;
 
-	for (i=1; i<11; i++)
+	for (i=1; i<11; i++) {
 		regs[i] = 0;
-	for (i=11; i<16; i++)
+	}
+	for (i=11; i<16; i++) {
 		regs[i] = 0xff;
+	}
 
-	if (ram_size > 0x20000)
+	if (ram_size > 0x20000) {
 		regs[0] = 0x50;
-	else
+	} else {
 		regs[0] = 0x40;
+	}
 }
 
 
@@ -184,8 +190,9 @@ void REU::WriteRegister(uint16_t adr, uint8_t byte)
 			break;
 		case 1:		// Command register
 			regs[1] = byte;
-			if ((byte & 0x90) == 0x90)
+			if ((byte & 0x90) == 0x90) {
 				execute_dma();
+			}
 			break;
 		default:
 			regs[adr] = byte;
@@ -198,13 +205,14 @@ void REU::WriteRegister(uint16_t adr, uint8_t byte)
  *  CPU triggered REU by writing to $ff00
  */
 
-void REU::FF00Trigger(void)
+void REU::FF00Trigger()
 {
 	if (ex_ram == NULL)
 		return;
 
-	if ((regs[1] & 0x90) == 0x80)
+	if ((regs[1] & 0x90) == 0x80) {
 		execute_dma();
+	}
 }
 
 
@@ -212,7 +220,7 @@ void REU::FF00Trigger(void)
  *  Execute REU DMA transfer
  */
 
-void REU::execute_dma(void)
+void REU::execute_dma()
 {
 	// Get C64 and REU transfer base addresses
 	uint16_t c64_adr = regs[2] | (regs[3] << 8);
@@ -220,8 +228,9 @@ void REU::execute_dma(void)
 
 	// Calculate transfer length
 	int length = regs[7] | (regs[8] << 8);
-	if (!length)
+	if (length == 0) {
 		length = 0x10000;
+	}
 
 	// Calculate address increments
 	uint32_t c64_inc = (regs[10] & 0x80) ? 0 : 1;
@@ -231,13 +240,15 @@ void REU::execute_dma(void)
 	switch (regs[1] & 3) {
 
 		case 0:		// C64 -> REU
-			for (; length--; c64_adr+=c64_inc, reu_adr+=reu_inc)
+			for (; length--; c64_adr+=c64_inc, reu_adr+=reu_inc) {
 				ex_ram[reu_adr & ram_mask] = the_cpu->REUReadByte(c64_adr);
+			}
 			break;
 
 		case 1:		// C64 <- REU
-			for (; length--; c64_adr+=c64_inc, reu_adr+=reu_inc)
+			for (; length--; c64_adr+=c64_inc, reu_adr+=reu_inc) {
 				the_cpu->REUWriteByte(c64_adr, ex_ram[reu_adr & ram_mask]);
+			}
 			break;
 
 		case 2:		// C64 <-> REU
@@ -249,11 +260,12 @@ void REU::execute_dma(void)
 			break;
 
 		case 3:		// Compare
-			for (; length--; c64_adr+=c64_inc, reu_adr+=reu_inc)
+			for (; length--; c64_adr+=c64_inc, reu_adr+=reu_inc) {
 				if (ex_ram[reu_adr & ram_mask] != the_cpu->REUReadByte(c64_adr)) {
 					regs[0] |= 0x20;
 					break;
 				}
+			}
 			break;
 	}
 

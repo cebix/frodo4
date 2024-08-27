@@ -136,28 +136,28 @@ public:
 	IEC(C64Display *display);
 	~IEC();
 
-	void Reset(void);
+	void Reset();
 	void NewPrefs(const Prefs *prefs);
-	void UpdateLEDs(void);
+	void UpdateLEDs();
 
 	uint8_t Out(uint8_t byte, bool eoi);
 	uint8_t OutATN(uint8_t byte);
 	uint8_t OutSec(uint8_t byte);
 	uint8_t In(uint8_t &byte);
-	void SetATN(void);
-	void RelATN(void);
-	void Turnaround(void);
-	void Release(void);
+	void SetATN();
+	void RelATN();
+	void Turnaround();
+	void Release();
 
 private:
 	Drive *create_drive(const char *path);
 
 	uint8_t listen(int device);
 	uint8_t talk(int device);
-	uint8_t unlisten(void);
-	uint8_t untalk(void);
-	uint8_t sec_listen(void);
-	uint8_t sec_talk(void);
+	uint8_t unlisten();
+	uint8_t untalk();
+	uint8_t sec_listen();
+	uint8_t sec_talk();
 	uint8_t open_out(uint8_t byte, bool eoi);
 	uint8_t data_out(uint8_t byte, bool eoi);
 	uint8_t data_in(uint8_t &byte);
@@ -191,7 +191,7 @@ public:
 	virtual uint8_t Close(int channel)=0;
 	virtual uint8_t Read(int channel, uint8_t &byte)=0;
 	virtual uint8_t Write(int channel, uint8_t byte, bool eoi)=0;
-	virtual void Reset(void)=0;
+	virtual void Reset()=0;
 
 	int LED;			// Drive LED state
 	bool Ready;			// Drive is ready for operation
@@ -215,10 +215,10 @@ protected:
 	virtual void rename_cmd(const uint8_t *new_file, int new_file_len, const uint8_t *old_file, int old_file_len);
 	virtual void scratch_cmd(const uint8_t *files, int files_len);
 	virtual void position_cmd(const uint8_t *cmd, int cmd_len);
-	virtual void initialize_cmd(void);
+	virtual void initialize_cmd();
 	virtual void new_cmd(const uint8_t *name, int name_len, const uint8_t *comma);
-	virtual void validate_cmd(void);
-	void unsupp_cmd(void);
+	virtual void validate_cmd();
+	void unsupp_cmd();
 
 	char error_buf[256];	// Buffer with current error message
 	char *error_ptr;		// Pointer within error message	

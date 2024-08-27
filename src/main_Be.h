@@ -112,7 +112,7 @@ void Frodo::RefsReceived(BMessage *message)
  *  Arguments processed, prepare emulation and show preferences editor window
  */
 
-void Frodo::ReadyToRun(void)
+void Frodo::ReadyToRun()
 {
 	// Find application directory and cwd to it
 	app_info the_info;
@@ -315,7 +315,7 @@ void Frodo::MessageReceived(BMessage *msg)
  *  Quit requested (either by menu or by closing the C64 display window)
  */
 
-bool Frodo::QuitRequested(void)
+bool Frodo::QuitRequested()
 {
 	// Stop emulation
 	if (TheC64) {
@@ -339,7 +339,7 @@ class AboutView : public BView {
 public:
 	AboutView() : BView(AboutFrame, "", B_FOLLOW_NONE, B_WILL_DRAW) {}
 
-	virtual void AttachedToWindow(void)
+	virtual void AttachedToWindow()
 	{
 		SetHighColor(0, 0, 0);
 	}
@@ -384,7 +384,7 @@ public:
 	}
 };
 
-void Frodo::AboutRequested(void)
+void Frodo::AboutRequested()
 {
 	new AboutWindow();
 }

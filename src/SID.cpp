@@ -70,8 +70,8 @@ class DigitalPlayer;
  *  Random number generator for noise waveform
  */
 
-static uint8_t sid_random(void);
-static uint8_t sid_random(void)
+static uint8_t sid_random();
+static uint8_t sid_random()
 {
 	static uint32_t seed = 1;
 	seed = seed * 1103515245 + 12345;
@@ -86,8 +86,9 @@ static uint8_t sid_random(void)
 MOS6581::MOS6581(C64 *c64) : the_c64(c64)
 {
 	the_renderer = NULL;
-	for (int i=0; i<32; i++)
+	for (int i=0; i<32; i++) {
 		regs[i] = 0;
+	}
 
 	// Open the renderer
 	open_close_renderer(SIDTYPE_NONE, ThePrefs.SIDType);
@@ -109,10 +110,11 @@ MOS6581::~MOS6581()
  *  Reset the SID
  */
 
-void MOS6581::Reset(void)
+void MOS6581::Reset()
 {
-	for (int i=0; i<32; i++)
+	for (int i=0; i<32; i++) {
 		regs[i] = 0;
+	}
 	last_sid_byte = 0;
 
 	// Reset the renderer
@@ -128,8 +130,9 @@ void MOS6581::Reset(void)
 void MOS6581::NewPrefs(const Prefs *prefs)
 {
 	open_close_renderer(ThePrefs.SIDType, prefs->SIDType);
-	if (the_renderer != NULL)
+	if (the_renderer != NULL) {
 		the_renderer->NewPrefs(prefs);
+	}
 }
 
 
@@ -137,10 +140,11 @@ void MOS6581::NewPrefs(const Prefs *prefs)
  *  Pause sound output
  */
 
-void MOS6581::PauseSound(void)
+void MOS6581::PauseSound()
 {
-	if (the_renderer != NULL)
+	if (the_renderer != NULL) {
 		the_renderer->Pause();
+	}
 }
 
 
@@ -148,10 +152,11 @@ void MOS6581::PauseSound(void)
  *  Resume sound output
  */
 
-void MOS6581::ResumeSound(void)
+void MOS6581::ResumeSound()
 {
-	if (the_renderer != NULL)
+	if (the_renderer != NULL) {
 		the_renderer->Resume();
+	}
 }
 
 
@@ -233,9 +238,11 @@ void MOS6581::SetState(const MOS6581State *ss)
 	regs[24] = ss->mode_vol;
 
 	// Stuff the new register values into the renderer
-	if (the_renderer != NULL)
-		for (int i=0; i<25; i++)
+	if (the_renderer != NULL) {
+		for (int i=0; i<25; i++) {
 			the_renderer->WriteRegister(i, regs[i]);
+		}
+	}
 }
 
 
@@ -320,16 +327,16 @@ public:
 	DigitalRenderer(C64 *c64);
 	virtual ~DigitalRenderer();
 
-	virtual void Reset(void);
-	virtual void EmulateLine(void);
+	virtual void Reset();
+	virtual void EmulateLine();
 	virtual void WriteRegister(uint16_t adr, uint8_t byte);
 	virtual void NewPrefs(const Prefs *prefs);
-	virtual void Pause(void);
-	virtual void Resume(void);
+	virtual void Pause();
+	virtual void Resume();
 
 private:
-	void init_sound(void);
-	void calc_filter(void);
+	void init_sound();
+	void calc_filter();
 	void calc_buffer(int16_t *buf, long count);
 
 	C64 *the_c64;					// Pointer to C64 object
@@ -374,11 +381,11 @@ private:
 
 #ifdef WIN32
 public:
-	void VBlank(void);
+	void VBlank();
 
 private:
-	void StartPlayer(void);
-	void StopPlayer(void);
+	void StartPlayer();
+	void StopPlayer();
 
 	BOOL direct_sound;
 	DigitalPlayer *ThePlayer;
@@ -736,8 +743,8 @@ DigitalRenderer::DigitalRenderer(C64 *c64) : the_c64(c64)
 
 #ifdef PRECOMPUTE_RESONANCE
 	for (int i=0; i<256; i++) {
-	  resonanceLP[i] = CALC_RESONANCE_LP(i);
-	  resonanceHP[i] = CALC_RESONANCE_HP(i);
+		resonanceLP[i] = CALC_RESONANCE_LP(i);
+		resonanceHP[i] = CALC_RESONANCE_HP(i);
 	}
 #endif
 
@@ -752,7 +759,7 @@ DigitalRenderer::DigitalRenderer(C64 *c64) : the_c64(c64)
  *  Reset emulation
  */
 
-void DigitalRenderer::Reset(void)
+void DigitalRenderer::Reset()
 {
 	volume = 0;
 
@@ -828,17 +835,21 @@ void DigitalRenderer::WriteRegister(uint16_t adr, uint8_t byte)
 		case 11:
 		case 18:
 			voice[v].wave = (byte >> 4) & 0xf;
-			if ((byte & 1) != voice[v].gate)
-				if (byte & 1)	// Gate turned on
+			if ((byte & 1) != voice[v].gate) {
+				if (byte & 1) {		// Gate turned on
 					voice[v].eg_state = EG_ATTACK;
-				else			// Gate turned off
-					if (voice[v].eg_state != EG_IDLE)
+				} else {			// Gate turned off
+					if (voice[v].eg_state != EG_IDLE) {
 						voice[v].eg_state = EG_RELEASE;
+					}
+				}
+			}
 			voice[v].gate = byte & 1;
 			voice[v].mod_by->sync = byte & 2;
 			voice[v].ring = byte & 4;
-			if ((voice[v].test = byte & 8) != 0)
+			if ((voice[v].test = byte & 8) != 0) {
 				voice[v].count = 0;
+			}
 			break;
 
 		case 5:
@@ -858,8 +869,9 @@ void DigitalRenderer::WriteRegister(uint16_t adr, uint8_t byte)
 		case 22:
 			if (byte != f_freq) {
 				f_freq = byte;
-				if (ThePrefs.SIDFilters)
+				if (ThePrefs.SIDFilters) {
 					calc_filter();
+				}
 			}
 			break;
 
@@ -869,8 +881,9 @@ void DigitalRenderer::WriteRegister(uint16_t adr, uint8_t byte)
 			voice[2].filter = byte & 4;
 			if ((byte >> 4) != f_res) {
 				f_res = byte >> 4;
-				if (ThePrefs.SIDFilters)
+				if (ThePrefs.SIDFilters) {
 					calc_filter();
+				}
 			}
 			break;
 
@@ -884,8 +897,9 @@ void DigitalRenderer::WriteRegister(uint16_t adr, uint8_t byte)
 #else
 				xn1 = xn2 = yn1 = yn2 = 0.0;
 #endif
-				if (ThePrefs.SIDFilters)
+				if (ThePrefs.SIDFilters) {
 					calc_filter();
+				}
 			}
 			break;
 	}
@@ -906,19 +920,22 @@ void DigitalRenderer::NewPrefs(const Prefs *prefs)
  *  Calculate IIR filter coefficients
  */
 
-void DigitalRenderer::calc_filter(void)
+void DigitalRenderer::calc_filter()
 {
 #ifdef USE_FIXPOINT_MATHS
 	FixPoint fr, arg;
 
-	if (f_type == FILT_ALL)
-	{
-		d1 = 0; d2 = 0; g1 = 0; g2 = 0; f_ampl = FixNo(1); return;
+	if (f_type == FILT_ALL) {
+		d1 = 0; d2 = 0;
+		g1 = 0; g2 = 0;
+		f_ampl = FixNo(1);
+		return;
+	} else if (f_type == FILT_NONE) {
+		d1 = 0; d2 = 0;
+		g1 = 0; g2 = 0;
+		f_ampl = 0;
+		return;
 	}
-	else if (f_type == FILT_NONE)
-	{
-		d1 = 0; d2 = 0; g1 = 0; g2 = 0; f_ampl = 0; return;
-        }
 #else
 	float fr, arg;
 
@@ -937,18 +954,19 @@ void DigitalRenderer::calc_filter(void)
 #endif
 
 	// Calculate resonance frequency
-	if (f_type == FILT_LP || f_type == FILT_LPBP)
+	if (f_type == FILT_LP || f_type == FILT_LPBP) {
 #ifdef PRECOMPUTE_RESONANCE
 		fr = resonanceLP[f_freq];
 #else
 		fr = CALC_RESONANCE_LP(f_freq);
 #endif
-	else
+	} else {
 #ifdef PRECOMPUTE_RESONANCE
 		fr = resonanceHP[f_freq];
 #else
 		fr = CALC_RESONANCE_HP(f_freq);
 #endif
+	}
 
 #ifdef USE_FIXPOINT_MATHS
 	// explanations see below.
@@ -959,56 +977,73 @@ void DigitalRenderer::calc_filter(void)
 	g2 = FixNo(0.55) + FixNo(1.2) * arg * (arg - 1) + FixNo(0.0133333333) * f_res;
 	g1 = FixNo(-2) * g2.sqrt() * fixcos(arg);
 
-	if (f_type == FILT_LPBP || f_type == FILT_HPBP) {g2 += FixNo(0.1);}
-
-	if (g1.abs() >= g2 + 1)
-	{
-	  if (g1 > 0) {g1 = g2 + FixNo(0.99);}
-	  else {g1 = -(g2 + FixNo(0.99));}
+	if (f_type == FILT_LPBP || f_type == FILT_HPBP) {
+		g2 += FixNo(0.1);
 	}
 
-	switch (f_type)
-	{
-	  case FILT_LPBP:
-	  case FILT_LP:
-		d1 = FixNo(2); d2 = FixNo(1); f_ampl = FixNo(0.25) * (1 + g1 + g2); break;
-	  case FILT_HPBP:
-	  case FILT_HP:
-		d1 = FixNo(-2); d2 = FixNo(1); f_ampl = FixNo(0.25) * (1 - g1 + g2); break;
-	  case FILT_BP:
-		d1 = 0; d2 = FixNo(-1);
-		f_ampl = FixNo(0.25) * (1 + g1 + g2) * (1 + fixcos(arg)) / fixsin(arg);
-		break;
-	  case FILT_NOTCH:
-		d1 = FixNo(-2) * fixcos(arg); d2 = FixNo(1);
-		f_ampl = FixNo(0.25) * (1 + g1 + g2) * (1 + fixcos(arg)) / fixsin(arg);
-		break;
-	  default: break;
+	if (g1.abs() >= g2 + 1) {
+		if (g1 > 0) {
+			g1 = g2 + FixNo(0.99);
+		} else {
+			g1 = -(g2 + FixNo(0.99));
+		}
+	}
+
+	switch (f_type) {
+		case FILT_LPBP:
+		case FILT_LP:
+			d1 = FixNo(2); d2 = FixNo(1);
+			f_ampl = FixNo(0.25) * (1 + g1 + g2);
+			break;
+
+		case FILT_HPBP:
+		case FILT_HP:
+			d1 = FixNo(-2); d2 = FixNo(1);
+			f_ampl = FixNo(0.25) * (1 - g1 + g2);
+			break;
+
+		case FILT_BP:
+			d1 = 0; d2 = FixNo(-1);
+			f_ampl = FixNo(0.25) * (1 + g1 + g2) * (1 + fixcos(arg)) / fixsin(arg);
+			break;
+
+		case FILT_NOTCH:
+			d1 = FixNo(-2) * fixcos(arg); d2 = FixNo(1);
+			f_ampl = FixNo(0.25) * (1 + g1 + g2) * (1 + fixcos(arg)) / fixsin(arg);
+			break;
+
+		default:
+			break;
 	}
 
 #else
 
 	// Limit to <1/2 sample frequency, avoid div by 0 in case FILT_BP below
 	arg = fr / (float)(SAMPLE_FREQ >> 1);
-	if (arg > 0.99)
+	if (arg > 0.99) {
 		arg = 0.99;
-	if (arg < 0.01)
+	}
+	if (arg < 0.01) {
 		arg = 0.01;
+	}
 
 	// Calculate poles (resonance frequency and resonance)
 	g2 = 0.55 + 1.2 * arg * arg - 1.2 * arg + (float)f_res * 0.0133333333;
 	g1 = -2.0 * sqrt(g2) * cos(M_PI * arg);
 
 	// Increase resonance if LP/HP combined with BP
-	if (f_type == FILT_LPBP || f_type == FILT_HPBP)
+	if (f_type == FILT_LPBP || f_type == FILT_HPBP) {
 		g2 += 0.1;
+	}
 
 	// Stabilize filter
-	if (fabs(g1) >= g2 + 1.0)
-		if (g1 > 0.0)
+	if (fabs(g1) >= g2 + 1.0) {
+		if (g1 > 0.0) {
 			g1 = g2 + 0.99;
-		else
+		} else {
 			g1 = -(g2 + 0.99);
+		}
+	}
 
 	// Calculate roots (filter characteristic) and input attenuation
 	switch (f_type) {
@@ -1086,9 +1121,9 @@ void DigitalRenderer::calc_buffer(int16_t *buf, long count)
 					}
 					break;
 				case EG_DECAY:
-					if (v->eg_level <= v->s_level || v->eg_level > 0xffffff)
+					if (v->eg_level <= v->s_level || v->eg_level > 0xffffff) {
 						v->eg_level = v->s_level;
-					else {
+					} else {
 						v->eg_level -= v->d_sub >> EGDRShift[v->eg_level >> 16];
 						if (v->eg_level <= v->s_level || v->eg_level > 0xffffff)
 							v->eg_level = v->s_level;
@@ -1112,66 +1147,75 @@ void DigitalRenderer::calc_buffer(int16_t *buf, long count)
 				continue;
 			uint16_t output;
 
-			if (!v->test)
+			if (!v->test) {
 				v->count += v->add;
+			}
 
-			if (v->sync && (v->count > 0x1000000))
+			if (v->sync && (v->count > 0x1000000)) {
 				v->mod_to->count = 0;
+			}
 
 			v->count &= 0xffffff;
 
 			switch (v->wave) {
 				case WAVE_TRI:
-					if (v->ring)
+					if (v->ring) {
 						output = TriTable[(v->count ^ (v->mod_by->count & 0x800000)) >> 11];
-					else
+					} else {
 						output = TriTable[v->count >> 11];
+					}
 					break;
 				case WAVE_SAW:
 					output = v->count >> 8;
 					break;
 				case WAVE_RECT:
-					if (v->count > (uint32_t)(v->pw << 12))
+					if (v->count > (uint32_t)(v->pw << 12)) {
 						output = 0xffff;
-					else
+					} else {
 						output = 0;
+					}
 					break;
 				case WAVE_TRISAW:
 					output = TriSawTable[v->count >> 16];
 					break;
 				case WAVE_TRIRECT:
-					if (v->count > (uint32_t)(v->pw << 12))
+					if (v->count > (uint32_t)(v->pw << 12)) {
 						output = TriRectTable[v->count >> 16];
-					else
+					} else {
 						output = 0;
+					}
 					break;
 				case WAVE_SAWRECT:
-					if (v->count > (uint32_t)(v->pw << 12))
+					if (v->count > (uint32_t)(v->pw << 12)) {
 						output = SawRectTable[v->count >> 16];
-					else
+					} else {
 						output = 0;
+					}
 					break;
 				case WAVE_TRISAWRECT:
-					if (v->count > (uint32_t)(v->pw << 12))
+					if (v->count > (uint32_t)(v->pw << 12)) {
 						output = TriSawRectTable[v->count >> 16];
-					else
+					} else {
 						output = 0;
+					}
 					break;
 				case WAVE_NOISE:
 					if (v->count > 0x100000) {
 						output = v->noise = sid_random() << 8;
 						v->count &= 0xfffff;
-					} else
+					} else {
 						output = v->noise;
+					}
 					break;
 				default:
 					output = 0x8000;
 					break;
 			}
-			if (v->filter)
+			if (v->filter) {
 				sum_output_filter += (int16_t)(output ^ 0x8000) * envelope;
-			else
+			} else {
 				sum_output += (int16_t)(output ^ 0x8000) * envelope;
+			}
 		}
 
 		// Filter
@@ -1209,11 +1253,11 @@ void DigitalRenderer::calc_buffer(int16_t *buf, long count)
 #include "SID_WIN32.h"
 
 #else	// No sound
-void DigitalRenderer::init_sound(void) {ready = false;}
+void DigitalRenderer::init_sound() {ready = false;}
 DigitalRenderer::~DigitalRenderer() {}
-void DigitalRenderer::EmulateLine(void) {}
-void DigitalRenderer::Pause(void) {}
-void DigitalRenderer::Resume(void) {}
+void DigitalRenderer::EmulateLine() {}
+void DigitalRenderer::Pause() {}
+void DigitalRenderer::Resume() {}
 #endif
 
 
@@ -1241,7 +1285,9 @@ void MOS6581::open_close_renderer(int old_type, int new_type)
 	}
 
 	// Stuff the current register values into the new renderer
-	if (the_renderer != NULL)
-		for (int i=0; i<25; i++)
+	if (the_renderer != NULL) {
+		for (int i=0; i<25; i++) {
 			the_renderer->WriteRegister(i, regs[i]);
+		}
+	}
 }

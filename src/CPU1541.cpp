@@ -115,7 +115,7 @@ MOS6502_1541::MOS6502_1541(C64 *c64, Job1541 *job, C64Display *disp, uint8_t *Ra
  *  Reset CPU asynchronously
  */
 
-void MOS6502_1541::AsyncReset(void)
+void MOS6502_1541::AsyncReset()
 {
 	interrupt.intr[INT_RESET] = true;
 	Idle = false;
@@ -128,7 +128,7 @@ void MOS6502_1541::AsyncReset(void)
 
 inline uint8_t MOS6502_1541::read_byte_io(uint16_t adr)
 {
-	if ((adr & 0xfc00) == 0x1800)	// VIA 1
+	if ((adr & 0xfc00) == 0x1800) {	// VIA 1
 		switch (adr & 0xf) {
 			case 0:
 				return (via1_prb & 0x1a
@@ -170,13 +170,14 @@ inline uint8_t MOS6502_1541::read_byte_io(uint16_t adr)
 				return 0;
 		}
 
-	else if ((adr & 0xfc00) == 0x1c00)	// VIA 2
+	} else if ((adr & 0xfc00) == 0x1c00) {	// VIA 2
 		switch (adr & 0xf) {
 			case 0:
-				if (the_job->SyncFound())
+				if (the_job->SyncFound()) {
 					return via2_prb & 0x7f | the_job->WPState();
-				else
+				} else {
 					return via2_prb | 0x80 | the_job->WPState();
+				}
 			case 1:
 			case 15:
 				return the_job->ReadGCRByte();
@@ -213,8 +214,9 @@ inline uint8_t MOS6502_1541::read_byte_io(uint16_t adr)
 				return 0;
 		}
 
-	else
+	} else {
 		return adr >> 8;
+	}
 }
 
 
@@ -224,12 +226,13 @@ inline uint8_t MOS6502_1541::read_byte_io(uint16_t adr)
 
 uint8_t MOS6502_1541::read_byte(uint16_t adr)
 {
-	if (adr >= 0xc000)
+	if (adr >= 0xc000) {
 		return rom[adr & 0x3fff];
-	else if (adr < 0x1000)
+	} else if (adr < 0x1000) {
 		return ram[adr & 0x07ff];
-	else
+	} else {
 		return read_byte_io(adr);
+	}
 }
 
 
@@ -249,7 +252,7 @@ inline uint16_t MOS6502_1541::read_word(uint16_t adr)
 
 void MOS6502_1541::write_byte_io(uint16_t adr, uint8_t byte)
 {
-	if ((adr & 0xfc00) == 0x1800)	// VIA 1
+	if ((adr & 0xfc00) == 0x1800) {	// VIA 1
 		switch (adr & 0xf) {
 			case 0:
 				via1_prb = byte;
@@ -310,16 +313,19 @@ void MOS6502_1541::write_byte_io(uint16_t adr, uint8_t byte)
 				break;
 		}
 
-	else if ((adr & 0xfc00) == 0x1c00)	// VIA 2
+	} else if ((adr & 0xfc00) == 0x1c00) {	// VIA 2
 		switch (adr & 0xf) {
 			case 0:
-				if ((via2_prb ^ byte) & 8)	// Bit 3: Drive LED
+				if ((via2_prb ^ byte) & 8) {	// Bit 3: Drive LED
 					the_display->UpdateLEDs(byte & 8 ? 1 : 0, 0, 0, 0);
-				if ((via2_prb ^ byte) & 3)	// Bits 0/1: Stepper motor
-					if ((via2_prb & 3) == ((byte+1) & 3))
+				}
+				if ((via2_prb ^ byte) & 3) {	// Bits 0/1: Stepper motor
+					if ((via2_prb & 3) == ((byte+1) & 3)) {
 						the_job->MoveHeadOut();
-					else if ((via2_prb & 3) == ((byte-1) & 3))
+					} else if ((via2_prb & 3) == ((byte-1) & 3)) {
 						the_job->MoveHeadIn();
+					}
+				}
 				via2_prb = byte & 0xef;
 				break;
 			case 1:
@@ -365,12 +371,14 @@ void MOS6502_1541::write_byte_io(uint16_t adr, uint8_t byte)
 				via2_ifr &= ~byte;
 				break;
 			case 14:
-				if (byte & 0x80)
+				if (byte & 0x80) {
 					via2_ier |= byte & 0x7f;
-				else
+				} else {
 					via2_ier &= ~byte;
+				}
 				break;
 		}
+	}
 }
 
 
@@ -380,10 +388,11 @@ void MOS6502_1541::write_byte_io(uint16_t adr, uint8_t byte)
 
 inline void MOS6502_1541::write_byte(uint16_t adr, uint8_t byte)
 {
-	if (adr < 0x1000)
+	if (adr < 0x1000) {
 		ram[adr & 0x7ff] = byte;
-	else
+	} else {
 		write_byte_io(adr, byte);
+	}
 }
 
 
@@ -450,8 +459,9 @@ void MOS6502_1541::jump(uint16_t adr)
 	} else if (adr < 0x800) {
 		pc = ram + adr;
 		pc_base = ram;
-	} else
+	} else {
 		illegal_jump(pc-pc_base, adr);
+	}
 }
 #else
 inline void MOS6502_1541::jump(uint16_t adr)
@@ -630,7 +640,7 @@ void MOS6502_1541::SetState(const MOS6502State *s)
  *  Reset CPU
  */
 
-void MOS6502_1541::Reset(void)
+void MOS6502_1541::Reset()
 {
 	// IEC lines and VIA registers
 	IECLines = 0xc0;
@@ -662,8 +672,9 @@ void MOS6502_1541::illegal_op(uint8_t op, uint16_t at)
 	char illop_msg[80];
 
 	sprintf(illop_msg, "1541: Illegal opcode %02x at %04x.", op, at);
-	if (ShowRequester(illop_msg, "Reset 1541", "Reset C64"))
+	if (ShowRequester(illop_msg, "Reset 1541", "Reset C64")) {
 		the_c64->Reset();
+	}
 	Reset();
 }
 
@@ -677,8 +688,9 @@ void MOS6502_1541::illegal_jump(uint16_t at, uint16_t to)
 	char illop_msg[80];
 
 	sprintf(illop_msg, "1541: Jump to I/O space at %04x to %04x.", at, to);
-	if (ShowRequester(illop_msg, "Reset 1541", "Reset C64"))
+	if (ShowRequester(illop_msg, "Reset 1541", "Reset C64")) {
 		the_c64->Reset();
+	}
 	Reset();
 }
 
@@ -728,8 +740,9 @@ int MOS6502_1541::EmulateLine(int cycles_left)
 	// Any pending interrupts?
 	if (interrupt.intr_any) {
 handle_int:
-		if (interrupt.intr[INT_RESET])
+		if (interrupt.intr[INT_RESET]) {
 			Reset();
+		}
 
 		else if ((interrupt.intr[INT_VIA1IRQ] || interrupt.intr[INT_VIA2IRQ] || interrupt.intr[INT_IECIRQ]) && !i_flag) {
 #if PC_IS_POINTER

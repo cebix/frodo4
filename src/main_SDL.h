@@ -129,7 +129,7 @@ void Frodo::ReadyToRun()
  *  Run preferences editor
  */
 
-bool Frodo::RunPrefsEditor(void)
+bool Frodo::RunPrefsEditor()
 {
 	Prefs *prefs = new Prefs(ThePrefs);
 	bool result = prefs->ShowEditor(false, prefs_path.c_str());

@@ -25,7 +25,7 @@
  *  Initialization
  */
 
-void DigitalRenderer::init_sound(void)
+void DigitalRenderer::init_sound()
 {
 	SDL_AudioSpec spec;
 	spec.freq = SAMPLE_FREQ;
@@ -59,7 +59,7 @@ DigitalRenderer::~DigitalRenderer()
  *  Sample volume (for sampled voice)
  */
 
-void DigitalRenderer::EmulateLine(void)
+void DigitalRenderer::EmulateLine()
 {
 	sample_buf[sample_in_ptr] = volume;
 	sample_in_ptr = (sample_in_ptr + 1) % SAMPLE_BUF_SIZE;
@@ -70,7 +70,7 @@ void DigitalRenderer::EmulateLine(void)
  *  Pause sound output
  */
 
-void DigitalRenderer::Pause(void)
+void DigitalRenderer::Pause()
 {
 	SDL_PauseAudio(1);
 }
@@ -80,7 +80,7 @@ void DigitalRenderer::Pause(void)
  *  Resume sound output
  */
 
-void DigitalRenderer::Resume(void)
+void DigitalRenderer::Resume()
 {
 	SDL_PauseAudio(0);
 }

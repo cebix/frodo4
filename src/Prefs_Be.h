@@ -72,7 +72,7 @@ class PrefsWindow : public BWindow {
 public:
 	PrefsWindow(Prefs *p, bool start, char *path);
 	virtual void MessageReceived(BMessage *msg);
-	virtual bool QuitRequested(void);
+	virtual bool QuitRequested();
 	virtual bool FilterKeyDown(uint32_t *aChar, BView **target);
 
 private:
@@ -83,9 +83,9 @@ private:
 	BPopUpMenu *make_reusize_popup(BRect frame, char *label_text, uint32_t what, BView *parent);
 	BPopUpMenu *make_disptype_popup(BRect frame, char *label_text, uint32_t what, BView *parent);
 	BPopUpMenu *make_joystick_popup(BRect frame, char *label_text, uint32_t what, BView *parent);
-	void set_values(void);
-	void get_values(void);
-	void ghost_controls(void);
+	void set_values();
+	void get_values();
+	void ghost_controls();
 
 	Prefs *prefs;
 
@@ -150,7 +150,7 @@ class NumberControl : public BTextControl {
 public:
 	NumberControl(BRect frame, float divider, const char *name, const char *label, const char *text, BMessage *message);
 	void SetValue(long value);
-	long Value(void);
+	long Value();
 };
 
 // Constructor: Allow only digits
@@ -172,7 +172,7 @@ void NumberControl::SetValue(long value)
 }
 
 // Get integer value
-long NumberControl::Value(void)
+long NumberControl::Value()
 {
 	return atol(Text());
 }
@@ -502,7 +502,7 @@ BPopUpMenu *PrefsWindow::make_joystick_popup(BRect frame, char *label_text, uint
  *  Set the values of the controls
  */
 
-void PrefsWindow::set_values(void)
+void PrefsWindow::set_values()
 {
 	prefs->Check();
 
@@ -541,7 +541,7 @@ void PrefsWindow::set_values(void)
  *  Get the values of the controls
  */
 
-void PrefsWindow::get_values(void)
+void PrefsWindow::get_values()
 {
 	prefs->NormalCycles = g_normal_cycles->Value();
 	prefs->BadLineCycles = g_bad_line_cycles->Value();
@@ -560,7 +560,7 @@ void PrefsWindow::get_values(void)
  *  Enable/disable certain controls
  */
 
-void PrefsWindow::ghost_controls(void)
+void PrefsWindow::ghost_controls()
 {
 	g_normal_cycles->SetEnabled(!IsFrodoSC);
 	g_bad_line_cycles->SetEnabled(!IsFrodoSC);
@@ -769,7 +769,7 @@ bool PrefsWindow::FilterKeyDown(uint32_t *aChar, BView **target)
  *  Quit requested
  */
 
-bool PrefsWindow::QuitRequested(void)
+bool PrefsWindow::QuitRequested()
 {
 	delete open_panel;
 	delete save_panel;

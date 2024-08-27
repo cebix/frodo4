@@ -44,12 +44,12 @@ public:
 	CatweaselRenderer();
 	virtual ~CatweaselRenderer();
 
-	virtual void Reset(void);
-	virtual void EmulateLine(void) {}
+	virtual void Reset();
+	virtual void EmulateLine() {}
 	virtual void WriteRegister(uint16_t adr, uint8_t byte);
 	virtual void NewPrefs(const Prefs *prefs) {}
-	virtual void Pause(void) {}
-	virtual void Resume(void) {}
+	virtual void Pause() {}
+	virtual void Resume() {}
 
 private:
 	int cwsid_fh; // Catweasel device file handle
@@ -85,7 +85,7 @@ CatweaselRenderer::~CatweaselRenderer()
 }
 
 // Reset SID
-void CatweaselRenderer::Reset(void)
+void CatweaselRenderer::Reset()
 {
 	if (cwsid_fh >= 0) {
 		uint8_t zero = 0;

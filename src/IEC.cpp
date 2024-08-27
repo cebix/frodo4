@@ -101,12 +101,14 @@ IEC::IEC(C64Display *display) : the_display(display)
 	int i;
 
 	// Create drives 8..11
-	for (i=0; i<4; i++)
+	for (i=0; i<4; i++) {
 		drive[i] = NULL;	// Important because UpdateLEDs is called from the drive constructors (via set_error)
+	}
 
 	if (!ThePrefs.Emul1541Proc) {
-		for (i=0; i<4; i++)
+		for (i=0; i<4; i++) {
 			drive[i] = create_drive(ThePrefs.DrivePath[i]);
+		}
 	}
 
 	listener_active = talker_active = false;
@@ -120,8 +122,9 @@ IEC::IEC(C64Display *display) : the_display(display)
 
 IEC::~IEC()
 {
-	for (int i=0; i<4; i++)
+	for (int i=0; i<4; i++) {
 		delete drive[i];
+	}
 }
 
 
@@ -129,11 +132,13 @@ IEC::~IEC()
  *  Reset all drives
  */
 
-void IEC::Reset(void)
+void IEC::Reset()
 {
-	for (int i=0; i<4; i++)
-		if (drive[i] != NULL && drive[i]->Ready)
+	for (int i=0; i<4; i++) {
+		if (drive[i] != NULL && drive[i]->Ready) {
 			drive[i]->Reset();
+		}
+	}
 
 	UpdateLEDs();
 }
@@ -152,8 +157,9 @@ void IEC::NewPrefs(const Prefs *prefs)
 		if (strcmp(ThePrefs.DrivePath[i], prefs->DrivePath[i]) || ThePrefs.Emul1541Proc != prefs->Emul1541Proc) {
 			delete drive[i];
 			drive[i] = NULL;	// Important because UpdateLEDs is called from drive constructors (via set_error())
-			if (!prefs->Emul1541Proc)
+			if (!prefs->Emul1541Proc) {
 				drive[i] = create_drive(prefs->DrivePath[i]);
+			}
 		}
 	}
 
@@ -165,7 +171,7 @@ void IEC::NewPrefs(const Prefs *prefs)
  *  Update drive LED display
  */
 
-void IEC::UpdateLEDs(void)
+void IEC::UpdateLEDs()
 {
 	int l0 = drive[0] ? drive[0]->LED : DRVLED_OFF;
 	int l1 = drive[1] ? drive[1]->LED : DRVLED_OFF;
@@ -183,13 +189,16 @@ void IEC::UpdateLEDs(void)
 uint8_t IEC::Out(uint8_t byte, bool eoi)
 {
 	if (listener_active) {
-		if (received_cmd == CMD_OPEN)
+		if (received_cmd == CMD_OPEN) {
 			return open_out(byte, eoi);
-		if (received_cmd == CMD_DATA)
+		}
+		if (received_cmd == CMD_DATA) {
 			return data_out(byte, eoi);
+		}
 		return ST_TIMEOUT;
-	} else
+	} else {
 		return ST_TIMEOUT;
+	}
 }
 
 
@@ -259,7 +268,7 @@ uint8_t IEC::In(uint8_t &byte)
  *  Assert ATN (for Untalk)
  */
 
-void IEC::SetATN(void)
+void IEC::SetATN()
 {
 	// Only needed for real IEC
 }
@@ -269,7 +278,7 @@ void IEC::SetATN(void)
  *  Release ATN
  */
 
-void IEC::RelATN(void)
+void IEC::RelATN()
 {
 	// Only needed for real IEC
 }
@@ -279,7 +288,7 @@ void IEC::RelATN(void)
  *  Talk-attention turn-around
  */
 
-void IEC::Turnaround(void)
+void IEC::Turnaround()
 {
 	// Only needed for real IEC
 }
@@ -289,7 +298,7 @@ void IEC::Turnaround(void)
  *  System line release
  */
 
-void IEC::Release(void)
+void IEC::Release()
 {
 	// Only needed for real IEC
 }
@@ -335,7 +344,7 @@ uint8_t IEC::talk(int device)
  *  Unlisten
  */
 
-uint8_t IEC::unlisten(void)
+uint8_t IEC::unlisten()
 {
 	listener_active = false;
 	return ST_OK;
@@ -346,7 +355,7 @@ uint8_t IEC::unlisten(void)
  *  Untalk
  */
 
-uint8_t IEC::untalk(void)
+uint8_t IEC::untalk()
 {
 	talker_active = false;
 	return ST_OK;
@@ -357,7 +366,7 @@ uint8_t IEC::untalk(void)
  *  Secondary address after Listen
  */
 
-uint8_t IEC::sec_listen(void)
+uint8_t IEC::sec_listen()
 {
 	switch (received_cmd) {
 
@@ -381,7 +390,7 @@ uint8_t IEC::sec_listen(void)
  *  Secondary address after Talk
  */
 
-uint8_t IEC::sec_talk(void)
+uint8_t IEC::sec_talk()
 {
 	return ST_OK;
 }
@@ -489,13 +498,15 @@ void Drive::set_error(int error, int track, int sector)
 	current_error = error;
 
 	// Set drive condition
-	if (error != ERR_OK && error != ERR_SCRATCHED)
-		if (error == ERR_STARTUP)
+	if (error != ERR_OK && error != ERR_SCRATCHED) {
+		if (error == ERR_STARTUP) {
 			LED = DRVLED_OFF;
-		else
+		} else {
 			LED = DRVLED_ERROR;
-	else if (LED == DRVLED_ERROR)
+		}
+	} else if (LED == DRVLED_ERROR) {
 		LED = DRVLED_OFF;
+	}
 	the_iec->UpdateLEDs();
 }
 
@@ -511,24 +522,27 @@ void Drive::parse_file_name(const uint8_t *src, int src_len, uint8_t *dest, int 
 	if (p) {
 		p++;
 		src_len -= p - src;
-	} else
+	} else {
 		p = src;
+	}
 
 	// Transfer file name upto ','
 	dest_len = 0;
 	uint8_t *q = dest;
 	while (*p != ',' && src_len-- > 0) {
-		if (convert_charset)
+		if (convert_charset) {
 			*q++ = petscii2ascii(*p++);
-		else
+		} else {
 			*q++ = *p++;
+		}
 		dest_len++;
 	}
 	*q++ = 0;
 
 	// Strip trailing CRs
-	while (dest_len > 0 && dest[dest_len - 1] == 0x0d)
+	while (dest_len > 0 && dest[dest_len - 1] == 0x0d) {
 		dest[--dest_len] = 0;
+	}
 
 	// Look for mode and type parameters separated by ','
 	p++; src_len--;
@@ -551,8 +565,9 @@ void Drive::parse_file_name(const uint8_t *src, int src_len, uint8_t *dest, int 
 				while (*p != ',' && src_len-- > 0) p++;
 				p++; src_len--;
 				rec_len = *p++; src_len--;
-				if (src_len < 0)
+				if (src_len < 0) {
 					rec_len = 0;
+				}
 				break;
 			case 'R':
 				mode = FMODE_READ;
@@ -584,27 +599,32 @@ static void parse_block_cmd_args(const uint8_t *p, int &arg1, int &arg2, int &ar
 	arg1 = arg2 = arg3 = arg4 = 0;
 
 	while (*p == ' ' || *p == 0x1d || *p == ',') p++;
-	while (*p >= '0' && *p < '@')
+	while (*p >= '0' && *p < '@') {
 		arg1 = arg1 * 10 + (*p++ & 0x0f);
+	}
 
 	while (*p == ' ' || *p == 0x1d || *p == ',') p++;
-	while (*p >= '0' && *p < '@')
+	while (*p >= '0' && *p < '@') {
 		arg2 = arg2 * 10 + (*p++ & 0x0f);
+	}
 
 	while (*p == ' ' || *p == 0x1d || *p == ',') p++;
-	while (*p >= '0' && *p < '@')
+	while (*p >= '0' && *p < '@') {
 		arg3 = arg3 * 10 + (*p++ & 0x0f);
+	}
 
 	while (*p == ' ' || *p == 0x1d || *p == ',') p++;
-	while (*p >= '0' && *p < '@')
+	while (*p >= '0' && *p < '@') {
 		arg4 = arg4 * 10 + (*p++ & 0x0f);
+	}
 }
 
 void Drive::execute_cmd(const uint8_t *cmd, int cmd_len)
 {
 	// Strip trailing CRs
-	while (cmd_len > 0 && cmd[cmd_len - 1] == 0x0d)
+	while (cmd_len > 0 && cmd[cmd_len - 1] == 0x0d) {
 		cmd_len--;
+	}
 
 	// Find token delimiters
 	const uint8_t *colon = (const uint8_t *)memchr(cmd, ':', cmd_len);
@@ -616,9 +636,9 @@ void Drive::execute_cmd(const uint8_t *cmd, int cmd_len)
 	set_error(ERR_OK);
 	switch (cmd[0]) {
 		case 'B':	// Block/buffer
-			if (!minus)
+			if (!minus) {
 				set_error(ERR_SYNTAX31);
-			else {
+			} else {
 				// Parse arguments (up to 4 decimal numbers separated by
 				// space, cursor right or comma)
 				const uint8_t *p = colon ? colon + 1 : cmd + 3;
@@ -653,9 +673,9 @@ void Drive::execute_cmd(const uint8_t *cmd, int cmd_len)
 			break;
 
 		case 'M':	// Memory
-			if (cmd[1] != '-')
+			if (cmd[1] != '-') {
 				set_error(ERR_SYNTAX31);
-			else {
+			} else {
 				// Read parameters
 				uint16_t adr = uint8_t(cmd[3]) | (uint8_t(cmd[4]) << 8);
 				uint8_t len = uint8_t(cmd[5]);
@@ -679,28 +699,31 @@ void Drive::execute_cmd(const uint8_t *cmd, int cmd_len)
 			break;
 
 		case 'C':	// Copy
-			if (!colon)
+			if (!colon) {
 				set_error(ERR_SYNTAX31);
-			else if (!equal || memchr(cmd, '*', cmd_len) || memchr(cmd, '?', cmd_len) || (comma && comma < equal))
+			} else if (!equal || memchr(cmd, '*', cmd_len) || memchr(cmd, '?', cmd_len) || (comma && comma < equal)) {
 				set_error(ERR_SYNTAX30);
-			else
+			} else {
 				copy_cmd(colon + 1, equal - colon - 1, equal + 1, cmd_len - (equal + 1 - cmd));
+			}
 			break;
 
 		case 'R':	// Rename
-			if (!colon)
+			if (!colon) {
 				set_error(ERR_SYNTAX34);
-			else if (!equal || comma || memchr(cmd, '*', cmd_len) || memchr(cmd, '?', cmd_len))
+			} else if (!equal || comma || memchr(cmd, '*', cmd_len) || memchr(cmd, '?', cmd_len)) {
 				set_error(ERR_SYNTAX30);
-			else
+			} else {
 				rename_cmd(colon + 1, equal - colon - 1, equal + 1, cmd_len - (equal + 1 - cmd));
+			}
 			break;
 
 		case 'S':	// Scratch
-			if (!colon)
+			if (!colon) {
 				set_error(ERR_SYNTAX34);
-			else
+			} else {
 				scratch_cmd(colon + 1, cmd_len - (colon + 1 - cmd));
+			}
 			break;
 
 		case 'P':	// Position
@@ -712,10 +735,11 @@ void Drive::execute_cmd(const uint8_t *cmd, int cmd_len)
 			break;
 
 		case 'N':	// New (format)
-			if (!colon)
+			if (!colon) {
 				set_error(ERR_SYNTAX34);
-			else
+			} else {
 				new_cmd(colon + 1, comma ? (comma - colon - 1) : cmd_len - (colon + 1 - cmd), comma);
+			}
 			break;
 
 		case 'V':	// Validate
@@ -725,6 +749,7 @@ void Drive::execute_cmd(const uint8_t *cmd, int cmd_len)
 		case 'U':	// User
 			if (cmd[1] == '0')
 				break;
+
 			switch (cmd[1] & 0x0f) {
 				case 1: {	// U1/UA: Read block
 					const uint8_t *p = colon ? colon + 1 : cmd + 2;
@@ -741,8 +766,9 @@ void Drive::execute_cmd(const uint8_t *cmd, int cmd_len)
 					break;
 				}
 				case 9:		// U9/UI: C64/VC20 mode switch
-					if (cmd[2] != '+' && cmd[2] != '-')
+					if (cmd[2] != '+' && cmd[2] != '-') {
 						Reset();
+					}
 					break;
 				case 10:	// U:/UJ: Reset
 					Reset();
@@ -850,7 +876,7 @@ void Drive::position_cmd(const uint8_t *cmd, int cmd_len)
 }
 
 // INITIALIZE
-void Drive::initialize_cmd(void)
+void Drive::initialize_cmd()
 {
 	set_error(ERR_UNIMPLEMENTED);
 }
@@ -864,7 +890,7 @@ void Drive::new_cmd(const uint8_t *name, int name_len, const uint8_t *comma)
 }
 
 // VALIDATE
-void Drive::validate_cmd(void)
+void Drive::validate_cmd()
 {
 	set_error(ERR_UNIMPLEMENTED);
 }
@@ -874,7 +900,7 @@ void Drive::validate_cmd(void)
  *  Notice user of unsupported drive command
  */
 
-void Drive::unsupp_cmd(void)
+void Drive::unsupp_cmd()
 {
 }
 
@@ -892,7 +918,7 @@ uint8_t ascii2petscii(char c)
 
 void ascii2petscii(uint8_t *dest, const char *src, int n)
 {
-	while (n-- && (*dest++ = ascii2petscii(*src++))) ;
+	while (n-- && (*dest++ = ascii2petscii(*src++))) { }
 }
 
 char petscii2ascii(uint8_t c)
@@ -906,7 +932,7 @@ char petscii2ascii(uint8_t c)
 
 void petscii2ascii(char *dest, const uint8_t *src, int n)
 {
-	while (n-- && (*dest++ = petscii2ascii(*src++))) ;
+	while (n-- && (*dest++ = petscii2ascii(*src++))) { }
 }
 
 
@@ -934,8 +960,9 @@ bool IsMountableFile(const char *path, int &type)
 	} else if (IsArchFile(path, header, size)) {
 		type = FILE_ARCH;
 		return true;
-	} else
+	} else {
 		return false;
+	}
 }
 
 

@@ -91,7 +91,7 @@ void Frodo::ArgvReceived(int argc, char **argv)
  *  Arguments processed, run emulation
  */
 
-void Frodo::ReadyToRun(void)
+void Frodo::ReadyToRun()
 {
 	getcwd(AppDirPath, 256);
 
@@ -116,7 +116,7 @@ void Frodo::ReadyToRun(void)
  *  Run preferences editor
  */
 
-void Frodo::RunPrefsEditor(void)
+void Frodo::RunPrefsEditor()
 {
 	Prefs *prefs = new Prefs(ThePrefs);
 	if (prefs->ShowEditor(FALSE, prefs_path)) {

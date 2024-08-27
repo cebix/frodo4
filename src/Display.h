@@ -57,21 +57,21 @@ public:
 	C64Display(C64 *the_c64);
 	~C64Display();
 
-	void Update(void);
+	void Update();
 	void UpdateLEDs(int l0, int l1, int l2, int l3);
 	void Speedometer(int speed);
-	uint8_t *BitmapBase(void);
-	int BitmapXMod(void);
+	uint8_t *BitmapBase();
+	int BitmapXMod();
 	void PollKeyboard(uint8_t *key_matrix, uint8_t *rev_matrix, uint8_t *joystick);
-	bool NumLock(void);
+	bool NumLock();
 	void InitColors(uint8_t *colors);
 	void NewPrefs(const Prefs *prefs);
 
 	C64 *TheC64;
 
 #ifdef __BEOS__
-	void Pause(void);
-	void Resume(void);
+	void Pause();
+	void Resume();
 #endif
 
 #ifdef HAVE_SDL
@@ -165,7 +165,7 @@ private:
 	BOOL EraseSurfaces();
 	BOOL RestoreSurfaces();
 
-	void draw_led_bar(void);		// Draw LED bar on the window
+	void draw_led_bar();		// Draw LED bar on the window
 	void draw_leds(BOOL force = false);	// Draw LEDs if force or changed
 	void led_rect(int n, RECT &rc, RECT &led); // Compute LED rectangle
 	void InsertNextDisk();			// should be a common func

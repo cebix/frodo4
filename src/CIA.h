@@ -34,16 +34,16 @@ class MOS6526 {
 public:
 	MOS6526(MOS6510 *CPU);
 
-	void Reset(void);
+	void Reset();
 	void GetState(MOS6526State *cs);
 	void SetState(const MOS6526State *cs);
 #ifdef FRODO_SC
-	void CheckIRQs(void);
-	void EmulateCycle(void);
+	void CheckIRQs();
+	void EmulateCycle();
 #else
 	void EmulateLine(int cycles);
 #endif
-	void CountTOD(void);
+	void CountTOD();
 	virtual void TriggerInterrupt(int bit)=0;
 
 protected:
@@ -85,7 +85,7 @@ class MOS6526_1 : public MOS6526 {
 public:
 	MOS6526_1(MOS6510 *CPU, MOS6569 *VIC);
 
-	void Reset(void);
+	void Reset();
 	uint8_t ReadRegister(uint16_t adr);
 	void WriteRegister(uint16_t adr, uint8_t byte);
 	virtual void TriggerInterrupt(int bit);
@@ -97,7 +97,7 @@ public:
 	uint8_t Joystick2;		// Joystick 2 AND value
 
 private:
-	void check_lp(void);
+	void check_lp();
 
 	MOS6569 *the_vic;
 
@@ -109,7 +109,7 @@ class MOS6526_2 : public MOS6526{
 public:
 	MOS6526_2(MOS6510 *CPU, MOS6569 *VIC, MOS6502_1541 *CPU1541);
 
-	void Reset(void);
+	void Reset();
 	uint8_t ReadRegister(uint16_t adr);
 	void WriteRegister(uint16_t adr, uint8_t byte);
 	virtual void TriggerInterrupt(int bit);
@@ -156,7 +156,7 @@ struct MOS6526State {
  */
 
 #ifdef FRODO_SC
-inline void MOS6526::CheckIRQs(void)
+inline void MOS6526::CheckIRQs()
 {
 	// Trigger pending interrupts
 	if (ta_irq_next_cycle) {

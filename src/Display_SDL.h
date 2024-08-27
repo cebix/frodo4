@@ -92,7 +92,6 @@ C64Display::C64Display(C64 *the_c64) : TheC64(the_c64)
 
 	SDL_SetWindowTitle(the_window, VERSION_STRING);
 	SDL_SetWindowMinimumSize(the_window, DISPLAY_X, DISPLAY_Y);
-//	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
 	SDL_RenderSetLogicalSize(the_renderer, DISPLAY_X, DISPLAY_Y);
 
 	c64_window = the_window;
@@ -171,7 +170,7 @@ void C64Display::NewPrefs(const Prefs *prefs)
  *  Redraw bitmap
  */
 
-void C64Display::Update(void)
+void C64Display::Update()
 {
 	if (ThePrefs.ShowLEDs) {
 
@@ -234,6 +233,7 @@ void C64Display::Update(void)
 		inPixel  += DISPLAY_X;
 		outPixel += texture_pitch / sizeof(uint32_t);
 	}
+
 	SDL_UnlockTexture(the_texture);
 
 	// Update display
@@ -333,7 +333,7 @@ void C64Display::Speedometer(int speed)
  *  Return pointer to VIC bitmap data
  */
 
-uint8_t *C64Display::BitmapBase(void)
+uint8_t *C64Display::BitmapBase()
 {
 	return pixel_buffer;
 }
@@ -343,7 +343,7 @@ uint8_t *C64Display::BitmapBase(void)
  *  Return number of VIC bitmap bytes per row
  */
 
-int C64Display::BitmapXMod(void)
+int C64Display::BitmapXMod()
 {
 	return DISPLAY_X;
 }
@@ -593,7 +593,7 @@ void C64Display::PollKeyboard(uint8_t *key_matrix, uint8_t *rev_matrix, uint8_t 
  *  Check if NumLock is down (for switching the joystick keyboard emulation)
  */
 
-bool C64Display::NumLock(void)
+bool C64Display::NumLock()
 {
 	return num_locked;
 }

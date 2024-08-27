@@ -356,7 +356,7 @@ MOS6569::MOS6569(C64 *c64, C64Display *disp, MOS6510 *CPU, uint8_t *RAM, uint8_t
  *  Reinitialize the colors table for when the palette has changed
  */
 
-void MOS6569::ReInitColors(void)
+void MOS6569::ReInitColors()
 {
 	int i;
 
@@ -399,9 +399,9 @@ void MOS6569::ReInitColors(void)
 }
 
 #ifdef GLOBAL_VARS
-static void make_mc_table(void)
+static void make_mc_table()
 #else
-void MOS6569::make_mc_table(void)
+void MOS6569::make_mc_table()
 #endif
 {
 	mc_color_lookup[0] = b0c_color | (b0c_color << 8);
@@ -589,9 +589,9 @@ void MOS6569::SetState(const MOS6569State *vd)
  */
 
 #ifdef GLOBAL_VARS
-static inline void raster_irq(void)
+static inline void raster_irq()
 #else
-inline void MOS6569::raster_irq(void)
+inline void MOS6569::raster_irq()
 #endif
 {
 	irq_flag |= 0x01;
@@ -852,7 +852,7 @@ void MOS6569::ChangedVA(uint16_t new_va)
  *  Trigger lightpen interrupt, latch lightpen coordinates
  */
 
-void MOS6569::TriggerLightpen(void)
+void MOS6569::TriggerLightpen()
 {
 	if (!lp_triggered) {	// Lightpen triggers only once per frame
 		lp_triggered = true;
@@ -874,9 +874,9 @@ void MOS6569::TriggerLightpen(void)
  */
 
 #ifdef GLOBAL_VARS
-static inline void vblank(void)
+static inline void vblank()
 #else
-inline void MOS6569::vblank(void)
+inline void MOS6569::vblank()
 #endif
 {
 	raster_y = vc_base = 0;
@@ -1536,7 +1536,7 @@ static asm void fastcopy(register uchar *dst, register uchar *src)
  *  Emulate one raster line
  */
 
-int MOS6569::EmulateLine(void)
+int MOS6569::EmulateLine()
 {
 	int cycles_left = ThePrefs.NormalCycles;	// Cycles left for CPU
 	bool is_bad_line = false;

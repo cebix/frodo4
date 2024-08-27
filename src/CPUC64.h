@@ -66,13 +66,13 @@ public:
 	MOS6510(C64 *c64, uint8_t *Ram, uint8_t *Basic, uint8_t *Kernal, uint8_t *Char, uint8_t *Color);
 
 #ifdef FRODO_SC
-	void EmulateCycle(void);			// Emulate one clock cycle
+	void EmulateCycle();				// Emulate one clock cycle
 #else
 	int EmulateLine(int cycles_left);	// Emulate until cycles_left underflows
 #endif
-	void Reset(void);
-	void AsyncReset(void);				// Reset the CPU asynchronously
-	void AsyncNMI(void);				// Raise NMI asynchronously (NMI pulse)
+	void Reset();
+	void AsyncReset();					// Reset the CPU asynchronously
+	void AsyncNMI();					// Raise NMI asynchronously (NMI pulse)
 	void GetState(MOS6510State *s);
 	void SetState(const MOS6510State *s);
 	uint8_t ExtReadByte(uint16_t adr);
@@ -80,12 +80,12 @@ public:
 	uint8_t REUReadByte(uint16_t adr);
 	void REUWriteByte(uint16_t adr, uint8_t byte);
 
-	void TriggerVICIRQ(void);
-	void ClearVICIRQ(void);
-	void TriggerCIAIRQ(void);
-	void ClearCIAIRQ(void);
-	void TriggerNMI(void);
-	void ClearNMI(void);
+	void TriggerVICIRQ();
+	void ClearVICIRQ();
+	void TriggerCIAIRQ();
+	void ClearCIAIRQ();
+	void TriggerNMI();
+	void ClearNMI();
 
 	int ExtConfig;		// Memory configuration for ExtRead/WriteByte (0..7)
 
@@ -111,7 +111,7 @@ private:
 	uint16_t read_zp_word(uint16_t adr);
 	void write_zp(uint16_t adr, uint8_t byte);
 
-	void new_config(void);
+	void new_config();
 	void illegal_op(uint8_t op, uint16_t at);
 	void illegal_jump(uint16_t at, uint16_t to);
 
@@ -178,21 +178,23 @@ struct MOS6510State {
 
 // Interrupt functions
 #ifdef FRODO_SC
-inline void MOS6510::TriggerVICIRQ(void)
+inline void MOS6510::TriggerVICIRQ()
 {
-	if (!(interrupt.intr[INT_VICIRQ] || interrupt.intr[INT_CIAIRQ]))
+	if (!(interrupt.intr[INT_VICIRQ] || interrupt.intr[INT_CIAIRQ])) {
 		first_irq_cycle = the_c64->CycleCounter;
+	}
 	interrupt.intr[INT_VICIRQ] = true;
 }
 
-inline void MOS6510::TriggerCIAIRQ(void)
+inline void MOS6510::TriggerCIAIRQ()
 {
-	if (!(interrupt.intr[INT_VICIRQ] || interrupt.intr[INT_CIAIRQ]))
+	if (!(interrupt.intr[INT_VICIRQ] || interrupt.intr[INT_CIAIRQ])) {
 		first_irq_cycle = the_c64->CycleCounter;
+	}
 	interrupt.intr[INT_CIAIRQ] = true;
 }
 
-inline void MOS6510::TriggerNMI(void)
+inline void MOS6510::TriggerNMI()
 {
 	if (!nmi_state) {
 		nmi_state = true;
@@ -201,17 +203,17 @@ inline void MOS6510::TriggerNMI(void)
 	}
 }
 #else
-inline void MOS6510::TriggerVICIRQ(void)
+inline void MOS6510::TriggerVICIRQ()
 {
 	interrupt.intr[INT_VICIRQ] = true;
 }
 
-inline void MOS6510::TriggerCIAIRQ(void)
+inline void MOS6510::TriggerCIAIRQ()
 {
 	interrupt.intr[INT_CIAIRQ] = true;
 }
 
-inline void MOS6510::TriggerNMI(void)
+inline void MOS6510::TriggerNMI()
 {
 	if (!nmi_state) {
 		nmi_state = true;
@@ -219,17 +221,17 @@ inline void MOS6510::TriggerNMI(void)
 	}
 }
 #endif
-inline void MOS6510::ClearVICIRQ(void)
+inline void MOS6510::ClearVICIRQ()
 {
 	interrupt.intr[INT_VICIRQ] = false;
 }
 
-inline void MOS6510::ClearCIAIRQ(void)
+inline void MOS6510::ClearCIAIRQ()
 {
 	interrupt.intr[INT_CIAIRQ] = false;
 }
 
-inline void MOS6510::ClearNMI(void)
+inline void MOS6510::ClearNMI()
 {
 	nmi_state = false;
 }

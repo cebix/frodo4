@@ -10,8 +10,8 @@ Changes from V4.2 to V4.3:
  - SDL: numeric keypad Enter key toggles fullscreen mode
  - SDL: numeric keypad Plus key toggles speed limiter
  - SDL: numeric keypad Minus key for instant rewind
- - SDL: replaced status bar with overlay
  - SDL: D-pad on game controllers now works
+ - SDL: replaced status bar with overlay
  - SDL: added setting for status overlay display (ShowLEDs)
  - SDL: added setting for initial window size (ScalingNumerator)
 

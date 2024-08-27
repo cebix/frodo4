@@ -68,10 +68,10 @@ public:
 	Frodo();
 	virtual void ArgvReceived(int32_t argc, char **argv);
 	virtual void RefsReceived(BMessage *message);
-	virtual void ReadyToRun(void);
+	virtual void ReadyToRun();
 	virtual void MessageReceived(BMessage *msg);
-	virtual bool QuitRequested(void);
-	virtual void AboutRequested(void);
+	virtual bool QuitRequested();
+	virtual void AboutRequested();
 
 private:
 	void load_rom(const char *which, const char *path, uint8_t *where, size_t size, const uint8_t *builtin);
