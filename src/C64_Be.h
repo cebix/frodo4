@@ -342,19 +342,9 @@ static bigtime_t cpu_time_acc = 0;
 #endif
 #ifdef FRODO_SC
 	while (!quit_thyself) {
-		// The order of calls is important here
-		if (TheVIC->EmulateCycle())
-			TheSID->EmulateLine();
-		TheCIA1->CheckIRQs();
-		TheCIA2->CheckIRQs();
-		TheCIA1->EmulateCycle();
-		TheCIA2->EmulateCycle();
-		TheCPU->EmulateCycle();
-
+		emulate_c64_cycle();
 		if (ThePrefs.Emul1541Proc) {
-			TheCPU1541->CountVIATimers(1);
-			if (!TheCPU1541->Idle)
-				TheCPU1541->EmulateCycle();
+			emulate_1541_cycle();
 		}
 		CycleCounter++;
 #else

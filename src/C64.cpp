@@ -52,8 +52,6 @@ bool IsFrodoSC = false;
 struct Snapshot {
 	uint8_t magic[16];
 	uint16_t flags;
-	uint8_t delay;		// Frodo SC: Number of cycles the saved C64 CPU lags behind the other state
-	uint8_t driveDelay;	// Frodo SC: Number of cycles the saved 1541 CPU lags behind the other state
 
 	char drive8Path[256];
 
@@ -308,14 +306,47 @@ void C64::PatchKernal(bool fast_reset, bool emul_1541_proc)
 }
 
 
+#ifdef FRODO_SC
+
+/*
+ *  Emulate one cycle of the C64.
+ */
+
+void C64::emulate_c64_cycle()
+{
+	// The order of calls is important here
+	if (TheVIC->EmulateCycle()) {
+		TheSID->EmulateLine();
+	}
+	TheCIA1->CheckIRQs();
+	TheCIA2->CheckIRQs();
+	TheCIA1->EmulateCycle();
+	TheCIA2->EmulateCycle();
+	TheCPU->EmulateCycle();
+}
+
+
+/*
+ *  Emulate one cycle of the 1541.
+ */
+
+void C64::emulate_1541_cycle()
+{
+	TheCPU1541->CountVIATimers(1);
+	if (!TheCPU1541->Idle) {
+		TheCPU1541->EmulateCycle();
+	}
+}
+
+#endif // def FRODO_SC
+
+
 /*
  *  Save state to snapshot (emulation must be paused and in VBlank)
  *
  *  To be able to use SC snapshots with SL, the state of the SC C64 and 1541
  *  CPUs are not saved in the middle of an instruction. Instead the state is
- *  advanced cycle by cycle until the current instruction has finished. The
- *  number of cycles this takes is saved in the snapshot and will be
- *  reconstructed when the snapshot is loaded into FrodoSC again.
+ *  advanced cycle by cycle until the current instruction has finished.
  */
 
 void C64::MakeSnapshot(Snapshot * s)
@@ -326,11 +357,6 @@ void C64::MakeSnapshot(Snapshot * s)
 
 	strcpy(s->drive8Path, ThePrefs.DrivePath[0]);
 
-	TheVIC->GetState(&(s->vic));
-	TheSID->GetState(&(s->sid));
-	TheCIA1->GetState(&(s->cia1));
-	TheCIA2->GetState(&(s->cia2));
-
 #ifdef FRODO_SC
 	while (true) {
 		TheCPU->GetState(&(s->cpu));
@@ -339,28 +365,22 @@ void C64::MakeSnapshot(Snapshot * s)
 			break;
 
 		// Advance C64 state by one cycle
-		if (TheVIC->EmulateCycle()) {
-			TheSID->EmulateLine();
-		}
-		TheCIA1->CheckIRQs();
-		TheCIA2->CheckIRQs();
-		TheCIA1->EmulateCycle();
-		TheCIA2->EmulateCycle();
-		TheCPU->EmulateCycle();
-
-		s->delay++;
+		emulate_c64_cycle();
 	}
 #else
 	TheCPU->GetState(&(s->cpu));
 #endif
+
+	TheVIC->GetState(&(s->vic));
+	TheSID->GetState(&(s->sid));
+	TheCIA1->GetState(&(s->cia1));
+	TheCIA2->GetState(&(s->cia2));
 
 	memcpy(s->ram, RAM, C64_RAM_SIZE);
 	memcpy(s->color, Color, COLOR_RAM_SIZE);
 
 	if (ThePrefs.Emul1541Proc) {
 		s->flags |= SNAPSHOT_FLAG_1541_PROC;
-
-		TheJob1541->GetState(&(s->driveJob));
 
 #ifdef FRODO_SC
 		while (true) {
@@ -370,15 +390,14 @@ void C64::MakeSnapshot(Snapshot * s)
 				break;
 
 			// Advance 1541 state by one cycle
-			TheCPU1541->CountVIATimers(1);
-			TheCPU1541->EmulateCycle();
-
-			s->driveDelay++;
+			emulate_1541_cycle();
 		}
 #else
 		TheCPU1541->GetState(&(s->driveCpu));
 #endif
 	}
+
+	TheJob1541->GetState(&(s->driveJob));
 
 	memcpy(s->driveRam, RAM1541, DRIVE_RAM_SIZE);
 }
@@ -403,19 +422,6 @@ void C64::RestoreSnapshot(const Snapshot * s)
 	TheCIA1->SetState(&(s->cia1));
 	TheCIA2->SetState(&(s->cia2));
 
-#ifdef FRODO_SC
-	// Advance C64 to saved CPU state
-	for (unsigned i = 0; i < s->delay; ++i) {
-		if (TheVIC->EmulateCycle()) {
-			TheSID->EmulateLine();
-		}
-		TheCIA1->CheckIRQs();
-		TheCIA2->CheckIRQs();
-		TheCIA1->EmulateCycle();
-		TheCIA2->EmulateCycle();
-	}
-#endif
-
 	if (s->flags & SNAPSHOT_FLAG_1541_PROC) {
 
 		memcpy(RAM1541, s->driveRam, DRIVE_RAM_SIZE);
@@ -431,13 +437,6 @@ void C64::RestoreSnapshot(const Snapshot * s)
 
 		TheCPU1541->SetState(&(s->driveCpu));
 		TheJob1541->SetState(&(s->driveJob));
-
-#ifdef FRODO_SC
-		// Advance 1541 to saved CPU state
-		for (unsigned i = 0; i < s->driveDelay; ++i) {
-			TheCPU1541->CountVIATimers(1);
-		}
-#endif
 
 	} else {
 

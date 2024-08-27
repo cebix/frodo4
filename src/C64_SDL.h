@@ -153,7 +153,7 @@ void C64::VBlank(bool draw_frame)
 
 
 /*
- * The emulation's main loop
+ *  The emulation's main loop
  */
 
 void C64::thread_func()
@@ -161,20 +161,9 @@ void C64::thread_func()
 	while (!quit_thyself) {
 
 #ifdef FRODO_SC
-		// The order of calls is important here
-		if (TheVIC->EmulateCycle())
-			TheSID->EmulateLine();
-		TheCIA1->CheckIRQs();
-		TheCIA2->CheckIRQs();
-		TheCIA1->EmulateCycle();
-		TheCIA2->EmulateCycle();
-		TheCPU->EmulateCycle();
-
+		emulate_c64_cycle();
 		if (ThePrefs.Emul1541Proc) {
-			TheCPU1541->CountVIATimers(1);
-			if (!TheCPU1541->Idle) {
-				TheCPU1541->EmulateCycle();
-			}
+			emulate_1541_cycle();
 		}
 		CycleCounter++;
 #else

@@ -106,6 +106,10 @@ private:
 	void c64_dtor();
 	void open_close_joysticks(int oldjoy1, int oldjoy2, int newjoy1, int newjoy2);
 	uint8_t poll_joystick(int port);
+#ifdef FRODO_SC
+	void emulate_c64_cycle();
+	void emulate_1541_cycle();
+#endif
 	void thread_func();
 	void handle_rewind();
 
