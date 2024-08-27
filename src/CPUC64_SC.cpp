@@ -193,8 +193,9 @@ void MOS6510::SetState(const MOS6510State *s)
 	interrupt.intr[INT_RESET] = s->intr[INT_RESET];
 	nmi_state = s->nmi_state;
 	dfff_byte = s->dfff_byte;
-	if (s->instruction_complete)
+	if (s->instruction_complete) {
 		state = 0;
+	}
 }
 
 

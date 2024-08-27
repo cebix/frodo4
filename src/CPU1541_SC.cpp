@@ -139,6 +139,7 @@ void MOS6502_1541::GetState(MOS6502State *s)
 	s->intr[INT_VIA2IRQ] = interrupt.intr[INT_VIA2IRQ];
 	s->intr[INT_IECIRQ] = interrupt.intr[INT_IECIRQ];
 	s->intr[INT_RESET] = interrupt.intr[INT_RESET];
+	s->instruction_complete = (state == 0);
 	s->idle = Idle;
 
 	s->via1_pra = via1_pra; s->via1_ddra = via1_ddra;
@@ -183,6 +184,9 @@ void MOS6502_1541::SetState(const MOS6502State *s)
 	interrupt.intr[INT_VIA2IRQ] = s->intr[INT_VIA2IRQ];
 	interrupt.intr[INT_IECIRQ] = s->intr[INT_IECIRQ];
 	interrupt.intr[INT_RESET] = s->intr[INT_RESET];
+	if (s->instruction_complete) {
+		state = 0;
+	}
 	Idle = s->idle;
 
 	via1_pra = s->via1_pra; via1_ddra = s->via1_ddra;

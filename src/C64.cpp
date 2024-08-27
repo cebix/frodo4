@@ -371,9 +371,7 @@ void C64::MakeSnapshot(Snapshot * s)
 
 			// Advance 1541 state by one cycle
 			TheCPU1541->CountVIATimers(1);
-			if (!TheCPU1541->Idle) {
-				TheCPU1541->EmulateCycle();
-			}
+			TheCPU1541->EmulateCycle();
 
 			s->driveDelay++;
 		}
