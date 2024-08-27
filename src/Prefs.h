@@ -55,7 +55,7 @@ public:
 #else
 	bool ShowEditor(bool startup, char *prefs_name);
 #endif
-	void Check(void);
+	void Check();
 	void Load(const char *filename);
 	bool Save(const char *filename);
 

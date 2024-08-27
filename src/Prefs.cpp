@@ -50,7 +50,7 @@ Prefs::Prefs()
 	ScalingNumerator = 4;
 	ScalingDenominator = 1;
 
-	strcpy(DrivePath[0], "64prgs");
+	strcpy(DrivePath[0], "");
 	strcpy(DrivePath[1], "");
 	strcpy(DrivePath[2], "");
 	strcpy(DrivePath[3], "");
@@ -71,7 +71,7 @@ Prefs::Prefs()
 	FastReset = false;
 	CIAIRQHack = false;
 	MapSlash = true;
-	Emul1541Proc = false;
+	Emul1541Proc = true;
 	SIDFilters = true;
 	DoubleScan = true;
 	HideCursor = false;
@@ -146,7 +146,7 @@ bool Prefs::operator!=(const Prefs &rhs) const
  *  Check preferences for validity and correct if necessary
  */
 
-void Prefs::Check(void)
+void Prefs::Check()
 {
 	if (SkipFrames <= 0) {
 		SkipFrames = 1;
