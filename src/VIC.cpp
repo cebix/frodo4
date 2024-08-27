@@ -182,77 +182,6 @@ static union {
 } TextColorTable[16][16][256][2];
 #endif
 
-#ifdef GLOBAL_VARS
-static uint16_t mc_color_lookup[4];
-#ifndef CAN_ACCESS_UNALIGNED
-static uint8_t text_chunky_buf[40*8];
-#endif
-static uint16_t mx[8];					// VIC registers
-static uint8_t mx8;
-static uint8_t my[8];
-static uint8_t ctrl1, ctrl2;
-static uint8_t lpx, lpy;
-static uint8_t me, mxe, mye, mdp, mmc;
-static uint8_t vbase;
-static uint8_t irq_flag, irq_mask;
-static uint8_t clx_spr, clx_bgr;
-static uint8_t ec, b0c, b1c, b2c, b3c, mm0, mm1;
-static uint8_t sc[8];
-
-static uint8_t *ram, *char_rom, *color_ram; // Pointers to RAM and ROM
-static C64 *the_c64;					// Pointer to C64
-static C64Display *the_display;			// Pointer to C64Display
-static MOS6510 *the_cpu;				// Pointer to 6510
-
-static uint8_t colors[256];				// Indices of the 16 C64 colors (16 times mirrored to avoid "& 0x0f")
-
-static uint8_t ec_color, b0c_color, b1c_color, b2c_color, b3c_color; // Indices for exterior/background colors
-static uint8_t mm0_color, mm1_color;	// Indices for MOB multicolors
-static uint8_t spr_color[8];			// Indices for MOB colors
-
-static uint32_t ec_color_long;			// ec_color expanded to 32 bits
-
-static uint8_t matrix_line[40];			// Buffer for video line, read in Bad Lines
-static uint8_t color_line[40];			// Buffer for color line, read in Bad Lines
-
-#ifdef __POWERPC__
-static double chunky_tmp[DISPLAY_X/8];	// Temporary line buffer for GameKit speedup
-#endif
-static uint8_t *chunky_line_start;		// Pointer to start of current line in bitmap buffer
-static int xmod;						// Number of bytes per row
-
-static uint8_t *matrix_base;			// Video matrix base
-static uint8_t *char_base;				// Character generator base
-static uint8_t *bitmap_base;			// Bitmap base
-
-static uint16_t raster_y;				// Current raster line
-static uint16_t irq_raster;				// Interrupt raster line
-static uint16_t dy_start;				// Comparison values for border logic
-static uint16_t dy_stop;
-static uint16_t rc;						// Row counter
-static uint16_t vc;						// Video counter
-static uint16_t vc_base;				// Video counter base
-static uint16_t x_scroll;				// X scroll value
-static uint16_t y_scroll;				// Y scroll value
-static uint16_t cia_vabase;				// CIA VA14/15 video base
-
-static int display_idx;					// Index of current display mode
-static int skip_counter;				// Counter for frame-skipping
-
-static uint16_t mc[8];					// Sprite data counters
-static uint8_t sprite_on;				// 8 Flags: Sprite display/DMA active
-
-static uint8_t spr_coll_buf[0x180];		// Buffer for sprite-sprite collisions and priorities
-static uint8_t fore_mask_buf[0x180/8];	// Foreground mask for sprite-graphics collisions and priorities
-
-static bool display_state;				// true: Display state, false: Idle state
-static bool border_on;					// Flag: Upper/lower border on
-static bool border_40_col;				// Flag: 40 column border
-static bool frame_skipped;				// Flag: Frame is being skipped
-static uint8_t bad_lines_enabled;		// Flag: Bad Lines enabled for this frame
-static bool lp_triggered;				// Flag: Lightpen was triggered in this frame
-#endif
-
 
 /*
  *  Constructor: Initialize variables
@@ -286,21 +215,9 @@ static void init_text_color_table(uint8_t *colors)
 }
 
 MOS6569::MOS6569(C64 *c64, C64Display *disp, MOS6510 *CPU, uint8_t *RAM, uint8_t *Char, uint8_t *Color)
-#ifndef GLOBAL_VARS
 	: ram(RAM), char_rom(Char), color_ram(Color), the_c64(c64), the_display(disp), the_cpu(CPU)
-#endif
 {
-	int i;
-
 	// Set pointers
-#ifdef GLOBAL_VARS
-	the_c64 = c64;
-	the_display = disp;
-	the_cpu = CPU;
-	ram = RAM;
-	char_rom = Char;
-	color_ram = Color;
-#endif
 	matrix_base = RAM;
 	char_base = RAM;
 	bitmap_base = RAM;
@@ -318,7 +235,9 @@ MOS6569::MOS6569(C64 *c64, C64Display *disp, MOS6510 *CPU, uint8_t *RAM, uint8_t
 	clx_spr = clx_bgr = 0;
 	cia_vabase = 0;
 	ec = b0c = b1c = b2c = b3c = mm0 = mm1 = 0;
-	for (i=0; i<8; i++) mx[i] = my[i] = sc[i] = 0;
+	for (unsigned i = 0; i < 8; ++i) {
+		mx[i] = my[i] = sc[i] = 0;
+	}
 
 	// Initialize other variables
 	raster_y = 0xffff;
@@ -334,8 +253,9 @@ MOS6569::MOS6569(C64 *c64, C64Display *disp, MOS6510 *CPU, uint8_t *RAM, uint8_t
 	lp_triggered = false;
 
 	sprite_on = 0;
-	for (i=0; i<8; i++)
+	for (unsigned i = 0; i < 8; ++i) {
 		mc[i] = 63;
+	}
 
 	frame_skipped = false;
 	skip_counter = 1;
@@ -348,7 +268,9 @@ MOS6569::MOS6569(C64 *c64, C64Display *disp, MOS6510 *CPU, uint8_t *RAM, uint8_t
 	init_text_color_table(colors);
 	ec_color = b0c_color = b1c_color = b2c_color = b3c_color = mm0_color = mm1_color = colors[0];
 	ec_color_long = (ec_color << 24) | (ec_color << 16) | (ec_color << 8) | ec_color;
-	for (i=0; i<8; i++) spr_color[i] = colors[0];
+	for (unsigned i = 0; i < 8; ++i) {
+		spr_color[i] = colors[0];
+	}
 }
 
 
@@ -358,21 +280,21 @@ MOS6569::MOS6569(C64 *c64, C64Display *disp, MOS6510 *CPU, uint8_t *RAM, uint8_t
 
 void MOS6569::ReInitColors()
 {
-	int i;
-
 	// Build inverse color table.
 	uint8_t xlate_colors[256];
 	memset(xlate_colors, 0, sizeof(xlate_colors));
-	for (i = 0; i < 16; i++)
+	for (unsigned i = 0; i < 16; ++i) {
 		xlate_colors[colors[i]] = i;
+	}
 
 	// Get the new colors.
 	the_display->InitColors(colors);
 	init_text_color_table(colors);
 
 	// Build color translation table.
-	for (i = 0; i < 256; i++)
+	for (unsigned i = 0; i < 256; ++i) {
 		xlate_colors[i] = colors[xlate_colors[i]];
+	}
 
 	// Translate all the old colors variables.
 	ec_color = colors[ec];
@@ -383,26 +305,24 @@ void MOS6569::ReInitColors()
 	b3c_color = colors[b3c];
 	mm0_color = colors[mm0];
 	mm1_color = colors[mm1];
-	for (i = 0; i < 8; i++)
+	for (unsigned i = 0; i < 8; ++i) {
 		spr_color[i] = colors[sc[i]];
+	}
 	mc_color_lookup[0] = b0c_color | (b0c_color << 8);
 	mc_color_lookup[1] = b1c_color | (b1c_color << 8);
 	mc_color_lookup[2] = b2c_color | (b2c_color << 8);
 
 	// Translate the chunky buffer.
 	uint8_t *scanline = the_display->BitmapBase();
-	for (int y = 0; y < DISPLAY_Y; y++) {
-		for (int x = 0; x < DISPLAY_X; x++)
+	for (unsigned y = 0; y < DISPLAY_Y; ++y) {
+		for (unsigned x = 0; x < DISPLAY_X; ++x) {
 			scanline[x] = xlate_colors[scanline[x]];
+		}
 		scanline += xmod;
 	}
 }
 
-#ifdef GLOBAL_VARS
-static void make_mc_table()
-#else
 void MOS6569::make_mc_table()
-#endif
 {
 	mc_color_lookup[0] = b0c_color | (b0c_color << 8);
 	mc_color_lookup[1] = b1c_color | (b1c_color << 8);
@@ -414,17 +334,14 @@ void MOS6569::make_mc_table()
  *  Convert video address to pointer
  */
 
-#ifdef GLOBAL_VARS
-static inline uint8_t *get_physical(uint16_t adr)
-#else
 inline uint8_t *MOS6569::get_physical(uint16_t adr)
-#endif
 {
 	int va = adr | cia_vabase;
-	if ((va & 0x7000) == 0x1000)
+	if ((va & 0x7000) == 0x1000) {
 		return char_rom + (va & 0x0fff);
-	else
+	} else {
 		return ram + va;
+	}
 }
 
 
@@ -434,8 +351,6 @@ inline uint8_t *MOS6569::get_physical(uint16_t adr)
 
 void MOS6569::GetState(MOS6569State *vd)
 {
-	int i;
-
 	vd->m0x = mx[0] & 0xff; vd->m0y = my[0];
 	vd->m1x = mx[1] & 0xff; vd->m1y = my[1];
 	vd->m2x = mx[2] & 0xff; vd->m2y = my[2];
@@ -471,8 +386,9 @@ void MOS6569::GetState(MOS6569State *vd)
 	vd->vc_base = vc_base;
 	vd->rc = rc;
 	vd->spr_dma = vd->spr_disp = sprite_on;
-	for (i=0; i<8; i++)
+	for (unsigned i = 0; i < 8; ++i) {
 		vd->mc[i] = vd->mc_base[i] = mc[i];
+	}
 	vd->display_state = display_state;
 	vd->bad_line = raster_y >= FIRST_DMA_LINE && raster_y <= LAST_DMA_LINE && ((raster_y & 7) == y_scroll) && bad_lines_enabled;
 	vd->bad_line_enable = bad_lines_enabled;
@@ -483,8 +399,9 @@ void MOS6569::GetState(MOS6569State *vd)
 	vd->matrix_base = ((vbase & 0xf0) << 6) | cia_vabase;
 	vd->char_base = ((vbase & 0x0e) << 10) | cia_vabase;
 	vd->bitmap_base = ((vbase & 0x08) << 10) | cia_vabase;
-	for (i=0; i<8; i++)
+	for (unsigned i = 0; i < 8; ++i) {
 		vd->sprite_base[i] = (matrix_base[0x3f8 + i] << 6) | cia_vabase;
+	}
 
 	vd->raster_x = 0;
 	vd->cycle = 1;
@@ -513,10 +430,11 @@ void MOS6569::SetState(const MOS6569State *vd)
 	mx[7] = vd->m7x; my[7] = vd->m7y;
 	mx8 = vd->mx8;
 	for (i=0, j=1; i<8; i++, j<<=1) {
-		if (mx8 & j)
+		if (mx8 & j) {
 			mx[i] |= 0x100;
-		else
+		} else {
 			mx[i] &= 0xff;
+		}
 	}
 
 	ctrl1 = vd->ctrl1;
@@ -567,16 +485,18 @@ void MOS6569::SetState(const MOS6569State *vd)
 	sc[2] = vd->m2c; sc[3] = vd->m3c;
 	sc[4] = vd->m4c; sc[5] = vd->m5c;
 	sc[6] = vd->m6c; sc[7] = vd->m7c;
-	for (i=0; i<8; i++)
+	for (unsigned i = 0; i < 8; ++i) {
 		spr_color[i] = colors[sc[i]];
+	}
 
 	irq_raster = vd->irq_raster;
 	vc = vd->vc;
 	vc_base = vd->vc_base;
 	rc = vd->rc;
 	sprite_on = vd->spr_dma;
-	for (i=0; i<8; i++)
+	for (unsigned i = 0; i < 8; ++i) {
 		mc[i] = vd->mc[i];
+	}
 	display_state = vd->display_state;
 	bad_lines_enabled = vd->bad_line_enable;
 	lp_triggered = vd->lp_triggered;
@@ -588,11 +508,7 @@ void MOS6569::SetState(const MOS6569State *vd)
  *  Trigger raster IRQ
  */
 
-#ifdef GLOBAL_VARS
-static inline void raster_irq()
-#else
 inline void MOS6569::raster_irq()
-#endif
 {
 	irq_flag |= 0x01;
 	if (irq_mask & 0x01) {
@@ -705,10 +621,11 @@ void MOS6569::WriteRegister(uint16_t adr, uint8_t byte)
 			int i, j;
 			mx8 = byte;
 			for (i=0, j=1; i<8; i++, j<<=1) {
-				if (mx8 & j)
+				if (mx8 & j) {
 					mx[i] |= 0x100;
-				else
+				} else {
 					mx[i] &= 0xff;
+				}
 			}
 			break;
 		}
@@ -723,8 +640,9 @@ void MOS6569::WriteRegister(uint16_t adr, uint8_t byte)
 			y_scroll = byte & 7;
 
 			uint16_t new_irq_raster = (irq_raster & 0xff) | ((byte & 0x80) << 1);
-			if (irq_raster != new_irq_raster && raster_y == new_irq_raster)
+			if (irq_raster != new_irq_raster && raster_y == new_irq_raster) {
 				raster_irq();
+			}
 			irq_raster = new_irq_raster;
 
 			if (byte & 8) {
@@ -741,8 +659,9 @@ void MOS6569::WriteRegister(uint16_t adr, uint8_t byte)
 
 		case 0x12:{	// Raster counter
 			uint16_t new_irq_raster = (irq_raster & 0xff00) | byte;
-			if (irq_raster != new_irq_raster && raster_y == new_irq_raster)
+			if (irq_raster != new_irq_raster && raster_y == new_irq_raster) {
 				raster_irq();
+			}
 			irq_raster = new_irq_raster;
 			break;
 		}
@@ -772,8 +691,9 @@ void MOS6569::WriteRegister(uint16_t adr, uint8_t byte)
 		case 0x19: // IRQ flags
 			irq_flag = irq_flag & (~byte & 0x0f);
 			the_cpu->ClearVICIRQ();	// Clear interrupt (hack!)
-			if (irq_flag & irq_mask) // Set master bit if allowed interrupt still pending
+			if (irq_flag & irq_mask) { // Set master bit if allowed interrupt still pending
 				irq_flag |= 0x80;
+			}
 			break;
 		
 		case 0x1a:	// IRQ mask
@@ -873,17 +793,14 @@ void MOS6569::TriggerLightpen()
  *  VIC vertical blank: Reset counters and redraw screen
  */
 
-#ifdef GLOBAL_VARS
-static inline void vblank()
-#else
 inline void MOS6569::vblank()
-#endif
 {
 	raster_y = vc_base = 0;
 	lp_triggered = false;
 
-	if (!(frame_skipped = --skip_counter))
+	if (!(frame_skipped = --skip_counter)) {
 		skip_counter = ThePrefs.SkipFrames;
+	}
 
 	the_c64->VBlank(!frame_skipped);
 
@@ -895,11 +812,7 @@ inline void MOS6569::vblank()
 }
 
 
-#ifdef GLOBAL_VARS
-static inline void el_std_text(uint8_t *p, uint8_t *q, uint8_t *r)
-#else
 inline void MOS6569::el_std_text(uint8_t *p, uint8_t *q, uint8_t *r)
-#endif
 {
 	unsigned int b0cc = b0c;
 #ifdef __POWERPC__
@@ -925,11 +838,7 @@ inline void MOS6569::el_std_text(uint8_t *p, uint8_t *q, uint8_t *r)
 }
 
 
-#ifdef GLOBAL_VARS
-static inline void el_mc_text(uint8_t *p, uint8_t *q, uint8_t *r)
-#else
 inline void MOS6569::el_mc_text(uint8_t *p, uint8_t *q, uint8_t *r)
-#endif
 {
 	uint16_t *wp = (uint16_t *)p;
 	uint8_t *cp = color_line;
@@ -937,7 +846,7 @@ inline void MOS6569::el_mc_text(uint8_t *p, uint8_t *q, uint8_t *r)
 	uint16_t *mclp = mc_color_lookup;
 
 	// Loop for 40 characters
-	for (int i=0; i<40; i++) {
+	for (unsigned i = 0; i < 40; ++i) {
 		uint8_t data = q[mp[i] << 3];
 
 		if (cp[i] & 8) {
@@ -966,11 +875,7 @@ inline void MOS6569::el_mc_text(uint8_t *p, uint8_t *q, uint8_t *r)
 }
 
 
-#ifdef GLOBAL_VARS
-static inline void el_std_bitmap(uint8_t *p, uint8_t *q, uint8_t *r)
-#else
 inline void MOS6569::el_std_bitmap(uint8_t *p, uint8_t *q, uint8_t *r)
-#endif
 {
 #ifdef __POWERPC__
 	double *dp = (double *)p-1;
@@ -980,7 +885,7 @@ inline void MOS6569::el_std_bitmap(uint8_t *p, uint8_t *q, uint8_t *r)
 	uint8_t *mp = matrix_line;
 
 	// Loop for 40 characters
-	for (int i=0; i<40; i++, q+=8) {
+	for (unsigned i = 0; i < 40; ++i, q += 8) {
 		uint8_t data = r[i] = *q;
 		uint8_t color = mp[i] >> 4;
 		uint8_t bcolor = mp[i] & 15;
@@ -995,11 +900,7 @@ inline void MOS6569::el_std_bitmap(uint8_t *p, uint8_t *q, uint8_t *r)
 }
 
 
-#ifdef GLOBAL_VARS
-static inline void el_mc_bitmap(uint8_t *p, uint8_t *q, uint8_t *r)
-#else
 inline void MOS6569::el_mc_bitmap(uint8_t *p, uint8_t *q, uint8_t *r)
-#endif
 {
 	uint16_t lookup[4];
 	uint16_t *wp = (uint16_t *)p - 1;
@@ -1015,7 +916,7 @@ inline void MOS6569::el_mc_bitmap(uint8_t *p, uint8_t *q, uint8_t *r)
 	lookup[0] = (b0c_color << 8) | b0c_color;
 
 	// Loop for 40 characters
-	for (int i=0; i<40; i++, q+=8) {
+	for (unsigned i = 0; i < 40; ++i, q+=8) {
 		uint8_t color, acolor, bcolor;
 
 		color = colors[mp[i] >> 4];
@@ -1036,11 +937,7 @@ inline void MOS6569::el_mc_bitmap(uint8_t *p, uint8_t *q, uint8_t *r)
 }
 
 
-#ifdef GLOBAL_VARS
-static inline void el_ecm_text(uint8_t *p, uint8_t *q, uint8_t *r)
-#else
 inline void MOS6569::el_ecm_text(uint8_t *p, uint8_t *q, uint8_t *r)
-#endif
 {
 #ifdef __POWERPC__
 	double *dp = (double *)p - 1;
@@ -1052,7 +949,7 @@ inline void MOS6569::el_ecm_text(uint8_t *p, uint8_t *q, uint8_t *r)
 	uint8_t *bcp = &b0c;
 
 	// Loop for 40 characters
-	for (int i=0; i<40; i++) {
+	for (unsigned i = 0; i < 40; ++i) {
 		uint8_t data = r[i] = mp[i];
 		uint8_t color = cp[i];
 		uint8_t bcolor = bcp[(data >> 6) & 3];
@@ -1068,11 +965,7 @@ inline void MOS6569::el_ecm_text(uint8_t *p, uint8_t *q, uint8_t *r)
 }
 
 
-#ifdef GLOBAL_VARS
-static inline void el_std_idle(uint8_t *p, uint8_t *r)
-#else
 inline void MOS6569::el_std_idle(uint8_t *p, uint8_t *r)
-#endif
 {
 #ifdef __POWERPC__
 	uint8_t data = *get_physical(ctrl1 & 0x40 ? 0x39ff : 0x3fff);
@@ -1080,7 +973,7 @@ inline void MOS6569::el_std_idle(uint8_t *p, uint8_t *r)
 	double conv = TextColorTable[0][b0c][data].b;
 	r--;
 
-	for (int i=0; i<40; i++) {
+	for (unsigned i = 0; i < 40; ++i) {
 		*++dp = conv;
 		*++r = data;
 	}
@@ -1090,7 +983,7 @@ inline void MOS6569::el_std_idle(uint8_t *p, uint8_t *r)
 	uint32_t conv0 = TextColorTable[0][b0c][data][0].b;
 	uint32_t conv1 = TextColorTable[0][b0c][data][1].b;
 
-	for (int i=0; i<40; i++) {
+	for (unsigned i = 0; i < 40; ++i) {
 		*lp++ = conv0;
 		*lp++ = conv1;
 		*r++ = data;
@@ -1099,11 +992,7 @@ inline void MOS6569::el_std_idle(uint8_t *p, uint8_t *r)
 }
 
 
-#ifdef GLOBAL_VARS
-static inline void el_mc_idle(uint8_t *p, uint8_t *r)
-#else
 inline void MOS6569::el_mc_idle(uint8_t *p, uint8_t *r)
-#endif
 {
 	uint8_t data = *get_physical(0x3fff);
 	uint32_t *lp = (uint32_t *)p - 1;
@@ -1116,7 +1005,7 @@ inline void MOS6569::el_mc_idle(uint8_t *p, uint8_t *r)
 	uint16_t conv0 = (lookup[(data >> 6) & 3] << 16) | lookup[(data >> 4) & 3];
 	uint16_t conv1 = (lookup[(data >> 2) & 3] << 16) | lookup[(data >> 0) & 3];
 
-	for (int i=0; i<40; i++) {
+	for (unsigned i = 0; i < 40; ++i) {
 		*++lp = conv0;
 		*++lp = conv1;
 		*++r = data;
@@ -1124,18 +1013,14 @@ inline void MOS6569::el_mc_idle(uint8_t *p, uint8_t *r)
 }
 
 
-#ifdef GLOBAL_VARS
-static inline void el_sprites(uint8_t *chunky_ptr)
-#else
 inline void MOS6569::el_sprites(uint8_t *chunky_ptr)
-#endif
 {
 	int i;
 	int snum, sbit;		// Sprite number/bit mask
 	int spr_coll=0, gfx_coll=0;
 
 	// Draw each active sprite
-	for (snum=0, sbit=1; snum<8; snum++, sbit<<=1)
+	for (snum=0, sbit=1; snum<8; snum++, sbit<<=1) {
 		if ((sprite_on & sbit) && mx[snum] < DISPLAY_X-32) {
 			int spr_mask_pos;	// Sprite bit position in fore_mask_buf
 			uint32_t sdata, fore_mask;
@@ -1191,19 +1076,21 @@ inline void MOS6569::el_sprites(uint8_t *chunky_ptr)
 					for (i=0; i<32; i++, plane0_l<<=1, plane1_l<<=1) {
 						uint8_t col;
 						if (plane1_l & 0x80000000) {
-							if (plane0_l & 0x80000000)
+							if (plane0_l & 0x80000000) {
 								col = mm1_color;
-							else
+							} else {
 								col = color;
+							}
 						} else {
-							if (plane0_l & 0x80000000)
+							if (plane0_l & 0x80000000) {
 								col = mm0_color;
-							else
+							} else {
 								continue;
+							}
 						}
-						if (q[i])
+						if (q[i]) {
 							spr_coll |= q[i] | sbit;
-						else {
+						} else {
 							p[i] = col;
 							q[i] = sbit;
 						}
@@ -1211,19 +1098,21 @@ inline void MOS6569::el_sprites(uint8_t *chunky_ptr)
 					for (; i<48; i++, plane0_r<<=1, plane1_r<<=1) {
 						uint8_t col;
 						if (plane1_r & 0x80000000) {
-							if (plane0_r & 0x80000000)
+							if (plane0_r & 0x80000000) {
 								col = mm1_color;
-							else
+							} else {
 								col = color;
+							}
 						} else {
-							if (plane0_r & 0x80000000)
+							if (plane0_r & 0x80000000) {
 								col = mm0_color;
-							else
+							} else {
 								continue;
+							}
 						}
-						if (q[i])
+						if (q[i]) {
 							spr_coll |= q[i] | sbit;
-						else {
+						} else {
 							p[i] = col;
 							q[i] = sbit;
 						}
@@ -1245,27 +1134,29 @@ inline void MOS6569::el_sprites(uint8_t *chunky_ptr)
 					}
 
 					// Paint sprite
-					for (i=0; i<32; i++, sdata_l<<=1)
+					for (i=0; i<32; i++, sdata_l<<=1) {
 						if (sdata_l & 0x80000000) {
-							if (q[i])	// Collision with sprite?
+							if (q[i]) {	// Collision with sprite?
 								spr_coll |= q[i] | sbit;
-							else {		// Draw pixel if no collision
+							} else {	// Draw pixel if no collision
 								p[i] = color;
 								q[i] = sbit;
 							}
 						}
-					for (; i<48; i++, sdata_r<<=1)
+					}
+					for (; i<48; i++, sdata_r<<=1) {
 						if (sdata_r & 0x80000000) {
-							if (q[i]) 	// Collision with sprite?
+							if (q[i]) {	// Collision with sprite?
 								spr_coll |= q[i] | sbit;
-							else {		// Draw pixel if no collision
+							} else {	// Draw pixel if no collision
 								p[i] = color;
 								q[i] = sbit;
 							}
 						}
+					}
 				}
 
-			} else					// Unexpanded
+			} else {				// Unexpanded
 
 				if (mmc & sbit) {	// Multicolor mode
 					uint32_t plane0, plane1;
@@ -1287,19 +1178,21 @@ inline void MOS6569::el_sprites(uint8_t *chunky_ptr)
 					for (i=0; i<24; i++, plane0<<=1, plane1<<=1) {
 						uint8_t col;
 						if (plane1 & 0x80000000) {
-							if (plane0 & 0x80000000)
+							if (plane0 & 0x80000000) {
 								col = mm1_color;
-							else
+							} else {
 								col = color;
+							}
 						} else {
-							if (plane0 & 0x80000000)
+							if (plane0 & 0x80000000) {
 								col = mm0_color;
-							else
+							} else {
 								continue;
+							}
 						}
-						if (q[i])
+						if (q[i]) {
 							spr_coll |= q[i] | sbit;
-						else {
+						} else {
 							p[i] = col;
 							q[i] = sbit;
 						}
@@ -1310,12 +1203,13 @@ inline void MOS6569::el_sprites(uint8_t *chunky_ptr)
 					// Collision with graphics?
 					if (fore_mask & sdata) {
 						gfx_coll |= sbit;
-						if (mdp & sbit)
+						if (mdp & sbit) {
 							sdata &= ~fore_mask;	// Mask sprite if in background
+						}
 					}
 	
 					// Paint sprite
-					for (i=0; i<24; i++, sdata<<=1)
+					for (i=0; i<24; i++, sdata<<=1) {
 						if (sdata & 0x80000000) {
 							if (q[i]) {		// Collision with sprite?
 								spr_coll |= q[i] | sbit;
@@ -1324,16 +1218,18 @@ inline void MOS6569::el_sprites(uint8_t *chunky_ptr)
 								q[i] = sbit;
 							}
 						}
-
+					}
 				}
+			}
 		}
+	}
 
 	if (ThePrefs.SpriteCollisions) {
 
 		// Check sprite-sprite collisions
-		if (clx_spr)
+		if (clx_spr) {
 			clx_spr |= spr_coll;
-		else {
+		} else {
 			clx_spr |= spr_coll;
 			irq_flag |= 0x04;
 			if (irq_mask & 0x04) {
@@ -1343,9 +1239,9 @@ inline void MOS6569::el_sprites(uint8_t *chunky_ptr)
 		}
 
 		// Check sprite-background collisions
-		if (clx_bgr)
+		if (clx_bgr) {
 			clx_bgr |= gfx_coll;
-		else {
+		} else {
 			clx_bgr |= gfx_coll;
 			irq_flag |= 0x02;
 			if (irq_mask & 0x02) {
@@ -1357,11 +1253,7 @@ inline void MOS6569::el_sprites(uint8_t *chunky_ptr)
 }
 
 
-#ifdef GLOBAL_VARS
-static inline int el_update_mc(int raster)
-#else
 inline int MOS6569::el_update_mc(int raster)
-#endif
 {
 	int i, j;
 	int cycles_used = 0;
@@ -1376,15 +1268,16 @@ inline int MOS6569::el_update_mc(int raster)
 	for (i=0, j=1; i<8; i++, j<<=1, mcp++, myp++) {
 
 		// Sprite enabled?
-		if (spren & j)
+		if (spren & j) {
 
 			// Yes, activate if Y position matches raster counter
 			if (*myp == (raster8bit & 0xff)) {
 				*mcp = 0;
 				spron |= j;
-			} else
+			} else {
 				goto spr_off;
-		else
+			}
+		} else {
 spr_off:
 			// No, turn sprite off when data counter exceeds 60
 			//  and increment counter
@@ -1393,16 +1286,19 @@ spr_off:
 					if (!((*myp ^ raster8bit) & 1)) {
 						*mcp += 3;
 						cycles_used += 2;
-						if (*mcp == 63)
+						if (*mcp == 63) {
 							spron &= ~j;
+						}
 					}
 				} else {
 					*mcp += 3;
 					cycles_used += 2;
-					if (*mcp == 63)
+					if (*mcp == 63) {
 						spron &= ~j;
+					}
 				}
 			}
+		}
 	}
 
 	sprite_on = spron;
@@ -1545,20 +1441,22 @@ int MOS6569::EmulateLine()
 	unsigned int raster = raster_y+1;
 
 	// End of screen reached?
-	if (raster != TOTAL_RASTERS)
+	if (raster != TOTAL_RASTERS) {
 		raster_y = raster;
-	else {
+	} else {
 		vblank();
 		raster = 0;
 	}
 
 	// Trigger raster IRQ if IRQ line reached
-	if (raster == irq_raster)
+	if (raster == irq_raster) {
 		raster_irq();
+	}
 
 	// In line $30, the DEN bit controls if Bad Lines can occur
-	if (raster == 0x30)
+	if (raster == 0x30) {
 		bad_lines_enabled = ctrl1 & 0x10;
+	}
 
 	// Skip frame? Only calculate Bad Lines then
 	if (frame_skipped) {
@@ -1596,17 +1494,19 @@ int MOS6569::EmulateLine()
 			int vc1 = vc - 1;
 			uint8_t *mbp = matrix_base + vc1;
 			uint8_t *crp = color_ram + vc1;
-			for (int i=0; i<40; i++) {
+			for (unsigned i = 0; i < 40; ++i) {
 				*++mp = *++mbp;
 				*++cp = *++crp;
 			}
 		}
 
 		// Handler upper/lower border
-		if (raster == dy_stop)
+		if (raster == dy_stop) {
 			border_on = true;
-		if (raster == dy_start && (ctrl1 & 0x10)) // Don't turn off border if DEN bit cleared
+		}
+		if (raster == dy_start && (ctrl1 & 0x10)) { // Don't turn off border if DEN bit cleared
 			border_on = false;
+		}
 
 		if (!border_on) {
 
@@ -1620,9 +1520,10 @@ int MOS6569::EmulateLine()
 			{
 				p--;
 				uint8_t b0cc = b0c_color;
-				int limit = x_scroll;
-				for (int i=0; i<limit; i++)	// Background on the left if XScroll>0
+				unsigned limit = x_scroll;
+				for (unsigned i = 0; i < limit; ++i) {	// Background on the left if XScroll>0
 					*++p = b0cc;
+				}
 				p++;
 			}
 
@@ -1633,14 +1534,16 @@ int MOS6569::EmulateLine()
 #ifndef CAN_ACCESS_UNALIGNED
 #ifdef ALIGNMENT_CHECK
 						el_std_text(use_p, char_base + rc, r);
-						if (use_p != p)
+						if (use_p != p) {
 							memcpy(p, use_p, 8*40);
+						}
 #else
 						if (x_scroll) {
 							el_std_text(text_chunky_buf, char_base + rc, r);
 							memcpy(p, text_chunky_buf, 8*40);					        
-						} else
+						} else {
 							el_std_text(p, char_base + rc, r);
+						}
 #endif
 #else
 						el_std_text(p, char_base + rc, r);
@@ -1651,14 +1554,16 @@ int MOS6569::EmulateLine()
 #ifndef CAN_ACCESS_UNALIGNED
 #ifdef ALIGNMENT_CHECK
 						el_mc_text(use_p, char_base + rc, r);
-						if (use_p != p)
+						if (use_p != p) {
 							memcpy(p, use_p, 8*40);
+						}
 #else
 						if (x_scroll) {
 							el_mc_text(text_chunky_buf, char_base + rc, r);
 							memcpy(p, text_chunky_buf, 8*40);					        
-						} else
+						} else {
 							el_mc_text(p, char_base + rc, r);
+						}
 #endif
 #else
 						el_mc_text(p, char_base + rc, r);
@@ -1687,14 +1592,16 @@ int MOS6569::EmulateLine()
 #ifndef CAN_ACCESS_UNALIGNED
 #ifdef ALIGNMENT_CHECK
 						el_mc_bitmap(use_p, bitmap_base + (vc << 3) + rc, r);
-						if (use_p != p)
+						if (use_p != p) {
 							memcpy(p, use_p, 8*40);
+						}
 #else
 						if (x_scroll) {
 							el_mc_bitmap(text_chunky_buf, bitmap_base + (vc << 3) + rc, r);
 							memcpy(p, text_chunky_buf, 8*40);					        
-						} else
+						} else {
 							el_mc_bitmap(p, bitmap_base + (vc << 3) + rc, r);
+						}
 #endif
 #else
 						el_mc_bitmap(p, bitmap_base + (vc << 3) + rc, r);
@@ -1705,14 +1612,16 @@ int MOS6569::EmulateLine()
 #ifndef CAN_ACCESS_UNALIGNED
 #ifdef ALIGNMENT_CHECK
 						el_ecm_text(use_p, char_base + rc, r);
-						if (use_p != p)
+						if (use_p != p) {
 							memcpy(p, use_p, 8*40);
+						}
 #else
 						if (x_scroll) {
 							el_ecm_text(text_chunky_buf, char_base + rc, r);
 							memcpy(p, text_chunky_buf, 8*40);					        
-						} else
+						} else {
 							el_ecm_text(p, char_base + rc, r);
+						}
 #endif
 #else
 						el_ecm_text(p, char_base + rc, r);
@@ -1740,8 +1649,9 @@ int MOS6569::EmulateLine()
 						if (x_scroll) {
 							el_std_idle(text_chunky_buf, r);
 							memcpy(p, text_chunky_buf, 8*40);					        
-						} else
+						} else {
 							el_std_idle(p, r);
+						}
 #endif
 #else
 						el_std_idle(p, r);
@@ -1757,8 +1667,9 @@ int MOS6569::EmulateLine()
 						if (x_scroll) {
 							el_mc_idle(text_chunky_buf, r);
 							memcpy(p, text_chunky_buf, 8*40);					        
-						} else
+						} else {
 							el_mc_idle(p, r);
+						}
 #endif
 #else
 						el_mc_idle(p, r);
@@ -1777,8 +1688,9 @@ int MOS6569::EmulateLine()
 
 				// Clear sprite collision buffer
 				uint32_t *lp = (uint32_t *)spr_coll_buf - 1;
-				for (int i=0; i<DISPLAY_X/4; i++)
+				for (unsigned i = 0; i < DISPLAY_X/4; ++i) {
 					*++lp = 0;
+				}
 
 				el_sprites(chunky_ptr);
 			}
@@ -1786,19 +1698,23 @@ int MOS6569::EmulateLine()
 			// Handle left/right border
 			uint32_t *lp = (uint32_t *)chunky_ptr - 1;
 			uint32_t c = ec_color_long;
-			for (int i=0; i<COL40_XSTART/4; i++)
+			for (unsigned i = 0; i < COL40_XSTART/4; ++i) {
 				*++lp = c;
+			}
 			lp = (uint32_t *)(chunky_ptr + COL40_XSTOP) - 1;
-			for (int i=0; i<(DISPLAY_X-COL40_XSTOP)/4; i++)
+			for (unsigned i = 0; i < (DISPLAY_X-COL40_XSTOP)/4; ++i) {
 				*++lp = c;
+			}
 			if (!border_40_col) {
 				c = ec_color;
 				p = chunky_ptr + COL40_XSTART - 1;
-				for (int i=0; i<COL38_XSTART-COL40_XSTART; i++)
+				for (unsigned i = 0; i < COL38_XSTART-COL40_XSTART; ++i) {
 					*++p = c;
+				}
 				p = chunky_ptr + COL38_XSTOP - 1;
-				for (int i=0; i<COL40_XSTOP-COL38_XSTOP; i++)
+				for (unsigned i = 0; i < COL40_XSTOP-COL38_XSTOP; ++i) {
 					*++p = c;
+				}
 			}
 
 #if 0
@@ -1836,8 +1752,9 @@ int MOS6569::EmulateLine()
 			// Display border
 			uint32_t *lp = (uint32_t *)chunky_ptr - 1;
 			uint32_t c = ec_color_long;
-			for (int i=0; i<DISPLAY_X/4; i++)
+			for (unsigned i = 0; i < DISPLAY_X/4; ++i) {
 				*++lp = c;
+			}
 		}
 
 #ifdef __POWERPC__
@@ -1852,17 +1769,20 @@ int MOS6569::EmulateLine()
 		if (rc == 7) {
 			display_state = false;
 			vc_base = vc;
-		} else
+		} else {
 			rc++;
+		}
 
-		if (raster >= FIRST_DMA_LINE-1 && raster <= LAST_DMA_LINE-1 && (((raster+1) & 7) == y_scroll) && bad_lines_enabled)
+		if (raster >= FIRST_DMA_LINE-1 && raster <= LAST_DMA_LINE-1 && (((raster+1) & 7) == y_scroll) && bad_lines_enabled) {
 			rc = 0;
+		}
 	}
 
 VIC_nop:
 	// Skip this if all sprites are off
-	if (me | sprite_on)
+	if (me | sprite_on) {
 		cycles_left -= el_update_mc(raster);
+	}
 
 	return cycles_left;
 }

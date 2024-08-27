@@ -22,11 +22,6 @@
 #define _VIC_H
 
 
-// Define this if you want global variables instead of member variables
-#if defined(__i386) || defined(mc68000) || defined(__MC68K__)
-#define GLOBAL_VARS
-#endif
-
 // Define this if you have a processor that can do unaligned accesses quickly
 #if defined(__i386) || defined(__x86_64) || defined(mc68000) || defined(__MC68K__)
 #define CAN_ACCESS_UNALIGNED
@@ -34,10 +29,10 @@
 
 
 // Total number of raster lines (PAL)
-const unsigned TOTAL_RASTERS = 0x138;
+constexpr unsigned TOTAL_RASTERS = 0x138;
 
 // Screen refresh frequency (PAL)
-const unsigned SCREEN_FREQ = 50;
+constexpr unsigned SCREEN_FREQ = 50;
 
 
 class MOS6510;
@@ -68,7 +63,6 @@ public:
 #endif
 
 private:
-#ifndef GLOBAL_VARS
 	void vblank();
 	void raster_irq();
 
@@ -198,7 +192,6 @@ private:
 	uint8_t *matrix_base;			// Video matrix base
 	uint8_t *char_base;				// Character generator base
 	uint8_t *bitmap_base;			// Bitmap base
-#endif
 #endif
 };
 

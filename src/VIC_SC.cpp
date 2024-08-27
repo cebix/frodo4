@@ -141,119 +141,15 @@ uint16_t MultiExpTable[256] = {
 	0xFFA0, 0xFFA5, 0xFFAA, 0xFFAF, 0xFFF0, 0xFFF5, 0xFFFA, 0xFFFF
 };
 
-#ifdef GLOBAL_VARS
-static uint16_t mx[8];						// VIC registers
-static uint8_t my[8];
-static uint8_t mx8;
-static uint8_t ctrl1, ctrl2;
-static uint8_t lpx, lpy;
-static uint8_t me, mxe, mye, mdp, mmc;
-static uint8_t vbase;
-static uint8_t irq_flag, irq_mask;
-static uint8_t clx_spr, clx_bgr;
-static uint8_t ec, b0c, b1c, b2c, b3c, mm0, mm1;
-static uint8_t sc[8];
-
-static uint8_t *ram, *char_rom, *color_ram; // Pointers to RAM and ROM
-static C64 *the_c64;					// Pointer to C64
-static C64Display *the_display;			// Pointer to C64Display
-static MOS6510 *the_cpu;				// Pointer to 6510
-static MOS6569 *the_vic;				// Pointer to self
-
-static uint8_t colors[256];				// Indices of the 16 C64 colors (16 times mirrored to avoid "& 0x0f")
-
-static uint8_t ec_color, b0c_color, b1c_color, b2c_color, b3c_color; // Indices for exterior/background colors
-static uint8_t mm0_color, mm1_color;	// Indices for MOB multicolors
-static uint8_t spr_color[8];			// Indices for MOB colors
-
-static uint8_t matrix_line[40];			// Buffer for video line, read in Bad Lines
-static uint8_t color_line[40];			// Buffer for color line, read in Bad Lines
-
-#ifdef __POWERPC__
-static double chunky_tmp[DISPLAY_X/8];	// Temporary line buffer for GameKit speedup
-#endif
-static uint8_t *chunky_ptr;				// Pointer in chunky bitmap buffer
-static uint8_t *chunky_line_start;		// Pointer to start of current line in bitmap buffer
-static uint8_t *fore_mask_ptr;			// Pointer in fore_mask_buf
-static int xmod;						// Number of bytes per row
-
-static uint16_t raster_x;				// Current raster x position
-static uint16_t raster_y;				// Current raster line
-static uint16_t irq_raster;				// Interrupt raster line
-static uint16_t dy_start;				// Comparison values for border logic
-static uint16_t dy_stop;
-static uint16_t rc;						// Row counter
-static uint16_t vc;						// Video counter
-static uint16_t vc_base;				// Video counter base
-static uint16_t x_scroll;				// X scroll value
-static uint16_t y_scroll;				// Y scroll value
-static uint16_t cia_vabase;				// CIA VA14/15 video base
-
-static unsigned cycle;					// Current cycle in line (1..63)
-
-static int display_idx;					// Index of current display mode
-static unsigned ml_index;				// Index in matrix/color_line[]
-static int skip_counter;				// Counter for frame-skipping
-
-static uint16_t mc[8];					// Sprite data counters
-static uint16_t mc_base[8];				// Sprite data counter bases
-
-static uint8_t spr_coll_buf[0x180];		// Buffer for sprite-sprite collisions and priorities
-static uint8_t fore_mask_buf[0x180/8];	// Foreground mask for sprite-graphics collisions and priorities
-
-static bool display_state;				// true: Display state, false: Idle state
-static bool border_on;					// Flag: Upper/lower border on
-static bool frame_skipped;				// Flag: Frame is being skipped
-static bool bad_lines_enabled;			// Flag: Bad Lines enabled for this frame
-static bool lp_triggered;				// Flag: Lightpen was triggered in this frame
-static bool is_bad_line;			 	// Flag: Current line is Bad Line
-static bool draw_this_line;				// Flag: This line is drawn on the screen
-static bool ud_border_on;				// Flag: Upper/lower border on
-static bool vblanking;					// Flag: VBlank in next cycle
-
-static bool border_on_sample[5];		// Samples of border state at different cycles (1, 17, 18, 56, 57)
-static uint8_t border_color_sample[DISPLAY_X/8];	// Samples of border color at each "displayed" cycle
-
-static uint16_t matrix_base;			// Video matrix base
-static uint16_t char_base;				// Character generator base
-static uint16_t bitmap_base;			// Bitmap base
-
-static uint8_t ref_cnt;					// Refresh counter
-static uint8_t spr_exp_y;				// 8 sprite y expansion flipflops
-static uint8_t spr_dma_on;				// 8 flags: Sprite DMA active
-static uint8_t spr_disp_on;				// 8 flags: Sprite display active
-static uint8_t spr_draw;				// 8 flags: Draw sprite in this line
-static uint16_t spr_ptr[8];				// Sprite data pointers
-
-static uint8_t gfx_data, char_data, color_data, last_char_data;
-static uint8_t spr_data[8][4];			// Sprite data read
-static uint8_t spr_draw_data[8][4];		// Sprite data for drawing
-
-static uint32_t first_ba_cycle;			// Cycle when BA first went low
-#endif
-
 
 /*
  *  Constructor: Initialize variables
  */
 
 MOS6569::MOS6569(C64 *c64, C64Display *disp, MOS6510 *CPU, uint8_t *RAM, uint8_t *Char, uint8_t *Color)
-#ifndef GLOBAL_VARS
 	: ram(RAM), char_rom(Char), color_ram(Color), the_c64(c64), the_display(disp), the_cpu(CPU)
-#endif
 {
-	int i;
-
 	// Set pointers
-#ifdef GLOBAL_VARS
-	the_vic = this;
-	the_c64 = c64;
-	the_display = disp;
-	the_cpu = CPU;
-	ram = RAM;
-	char_rom = Char;
-	color_ram = Color;
-#endif
 	matrix_base = 0;
 	char_base = 0;
 	bitmap_base = 0;
@@ -271,7 +167,9 @@ MOS6569::MOS6569(C64 *c64, C64Display *disp, MOS6510 *CPU, uint8_t *RAM, uint8_t
 	clx_spr = clx_bgr = 0;
 	cia_vabase = 0;
 	ec = b0c = b1c = b2c = b3c = mm0 = mm1 = 0;
-	for (i=0; i<8; i++) mx[i] = my[i] = sc[i] = 0;
+	for (unsigned i = 0; i < 8; ++i) {
+		mx[i] = my[i] = sc[i] = 0;
+	}
 
 	// Initialize other variables
 	raster_y = TOTAL_RASTERS - 1;
@@ -289,7 +187,7 @@ MOS6569::MOS6569(C64 *c64, C64Display *disp, MOS6510 *CPU, uint8_t *RAM, uint8_t
 	is_bad_line = false;
 
     spr_exp_y = spr_dma_on = spr_disp_on = 0;
-	for (i=0; i<8; i++) {
+	for (unsigned i = 0; i < 8; ++i) {
 		mc[i] = 63;
 		mc_base[i] = 0;
 		spr_ptr[i] = 0;
@@ -304,7 +202,9 @@ MOS6569::MOS6569(C64 *c64, C64Display *disp, MOS6510 *CPU, uint8_t *RAM, uint8_t
 	// Preset colors to black
 	disp->InitColors(colors);
 	ec_color = b0c_color = b1c_color = b2c_color = b3c_color = mm0_color = mm1_color = colors[0];
-	for (i=0; i<8; i++) spr_color[i] = colors[0];
+	for (unsigned i = 0; i < 8; ++i) {
+		spr_color[i] = colors[0];
+	}
 }
 
 
@@ -314,20 +214,20 @@ MOS6569::MOS6569(C64 *c64, C64Display *disp, MOS6510 *CPU, uint8_t *RAM, uint8_t
 
 void MOS6569::ReInitColors()
 {
-	int i;
-
 	// Build inverse color table.
 	uint8_t xlate_colors[256];
 	memset(xlate_colors, 0, sizeof(xlate_colors));
-	for (i=0; i<16; i++)
+	for (unsigned i = 0; i < 16; ++i) {
 		xlate_colors[colors[i]] = i;
+	}
 
 	// Get the new colors.
 	the_display->InitColors(colors);
 
 	// Build color translation table.
-	for (i=0; i<256; i++)
+	for (unsigned i = 0; i < 256; ++i) {
 		xlate_colors[i] = colors[xlate_colors[i]];
+	}
 
 	// Translate all the old colors variables.
 	ec_color = colors[ec];
@@ -337,18 +237,21 @@ void MOS6569::ReInitColors()
 	b3c_color = colors[b3c];
 	mm0_color = colors[mm0];
 	mm1_color = colors[mm1];
-	for (i=0; i<8; i++)
+	for (unsigned i = 0; i < 8; ++i) {
 		spr_color[i] = colors[sc[i]];
+	}
 
 	// Translate the border color sample buffer.
-	for (unsigned x = 0; x < sizeof(border_color_sample); x++)
+	for (unsigned x = 0; x < sizeof(border_color_sample); x++) {
 		border_color_sample[x] = xlate_colors[border_color_sample[x]];
+	}
 
 	// Translate the chunky buffer.
 	uint8_t *scanline = the_display->BitmapBase();
-	for (int y=0; y<DISPLAY_Y; y++) {
-		for (int x=0; x<DISPLAY_X; x++)
+	for (unsigned y = 0; y < DISPLAY_Y; ++y) {
+		for (unsigned x = 0; x < DISPLAY_X; ++x) {
 			scanline[x] = xlate_colors[scanline[x]];
+		}
 		scanline += xmod;
 	}
 }
@@ -360,8 +263,6 @@ void MOS6569::ReInitColors()
 
 void MOS6569::GetState(MOS6569State *vd)
 {
-	int i;
-
 	vd->m0x = mx[0] & 0xff; vd->m0y = my[0];
 	vd->m1x = mx[1] & 0xff; vd->m1y = my[1];
 	vd->m2x = mx[2] & 0xff; vd->m2y = my[2];
@@ -402,7 +303,7 @@ void MOS6569::GetState(MOS6569State *vd)
 	vd->rc = rc;
 	vd->spr_dma = spr_dma_on;
 	vd->spr_disp = spr_disp_on;
-	for (i=0; i<8; i++) {
+	for (unsigned i = 0; i < 8; ++i) {
 		vd->mc[i] = mc[i];
 		vd->mc_base[i] = mc_base[i];
 	}
@@ -416,8 +317,9 @@ void MOS6569::GetState(MOS6569State *vd)
 	vd->matrix_base = ((vbase & 0xf0) << 6) | cia_vabase;
 	vd->char_base = ((vbase & 0x0e) << 10) | cia_vabase;
 	vd->bitmap_base = ((vbase & 0x08) << 10) | cia_vabase;
-	for (i=0; i<8; i++)
+	for (unsigned i = 0; i < 8; ++i) {
 		vd->sprite_base[i] = spr_ptr[i] | cia_vabase;
+	}
 
 	vd->raster_x = raster_x;
 	vd->cycle = cycle;
@@ -446,10 +348,11 @@ void MOS6569::SetState(const MOS6569State *vd)
 	mx[7] = vd->m7x; my[7] = vd->m7y;
 	mx8 = vd->mx8;
 	for (i=0, j=1; i<8; i++, j<<=1) {
-		if (mx8 & j)
+		if (mx8 & j) {
 			mx[i] |= 0x100;
-		else
+		} else {
 			mx[i] &= 0xff;
+		}
 	}
 
 	ctrl1 = vd->ctrl1;
@@ -497,8 +400,9 @@ void MOS6569::SetState(const MOS6569State *vd)
 	sc[2] = vd->m2c; sc[3] = vd->m3c;
 	sc[4] = vd->m4c; sc[5] = vd->m5c;
 	sc[6] = vd->m6c; sc[7] = vd->m7c;
-	for (i=0; i<8; i++)
+	for (unsigned i = 0; i < 8; ++i) {
 		spr_color[i] = colors[sc[i]];
+	}
 
 	irq_raster = vd->irq_raster;
 	vc = vd->vc;
@@ -506,7 +410,7 @@ void MOS6569::SetState(const MOS6569State *vd)
 	rc = vd->rc;
 	spr_dma_on = vd->spr_dma;
 	spr_disp_on = vd->spr_disp;
-	for (i=0; i<8; i++) {
+	for (unsigned i = 0; i < 8; ++i) {
 		mc[i] = vd->mc[i];
 		mc_base[i] = vd->mc_base[i];
 		spr_ptr[i] = vd->sprite_base[i] & 0x3fff;
@@ -529,11 +433,7 @@ void MOS6569::SetState(const MOS6569State *vd)
  *  Trigger raster IRQ
  */
 
-#ifdef GLOBAL_VARS
-static inline void raster_irq()
-#else
 inline void MOS6569::raster_irq()
-#endif
 {
 	irq_flag |= 0x01;
 	if (irq_mask & 0x01) {
@@ -646,10 +546,11 @@ void MOS6569::WriteRegister(uint16_t adr, uint8_t byte)
 			int i, j;
 			mx8 = byte;
 			for (i=0, j=1; i<8; i++, j<<=1) {
-				if (mx8 & j)
+				if (mx8 & j) {
 					mx[i] |= 0x100;
-				else
+				} else {
 					mx[i] &= 0xff;
+				}
 			}
 			break;
 		}
@@ -664,8 +565,9 @@ void MOS6569::WriteRegister(uint16_t adr, uint8_t byte)
 			y_scroll = byte & 7;
 
 			uint16_t new_irq_raster = (irq_raster & 0xff) | ((byte & 0x80) << 1);
-			if (irq_raster != new_irq_raster && raster_y == new_irq_raster)
+			if (irq_raster != new_irq_raster && raster_y == new_irq_raster) {
 				raster_irq();
+			}
 			irq_raster = new_irq_raster;
 
 			if (byte & 8) {
@@ -677,8 +579,9 @@ void MOS6569::WriteRegister(uint16_t adr, uint8_t byte)
 			}
 
 			// In line $30, the DEN bit controls if Bad Lines can occur
-			if (raster_y == 0x30 && byte & 0x10)
+			if (raster_y == 0x30 && byte & 0x10) {
 				bad_lines_enabled = true;
+			}
 
 			// Bad Line condition?
 			is_bad_line = (raster_y >= FIRST_DMA_LINE && raster_y <= LAST_DMA_LINE && ((raster_y & 7) == y_scroll) && bad_lines_enabled);
@@ -689,8 +592,9 @@ void MOS6569::WriteRegister(uint16_t adr, uint8_t byte)
 
 		case 0x12:{	// Raster counter
 			uint16_t new_irq_raster = (irq_raster & 0xff00) | byte;
-			if (irq_raster != new_irq_raster && raster_y == new_irq_raster)
+			if (irq_raster != new_irq_raster && raster_y == new_irq_raster) {
 				raster_irq();
+			}
 			irq_raster = new_irq_raster;
 			break;
 		}
@@ -719,10 +623,11 @@ void MOS6569::WriteRegister(uint16_t adr, uint8_t byte)
 
 		case 0x19: // IRQ flags
 			irq_flag = irq_flag & (~byte & 0x0f);
-			if (irq_flag & irq_mask)	// Set master bit if allowed interrupt still pending
+			if (irq_flag & irq_mask) {	// Set master bit if allowed interrupt still pending
 				irq_flag |= 0x80;
-			else
+			} else {
 				the_cpu->ClearVICIRQ();	// Else clear interrupt
+			}
 			break;
 		
 		case 0x1a:	// IRQ mask
@@ -800,25 +705,14 @@ void MOS6569::TriggerLightpen()
  *  Read a byte from the VIC's address space
  */
 
-#ifdef GLOBAL_VARS
-static inline uint8_t read_byte(uint16_t adr)
-#else
 inline uint8_t MOS6569::read_byte(uint16_t adr)
-#endif
 {
 	uint16_t va = adr | cia_vabase;
-	if ((va & 0x7000) == 0x1000)
-#ifdef GLOBAL_VARS
-		return the_vic->LastVICByte = char_rom[va & 0x0fff];
-#else
+	if ((va & 0x7000) == 0x1000) {
 		return LastVICByte = char_rom[va & 0x0fff];
-#endif
-	else
-#ifdef GLOBAL_VARS
-		return the_vic->LastVICByte = ram[va];
-#else
+	} else {
 		return LastVICByte = ram[va];
-#endif
+	}
 }
 
 
@@ -836,19 +730,12 @@ inline void memset8(uint8_t *p, uint8_t c)
  *  Video matrix access
  */
 
-#ifdef __i386
-inline
-#endif
-#ifdef GLOBAL_VARS
-static void matrix_access()
-#else
 void MOS6569::matrix_access()
-#endif
 {
 	if (the_cpu->BALow) {
-		if (the_c64->CycleCounter-first_ba_cycle < 3)
+		if (the_c64->CycleCounter-first_ba_cycle < 3) {
 			matrix_line[ml_index] = color_line[ml_index] = 0xff;
-		else {
+		} else {
 			uint16_t adr = (vc & 0x03ff) | matrix_base;
 			matrix_line[ml_index] = read_byte(adr);
 			color_line[ml_index] = color_ram[adr & 0x03ff];
@@ -861,24 +748,19 @@ void MOS6569::matrix_access()
  *  Graphics data access
  */
 
-#ifdef __i386
-inline
-#endif
-#ifdef GLOBAL_VARS
-static void graphics_access()
-#else
 void MOS6569::graphics_access()
-#endif
 {
 	if (display_state) {
 
 		uint16_t adr;
-		if (ctrl1 & 0x20)	// Bitmap
+		if (ctrl1 & 0x20) {	// Bitmap
 			adr = ((vc & 0x03ff) << 3) | bitmap_base | rc;
-		else				// Text
+		} else {			// Text
 			adr = (matrix_line[ml_index] << 3) | char_base | rc;
-		if (ctrl1 & 0x40)	// ECM
+		}
+		if (ctrl1 & 0x40) {	// ECM
 			adr &= 0xf9ff;
+		}
 		gfx_data = read_byte(adr);
 		char_data = matrix_line[ml_index];
 		color_data = color_line[ml_index];
@@ -898,11 +780,7 @@ void MOS6569::graphics_access()
  *  Background display (8 pixels)
  */
 
-#ifdef GLOBAL_VARS
-static void draw_background()
-#else
 void MOS6569::draw_background()
-#endif
 {
 	uint8_t *p = chunky_ptr;
 	uint8_t c;
@@ -920,16 +798,19 @@ void MOS6569::draw_background()
 			c = colors[last_char_data];
 			break;
 		case 4:		// ECM text
-			if (last_char_data & 0x80)
-				if (last_char_data & 0x40)
+			if (last_char_data & 0x80) {
+				if (last_char_data & 0x40) {
 					c = b3c_color;
-				else
+				} else {
 					c = b2c_color;
-			else
-				if (last_char_data & 0x40)
+				}
+			} else {
+				if (last_char_data & 0x40) {
 					c = b1c_color;
-				else
+				} else {
 					c = b0c_color;
+				}
+			}
 			break;
 		default:
 			c = colors[0];
@@ -943,20 +824,14 @@ void MOS6569::draw_background()
  *  Graphics display (8 pixels)
  */
 
-#ifdef __i386
-inline
-#endif
-#ifdef GLOBAL_VARS
-static void draw_graphics()
-#else
 void MOS6569::draw_graphics()
-#endif
 {
 	uint8_t *p = chunky_ptr + x_scroll;
 	uint8_t c[4], data;
 
 	if (!draw_this_line)
 		return;
+
 	if (ud_border_on) {
 		draw_background();
 		return;
@@ -995,16 +870,19 @@ void MOS6569::draw_graphics()
 			goto draw_multi;
 
 		case 4:		// ECM text
-			if (char_data & 0x80)
-				if (char_data & 0x40)
+			if (char_data & 0x80) {
+				if (char_data & 0x40) {
 					c[0] = b3c_color;
-				else
+				} else {
 					c[0] = b2c_color;
-			else
-				if (char_data & 0x40)
+				}
+			} else {
+				if (char_data & 0x40) {
 					c[0] = b1c_color;
-				else
+				} else {
 					c[0] = b0c_color;
+				}
+			}
 			c[1] = colors[color_data];
 			goto draw_std;
 
@@ -1069,11 +947,7 @@ draw_multi:
  *  Sprite display
  */
 
-#ifdef GLOBAL_VARS
-inline static void draw_sprites()
-#else
 inline void MOS6569::draw_sprites()
-#endif
 {
 	int i;
 	int snum, sbit;		// Sprite number/bit mask
@@ -1082,8 +956,9 @@ inline void MOS6569::draw_sprites()
 	// Clear sprite collision buffer
 	{
 		uint32_t *lp = (uint32_t *)spr_coll_buf - 1;
-		for (i=0; i<DISPLAY_X/4; i++)
+		for (i=0; i<DISPLAY_X/4; i++) {
 			*++lp = 0;
+		}
 	}
 
 	// Loop for all sprites
@@ -1145,19 +1020,21 @@ inline void MOS6569::draw_sprites()
 					for (i=0; i<32; i++, plane0_l<<=1, plane1_l<<=1) {
 						uint8_t col;
 						if (plane1_l & 0x80000000) {
-							if (plane0_l & 0x80000000)
+							if (plane0_l & 0x80000000) {
 								col = mm1_color;
-							else
+							} else {
 								col = color;
+							}
 						} else {
-							if (plane0_l & 0x80000000)
+							if (plane0_l & 0x80000000) {
 								col = mm0_color;
-							else
+							} else {
 								continue;
+							}
 						}
-						if (q[i])
+						if (q[i]) {
 							spr_coll |= q[i] | sbit;
-						else {
+						} else {
 							p[i] = col;
 							q[i] = sbit;
 						}
@@ -1165,19 +1042,21 @@ inline void MOS6569::draw_sprites()
 					for (; i<48; i++, plane0_r<<=1, plane1_r<<=1) {
 						uint8_t col;
 						if (plane1_r & 0x80000000) {
-							if (plane0_r & 0x80000000)
+							if (plane0_r & 0x80000000) {
 								col = mm1_color;
-							else
+							} else {
 								col = color;
+							}
 						} else {
-							if (plane0_r & 0x80000000)
+							if (plane0_r & 0x80000000) {
 								col = mm0_color;
-							else
+							} else {
 								continue;
+							}
 						}
-						if (q[i])
+						if (q[i]) {
 							spr_coll |= q[i] | sbit;
-						else {
+						} else {
 							p[i] = col;
 							q[i] = sbit;
 						}
@@ -1199,24 +1078,26 @@ inline void MOS6569::draw_sprites()
 					}
 
 					// Paint sprite
-					for (i=0; i<32; i++, sdata_l<<=1)
+					for (i=0; i<32; i++, sdata_l<<=1) {
 						if (sdata_l & 0x80000000) {
-							if (q[i])	// Collision with sprite?
+							if (q[i]) {	// Collision with sprite?
 								spr_coll |= q[i] | sbit;
-							else {		// Draw pixel if no collision
+							} else {	// Draw pixel if no collision
 								p[i] = color;
 								q[i] = sbit;
 							}
 						}
-					for (; i<48; i++, sdata_r<<=1)
+					}
+					for (; i<48; i++, sdata_r<<=1) {
 						if (sdata_r & 0x80000000) {
-							if (q[i]) 	// Collision with sprite?
+							if (q[i]) {	// Collision with sprite?
 								spr_coll |= q[i] | sbit;
-							else {		// Draw pixel if no collision
+							} else {	// Draw pixel if no collision
 								p[i] = color;
 								q[i] = sbit;
 							}
 						}
+					}
 				}
 
 			} else {				// Unexpanded
@@ -1241,19 +1122,21 @@ inline void MOS6569::draw_sprites()
 					for (i=0; i<24; i++, plane0<<=1, plane1<<=1) {
 						uint8_t col;
 						if (plane1 & 0x80000000) {
-							if (plane0 & 0x80000000)
+							if (plane0 & 0x80000000) {
 								col = mm1_color;
-							else
+							} else {
 								col = color;
+							}
 						} else {
-							if (plane0 & 0x80000000)
+							if (plane0 & 0x80000000) {
 								col = mm0_color;
-							else
+							} else {
 								continue;
+							}
 						}
-						if (q[i])
+						if (q[i]) {
 							spr_coll |= q[i] | sbit;
-						else {
+						} else {
 							p[i] = col;
 							q[i] = sbit;
 						}
@@ -1264,12 +1147,13 @@ inline void MOS6569::draw_sprites()
 					// Collision with graphics?
 					if (fore_mask & sdata) {
 						gfx_coll |= sbit;
-						if (mdp & sbit)
+						if (mdp & sbit) {
 							sdata &= ~fore_mask;	// Mask sprite if in background
+						}
 					}
 	
 					// Paint sprite
-					for (i=0; i<24; i++, sdata<<=1)
+					for (i=0; i<24; i++, sdata<<=1) {
 						if (sdata & 0x80000000) {
 							if (q[i]) {	// Collision with sprite?
 								spr_coll |= q[i] | sbit;
@@ -1278,6 +1162,7 @@ inline void MOS6569::draw_sprites()
 								q[i] = sbit;
 							}
 						}
+					}
 				}
 			}
 		}
@@ -1286,9 +1171,9 @@ inline void MOS6569::draw_sprites()
 	if (ThePrefs.SpriteCollisions) {
 
 		// Check sprite-sprite collisions
-		if (clx_spr)
+		if (clx_spr) {
 			clx_spr |= spr_coll;
-		else {
+		} else {
 			clx_spr |= spr_coll;
 			irq_flag |= 0x04;
 			if (irq_mask & 0x04) {
@@ -1298,9 +1183,9 @@ inline void MOS6569::draw_sprites()
 		}
 
 		// Check sprite-background collisions
-		if (clx_bgr)
+		if (clx_bgr) {
 			clx_bgr |= gfx_coll;
-		else {
+		} else {
 			clx_bgr |= gfx_coll;
 			irq_flag |= 0x02;
 			if (irq_mask & 0x02) {
@@ -1447,8 +1332,9 @@ static asm void fastcopy(register uchar *dst, register uchar *src)
 
 // Turn on display if Bad Line
 #define DisplayIfBadLine \
-	if (is_bad_line) \
-		display_state = true;
+	if (is_bad_line) { \
+		display_state = true; \
+	}
 
 // Turn on display and matrix access if Bad Line
 #define FetchIfBadLine \
@@ -1476,13 +1362,15 @@ static asm void fastcopy(register uchar *dst, register uchar *src)
 // Turn on sprite DMA if necessary
 #define CheckSpriteDMA \
 	mask = 1; \
-	for (i=0; i<8; i++, mask<<=1) \
+	for (i=0; i<8; i++, mask<<=1) { \
 		if ((me & mask) && (raster_y & 0xff) == my[i]) { \
 			spr_dma_on |= mask; \
 			mc_base[i] = 0; \
-			if (mye & mask) \
+			if (mye & mask) { \
 				spr_exp_y &= ~mask; \
-		}
+			} \
+		} \
+	}
 
 // Fetch sprite data pointer
 #define SprPtrAccess(num) \
@@ -1493,14 +1381,16 @@ static asm void fastcopy(register uchar *dst, register uchar *src)
 	if (spr_dma_on & (1 << num)) { \
 		spr_data[num][bytenum] = read_byte(mc[num] & 0x3f | spr_ptr[num]); \
 		mc[num]++; \
-	} else if (bytenum == 1) \
-		IdleAccess;
+	} else if (bytenum == 1) { \
+		IdleAccess; \
+	}
 
 // Sample border color and increment chunky_ptr and fore_mask_ptr
 #define SampleBorder \
 	if (draw_this_line) { \
-		if (border_on) \
+		if (border_on) { \
 			border_color_sample[cycle-13] = ec_color; \
+		} \
 		chunky_ptr += 8; \
 		fore_mask_ptr++; \
 	}
@@ -1527,12 +1417,14 @@ bool MOS6569::EmulateCycle()
 				raster_y++;
 
 				// Trigger raster IRQ if IRQ line reached
-				if (raster_y == irq_raster)
+				if (raster_y == irq_raster) {
 					raster_irq();
+				}
 
 				// In line $30, the DEN bit controls if Bad Lines can occur
-				if (raster_y == 0x30)
+				if (raster_y == 0x30) {
 					bad_lines_enabled = ctrl1 & 0x10;
+				}
 
 				// Bad Line condition?
 				is_bad_line = (raster_y >= FIRST_DMA_LINE && raster_y <= LAST_DMA_LINE && ((raster_y & 7) == y_scroll) && bad_lines_enabled);
@@ -1547,8 +1439,9 @@ bool MOS6569::EmulateCycle()
 			SprPtrAccess(3);
 			SprDataAccess(3, 0);
 			DisplayIfBadLine;
-			if (!(spr_dma_on & 0x18))
+			if (!(spr_dma_on & 0x18)) {
 				the_cpu->BALow = false;
+			}
 			break;
 
 		// Set BA for sprite 5, read data of sprite 3
@@ -1560,8 +1453,9 @@ bool MOS6569::EmulateCycle()
 				ref_cnt = 0xff;
 				lp_triggered = vblanking = false;
 
-				if (!(frame_skipped = --skip_counter))
+				if (!(frame_skipped = --skip_counter)) {
 					skip_counter = ThePrefs.SkipFrames;
+				}
 
 				the_c64->VBlank(!frame_skipped);
 
@@ -1591,8 +1485,9 @@ bool MOS6569::EmulateCycle()
 			SprDataAccess(3,1);
 			SprDataAccess(3,2);
 			DisplayIfBadLine;
-			if (spr_dma_on & 0x20)
+			if (spr_dma_on & 0x20) {
 				SetBALow;
+			}
 			break;
 
 		// Fetch sprite pointer 4, reset BA is sprite 4 and 5 off
@@ -1600,8 +1495,9 @@ bool MOS6569::EmulateCycle()
 			SprPtrAccess(4);
 			SprDataAccess(4, 0);
 			DisplayIfBadLine;
-			if (!(spr_dma_on & 0x30))
+			if (!(spr_dma_on & 0x30)) {
 				the_cpu->BALow = false;
+			}
 			break;
 
 		// Set BA for sprite 6, read data of sprite 4 
@@ -1609,8 +1505,9 @@ bool MOS6569::EmulateCycle()
 			SprDataAccess(4, 1);
 			SprDataAccess(4, 2);
 			DisplayIfBadLine;
-			if (spr_dma_on & 0x40)
+			if (spr_dma_on & 0x40) {
 				SetBALow;
+			}
 			break;
 
 		// Fetch sprite pointer 5, reset BA if sprite 5 and 6 off
@@ -1618,8 +1515,9 @@ bool MOS6569::EmulateCycle()
 			SprPtrAccess(5);
 			SprDataAccess(5, 0);
 			DisplayIfBadLine;
-			if (!(spr_dma_on & 0x60))
+			if (!(spr_dma_on & 0x60)) {
 				the_cpu->BALow = false;
+			}
 			break;
 
 		// Set BA for sprite 7, read data of sprite 5
@@ -1627,8 +1525,9 @@ bool MOS6569::EmulateCycle()
 			SprDataAccess(5, 1);
 			SprDataAccess(5, 2);
 			DisplayIfBadLine;
-			if (spr_dma_on & 0x80)
+			if (spr_dma_on & 0x80) {
 				SetBALow;
+			}
 			break;
 
 		// Fetch sprite pointer 6, reset BA if sprite 6 and 7 off
@@ -1636,8 +1535,9 @@ bool MOS6569::EmulateCycle()
 			SprPtrAccess(6);
 			SprDataAccess(6, 0);
 			DisplayIfBadLine;
-			if (!(spr_dma_on & 0xc0))
+			if (!(spr_dma_on & 0xc0)) {
 				the_cpu->BALow = false;
+			}
 			break;
 
 		// Read data of sprite 6
@@ -1652,8 +1552,9 @@ bool MOS6569::EmulateCycle()
 			SprPtrAccess(7);
 			SprDataAccess(7, 0);
 			DisplayIfBadLine;
-			if (!(spr_dma_on & 0x80))
+			if (!(spr_dma_on & 0x80)) {
 				the_cpu->BALow = false;
+			}
 			break;
 
 		// Read data of sprite 7
@@ -1701,9 +1602,11 @@ bool MOS6569::EmulateCycle()
 			RefreshAccess;
 			FetchIfBadLine;
 
-			for (i=0; i<8; i++)
-				if (spr_exp_y & (1 << i))
+			for (i=0; i<8; i++) {
+				if (spr_exp_y & (1 << i)) {
 					mc_base[i] += 2;
+				}
+			}
 
 			ml_index = 0;
 			matrix_access();
@@ -1719,10 +1622,12 @@ bool MOS6569::EmulateCycle()
 
 			mask = 1;
 			for (i=0; i<8; i++, mask<<=1) {
-				if (spr_exp_y & mask)
+				if (spr_exp_y & mask) {
 					mc_base[i]++;
-				if ((mc_base[i] & 0x3f) == 0x3f)
+				}
+				if ((mc_base[i] & 0x3f) == 0x3f) {
 					spr_dma_on &= ~mask;
+				}
 			}
 
 			matrix_access();
@@ -1731,18 +1636,22 @@ bool MOS6569::EmulateCycle()
 		// Graphics and matrix access, turn off border in 40 column mode, display window starts here
 		case 17:
 			if (ctrl2 & 8) {
-				if (raster_y == dy_stop)
+				if (raster_y == dy_stop) {
 					ud_border_on = true;
-				else {
+				} else {
 					if (ctrl1 & 0x10) {
-						if (raster_y == dy_start)
+						if (raster_y == dy_start) {
 							border_on = ud_border_on = false;
-						else
-							if (!ud_border_on)
+						} else {
+							if (!ud_border_on) {
 								border_on = false;
-					} else
-						if (!ud_border_on)
+							}
+						}
+					} else {
+						if (!ud_border_on) {
 							border_on = false;
+						}
+					}
 				}
 			}
 
@@ -1760,18 +1669,22 @@ bool MOS6569::EmulateCycle()
 		// Turn off border in 38 column mode
 		case 18:
 			if (!(ctrl2 & 8)) {
-				if (raster_y == dy_stop)
+				if (raster_y == dy_stop) {
 					ud_border_on = true;
-				else {
+				} else {
 					if (ctrl1 & 0x10) {
-						if (raster_y == dy_start)
+						if (raster_y == dy_start) {
 							border_on = ud_border_on = false;
-						else
-							if (!ud_border_on)
+						} else {
+							if (!ud_border_on) {
 								border_on = false;
-					} else
-						if (!ud_border_on)
+							}
+						}
+					} else {
+						if (!ud_border_on) {
 							border_on = false;
+						}
+					}
 				}
 			}
 
@@ -1805,22 +1718,26 @@ bool MOS6569::EmulateCycle()
 
 			// Invert y expansion flipflop if bit in MYE is set
 			mask = 1;
-			for (i=0; i<8; i++, mask<<=1)
-				if (mye & mask)
+			for (i=0; i<8; i++, mask<<=1) {
+				if (mye & mask) {
 					spr_exp_y ^= mask;
+				}
+			}
 			CheckSpriteDMA;
 
 			if (spr_dma_on & 0x01) {	// Don't remove these braces!
 				SetBALow;
-			} else
+			} else {
 				the_cpu->BALow = false;
+			}
 			break;
 
 		// Turn on border in 38 column mode, turn on sprite DMA if Y coordinate is right and
 		// sprite is enabled, set BA for sprite 0, display window ends here
 		case 56:
-			if (!(ctrl2 & 8))
+			if (!(ctrl2 & 8)) {
 				border_on = true;
+			}
 
 			// Fourth sample of border state
 			border_on_sample[3] = border_on;
@@ -1831,14 +1748,16 @@ bool MOS6569::EmulateCycle()
 			DisplayIfBadLine;
 			CheckSpriteDMA;
 
-			if (spr_dma_on & 0x01)
+			if (spr_dma_on & 0x01) {
 				SetBALow;
+			}
 			break;
 
 		// Turn on border in 40 column mode, set BA for sprite 1, paint sprites
 		case 57:
-			if (ctrl2 & 8)
+			if (ctrl2 & 8) {
 				border_on = true;
+			}
 
 			// Fifth sample of border state
 			border_on_sample[4] = border_on;
@@ -1849,16 +1768,19 @@ bool MOS6569::EmulateCycle()
 
 			// Turn off sprite display if DMA is off
 			mask = 1;
-			for (i=0; i<8; i++, mask<<=1)
-				if ((spr_disp_on & mask) && !(spr_dma_on & mask))
+			for (i=0; i<8; i++, mask<<=1) {
+				if ((spr_disp_on & mask) && !(spr_dma_on & mask)) {
 					spr_disp_on &= ~mask;
+				}
+			}
 
 			draw_background();
 			SampleBorder;
 			IdleAccess;
 			DisplayIfBadLine;
-			if (spr_dma_on & 0x02)
+			if (spr_dma_on & 0x02) {
 				SetBALow;
+			}
 			break;
 
 		// Fetch sprite pointer 0, mc_base->mc, turn on sprite display if necessary,
@@ -1870,8 +1792,9 @@ bool MOS6569::EmulateCycle()
 			mask = 1;
 			for (i=0; i<8; i++, mask<<=1) {
 				mc[i] = mc_base[i];
-				if ((spr_dma_on & mask) && (raster_y & 0xff) == my[i])
+				if ((spr_dma_on & mask) && (raster_y & 0xff) == my[i]) {
 					spr_disp_on |= mask;
+				}
 			}
 			SprPtrAccess(0);
 			SprDataAccess(0, 0);
@@ -1893,8 +1816,9 @@ bool MOS6569::EmulateCycle()
 			SprDataAccess(0, 1);
 			SprDataAccess(0, 2);
 			DisplayIfBadLine;
-			if (spr_dma_on & 0x04)
+			if (spr_dma_on & 0x04) {
 				SetBALow;
+			}
 			break;
 
 		// Fetch sprite pointer 1, reset BA if sprite 1 and 2 off, graphics display ends here
@@ -1905,38 +1829,55 @@ bool MOS6569::EmulateCycle()
 			if (draw_this_line) {
 
 				// Draw sprites
-				if (spr_draw && ThePrefs.SpritesOn)
+				if (spr_draw && ThePrefs.SpritesOn) {
 					draw_sprites();
+				}
 
 				// Draw border
 #ifdef __POWERPC__
-				if (border_on_sample[0])
-					for (i=0; i<4; i++)
+				if (border_on_sample[0]) {
+					for (i=0; i<4; i++) {
 						memset8((uint8_t *)chunky_tmp+i*8, border_color_sample[i]);
-				if (border_on_sample[1])
+					}
+				}
+				if (border_on_sample[1]) {
 					memset8((uint8_t *)chunky_tmp+4*8, border_color_sample[4]);
-				if (border_on_sample[2])
-					for (i=5; i<43; i++)
+				}
+				if (border_on_sample[2]) {
+					for (i=5; i<43; i++) {
 						memset8((uint8_t *)chunky_tmp+i*8, border_color_sample[i]);
-				if (border_on_sample[3])
+					}
+				}
+				if (border_on_sample[3]) {
 					memset8((uint8_t *)chunky_tmp+43*8, border_color_sample[43]);
-				if (border_on_sample[4])
-					for (i=44; i<DISPLAY_X/8; i++)
+				}
+				if (border_on_sample[4]) {
+					for (i=44; i<DISPLAY_X/8; i++) {
 						memset8((uint8_t *)chunky_tmp+i*8, border_color_sample[i]);
+					}
+				}
 #else
-				if (border_on_sample[0])
-					for (i=0; i<4; i++)
+				if (border_on_sample[0]) {
+					for (i=0; i<4; i++) {
 						memset8(chunky_line_start+i*8, border_color_sample[i]);
-				if (border_on_sample[1])
+					}
+				}
+				if (border_on_sample[1]) {
 					memset8(chunky_line_start+4*8, border_color_sample[4]);
-				if (border_on_sample[2])
-					for (i=5; i<43; i++)
+				}
+				if (border_on_sample[2]) {
+					for (i=5; i<43; i++) {
 						memset8(chunky_line_start+i*8, border_color_sample[i]);
-				if (border_on_sample[3])
+					}
+				}
+				if (border_on_sample[3]) {
 					memset8(chunky_line_start+43*8, border_color_sample[43]);
-				if (border_on_sample[4])
-					for (i=44; i<DISPLAY_X/8; i++)
+				}
+				if (border_on_sample[4]) {
+					for (i=44; i<DISPLAY_X/8; i++) {
 						memset8(chunky_line_start+i*8, border_color_sample[i]);
+					}
+				}
 #endif
 
 #ifdef __POWERPC__
@@ -1951,8 +1892,9 @@ bool MOS6569::EmulateCycle()
 			SprPtrAccess(1);
 			SprDataAccess(1, 0);
 			DisplayIfBadLine;
-			if (!(spr_dma_on & 0x06))
+			if (!(spr_dma_on & 0x06)) {
 				the_cpu->BALow = false;
+			}
 			break;
 
 		// Set BA for sprite 3, read data of sprite 1
@@ -1960,8 +1902,9 @@ bool MOS6569::EmulateCycle()
 			SprDataAccess(1, 1);
 			SprDataAccess(1, 2);
 			DisplayIfBadLine;
-			if (spr_dma_on & 0x08)
+			if (spr_dma_on & 0x08) {
 				SetBALow;
+			}
 			break;
 
 		// Read sprite pointer 2, reset BA if sprite 2 and 3 off, read data of sprite 2
@@ -1969,8 +1912,9 @@ bool MOS6569::EmulateCycle()
 			SprPtrAccess(2);
 			SprDataAccess(2, 0);
 			DisplayIfBadLine;
-			if (!(spr_dma_on & 0x0c))
+			if (!(spr_dma_on & 0x0c)) {
 				the_cpu->BALow = false;
+			}
 			break;
 
 		// Set BA for sprite 4, read data of sprite 2
@@ -1979,14 +1923,17 @@ bool MOS6569::EmulateCycle()
 			SprDataAccess(2, 2);
 			DisplayIfBadLine;
 
-			if (raster_y == dy_stop)
+			if (raster_y == dy_stop) {
 				ud_border_on = true;
-			else
-				if (ctrl1 & 0x10 && raster_y == dy_start)
+			} else {
+				if (ctrl1 & 0x10 && raster_y == dy_start) {
 					ud_border_on = false;
+				}
+			}
 
-			if (spr_dma_on & 0x10)
+			if (spr_dma_on & 0x10) {
 				SetBALow;
+			}
 
 			// Last cycle
 			raster_x += 8;
