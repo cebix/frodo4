@@ -74,7 +74,7 @@ struct Snapshot {
 
 
 // Length of rewind buffer
-static constexpr size_t REWIND_LENGTH = 50 * 30;  // 50 fps * 30 seconds
+constexpr size_t REWIND_LENGTH = SCREEN_FREQ * 30;  // 30 seconds
 
 
 /*

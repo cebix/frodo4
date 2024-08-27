@@ -31,7 +31,7 @@
 
 
 // Period of LED error blinking
-static constexpr uint32_t PULSE_ms = 400;
+constexpr uint32_t PULSE_ms = 400;
 
 // For requester
 static SDL_Window * c64_window = nullptr;

@@ -29,11 +29,11 @@ namespace chrono = std::chrono;
 
 // For speed limiting to 50 fps
 static chrono::time_point<chrono::steady_clock> frame_start;
-static constexpr int FRAME_TIME_us = 20000;  // 20 ms for 50 fps
+constexpr int FRAME_TIME_us = 20000;  // 20 ms for 50 fps
 
 // Joystick dead zone around center (+/-), and hysteresis to prevent jitter
-static constexpr int JOYSTICK_DEAD_ZONE = 12000;
-static constexpr int JOYSTICK_HYSTERESIS = 1000;
+constexpr int JOYSTICK_DEAD_ZONE = 12000;
+constexpr int JOYSTICK_HYSTERESIS = 1000;
 
 
 /*

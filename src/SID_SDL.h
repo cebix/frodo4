@@ -28,6 +28,7 @@
 void DigitalRenderer::init_sound()
 {
 	SDL_AudioSpec spec;
+	SDL_zero(spec);
 	spec.freq = SAMPLE_FREQ;
 	spec.format = AUDIO_S16SYS;
 	spec.channels = 1;
@@ -52,17 +53,6 @@ void DigitalRenderer::init_sound()
 DigitalRenderer::~DigitalRenderer()
 {
 	SDL_CloseAudio();
-}
-
-
-/*
- *  Sample volume (for sampled voice)
- */
-
-void DigitalRenderer::EmulateLine()
-{
-	sample_buf[sample_in_ptr] = volume;
-	sample_in_ptr = (sample_in_ptr + 1) % SAMPLE_BUF_SIZE;
 }
 
 

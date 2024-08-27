@@ -29,6 +29,7 @@
 #include <math.h>
 
 #include "SID.h"
+#include "VIC.h"
 #include "Prefs.h"
 
 #ifdef __BEOS__
@@ -250,11 +251,11 @@ void MOS6581::SetState(const MOS6581State *ss)
  **  Renderer for digital SID emulation (SIDTYPE_DIGITAL)
  **/
 
-const uint32_t SAMPLE_FREQ = 44100;		// Sample output frequency in Hz
-const uint32_t SID_FREQ = 985248;		// SID frequency in Hz
-const uint32_t CALC_FREQ = 50;			// Frequency at which calc_buffer is called in Hz (should be 50Hz)
-const uint32_t SID_CYCLES = SID_FREQ/SAMPLE_FREQ;	// # of SID clocks per sample frame
-const int SAMPLE_BUF_SIZE = 0x138*2;	// Size of buffer for sampled voice (double buffered)
+constexpr uint32_t SAMPLE_FREQ = 44100;		// Sample output frequency in Hz
+constexpr uint32_t SID_FREQ = 985248;		// SID frequency in Hz
+constexpr uint32_t CALC_FREQ = 50;			// Frequency at which calc_buffer is called in Hz (should be 50Hz)
+constexpr uint32_t SID_CYCLES = SID_FREQ/SAMPLE_FREQ;	// # of SID clocks per sample frame
+constexpr size_t SAMPLE_BUF_SIZE = TOTAL_RASTERS * 2;	// Size of buffer for sampled voice (double buffered)
 
 // SID waveforms (some of them :-)
 enum {
@@ -367,7 +368,7 @@ private:
 #endif
 
 	uint8_t sample_buf[SAMPLE_BUF_SIZE]; // Buffer for sampled voice
-	int sample_in_ptr;				// Index in sample_buf for writing
+	unsigned sample_in_ptr;			// Index in sample_buf for writing
 
 #ifdef __BEOS__
 	static void buffer_proc(void *cookie, void *buffer, size_t size, const media_raw_audio_format &format);
@@ -786,6 +787,17 @@ void DigitalRenderer::Reset()
 
 
 /*
+ *  Sample current volume setting once per raster line (for sampled voice)
+ */
+
+void DigitalRenderer::EmulateLine()
+{
+	sample_buf[sample_in_ptr] = volume;
+	sample_in_ptr = (sample_in_ptr + 1) % SAMPLE_BUF_SIZE;
+}
+
+
+/*
  *  Write to register
  */
 
@@ -1101,7 +1113,7 @@ void DigitalRenderer::calc_buffer(int16_t *buf, long count)
 		// Get current master volume from sample buffer,
 		// calculate sampled voice
 		uint8_t master_volume = sample_buf[(sample_count >> 16) % SAMPLE_BUF_SIZE];
-		sample_count += ((0x138 * 50) << 16) / SAMPLE_FREQ;
+		sample_count += ((TOTAL_RASTERS * SCREEN_FREQ) << 16) / SAMPLE_FREQ;
 		int32_t sum_output = SampleTab[master_volume] << 8;
 		int32_t sum_output_filter = 0;
 
@@ -1239,7 +1251,6 @@ void DigitalRenderer::calc_buffer(int16_t *buf, long count)
 }
 
 
-// Manufacturer independent sound is still just a dream...
 #if defined(__BEOS__)
 #include "SID_Be.h"
 
