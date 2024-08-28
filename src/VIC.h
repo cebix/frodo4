@@ -114,7 +114,7 @@ private:
 
 	uint16_t mc[8];					// Sprite data counters
 
-	int display_idx;				// Index of current display mode
+	unsigned display_idx;			// Index of current display mode
 	int skip_counter;				// Counter for frame-skipping
 
 	long pad0;	// Keep buffers long-aligned
@@ -140,7 +140,7 @@ private:
 
 	unsigned cycle;					// Current cycle in line (1..63)
 
-	uint8_t *chunky_ptr;			// Pointer in chunky bitmap buffer (this is where out output goes)
+	uint8_t *chunky_ptr;			// Pointer in chunky bitmap buffer (this is where our output goes)
 	uint8_t *fore_mask_ptr;			// Pointer in fore_mask_buf
 
 	uint16_t matrix_base;			// Video matrix base
@@ -151,6 +151,7 @@ private:
 	bool draw_this_line;			// Flag: This line is drawn on the screen
 	bool ud_border_on;				// Flag: Upper/lower border on
 	bool vblanking;					// Flag: VBlank in next cycle
+	bool hold_off_raster_irq;		// Flag: No raster IRQ in next line
 
 	bool border_on_sample[5];		// Samples of border state at different cycles (1, 17, 18, 56, 57)
 	uint8_t border_color_sample[0x180/8]; // Samples of border color at each "displayed" cycle
@@ -198,7 +199,7 @@ private:
 
 // VIC state
 struct MOS6569State {
-	uint8_t m0x;			// Sprite coordinates
+	uint8_t m0x;				// Sprite coordinates
 	uint8_t m0y;
 	uint8_t m1x;
 	uint8_t m1y;
@@ -216,7 +217,7 @@ struct MOS6569State {
 	uint8_t m7y;
 	uint8_t mx8;
 
-	uint8_t ctrl1;			// Control registers
+	uint8_t ctrl1;				// Control registers
 	uint8_t raster;
 	uint8_t lpx;
 	uint8_t lpy;
@@ -232,7 +233,7 @@ struct MOS6569State {
 	uint8_t mm;
 	uint8_t md;
 
-	uint8_t ec;				// Color registers
+	uint8_t ec;					// Color registers
 	uint8_t b0c;
 	uint8_t b1c;
 	uint8_t b2c;
@@ -247,35 +248,36 @@ struct MOS6569State {
 	uint8_t m5c;
 	uint8_t m6c;
 	uint8_t m7c;
-							// Additional registers
+								// Additional registers
 	uint8_t pad0;
-	uint16_t irq_raster;	// IRQ raster line
-	uint16_t vc;			// Video counter
-	uint16_t vc_base;		// Video counter base
-	uint8_t rc;				// Row counter
-	uint8_t spr_dma;		// 8 Flags: Sprite DMA active
-	uint8_t spr_disp;		// 8 Flags: Sprite display active
-	uint8_t mc[8];			// Sprite data counters
-	uint8_t mc_base[8];		// Sprite data counter bases
-	bool display_state;		// true: Display state, false: Idle state
-	bool bad_line;			// Flag: Bad Line state
-	bool bad_line_enable;	// Flag: Bad Lines enabled for this frame
-	bool lp_triggered;		// Flag: Lightpen was triggered in this frame
-	bool border_on;			// Flag: Upper/lower border on (Frodo SC: Main border flipflop)
+	uint16_t irq_raster;		// IRQ raster line
+	uint16_t vc;				// Video counter
+	uint16_t vc_base;			// Video counter base
+	uint8_t rc;					// Row counter
+	uint8_t spr_dma;			// 8 Flags: Sprite DMA active
+	uint8_t spr_disp;			// 8 Flags: Sprite display active
+	uint8_t mc[8];				// Sprite data counters
+	uint8_t mc_base[8];			// Sprite data counter bases
+	bool display_state;			// true: Display state, false: Idle state
+	bool bad_line;				// Flag: Bad Line state
+	bool bad_line_enable;		// Flag: Bad Lines enabled for this frame
+	bool lp_triggered;			// Flag: Lightpen was triggered in this frame
+	bool border_on;				// Flag: Upper/lower border on (Frodo SC: Main border flipflop)
 
-	uint16_t bank_base;		// VIC bank base address
-	uint16_t matrix_base;	// Video matrix base
-	uint16_t char_base;		// Character generator base
-	uint16_t bitmap_base;	// Bitmap base
-	uint16_t sprite_base[8]; // Sprite bases
+	uint16_t bank_base;			// VIC bank base address
+	uint16_t matrix_base;		// Video matrix base
+	uint16_t char_base;			// Character generator base
+	uint16_t bitmap_base;		// Bitmap base
+	uint16_t sprite_base[8];	// Sprite bases
 
-							// Frodo SC:
-	uint16_t raster_x;		// Current raster x position
-	uint8_t cycle;			// Current cycle in line (1..63)
-	uint8_t ml_index;		// Index in matrix/color_line[]
-	uint8_t ref_cnt;		// Refresh counter
-	uint8_t last_vic_byte;	// Last byte read by VIC
-	bool ud_border_on;		// Flag: Upper/lower border on
+								// Frodo SC:
+	uint16_t raster_x;			// Current raster x position
+	uint8_t cycle;				// Current cycle in line (1..63)
+	uint8_t ml_index;			// Index in matrix/color_line[]
+	uint8_t ref_cnt;			// Refresh counter
+	uint8_t last_vic_byte;		// Last byte read by VIC
+	bool ud_border_on;			// Flag: Upper/lower border on
+	bool hold_off_raster_irq;	// Flag: No raster IRQ in next line
 };
 
 #endif

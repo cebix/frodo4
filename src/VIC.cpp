@@ -409,6 +409,7 @@ void MOS6569::GetState(MOS6569State *vd)
 	vd->ref_cnt = 0xff;
 	vd->last_vic_byte = 0;
 	vd->ud_border_on = border_on;
+	vd->hold_off_raster_irq = false;
 }
 
 
@@ -639,11 +640,7 @@ void MOS6569::WriteRegister(uint16_t adr, uint8_t byte)
 			ctrl1 = byte;
 			y_scroll = byte & 7;
 
-			uint16_t new_irq_raster = (irq_raster & 0xff) | ((byte & 0x80) << 1);
-			if (irq_raster != new_irq_raster && raster_y == new_irq_raster) {
-				raster_irq();
-			}
-			irq_raster = new_irq_raster;
+			irq_raster = (irq_raster & 0xff) | ((byte & 0x80) << 1);
 
 			if (byte & 8) {
 				dy_start = ROW25_YSTART;
@@ -658,11 +655,7 @@ void MOS6569::WriteRegister(uint16_t adr, uint8_t byte)
 		}
 
 		case 0x12:{	// Raster counter
-			uint16_t new_irq_raster = (irq_raster & 0xff00) | byte;
-			if (irq_raster != new_irq_raster && raster_y == new_irq_raster) {
-				raster_irq();
-			}
-			irq_raster = new_irq_raster;
+			irq_raster = (irq_raster & 0xff00) | byte;
 			break;
 		}
 

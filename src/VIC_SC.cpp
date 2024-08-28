@@ -182,7 +182,7 @@ MOS6569::MOS6569(C64 *c64, C64Display *disp, MOS6510 *CPU, uint8_t *RAM, uint8_t
 	cycle = 1;
 	display_idx = 0;
 	display_state = false;
-	border_on = ud_border_on = vblanking = false;
+	border_on = ud_border_on = vblanking = hold_off_raster_irq = false;
 	lp_triggered = draw_this_line = false;
 	is_bad_line = false;
 
@@ -327,6 +327,7 @@ void MOS6569::GetState(MOS6569State *vd)
 	vd->ref_cnt = ref_cnt;
 	vd->last_vic_byte = LastVICByte;
 	vd->ud_border_on = ud_border_on;
+	vd->hold_off_raster_irq = hold_off_raster_irq;
 }
 
 
@@ -426,6 +427,7 @@ void MOS6569::SetState(const MOS6569State *vd)
 	ref_cnt = vd->ref_cnt;
 	LastVICByte = vd->last_vic_byte;
 	ud_border_on = vd->ud_border_on;
+	hold_off_raster_irq = vd->hold_off_raster_irq;
 }
 
 
@@ -560,15 +562,17 @@ void MOS6569::WriteRegister(uint16_t adr, uint8_t byte)
 			my[adr >> 1] = byte;
 			break;
 
-		case 0x11:{	// Control register 1
+		case 0x11:	// Control register 1
 			ctrl1 = byte;
 			y_scroll = byte & 7;
 
-			uint16_t new_irq_raster = (irq_raster & 0xff) | ((byte & 0x80) << 1);
-			if (irq_raster != new_irq_raster && raster_y == new_irq_raster) {
-				raster_irq();
+			irq_raster = (irq_raster & 0xff) | ((byte & 0x80) << 1);
+
+			// Don't trigger raster IRQ in next line if set during last cycle of line
+			// (note that 'cycle' is one cycle ahead)
+			if (cycle == 1) {
+				hold_off_raster_irq = true;
 			}
-			irq_raster = new_irq_raster;
 
 			if (byte & 8) {
 				dy_start = ROW25_YSTART;
@@ -588,16 +592,16 @@ void MOS6569::WriteRegister(uint16_t adr, uint8_t byte)
 
 			display_idx = ((ctrl1 & 0x60) | (ctrl2 & 0x10)) >> 4;
 			break;
-		}
 
-		case 0x12:{	// Raster counter
-			uint16_t new_irq_raster = (irq_raster & 0xff00) | byte;
-			if (irq_raster != new_irq_raster && raster_y == new_irq_raster) {
-				raster_irq();
+		case 0x12:	// Raster counter
+			irq_raster = (irq_raster & 0xff00) | byte;
+
+			// Don't trigger raster IRQ in next line if set during last cycle of line
+			// (note that 'cycle' is one cycle ahead)
+			if (cycle == 1) {
+				hold_off_raster_irq = true;
 			}
-			irq_raster = new_irq_raster;
 			break;
-		}
 
 		case 0x15:	// Sprite enable
 			me = byte;
@@ -1417,9 +1421,10 @@ bool MOS6569::EmulateCycle()
 				raster_y++;
 
 				// Trigger raster IRQ if IRQ line reached
-				if (raster_y == irq_raster) {
+				if (raster_y == irq_raster && !hold_off_raster_irq) {
 					raster_irq();
 				}
+				hold_off_raster_irq = false;
 
 				// In line $30, the DEN bit controls if Bad Lines can occur
 				if (raster_y == 0x30) {
@@ -1469,6 +1474,7 @@ bool MOS6569::EmulateCycle()
 				if (irq_raster == 0) {
 					raster_irq();
 				}
+				hold_off_raster_irq = false;
 			}
 
 			// Our output goes here
