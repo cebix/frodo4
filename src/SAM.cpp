@@ -1101,14 +1101,14 @@ static void display_registers(void)
 {
 	if (access_1541) {
 		fprintf(fout, " PC  A  X  Y   SP  NVDIZC  Instruction\n");
-		fprintf(fout, "%04lx %02lx %02lx %02lx %04lx %c%c%c%c%c%c ",
+		fprintf(fout, "%04x %02x %02x %02x %04x %c%c%c%c%c%c ",
 			R1541.pc, R1541.a, R1541.x, R1541.y, R1541.sp,
 			R1541.p & 0x80 ? '1' : '0', R1541.p & 0x40 ? '1' : '0', R1541.p & 0x08 ? '1' : '0',
 			R1541.p & 0x04 ? '1' : '0', R1541.p & 0x02 ? '1' : '0', R1541.p & 0x01 ? '1' : '0');
 		disass_line(R1541.pc, SAMReadByte(R1541.pc), SAMReadByte(R1541.pc+1), SAMReadByte(R1541.pc+2));
 	} else {
 		fprintf(fout, " PC  A  X  Y   SP  DR PR NVDIZC  Instruction\n");
-		fprintf(fout, "%04lx %02lx %02lx %02lx %04lx %02lx %02lx %c%c%c%c%c%c ",
+		fprintf(fout, "%04x %02x %02x %02x %04x %02x %02x %c%c%c%c%c%c ",
 			R64.pc, R64.a, R64.x, R64.y, R64.sp, R64.ddr, R64.pr,
 			R64.p & 0x80 ? '1' : '0', R64.p & 0x40 ? '1' : '0', R64.p & 0x08 ? '1' : '0',
 			R64.p & 0x04 ? '1' : '0', R64.p & 0x02 ? '1' : '0', R64.p & 0x01 ? '1' : '0');
@@ -1137,11 +1137,11 @@ static void memory_dump(void)
 		return;
 
 	do {
-		fprintf(fout, "%04lx:", address);
+		fprintf(fout, "%04x:", address);
 		for (i=0; i<MEMDUMP_BPL; i++, address++) {
 			if (address == end_address) done = true;
 
-			fprintf(fout, " %02lx", byte = SAMReadByte(address));
+			fprintf(fout, " %02x", byte = SAMReadByte(address));
 			if ((byte >= ' ') && (byte <= '~'))
 				mem[i] = conv_from_64(byte);
 			else
@@ -1172,7 +1172,7 @@ static void ascii_dump(void)
 		return;
 
 	do {
-		fprintf(fout, "%04lx:", address);
+		fprintf(fout, "%04x:", address);
 		for (i=0; i<ASCIIDUMP_BPL; i++, address++) {
 			if (address == end_address) done = true;
 
@@ -1220,7 +1220,7 @@ static void screen_dump(void)
 		return;
 
 	do {
-		fprintf(fout, "%04lx:", address);
+		fprintf(fout, "%04x:", address);
 		for (i=0; i<SCRDUMP_BPL; i++, address++) {
 			if (address == end_address) done = true;
 
@@ -1272,7 +1272,7 @@ static void binary_dump(void)
 		if (address == end_address) done = true;
 
 		byte_to_bin(SAMReadByte(address), bin);
-		fprintf(fout, "%04lx: %s\n", address++, bin);
+		fprintf(fout, "%04x: %s\n", address++, bin);
 	} while (!done && !aborted());
 }
 
@@ -1294,7 +1294,7 @@ static void sprite_dump(void)
 		return;
 
 	do {
-		fprintf(fout, "%04lx: ", address);
+		fprintf(fout, "%04x: ", address);
 		for (i=0; i<3; i++, address++) {
 			if (address == end_address) done = true;
 
@@ -1338,7 +1338,7 @@ static void disassemble(void)
 		return;
 
 	do {
-		fprintf(fout, "%04lx:", adr = address);
+		fprintf(fout, "%04x:", adr = address);
 		for (i=0; i<3; i++, adr++) {
 			if (adr == end_address) done = true;
 			op[i] = SAMReadByte(adr);
@@ -1359,15 +1359,15 @@ static int disass_line(uint16_t adr, uint8_t op, uint8_t lo, uint8_t hi)
 	// Display instruction bytes in hex
 	switch (adr_length[mode]) {
 		case 1:
-			fprintf(fout, " %02lx       ", op);
+			fprintf(fout, " %02x       ", op);
 			break;
 
 		case 2:
-			fprintf(fout, " %02lx %02lx    ", op, lo);
+			fprintf(fout, " %02x %02x    ", op, lo);
 			break;
 
 		case 3:
-			fprintf(fout, " %02lx %02lx %02lx ", op, lo, hi);
+			fprintf(fout, " %02x %02x %02x ", op, lo, hi);
 			break;
 	}
 
@@ -1390,47 +1390,47 @@ static int disass_line(uint16_t adr, uint8_t op, uint8_t lo, uint8_t hi)
 			break;
 
 		case A_IMM:
-			fprintf(fout, "#%02lx", lo);
+			fprintf(fout, "#%02x", lo);
 			break;
 
 		case A_REL:
-			fprintf(fout, "%04lx", ((adr + 2) + (int8_t)lo) & 0xffff);
+			fprintf(fout, "%04x", ((adr + 2) + (int8_t)lo) & 0xffff);
 			break;
 
 		case A_ZERO:
-			fprintf(fout, "%02lx", lo);
+			fprintf(fout, "%02x", lo);
 			break;
 
 		case A_ZEROX:
-			fprintf(fout, "%02lx,x", lo);
+			fprintf(fout, "%02x,x", lo);
 			break;
 
 		case A_ZEROY:
-			fprintf(fout, "%02lx,y", lo);
+			fprintf(fout, "%02x,y", lo);
 			break;
 
 		case A_ABS:
-			fprintf(fout, "%04lx", (hi << 8) | lo);
+			fprintf(fout, "%04x", (hi << 8) | lo);
 			break;
 
 		case A_ABSX:
-			fprintf(fout, "%04lx,x", (hi << 8) | lo);
+			fprintf(fout, "%04x,x", (hi << 8) | lo);
 			break;
 
 		case A_ABSY:
-			fprintf(fout, "%04lx,y", (hi << 8) | lo);
+			fprintf(fout, "%04x,y", (hi << 8) | lo);
 			break;
 
 		case A_IND:
-			fprintf(fout, "(%04lx)", (hi << 8) | lo);
+			fprintf(fout, "(%04x)", (hi << 8) | lo);
 			break;
 
 		case A_INDX:
-			fprintf(fout, "(%02lx,x)", lo);
+			fprintf(fout, "(%02x,x)", lo);
 			break;
 
 		case A_INDY:
-			fprintf(fout, "(%02lx),y", lo);
+			fprintf(fout, "(%02x),y", lo);
 			break;
 	}
 
@@ -1458,7 +1458,7 @@ static void assemble(void)
 		return;
 
 	do {
-		fprintf(fout, "%04lx> ", address);
+		fprintf(fout, "%04x> ", address);
 		fflush(ferr);
 		read_line();
 
@@ -1491,7 +1491,7 @@ static void assemble(void)
 					if (find_opcode(mnem, mode, &opcode)) {
 
 						// Print disassembled line
-						fprintf(fout, "\v%04lx:", address);
+						fprintf(fout, "\v%04x:", address);
 						disass_line(address, opcode, arg & 0xff, arg >> 8);
 
 						switch (adr_length[mode]) {
@@ -1637,7 +1637,7 @@ static void compare(void)
 		if (adr == end_adr) done = true;
 
 		if (SAMReadByte(adr) != SAMReadByte(dest)) {
-			fprintf(fout, "%04lx ", adr);
+			fprintf(fout, "%04x ", adr);
 			num++;
 			if (!(num & 7))
 				fputc('\n', fout);
@@ -1715,7 +1715,7 @@ static void print_expr(void)
 	if (!expression(&val))
 		return;
 
-	fprintf(fout, "Hex: %04lx\nDec: %lu\n", val, val);
+	fprintf(fout, "Hex: %04x\nDec: %lu\n", val, val);
 }
 
 
@@ -1753,14 +1753,14 @@ static void redir_output(void)
 static void int_vectors(void)
 {
 	fprintf(fout, "        IRQ  BRK  NMI\n");
-	fprintf(fout, "%d  : %04lx %04lx %04lx\n",
+	fprintf(fout, "%d  : %04x %04x %04x\n",
 		access_1541 ? 6502 : 6510,
 		SAMReadByte(0xffff) << 8 | SAMReadByte(0xfffe),
 		SAMReadByte(0xffff) << 8 | SAMReadByte(0xfffe),
 		SAMReadByte(0xfffb) << 8 | SAMReadByte(0xfffa));
 
 	if (!access_1541 && TheCPU->ExtConfig & 2)
-		fprintf(fout, "Kernal: %04lx %04lx %04lx\n",
+		fprintf(fout, "Kernal: %04x %04x %04x\n",
 			SAMReadByte(0x0315) << 8 | SAMReadByte(0x0314),
 			SAMReadByte(0x0317) << 8 | SAMReadByte(0x0316),
 			SAMReadByte(0x0319) << 8 | SAMReadByte(0x0318));
@@ -1813,7 +1813,7 @@ static void view_cia_state(void)
 	}
 
 	fprintf(fout, "Timer A  : %s\n", cs.cra & 1 ? "On" : "Off");
-	fprintf(fout, " Counter : %04lx  Latch: %04lx\n", (cs.ta_hi << 8) | cs.ta_lo, cs.latcha);
+	fprintf(fout, " Counter : %04x  Latch: %04x\n", (cs.ta_hi << 8) | cs.ta_lo, cs.latcha);
 	fprintf(fout, " Run mode: %s\n", cs.cra & 8 ? "One-shot" : "Continuous");
 	fprintf(fout, " Input   : %s\n", cs.cra & 0x20 ? "CNT" : "Phi2");
 	fprintf(fout, " Output  : ");
@@ -1826,7 +1826,7 @@ static void view_cia_state(void)
 		fprintf(fout, "None\n\n");
 
 	fprintf(fout, "Timer B  : %s\n", cs.crb & 1 ? "On" : "Off");
-	fprintf(fout, " Counter : %04lx  Latch: %04lx\n", (cs.tb_hi << 8) | cs.tb_lo, cs.latchb);
+	fprintf(fout, " Counter : %04x  Latch: %04x\n", (cs.tb_hi << 8) | cs.tb_lo, cs.latchb);
 	fprintf(fout, " Run mode: %s\n", cs.crb & 8 ? "One-shot" : "Continuous");
 	fprintf(fout, " Input   : ");
 	if (cs.crb & 0x40)
@@ -1861,7 +1861,7 @@ static void view_cia_state(void)
 	fprintf(fout, "TOD input   : %s\n", cs.cra & 0x80 ? "50Hz" : "60Hz");
 	fprintf(fout, "Write to    : %s registers\n\n", cs.crb & 0x80 ? "Alarm" : "TOD");
 
-	fprintf(fout, "Serial data : %02lx\n", cs.sdr);
+	fprintf(fout, "Serial data : %02x\n", cs.sdr);
 	fprintf(fout, "Serial mode : %s\n\n", cs.cra & 0x40 ? "Output" : "Input");
 
 	fprintf(fout, "Pending int.: ");
@@ -1890,8 +1890,8 @@ static void view_sid_state(void)
 	TheSID->GetState(&ss);
 
 	fprintf(fout, "Voice 1\n");
-	fprintf(fout, " Frequency  : %04lx\n", (ss.freq_hi_1 << 8) | ss.freq_lo_1);
-	fprintf(fout, " Pulse Width: %04lx\n", ((ss.pw_hi_1 & 0x0f) << 8) | ss.pw_lo_1);
+	fprintf(fout, " Frequency  : %04x\n", (ss.freq_hi_1 << 8) | ss.freq_lo_1);
+	fprintf(fout, " Pulse Width: %04x\n", ((ss.pw_hi_1 & 0x0f) << 8) | ss.pw_lo_1);
 	fprintf(fout, " Env. (ADSR): %lx %lx %lx %lx\n", ss.AD_1 >> 4, ss.AD_1 & 0x0f, ss.SR_1 >> 4, ss.SR_1 & 0x0f);
 	fprintf(fout, " Waveform   : ");
 	dump_sid_waveform(ss.ctrl_1);
@@ -1900,8 +1900,8 @@ static void view_sid_state(void)
 	fprintf(fout, " Filter     : %s\n", ss.res_filt & 0x01 ? "On" : "Off");
 
 	fprintf(fout, "\nVoice 2\n");
-	fprintf(fout, " Frequency  : %04lx\n", (ss.freq_hi_2 << 8) | ss.freq_lo_2);
-	fprintf(fout, " Pulse Width: %04lx\n", ((ss.pw_hi_2 & 0x0f) << 8) | ss.pw_lo_2);
+	fprintf(fout, " Frequency  : %04x\n", (ss.freq_hi_2 << 8) | ss.freq_lo_2);
+	fprintf(fout, " Pulse Width: %04x\n", ((ss.pw_hi_2 & 0x0f) << 8) | ss.pw_lo_2);
 	fprintf(fout, " Env. (ADSR): %lx %lx %lx %lx\n", ss.AD_2 >> 4, ss.AD_2 & 0x0f, ss.SR_2 >> 4, ss.SR_2 & 0x0f);
 	fprintf(fout, " Waveform   : ");
 	dump_sid_waveform(ss.ctrl_2);
@@ -1910,8 +1910,8 @@ static void view_sid_state(void)
 	fprintf(fout, " Filter     : %s\n", ss.res_filt & 0x02 ? "On" : "Off");
 
 	fprintf(fout, "\nVoice 3\n");
-	fprintf(fout, " Frequency  : %04lx\n", (ss.freq_hi_3 << 8) | ss.freq_lo_3);
-	fprintf(fout, " Pulse Width: %04lx\n", ((ss.pw_hi_3 & 0x0f) << 8) | ss.pw_lo_3);
+	fprintf(fout, " Frequency  : %04x\n", (ss.freq_hi_3 << 8) | ss.freq_lo_3);
+	fprintf(fout, " Pulse Width: %04x\n", ((ss.pw_hi_3 & 0x0f) << 8) | ss.pw_lo_3);
 	fprintf(fout, " Env. (ADSR): %lx %lx %lx %lx\n", ss.AD_3 >> 4, ss.AD_3 & 0x0f, ss.SR_3 >> 4, ss.SR_3 & 0x0f);
 	fprintf(fout, " Waveform   : ");
 	dump_sid_waveform(ss.ctrl_3);
@@ -1920,7 +1920,7 @@ static void view_sid_state(void)
 	fprintf(fout, " Filter     : %s  Mute     : %s\n", ss.res_filt & 0x04 ? "On" : "Off", ss.mode_vol & 0x80 ? "Yes" : "No");
 
 	fprintf(fout, "\nFilters/Volume\n");
-	fprintf(fout, " Frequency: %04lx\n", (ss.fc_hi << 3) | (ss.fc_lo & 0x07));
+	fprintf(fout, " Frequency: %04x\n", (ss.fc_hi << 3) | (ss.fc_lo & 0x07));
 	fprintf(fout, " Resonance: %lx\n", ss.res_filt >> 4);
 	fprintf(fout, " Mode     : ");
 	if (ss.mode_vol & 0x70) {
@@ -1951,8 +1951,8 @@ static void view_vic_state(void)
 
 	TheVIC->GetState(&vs);
 
-	fprintf(fout, "Raster line       : %04lx\n", vs.raster | ((vs.ctrl1 & 0x80) << 1));
-	fprintf(fout, "IRQ raster line   : %04lx\n\n", vs.irq_raster);
+	fprintf(fout, "Raster line       : %04x\n", vs.raster | ((vs.ctrl1 & 0x80) << 1));
+	fprintf(fout, "IRQ raster line   : %04x\n\n", vs.irq_raster);
 
 	fprintf(fout, "X scroll          : %ld\n", vs.ctrl2 & 7);
 	fprintf(fout, "Y scroll          : %ld\n", vs.ctrl1 & 7);
@@ -1989,22 +1989,26 @@ static void view_vic_state(void)
 	fprintf(fout, "Sequencer state   : %s\n", vs.display_state ? "Display" : "Idle");
 	fprintf(fout, "Bad line state    : %s\n", vs.bad_line ? "Yes" : "No");
 	fprintf(fout, "Bad lines enabled : %s\n", vs.bad_line_enable ? "Yes" : "No");
-	fprintf(fout, "Video counter     : %04lx\n", vs.vc);
-	fprintf(fout, "Video counter base: %04lx\n", vs.vc_base);
-	fprintf(fout, "Row counter       : %ld\n\n", vs.rc);
+	fprintf(fout, "Video counter     : %04x\n", vs.vc);
+	fprintf(fout, "Video counter base: %04x\n", vs.vc_base);
+	fprintf(fout, "Row counter       : %d\n\n", vs.rc);
 
-	fprintf(fout, "VIC bank          : %04lx-%04lx\n", vs.bank_base, vs.bank_base + 0x3fff);
-	fprintf(fout, "Video matrix base : %04lx\n", vs.matrix_base);
-	fprintf(fout, "Character base    : %04lx\n", vs.char_base);
-	fprintf(fout, "Bitmap base       : %04lx\n\n", vs.bitmap_base);
+	fprintf(fout, "VIC bank          : %04x-%04x\n", vs.bank_base, vs.bank_base + 0x3fff);
+	fprintf(fout, "Video matrix base : %04x\n", vs.matrix_base);
+	fprintf(fout, "Character base    : %04x\n", vs.char_base);
+	fprintf(fout, "Bitmap base       : %04x\n\n", vs.bitmap_base);
 
 	fprintf(fout, "         Spr.0  Spr.1  Spr.2  Spr.3  Spr.4  Spr.5  Spr.6  Spr.7\n");
 	fprintf(fout, "Enabled: "); dump_spr_flags(vs.me);
-	fprintf(fout, "Data   : %04lx   %04lx   %04lx   %04lx   %04lx   %04lx   %04lx   %04lx\n",
+	fprintf(fout, "Data   : %04x   %04x   %04x   %04x   %04x   %04x   %04x   %04x\n",
 		vs.sprite_base[0], vs.sprite_base[1], vs.sprite_base[2], vs.sprite_base[3],
 		vs.sprite_base[4], vs.sprite_base[5], vs.sprite_base[6], vs.sprite_base[7]);
-	fprintf(fout, "MC     : %02lx     %02lx     %02lx     %02lx     %02lx     %02lx     %02lx     %02lx\n",
-		vs.mc[0], vs.mc[1], vs.mc[2], vs.mc[3], vs.mc[4], vs.mc[5], vs.mc[6], vs.mc[7]);
+	fprintf(fout, "MC     : %02x     %02x     %02x     %02x     %02x     %02x     %02x     %02x\n",
+		vs.mc[0], vs.mc[1], vs.mc[2], vs.mc[3],
+		vs.mc[4], vs.mc[5], vs.mc[6], vs.mc[7]);
+	fprintf(fout, "MCBASE : %02x     %02x     %02x     %02x     %02x     %02x     %02x     %02x\n",
+		vs.mc_base[0], vs.mc_base[1], vs.mc_base[2], vs.mc_base[3],
+		vs.mc_base[4], vs.mc_base[5], vs.mc_base[6], vs.mc_base[7]);
 
 	fprintf(fout, "Mode   : ");
 	for (i=0; i<8; i++)
@@ -2013,10 +2017,17 @@ static void view_vic_state(void)
 		else
 			fprintf(fout, "Std.   ");
 
-	fprintf(fout, "\nX-Exp. : "); dump_spr_flags(vs.mxe);
-	fprintf(fout, "Y-Exp. : "); dump_spr_flags(vs.mye);
+	fprintf(fout, "\nX Pos  : %04x   %04x   %04x   %04x   %04x   %04x   %04x   %04x\n",
+		vs.m0x + ((vs.mx8 & 0x01) ? 0x100 : 0), vs.m1x + ((vs.mx8 & 0x02) ? 0x100 : 0), vs.m2x + ((vs.mx8 & 0x04) ? 0x100 : 0), vs.m3x + ((vs.mx8 & 0x08) ? 0x100 : 0),
+		vs.m4x + ((vs.mx8 & 0x10) ? 0x100 : 0), vs.m5x + ((vs.mx8 & 0x20) ? 0x100 : 0), vs.m6x + ((vs.mx8 & 0x40) ? 0x100 : 0), vs.m7x + ((vs.mx8 & 0x80) ? 0x100 : 0));
+	fprintf(fout, "Y Pos  : %02x     %02x     %02x     %02x     %02x     %02x     %02x     %02x\n",
+		vs.m0y, vs.m1y, vs.m2y, vs.m3y,
+		vs.m4y, vs.m5y, vs.m6y, vs.m7y);
 
-	fprintf(fout, "Prio.  : ");
+	fprintf(fout, "X Exp  : "); dump_spr_flags(vs.mxe);
+	fprintf(fout, "Y Exp  : "); dump_spr_flags(vs.mye);
+
+	fprintf(fout, "Prio   : ");
 	for (i=0; i<8; i++)
 		if (vs.mdp & (1<<i))
 			fprintf(fout, "Back   ");
