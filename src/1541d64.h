@@ -23,6 +23,8 @@
 
 #include "IEC.h"
 
+#include <string>
+
 
 /*
  *  Definitions
@@ -148,5 +150,8 @@ extern bool ReadImageDirectory(const char *path, vector<c64_dir_entry> &vec);
 
 // Create new blank disk image file
 extern bool CreateImageFile(const char *path);
+
+// Determine the name of the possible "next" disk image file in a series
+extern std::string NextImageFile(const std::string & path);
 
 #endif

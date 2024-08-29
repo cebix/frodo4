@@ -20,6 +20,8 @@
 
 #include "Version.h"
 
+#include "1541d64.h"
+
 #include <gtk/gtk.h>
 
 #include <SDL.h>
@@ -353,6 +355,30 @@ extern "C" void on_emul1541_proc_toggled(GtkToggleButton *button, gpointer user_
 {
 	prefs->Emul1541Proc = gtk_toggle_button_get_active(button);
 	ghost_widgets();
+}
+
+extern "C" void on_drive8_next_disk_clicked(GtkButton *button, gpointer user_data)
+{
+	get_drive_path(0, "drive8_path");
+	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "drive8_path")), NextImageFile(prefs->DrivePath[0]).c_str());
+}
+
+extern "C" void on_drive9_next_disk_clicked(GtkButton *button, gpointer user_data)
+{
+	get_drive_path(1, "drive9_path");
+	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "drive9_path")), NextImageFile(prefs->DrivePath[1]).c_str());
+}
+
+extern "C" void on_drive10_next_disk_clicked(GtkButton *button, gpointer user_data)
+{
+	get_drive_path(2, "drive10_path");
+	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "drive10_path")), NextImageFile(prefs->DrivePath[2]).c_str());
+}
+
+extern "C" void on_drive11_next_disk_clicked(GtkButton *button, gpointer user_data)
+{
+	get_drive_path(3, "drive11_path");
+	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "drive11_path")), NextImageFile(prefs->DrivePath[3]).c_str());
 }
 
 extern "C" void on_display_type_changed(GtkComboBox *box, gpointer user_data)

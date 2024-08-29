@@ -34,25 +34,25 @@ public:
 	void GetState(Job1541State *state);
 	void SetState(const Job1541State *state);
 	void NewPrefs(const Prefs *prefs);
-	void MoveHeadOut(void);
-	void MoveHeadIn(void);
-	bool SyncFound(void);
-	uint8_t ReadGCRByte(void);
-	uint8_t WPState(void);
-	void WriteSector(void);
-	void FormatTrack(void);
+	void MoveHeadOut();
+	void MoveHeadIn();
+	bool SyncFound();
+	uint8_t ReadGCRByte();
+	uint8_t WPState();
+	void WriteSector();
+	void FormatTrack();
 
 private:
 	void open_d64_file(const char *filepath);
-	void close_d64_file(void);
+	void close_d64_file();
 	bool read_sector(int track, int sector, uint8_t *buffer);
 	bool write_sector(int track, int sector, uint8_t *buffer);
-	void format_disk(void);
+	void format_disk();
 	int secnum_from_ts(int track, int sector);
 	int offset_from_ts(int track, int sector);
 	void gcr_conv4(uint8_t *from, uint8_t *to);
 	void sector2gcr(int track, int sector);
-	void disk2gcr(void);
+	void disk2gcr();
 
 	uint8_t *ram;				// Pointer to 1541 RAM
 	FILE *the_file;				// File pointer for .d64 file
@@ -84,14 +84,15 @@ struct Job1541State {
  *  Check if R/W head is over SYNC
  */
 
-inline bool Job1541::SyncFound(void)
+inline bool Job1541::SyncFound()
 {
-	if (*gcr_ptr == 0xff)
+	if (*gcr_ptr == 0xff) {
 		return true;
-	else {
+	} else {
 		gcr_ptr++;		// Rotate disk
-		if (gcr_ptr == gcr_track_end)
+		if (gcr_ptr == gcr_track_end) {
 			gcr_ptr = gcr_track_start;
+		}
 		return false;
 	}
 }
@@ -101,11 +102,12 @@ inline bool Job1541::SyncFound(void)
  *  Read one GCR byte from disk
  */
 
-inline uint8_t Job1541::ReadGCRByte(void)
+inline uint8_t Job1541::ReadGCRByte()
 {
 	uint8_t byte = *gcr_ptr++;	// Rotate disk
-	if (gcr_ptr == gcr_track_end)
+	if (gcr_ptr == gcr_track_end) {
 		gcr_ptr = gcr_track_start;
+	}
 	return byte;
 }
 
@@ -114,13 +116,14 @@ inline uint8_t Job1541::ReadGCRByte(void)
  *  Return state of write protect sensor
  */
 
-inline uint8_t Job1541::WPState(void)
+inline uint8_t Job1541::WPState()
 {
 	if (disk_changed) {	// Disk change -> WP sensor strobe
 		disk_changed = false;
 		return write_protected ? 0x10 : 0;
-	} else
+	} else {
 		return write_protected ? 0 : 0x10;
+	}
 }
 
 #endif

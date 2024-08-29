@@ -34,6 +34,11 @@
 #include "C64.h"
 #include "main.h"
 
+#include <cctype>
+#include <filesystem>
+#include <regex>
+namespace fs = std::filesystem;
+
 #define DEBUG 0
 #include "debug.h"
 
@@ -134,8 +139,9 @@ ImageDrive::ImageDrive(IEC *iec, const char *filepath) : Drive(iec), the_file(NU
 	Reset();
 
 	// Open image file
-	if (change_image(filepath))
+	if (change_image(filepath)) {
 		Ready = true;
+	}
 }
 
 
@@ -153,7 +159,7 @@ ImageDrive::~ImageDrive()
  *  Close the image file
  */
 
-void ImageDrive::close_image(void)
+void ImageDrive::close_image()
 {
 	if (the_file) {
 		close_all_channels();
@@ -196,8 +202,9 @@ bool ImageDrive::change_image(const char *path)
 		read_sector(DIR_TRACK, 0, bam);
 		bam_dirty = false;
 		return true;
-	} else
+	} else {
 		return false;
+	}
 }
 
 
@@ -222,14 +229,17 @@ uint8_t ImageDrive::Open(int channel, const uint8_t *name, int name_len)
 		return ST_OK;
 	}
 
-	if (name[0] == '$')
-		if (channel)
+	if (name[0] == '$') {
+		if (channel) {
 			return open_file_ts(channel, DIR_TRACK, 0);
-		else
+		} else {
 			return open_directory(name + 1, name_len - 1);
+		}
+	}
 
-	if (name[0] == '#')
+	if (name[0] == '#') {
 		return open_direct(channel, name);
+	}
 
 	return open_file(channel, name, name_len);
 }
@@ -246,17 +256,20 @@ uint8_t ImageDrive::open_file(int channel, const uint8_t *name, int name_len)
 	int mode = FMODE_READ;
 	int type = FTYPE_DEL;
 	int rec_len = 0;
+
 	parse_file_name(name, name_len, plain_name, plain_name_len, mode, type, rec_len);
-	if (plain_name_len > 16)
+	if (plain_name_len > 16) {
 		plain_name_len = 16;
+	}
 
 	D(bug(" plain name %s, type %d, mode %d\n", plain_name, type, mode));
 
 	// Channel 0 is READ, channel 1 is WRITE
 	if (channel == 0 || channel == 1) {
 		mode = channel ? FMODE_WRITE : FMODE_READ;
-		if (type == FTYPE_DEL)
+		if (type == FTYPE_DEL) {
 			type = FTYPE_PRG;
+		}
 	}
 
 	ch[channel].writing = (mode == FMODE_WRITE || mode == FMODE_APPEND);
@@ -291,8 +304,9 @@ uint8_t ImageDrive::open_file(int channel, const uint8_t *name, int name_len)
 		uint8_t *de = dir + DIR_ENTRIES + entry * SIZEOF_DE;
 
 		// Get file type from existing file if not specified in file name
-		if (type == FTYPE_DEL)
+		if (type == FTYPE_DEL) {
 			type = de[DE_TYPE] & 7;
+		}
 
 		if ((de[DE_TYPE] & 7) != type) {
 
@@ -341,10 +355,11 @@ uint8_t ImageDrive::open_file(int channel, const uint8_t *name, int name_len)
 		} else {
 
 			// Open old file for reading, error if file is open
-			if (de[DE_TYPE] & 0x80)
+			if (de[DE_TYPE] & 0x80) {
 				return open_file_ts(channel, de[DE_TRACK], de[DE_SECTOR]);
-			else
+			} else {
 				set_error(ERR_WRITEFILEOPEN);
+			}
 		}
 
 	} else {
@@ -353,16 +368,18 @@ uint8_t ImageDrive::open_file(int channel, const uint8_t *name, int name_len)
 		D(bug(" file not found\n"));
 
 		// Set file type to SEQ if not specified in file name
-		if (type == FTYPE_DEL)
+		if (type == FTYPE_DEL) {
 			type = FTYPE_SEQ;
+		}
 
 		if (mode == FMODE_WRITE) {
 
 			// Create new file for writing
 			return create_file(channel, plain_name, plain_name_len, type);
 
-		} else
+		} else {
 			set_error(ERR_FILENOTFOUND);
+		}
 	}
 	return ST_OK;
 }
@@ -510,6 +527,7 @@ uint8_t ImageDrive::open_directory(const uint8_t *pattern, int pattern_len)
 	while (dir[DIR_NEXT_TRACK] && num_dir_blocks < num_sectors[DIR_TRACK]) {
 		if (!read_sector(dir[DIR_NEXT_TRACK], dir[DIR_NEXT_SECTOR], dir))
 			return ST_OK;
+
 		num_dir_blocks++;
 
 		// Scan all 8 entries of a block
@@ -538,23 +556,27 @@ uint8_t ImageDrive::open_directory(const uint8_t *pattern, int pattern_len)
 				bool m = false;
 				for (int i=0; i<16; i++) {
 					if ((c = *q++) == 0xa0) {
-						if (m)
+						if (m) {
 							*p++ = ' ';			// Replace all 0xa0 by spaces
-						else
+						} else {
 							m = (*p++ = '\"');	// But the first by a '"'
-					} else
+						}
+					} else {
 						*p++ = c;
+					}
 				}
-				if (m)
+				if (m) {
 					*p++ = ' ';
-				else
+				} else {
 					*p++ = '\"';			// No 0xa0, then append a space
+				}
 
 				// Open files are marked by '*'
-				if (de[DE_TYPE] & 0x80)
+				if (de[DE_TYPE] & 0x80) {
 					*p++ = ' ';
-				else
+				} else {
 					*p++ = '*';
+				}
 
 				// File type
 				*p++ = type_char_1[de[DE_TYPE] & 7];
@@ -562,10 +584,11 @@ uint8_t ImageDrive::open_directory(const uint8_t *pattern, int pattern_len)
 				*p++ = type_char_3[de[DE_TYPE] & 7];
 
 				// Protected files are marked by '<'
-				if (de[DE_TYPE] & 0x40)
+				if (de[DE_TYPE] & 0x40) {
 					*p++ = '<';
-				else
+				} else {
 					*p++ = ' ';
+				}
 
 				// Appropriate number of spaces at the end
 				*p++ = ' ';
@@ -579,8 +602,9 @@ uint8_t ImageDrive::open_directory(const uint8_t *pattern, int pattern_len)
 	// Final line, count number of free blocks
 	int n = 0;
 	for (int i=1; i<=35; i++) {
-		if (i != DIR_TRACK)	// exclude track 18
+		if (i != DIR_TRACK)	{ // exclude track 18
 			n += num_free_blocks(i);
+		}
 	}
 
 	*p++ = 0x01;		// Dummy line link
@@ -621,11 +645,13 @@ uint8_t ImageDrive::open_direct(int channel, const uint8_t *name)
 {
 	int buf = -1;
 
-	if (name[1] == 0)
+	if (name[1] == 0) {
 		buf = alloc_buffer(-1);
-	else
-		if ((name[1] >= '0') && (name[1] <= '3') && (name[2] == 0))
+	} else {
+		if ((name[1] >= '0') && (name[1] <= '3') && (name[2] == 0)) {
 			buf = alloc_buffer(name[1] - '0');
+		}
+	}
 
 	if (buf == -1) {
 		set_error(ERR_NOCHANNEL);
@@ -722,8 +748,9 @@ free:		free_buffer(ch[channel].buf_num);
 
 void ImageDrive::close_all_channels()
 {
-	for (int i=0; i<15; i++)
+	for (int i=0; i<15; i++) {
 		Close(i);
+	}
 	Close(16);
 	Close(17);
 
@@ -748,9 +775,9 @@ uint8_t ImageDrive::Read(int channel, uint8_t &byte)
 		case CHMOD_COMMAND:
 			// Read error channel
 			byte = *error_ptr++;
-			if (--error_len)
+			if (--error_len) {
 				return ST_OK;
-			else {
+			} else {
 				set_error(ERR_OK);
 				return ST_EOF;
 			}
@@ -775,24 +802,28 @@ uint8_t ImageDrive::Read(int channel, uint8_t &byte)
 
 			if (ch[channel].buf_len > 0) {
 				byte = *(ch[channel].buf_ptr)++;
-				if (--(ch[channel].buf_len) == 0 && ch[channel].buf[0] == 0)
+				if (--(ch[channel].buf_len) == 0 && ch[channel].buf[0] == 0) {
 					return ST_EOF;
-				else
+				} else {
 					return ST_OK;
-			} else
+				}
+			} else {
 				return ST_READ_TIMEOUT;
+			}
 			break;
 
 		case CHMOD_DIRECTORY:
 		case CHMOD_DIRECT:
 			if (ch[channel].buf_len > 0) {
 				byte = *(ch[channel].buf_ptr)++;
-				if (--(ch[channel].buf_len))
+				if (--(ch[channel].buf_len)) {
 					return ST_OK;
-				else
+				} else {
 					return ST_EOF;
-			} else
+				}
+			} else {
 				return ST_READ_TIMEOUT;
+			}
 			break;
 	}
 	return ST_READ_TIMEOUT;
@@ -809,8 +840,9 @@ uint8_t ImageDrive::Write(int channel, uint8_t byte, bool eoi)
 
 	switch (ch[channel].mode) {
 		case CHMOD_FREE:
-			if (current_error == ERR_OK)
+			if (current_error == ERR_OK) {
 				set_error(ERR_FILENOTOPEN);
+			}
 			break;
 
 		case CHMOD_COMMAND:
@@ -868,8 +900,9 @@ uint8_t ImageDrive::Write(int channel, uint8_t byte, bool eoi)
 				*(ch[channel].buf_ptr)++ = byte;
 				ch[channel].buf_len++;
 				return ST_OK;
-			} else
+			} else {
 				return ST_TIMEOUT;
+			}
 			break;
 	}
 	return ST_TIMEOUT;
@@ -880,13 +913,14 @@ uint8_t ImageDrive::Write(int channel, uint8_t byte, bool eoi)
  *  Reset drive
  */
 
-void ImageDrive::Reset(void)
+void ImageDrive::Reset()
 {
 	close_all_channels();
 
 	cmd_len = 0;
-	for (int i=0; i<4; i++)
+	for (int i=0; i<4; i++) {
 		buf_free[i] = true;
+	}
 
 	if (bam_dirty) {
 		write_sector(DIR_TRACK, 0, bam);
@@ -910,22 +944,25 @@ void ImageDrive::Reset(void)
 int ImageDrive::alloc_buffer(int want)
 {
 	if (want == -1) {
-		for (want=3; want>=0; want--)
+		for (want=3; want>=0; want--) {
 			if (buf_free[want]) {
 				buf_free[want] = false;
 				return want;
 			}
+		}
 		return -1;
 	}
 
-	if (want < 4)
+	if (want < 4) {
 		if (buf_free[want]) {
 			buf_free[want] = false;
 			return want;
-		} else
+		} else {
 			return -1;
-	else
+		}
+	} else {
 		return -1;
+	}
 }
 
 
@@ -947,8 +984,9 @@ void ImageDrive::free_buffer(int buf)
 // Return true if name 'n' matches pattern 'p'
 static bool match(const uint8_t *p, int p_len, const uint8_t *n)
 {
-	if (p_len > 16)
+	if (p_len > 16) {
 		p_len = 16;
+	}
 
 	int c = 0;
 	while (p_len-- > 0) {
@@ -969,9 +1007,9 @@ bool ImageDrive::find_file(const uint8_t *pattern, int pattern_len, int &dir_tra
 
 	// Pointer to current directory entry
 	uint8_t *de = NULL;
-	if (cont)
+	if (cont) {
 		de = dir + DIR_ENTRIES + entry * SIZEOF_DE;
-	else {
+	} else {
 		dir[DIR_NEXT_TRACK] = DIR_TRACK;
 		dir[DIR_NEXT_SECTOR] = 1;
 		entry = 8;
@@ -1116,8 +1154,9 @@ int ImageDrive::alloc_block(int track, int sector)
 		bam_dirty = true;
 		return ERR_OK;
 
-	} else
+	} else {
 		return ERR_NOBLOCK;
+	}
 }
 
 
@@ -1200,20 +1239,22 @@ full:		track = sector = 0;
 		} else if (track > DIR_TRACK) {
 			track++;
 			if (track > 35) {
-				if (!side_changed)
+				if (!side_changed) {
 					side_changed = true;
-				else
+				} else {
 					goto full;
+				}
 				track = DIR_TRACK - 1;
 				sector = 0;
 			}
 		} else {
 			track--;
 			if (track < 1) {
-				if (!side_changed)
+				if (!side_changed) {
 					side_changed = true;
-				else
+				} else {
 					goto full;
+				}
 				track = DIR_TRACK + 1;
 				sector = 0;
 			}
@@ -1225,8 +1266,9 @@ full:		track = sector = 0;
 	sector = sector + interleave;
 	if (sector >= num) {
 		sector -= num;
-		if (sector)
+		if (sector) {
 			sector--;
+		}
 	}
 	while (!is_block_free(track, sector)) {
 		sector++;
@@ -1311,9 +1353,9 @@ static int read_sector(FILE *f, const image_file_desc &desc, int track, int sect
 		return ERR_NOTREADY;
 
 	fseek(f, offset, SEEK_SET);
-	if (fread(buffer, 1, 256, f) != 256)
+	if (fread(buffer, 1, 256, f) != 256) {
 		return ERR_READ22;
-	else {
+	} else {
 		unsigned int error = error_info_for_sector(desc, track, sector);
 		return conv_job_error[error & 0x0f];
 	}
@@ -1331,18 +1373,20 @@ static int write_sector(FILE *f, const image_file_desc &desc, int track, int sec
 		return ERR_NOTREADY;
 
 	fseek(f, offset, SEEK_SET);
-	if (fwrite(buffer, 1, 256, f) != 256)
+	if (fwrite(buffer, 1, 256, f) != 256) {
 		return ERR_WRITE25;
-	else
+	} else {
 		return ERR_OK;
+	}
 }
 
 // Read sector and set error message, returns false on error
 bool ImageDrive::read_sector(int track, int sector, uint8_t *buffer)
 {
 	int error = ::read_sector(the_file, desc, track, sector, buffer);
-	if (error)
+	if (error) {
 		set_error(error, track, sector);
+	}
 	return error == ERR_OK;
 }
 
@@ -1350,8 +1394,9 @@ bool ImageDrive::read_sector(int track, int sector, uint8_t *buffer)
 bool ImageDrive::write_sector(int track, int sector, uint8_t *buffer)
 {
 	int error = ::write_sector(the_file, desc, track, sector, buffer);
-	if (error)
+	if (error) {
 		set_error(error, track, sector);
+	}
 	return error == ERR_OK;
 }
 
@@ -1378,8 +1423,9 @@ static bool format_image(FILE *f, image_file_desc &desc, bool lowlevel, uint8_t 
 
 		// Overwrite all blocks
 		for (int track=1; track<=35; track++) {
-			if (track == 2)
+			if (track == 2) {
 				p[0] = 0x4b;
+			}
 			for (int sector=0; sector<num_sectors[track]; sector++) {
 				if (write_sector(f, desc, track, sector, p) != ERR_OK)
 					return false;
@@ -1408,8 +1454,9 @@ static bool format_image(FILE *f, image_file_desc &desc, bool lowlevel, uint8_t 
 	p[BAM_BITMAP + (DIR_TRACK - 1) * 4 + 0] -= 2;	// Allocate BAM and first directory block
 	p[BAM_BITMAP + (DIR_TRACK - 1) * 4 + 1] &= 0xfc;
 	memset(p + BAM_DISK_NAME, 0xa0, 27);
-	if (disk_name_len > 16)
+	if (disk_name_len > 16) {
 		disk_name_len = 16;
+	}
 	memcpy(p + BAM_DISK_NAME, disk_name, disk_name_len);
 	p[BAM_DISK_ID] = id1;
 	p[BAM_DISK_ID + 1] = id2;
@@ -1458,8 +1505,9 @@ void ImageDrive::block_write_cmd(int channel, int track, int sector, bool user_c
 		set_error(ERR_NOCHANNEL);
 		return;
 	}
-	if (!user_cmd)
+	if (!user_cmd) {
 		ch[channel].buf[0] = ch[channel].buf_len ? ch[channel].buf_len - 1 : 1;
+	}
 	if (!write_sector(track, sector, ch[channel].buf))
 		return;
 	if (!user_cmd) {
@@ -1491,8 +1539,9 @@ void ImageDrive::block_allocate_cmd(int track, int sector)
 					return;
 				}
 			}
-		} else
+		} else {
 			set_error(err, track, sector);
+		}
 	}
 }
 
@@ -1500,8 +1549,9 @@ void ImageDrive::block_allocate_cmd(int track, int sector)
 void ImageDrive::block_free_cmd(int track, int sector)
 {
 	int err = free_block(track, sector);
-	if (err)
+	if (err) {
 		set_error(err, track, sector);
+	}
 }
 
 // BUFFER-POINTER:channel,pos
@@ -1604,8 +1654,9 @@ void ImageDrive::copy_cmd(const uint8_t *new_file, int new_file_len, const uint8
 		if (comma) {
 			old_files_len -= name_len + 1;
 			old_files = comma + 1;
-		} else
+		} else {
 			old_files_len = 0;
+		}
 	}
 	Close(17);
 }
@@ -1683,8 +1734,9 @@ void ImageDrive::scratch_cmd(const uint8_t *files, int files_len)
 		if (comma) {
 			files_len -= name_len + 1;
 			files = comma + 1;
-		} else
+		} else {
 			files_len = 0;
+		}
 	}
 
 	// Report number of files scratched
@@ -1692,7 +1744,7 @@ void ImageDrive::scratch_cmd(const uint8_t *files, int files_len)
 }
 
 // INITIALIZE
-void ImageDrive::initialize_cmd(void)
+void ImageDrive::initialize_cmd()
 {
 	// Close all channels and re-read BAM
 	close_all_channels();
@@ -1743,7 +1795,7 @@ void ImageDrive::new_cmd(const uint8_t *name, int name_len, const uint8_t *comma
 }
 
 // VALIDATE
-void ImageDrive::validate_cmd(void)
+void ImageDrive::validate_cmd()
 {
 	// Backup of old BAM in case something goes amiss
 	uint8_t old_bam[256];
@@ -1828,8 +1880,9 @@ bool IsImageFile(const char *path, const uint8_t *header, long size)
 
 static FILE *open_zipcode_file(FILE *old, int num, const string &base, string &part, uint8_t &id1, uint8_t &id2)
 {
-	if (old)
+	if (old) {
 		fclose(old);
+	}
 	part[0] = num + '1';
 	FILE *f = fopen(AddToPath(base, part).c_str(), "rb");
 	if (f == NULL)
@@ -1885,8 +1938,9 @@ static FILE *convert_zipcode_to_ed64(const string &path)
 
 		// Clear "sector read" flags
 		bool sect_flag[21];
-		for (int i=0; i<max_sect; i++)
+		for (int i=0; i<max_sect; i++) {
 			sect_flag[i] = false;
+		}
 
 		// Read track
 		uint8_t act_track[21 * 256];
@@ -1910,9 +1964,9 @@ static FILE *convert_zipcode_to_ed64(const string &path)
 					if (feof(in))
 						goto error;
 					uint8_t c = getc(in);
-					if (c != rep)
+					if (c != rep) {
 						p[count++] = c;
-					else {
+					} else {
 						uint8_t repnum = getc(in);
 						if (feof(in))
 							goto error;
@@ -1950,10 +2004,12 @@ static FILE *convert_zipcode_to_ed64(const string &path)
 	return out;
 
 error:
-	if (in)
+	if (in) {
 		fclose(in);
-	if (out)
+	}
+	if (out) {
 		fclose(out);
+	}
 	return NULL;
 }
 #endif
@@ -1967,10 +2023,11 @@ static FILE *open_image_file(const char *path, bool write_mode)
 {
 #if 0
 	if (is_zipcode_file(path)) {
-		if (write_mode)
+		if (write_mode) {
 			return NULL;
-		else
+		} else {
 			return convert_zipcode_to_ed64(path);
+		}
 	} else
 #endif
 		return fopen(path, write_mode ? "r+b" : "rb");
@@ -1990,10 +2047,11 @@ static bool parse_d64_file(FILE *f, image_file_desc &desc, bool has_header_id)
 	// Determine number of tracks
 	fseek(f, 0, SEEK_END);
 	long size = ftell(f);
-	if (size == NUM_SECTORS_40 * 256 || size == NUM_SECTORS_40 * 257)
+	if (size == NUM_SECTORS_40 * 256 || size == NUM_SECTORS_40 * 257) {
 		desc.num_tracks = 40;
-	else
+	} else {
 		desc.num_tracks = 35;
+	}
 
 	if (has_header_id) {
 		// Read header ID from image file (last 2 bytes)
@@ -2018,8 +2076,9 @@ static bool parse_d64_file(FILE *f, image_file_desc &desc, bool has_header_id)
 		fseek(f, NUM_SECTORS_40 * 256, SEEK_SET);
 		fread(desc.error_info, NUM_SECTORS_40, 1, f);
 		desc.has_error_info = true;
-	} else
+	} else {
 		desc.has_error_info = false;
+	}
 
 	return true;
 }
@@ -2058,14 +2117,15 @@ static bool parse_image_file(FILE *f, image_file_desc &desc)
 	long size = ftell(f);
 
 	// Determine file type and fill in image_file_desc structure
-	if (is_x64_file(header, size))
+	if (is_x64_file(header, size)) {
 		return parse_x64_file(f, desc);
-	else if (is_d64_file(header, size))
+	} else if (is_d64_file(header, size)) {
 		return parse_d64_file(f, desc, false);
-	else if (is_ed64_file(header, size))
+	} else if (is_ed64_file(header, size)) {
 		return parse_d64_file(f, desc, true);
-	else
+	} else {
 		return false;
+	}
 }
 
 
@@ -2111,13 +2171,15 @@ bool ReadImageDirectory(const char *path, vector<c64_dir_entry> &vec)
 				memcpy(name_buf, de + DE_NAME, 16);
 				name_buf[16] = 0;
 				uint8_t *p = (uint8_t *)memchr(name_buf, 0xa0, 16);
-				if (p)
+				if (p) {
 					*p = 0;
+				}
 
 				// Convert file type
 				int type = de[DE_TYPE] & 7;
-				if (type > 4)
+				if (type > 4) {
 					type = FTYPE_UNKNOWN;
+				}
 
 				// Read start address
 				uint8_t sa_lo = 0, sa_hi = 0;
@@ -2170,4 +2232,66 @@ bool CreateImageFile(const char *path)
 	// Close file
 	fclose(f);
 	return true;
+}
+
+
+/*
+ *  Determine the name of the possible "next" disk image file in a series
+ */
+
+static std::string next_image_file_name(const std::string & path)
+{
+	// ...Disk1.d64, ...(Disk 1).d64, ...[Disk A].d64 etc.
+	static const std::regex r1(R"(.*Dis[ck]\s?([A-Z1-9])[\]\)]?\.[dgx]64)");
+
+	// ...Side1.d64, ...(Side 1).d64, ...[Side A].d64 etc.
+	static const std::regex r2(R"(.*Side\s?([A-Z1-9])[\]\)]?\.[dgx]64)");
+
+	// ...(1).d64, ...[A].d64 etc.
+	static const std::regex r3(R"(.*[\[\(]([A-Z1-9])[\]\)]\.[dgx]64)");
+
+	// ...1.d64, ...A.d64 etc.
+	static const std::regex r4(R"(.*([A-Z1-9])\.[dgx]64)");
+
+	std::smatch m;
+	if (std::regex_match(path, m, r1) ||
+	    std::regex_match(path, m, r2) ||
+	    std::regex_match(path, m, r3) ||
+	    std::regex_match(path, m, r4)) {
+
+		std::string prefix = path.substr(0, m.position(1));
+		std::string infix  = m[1].str();
+		std::string suffix = path.substr(m.position(1) + m.length(1));
+
+		// Increment infix
+		if (infix == "Z") {
+			infix = "A";
+		} else if (infix == "9") {
+			infix = "1";
+		} else if (std::isalpha(infix[0]) || std::isdigit(infix[0])) {
+			infix = std::string(1, infix[0] + 1);
+		} else {
+			return path;
+		}
+
+		return prefix + infix + suffix;
+	}
+
+	return path;
+}
+
+std::string NextImageFile(const std::string & path)
+{
+	std::string candidate = next_image_file_name(path);
+
+	// Try candidates until existing file is found
+	while (candidate != path) {
+		if (fs::is_regular_file(candidate)) {
+			return candidate;
+		}
+		candidate = next_image_file_name(candidate);
+	}
+
+	// No candidate found, return original path
+	return path;
 }

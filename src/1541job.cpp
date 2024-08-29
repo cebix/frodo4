@@ -93,8 +93,9 @@ Job1541::Job1541(uint8_t *ram1541) : ram(ram1541)
 
 	disk_changed = true;
 
-	if (ThePrefs.Emul1541Proc)
+	if (ThePrefs.Emul1541Proc) {
 		open_d64_file(ThePrefs.DrivePath[0]);
+	}
 }
 
 
@@ -116,15 +117,15 @@ Job1541::~Job1541()
 void Job1541::NewPrefs(const Prefs *prefs)
 {
 	// 1541 emulation turned off?
-	if (!prefs->Emul1541Proc)
+	if (!prefs->Emul1541Proc) {
 		close_d64_file();
 
 	// 1541 emulation turned on?
-	else if (!ThePrefs.Emul1541Proc && prefs->Emul1541Proc)
+	} else if (!ThePrefs.Emul1541Proc && prefs->Emul1541Proc) {
 		open_d64_file(prefs->DrivePath[0]);
 
 	// .d64 file name changed?
-	else if (strcmp(ThePrefs.DrivePath[0], prefs->DrivePath[0])) {
+	} else if (strcmp(ThePrefs.DrivePath[0], prefs->DrivePath[0])) {
 		close_d64_file();
 		open_d64_file(prefs->DrivePath[0]);
 		disk_changed = true;
@@ -165,10 +166,11 @@ void Job1541::open_d64_file(const char *filepath)
 		// x64 image?
 		fseek(the_file, 0, SEEK_SET);
 		fread(&magic, 4, 1, the_file);
-		if (magic[0] == 0x43 && magic[1] == 0x15 && magic[2] == 0x41 && magic[3] == 0x64)
+		if (magic[0] == 0x43 && magic[1] == 0x15 && magic[2] == 0x41 && magic[3] == 0x64) {
 			image_header = 64;
-		else
+		} else {
 			image_header = 0;
+		}
 
 		// Preset error info (all sectors no error)
 		memset(error_info, 1, NUM_SECTORS);
@@ -194,7 +196,7 @@ void Job1541::open_d64_file(const char *filepath)
  *  Close .d64 file
  */
 
-void Job1541::close_d64_file(void)
+void Job1541::close_d64_file()
 {
 	if (the_file != NULL) {
 		fclose(the_file);
@@ -207,15 +209,17 @@ void Job1541::close_d64_file(void)
  *  Write sector to disk (1541 ROM patch)
  */
 
-void Job1541::WriteSector(void)
+void Job1541::WriteSector()
 {
 	int track = ram[0x18];
 	int sector = ram[0x19];
 	uint16_t buf = ram[0x30] | (ram[0x31] << 8);
 
-	if (buf <= 0x0700)
-		if (write_sector(track, sector, ram + buf))
+	if (buf <= 0x0700) {
+		if (write_sector(track, sector, ram + buf)) {
 			sector2gcr(track, sector);
+		}
+	}
 }
 
 
@@ -223,7 +227,7 @@ void Job1541::WriteSector(void)
  *  Format one track (1541 ROM patch)
  */
 
-void Job1541::FormatTrack(void)
+void Job1541::FormatTrack()
 {
 	int track = ram[0x51];
 
@@ -238,15 +242,16 @@ void Job1541::FormatTrack(void)
 	buf[0] = 0x4b;
 
 	// Write block to all sectors on track
-	for(int sector=0; sector<num_sectors[track]; sector++) {
+	for (int sector=0; sector<num_sectors[track]; sector++) {
 		write_sector(track, sector, buf);
 		sector2gcr(track, sector);
 	}
 
 	// Clear error info (all sectors no error)
-	if (track == 35)
+	if (track == 35) {
 		memset(error_info, 1, NUM_SECTORS);
 		// Write error_info to disk?
+	}
 }
 
 
@@ -395,12 +400,14 @@ void Job1541::sector2gcr(int track, int sector)
 	memset(p, 0x55, 8);						// Gap
 }
 
-void Job1541::disk2gcr(void)
+void Job1541::disk2gcr()
 {
 	// Convert all tracks and sectors
-	for (int track=1; track<=NUM_TRACKS; track++)
-		for(int sector=0; sector<num_sectors[track]; sector++)
+	for (int track=1; track<=NUM_TRACKS; track++) {
+		for(int sector=0; sector<num_sectors[track]; sector++) {
 			sector2gcr(track, sector);
+		}
+	}
 }
 
 
@@ -408,7 +415,7 @@ void Job1541::disk2gcr(void)
  *  Move R/W head out (lower track numbers)
  */
 
-void Job1541::MoveHeadOut(void)
+void Job1541::MoveHeadOut()
 {
 	if (current_halftrack == 2)
 		return;
@@ -422,7 +429,7 @@ void Job1541::MoveHeadOut(void)
  *  Move R/W head in (higher track numbers)
  */
 
-void Job1541::MoveHeadIn(void)
+void Job1541::MoveHeadIn()
 {
 	if (current_halftrack == NUM_TRACKS*2)
 		return;
