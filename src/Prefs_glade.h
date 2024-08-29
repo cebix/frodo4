@@ -84,6 +84,11 @@ bool Prefs::ShowEditor(bool startup, const char *prefs_name)
 	GtkWindow * prefs_win = GTK_WINDOW(gtk_builder_get_object(builder, "prefs_win"));
 
 	if (startup) {
+		if (IsFrodoSC) {
+			// Remove entire "Advanced" page
+			gtk_notebook_remove_page(GTK_NOTEBOOK(gtk_builder_get_object(builder, "tabs")), -1);
+		}
+
 		snapshot_dialog = gtk_file_chooser_dialog_new("", prefs_win,
 			GTK_FILE_CHOOSER_ACTION_SAVE, "Cancel", GTK_RESPONSE_CANCEL, nullptr
 		);
@@ -172,12 +177,14 @@ static void set_values()
 
 	gtk_combo_box_set_active(GTK_COMBO_BOX(gtk_builder_get_object(builder, "reu_size")), prefs->REUSize);
 
-	gtk_spin_button_set_value(GTK_SPIN_BUTTON(gtk_builder_get_object(builder, "normal_cycles")), prefs->NormalCycles);
-	gtk_spin_button_set_value(GTK_SPIN_BUTTON(gtk_builder_get_object(builder, "bad_line_cycles")), prefs->BadLineCycles);
-	gtk_spin_button_set_value(GTK_SPIN_BUTTON(gtk_builder_get_object(builder, "cia_cycles")), prefs->CIACycles);
-	gtk_spin_button_set_value(GTK_SPIN_BUTTON(gtk_builder_get_object(builder, "floppy_cycles")), prefs->FloppyCycles);
+	if (! IsFrodoSC) {
+		gtk_spin_button_set_value(GTK_SPIN_BUTTON(gtk_builder_get_object(builder, "normal_cycles")), prefs->NormalCycles);
+		gtk_spin_button_set_value(GTK_SPIN_BUTTON(gtk_builder_get_object(builder, "bad_line_cycles")), prefs->BadLineCycles);
+		gtk_spin_button_set_value(GTK_SPIN_BUTTON(gtk_builder_get_object(builder, "cia_cycles")), prefs->CIACycles);
+		gtk_spin_button_set_value(GTK_SPIN_BUTTON(gtk_builder_get_object(builder, "floppy_cycles")), prefs->FloppyCycles);
 
-	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "cia_irq_hack")), prefs->CIAIRQHack);
+		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "cia_irq_hack")), prefs->CIAIRQHack);
+	}
 
 	ghost_widgets();
 }
@@ -228,12 +235,14 @@ static void get_values()
 
 	prefs->REUSize = gtk_combo_box_get_active(GTK_COMBO_BOX(gtk_builder_get_object(builder, "reu_size")));
 
-	prefs->NormalCycles = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(gtk_builder_get_object(builder, "normal_cycles")));
-	prefs->BadLineCycles = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(gtk_builder_get_object(builder, "bad_line_cycles")));
-	prefs->CIACycles = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(gtk_builder_get_object(builder, "cia_cycles")));
-	prefs->FloppyCycles = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(gtk_builder_get_object(builder, "floppy_cycles")));
+	if (! IsFrodoSC) {
+		prefs->NormalCycles = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(gtk_builder_get_object(builder, "normal_cycles")));
+		prefs->BadLineCycles = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(gtk_builder_get_object(builder, "bad_line_cycles")));
+		prefs->CIACycles = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(gtk_builder_get_object(builder, "cia_cycles")));
+		prefs->FloppyCycles = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(gtk_builder_get_object(builder, "floppy_cycles")));
 
-	prefs->CIAIRQHack = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "cia_irq_hack")));
+		prefs->CIAIRQHack = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "cia_irq_hack")));
+	}
 }
 
 
@@ -256,9 +265,6 @@ static void ghost_widgets()
 
 	ghost_widget("sid_filters", prefs->SIDType != SIDTYPE_DIGITAL);
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "sid_filters")), prefs->SIDType == SIDTYPE_DIGITAL ? prefs->SIDFilters : (prefs->SIDType == SIDTYPE_SIDCARD ? true : false));
-
-	ghost_widget("timing_control", IsFrodoSC);
-	ghost_widget("advanced_options", IsFrodoSC);
 }
 
 
