@@ -3,6 +3,7 @@ Changes from V4.2 to V4.3:
  - Unix: settings are now stored in ~/.local/share/cebix/Frodo/config
    instead of ~/.frodorc
  - Removed Unix display and sound support, main target is now SDL
+ - Removed Win32 support (use SDL/GTK instead)
  - Removed AmigaOS support
  - Removed RiscOS support
  - Removed classic MacOS support

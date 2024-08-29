@@ -49,7 +49,9 @@
 #include "1541t64.h"
 #include "Prefs.h"
 #include "Display.h"
-#include "main.h"
+
+#include <filesystem>
+namespace fs = std::filesystem;
 
 
 // IEC command codes
@@ -74,7 +76,7 @@ enum {
 
 Drive *IEC::create_drive(const char *path)
 {
-	if (IsDirectory(path)) {
+	if (fs::is_directory(path)) {
 		// Mount host directory
 		return new FSDrive(this, path);
 	} else {

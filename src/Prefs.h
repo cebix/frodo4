@@ -70,17 +70,11 @@ public:
 
 	char DrivePath[4][256];	// Path for drive 8..11
 
-	char ViewPort[256];		// Size of the C64 screen to display (Win32)
-	char DisplayMode[256];	// Video mode to use for full screen (Win32)
-
 	int SIDType;			// SID emulation type
 	int REUSize;			// Size of REU
-	int DisplayType;		// Display type (BeOS)
+	int DisplayType;		// Display type (windowed or full-screen)
 	int Joystick1Port;		// Port that joystick 1 is connected to (0 = no joystick, all other values are system dependant)
 	int Joystick2Port;		// Port that joystick 2 is connected to
-	int LatencyMin;			// Min msecs ahead of sound buffer (Win32)
-	int LatencyMax;			// Max msecs ahead of sound buffer (Win32)
-	int LatencyAvg;			// Averaging interval in msecs (Win32)
 	int ScalingNumerator;	// Window scaling numerator
 	int ScalingDenominator;	// Window scaling denominator
 
@@ -96,29 +90,9 @@ public:
 	bool DoubleScan;		// Double scan lines (BeOS, if DisplayType == DISPTYPE_SCREEN)
 	bool JoystickGeekPort;	// Enable GeekPort joystick adapter (BeOS)
 	bool HideCursor;		// Hide mouse cursor when visible (Win32)
-	bool DirectSound;		// Use direct sound (instead of wav) (Win32)
-	bool ExclusiveSound;	// Use exclusive mode with direct sound (Win32)
 	bool AutoPause;			// Auto pause when not foreground app (Win32)
 	bool PrefsAtStartup;	// Show prefs dialog at startup (Win32)
-	bool SystemMemory;		// Put view work surface in system mem (Win32)
-	bool AlwaysCopy;		// Always use a work surface (Win32)
-	bool SystemKeys;		// Enable system keys and menu keys (Win32)
-	bool ShowLEDs;			// Show LEDs
-
-#ifdef WIN32
-private:
-	static BOOL CALLBACK StandardDialogProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
-	static BOOL CALLBACK WIN32DialogProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
-	BOOL DialogProc(int page, HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
-	void SetupControls(int page);
-	void SetValues(int page);
-	void GetValues(int page);
-	void BrowseForDevice(int id);
-
-	static Prefs *edit_prefs;
-	static char *edit_prefs_name;
-	static HWND hDlg;
-#endif
+	bool ShowLEDs;			// Show status bar
 };
 
 

@@ -388,14 +388,3 @@ void Frodo::AboutRequested()
 {
 	new AboutWindow();
 }
-
-
-/*
- *  Determine whether path name refers to a directory
- */
-
-bool IsDirectory(const char *path)
-{
-	struct stat st;
-	return stat(path.c_str(), &st) == 0 && S_ISDIR(st.st_mode);
-}

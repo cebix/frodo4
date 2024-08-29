@@ -36,10 +36,6 @@
 #include <media/SoundPlayer.h>
 #endif
 
-#ifdef WIN32
-class DigitalPlayer;
-#endif
-
 
 #undef USE_FIXPOINT_MATHS
 
@@ -378,24 +374,6 @@ private:
 
 #ifdef HAVE_SDL
 	static void buffer_proc(void *cookie, uint8_t *buffer, int size);
-#endif
-
-#ifdef WIN32
-public:
-	void VBlank();
-
-private:
-	void StartPlayer();
-	void StopPlayer();
-
-	BOOL direct_sound;
-	DigitalPlayer *ThePlayer;
-	SWORD *sound_buffer;
-	int to_output;
-	int sb_pos;
-	int divisor;
-	int *lead;
-	int lead_pos;
 #endif
 };
 
@@ -1259,9 +1237,6 @@ void DigitalRenderer::calc_buffer(int16_t *buf, long count)
 # if defined(__linux__)
 # include "SID_catweasel.h"
 # endif
-
-#elif defined(WIN32)
-#include "SID_WIN32.h"
 
 #else	// No sound
 void DigitalRenderer::init_sound() {ready = false;}

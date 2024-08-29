@@ -8,9 +8,9 @@
 
 <HR>
 
-Under Unix, the settings window appears directly after starting Frodo, or by
-pressing F10. Under BeOS, the settings window can be brought up by selecting
-the "Settings..." menu item in the running emulation.<P>
+On SDL platforms, the settings window appears directly after starting Frodo,
+or by pressing F10. Under BeOS, the settings window can be brought up by
+selecting the "Settings..." menu item in the running emulation.<P>
 
 <H2>Drives</H2>
 
@@ -53,15 +53,15 @@ processor emulation instead.<P>
 
 With <B>"Map '/' &lt;-&gt; '\' in file names"</B> you control whether the
 '/' in C64 filenames will be translated to '\' and vice versa for Directory
-Mode drives. The '/' character is used to access subdirectories under
-Unix/BeOS, but as the C64 doesn't have subdirectories, it's a valid part of
-a C64 file name. This is a problem if a program wants to create a file with
-'/' in it as the host system would interpret the part before the '/' as a
-directory name and, finding no such directory, would return an error and
-the operation would fail. If you activate this checkbox all '/'s will
-transparently be translated into '\', so in directory listings the '/' will
-still appear. If you turn off this option, you can of course use the '/' to
-access files in subdirectories from the C64.<P>
+Mode drives. On many systems, the '/' character is used to access
+subdirectories, but since the C64/1541 doesn't support subdirectories, that
+character is a valid part of a C64 file name. This is a problem if a program
+wants to create a file with '/' in it as the host system would interpret the
+part before the '/' as a directory name and, finding no such directory,
+would return an error and the operation would fail. If you activate this
+checkbox all '/'s will transparently be translated into '\', so in directory
+listings the '/' will still appear. If you turn off this option, you can of
+course use the '/' to access files in subdirectories from the C64.<P>
 
 <H2>Video/Sound</H2>
 
@@ -162,11 +162,11 @@ hang in an endless interrupt loop because they use an unusual technique to
 acknowledge CIA interrupts (sometimes even without the programmer knowing
 it). It should normally be turned off.<P>
 
-<H2>Unix/BeOS</H2>
+<H2>SDL platforms</H2>
 
-Clicking <B>"Start"/"OK"</B> will start the actual emulation (or return
-to it) and <B>"Quit"/"Cancel"</b> will discard your changes to the settings
-and quit Frodo (or discard the changes and return to the emulation).<P>
+Clicking <B>"Start"/"Continue"</B> will start the actual emulation (or
+return to it), and <B>"Quit"</b> will discard your changes to the settings
+and quit Frodo.<P>
 
 <H2>BeOS</H2>
 

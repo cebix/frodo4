@@ -575,7 +575,4 @@ void C64::handle_rewind()
 
 #elif defined(HAVE_SDL)
 #include "C64_SDL.h"
-
-#elif defined(WIN32)
-#include "C64_WIN32.h"
 #endif

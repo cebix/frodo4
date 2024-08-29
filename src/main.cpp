@@ -83,7 +83,4 @@ void Frodo::load_rom_files()
 
 #elif defined(HAVE_SDL)
 #include "main_SDL.h"
-
-#elif defined(WIN32)
-#include "main_WIN32.h"
 #endif

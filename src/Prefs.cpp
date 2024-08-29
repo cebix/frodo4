@@ -44,9 +44,6 @@ Prefs::Prefs()
 	CIACycles = 63;
 	FloppyCycles = 64;
 	SkipFrames = 1;
-	LatencyMin = 80;
-	LatencyMax = 120;
-	LatencyAvg = 280;
 	ScalingNumerator = 4;
 	ScalingDenominator = 1;
 
@@ -54,9 +51,6 @@ Prefs::Prefs()
 	strcpy(DrivePath[1], "");
 	strcpy(DrivePath[2], "");
 	strcpy(DrivePath[3], "");
-
-	strcpy(ViewPort, "Default");
-	strcpy(DisplayMode, "Default");
 
 	SIDType = SIDTYPE_DIGITAL;
 	REUSize = REU_NONE;
@@ -75,13 +69,8 @@ Prefs::Prefs()
 	SIDFilters = true;
 	DoubleScan = true;
 	HideCursor = false;
-	DirectSound = true;	
-	ExclusiveSound = false;
 	AutoPause = false;
-	PrefsAtStartup = false;
-	SystemMemory = false;
-	AlwaysCopy = false;
-	SystemKeys = true;
+	PrefsAtStartup = true;
 	ShowLEDs = true;
 }
 
@@ -98,17 +87,12 @@ bool Prefs::operator==(const Prefs &rhs) const
 		&& CIACycles == rhs.CIACycles
 		&& FloppyCycles == rhs.FloppyCycles
 		&& SkipFrames == rhs.SkipFrames
-		&& LatencyMin == rhs.LatencyMin
-		&& LatencyMax == rhs.LatencyMax
-		&& LatencyAvg == rhs.LatencyAvg
 		&& ScalingNumerator == rhs.ScalingNumerator
 		&& ScalingDenominator == rhs.ScalingNumerator
 		&& strcmp(DrivePath[0], rhs.DrivePath[0]) == 0
 		&& strcmp(DrivePath[1], rhs.DrivePath[1]) == 0
 		&& strcmp(DrivePath[2], rhs.DrivePath[2]) == 0
 		&& strcmp(DrivePath[3], rhs.DrivePath[3]) == 0
-		&& strcmp(ViewPort, rhs.ViewPort) == 0
-		&& strcmp(DisplayMode, rhs.DisplayMode) == 0
 		&& SIDType == rhs.SIDType
 		&& REUSize == rhs.REUSize
 		&& DisplayType == rhs.DisplayType
@@ -125,13 +109,8 @@ bool Prefs::operator==(const Prefs &rhs) const
 		&& SIDFilters == rhs.SIDFilters
 		&& DoubleScan == rhs.DoubleScan
 		&& HideCursor == rhs.HideCursor
-		&& DirectSound == rhs.DirectSound
-		&& ExclusiveSound == rhs.ExclusiveSound
 		&& AutoPause == rhs.AutoPause
 		&& PrefsAtStartup == rhs.PrefsAtStartup
-		&& SystemMemory == rhs.SystemMemory
-		&& AlwaysCopy == rhs.AlwaysCopy
-		&& SystemKeys == rhs.SystemKeys
 		&& ShowLEDs == rhs.ShowLEDs
 	);
 }
@@ -186,98 +165,81 @@ void Prefs::Load(const char *filename)
 	if ((file = fopen(filename, "r")) != NULL) {
 		while(fgets(line, 255, file)) {
 			if (sscanf(line, "%s = %[^\n]\n", keyword, value) == 2) {
-				if (!strcmp(keyword, "NormalCycles"))
+				if (!strcmp(keyword, "NormalCycles")) {
 					NormalCycles = atoi(value);
-				else if (!strcmp(keyword, "BadLineCycles"))
+				} else if (!strcmp(keyword, "BadLineCycles")) {
 					BadLineCycles = atoi(value);
-				else if (!strcmp(keyword, "CIACycles"))
+				} else if (!strcmp(keyword, "CIACycles")) {
 					CIACycles = atoi(value);
-				else if (!strcmp(keyword, "FloppyCycles"))
+				} else if (!strcmp(keyword, "FloppyCycles")) {
 					FloppyCycles = atoi(value);
-				else if (!strcmp(keyword, "SkipFrames"))
+				} else if (!strcmp(keyword, "SkipFrames")) {
 					SkipFrames = atoi(value);
-				else if (!strcmp(keyword, "LatencyMin"))
-					LatencyMin = atoi(value);
-				else if (!strcmp(keyword, "LatencyMax"))
-					LatencyMax = atoi(value);
-				else if (!strcmp(keyword, "LatencyAvg"))
-					LatencyAvg = atoi(value);
-				else if (!strcmp(keyword, "ScalingNumerator"))
+				} else if (!strcmp(keyword, "ScalingNumerator")) {
 					ScalingNumerator = atoi(value);
-				else if (!strcmp(keyword, "ScalingDenominator"))
+				} else if (!strcmp(keyword, "ScalingDenominator")) {
 					ScalingDenominator = atoi(value);
-				else if (!strcmp(keyword, "DrivePath8"))
+				} else if (!strcmp(keyword, "DrivePath8")) {
 					strcpy(DrivePath[0], value);
-				else if (!strcmp(keyword, "DrivePath9"))
+				} else if (!strcmp(keyword, "DrivePath9")) {
 					strcpy(DrivePath[1], value);
-				else if (!strcmp(keyword, "DrivePath10"))
+				} else if (!strcmp(keyword, "DrivePath10")) {
 					strcpy(DrivePath[2], value);
-				else if (!strcmp(keyword, "DrivePath11"))
+				} else if (!strcmp(keyword, "DrivePath11")) {
 					strcpy(DrivePath[3], value);
-				else if (!strcmp(keyword, "ViewPort"))
-					strcpy(ViewPort, value);
-				else if (!strcmp(keyword, "DisplayMode"))
-					strcpy(DisplayMode, value);
-				else if (!strcmp(keyword, "SIDType"))
-					if (!strcmp(value, "DIGITAL"))
+				} else if (!strcmp(keyword, "SIDType")) {
+					if (!strcmp(value, "DIGITAL")) {
 						SIDType = SIDTYPE_DIGITAL;
-					else if (!strcmp(value, "SIDCARD"))
+					} else if (!strcmp(value, "SIDCARD")) {
 						SIDType = SIDTYPE_SIDCARD;
-					else
+					} else {
 						SIDType = SIDTYPE_NONE;
-				else if (!strcmp(keyword, "REUSize")) {
-					if (!strcmp(value, "128K"))
+					}
+				} else if (!strcmp(keyword, "REUSize")) {
+					if (!strcmp(value, "128K")) {
 						REUSize = REU_128K;
-					else if (!strcmp(value, "256K"))
+					} else if (!strcmp(value, "256K")) {
 						REUSize = REU_256K;
-					else if (!strcmp(value, "512K"))
+					} else if (!strcmp(value, "512K")) {
 						REUSize = REU_512K;
-					else
+					} else {
 						REUSize = REU_NONE;
-				} else if (!strcmp(keyword, "DisplayType"))
+					}
+				} else if (!strcmp(keyword, "DisplayType")) {
 					DisplayType = strcmp(value, "SCREEN") ? DISPTYPE_WINDOW : DISPTYPE_SCREEN;
-				else if (!strcmp(keyword, "Joystick1Port"))
+				} else if (!strcmp(keyword, "Joystick1Port")) {
 					Joystick1Port = atoi(value);
-				else if (!strcmp(keyword, "Joystick2Port"))
+				} else if (!strcmp(keyword, "Joystick2Port")) {
 					Joystick2Port = atoi(value);
-				else if (!strcmp(keyword, "SpritesOn"))
+				} else if (!strcmp(keyword, "SpritesOn")) {
 					SpritesOn = !strcmp(value, "TRUE");
-				else if (!strcmp(keyword, "SpriteCollisions"))
+				} else if (!strcmp(keyword, "SpriteCollisions")) {
 					SpriteCollisions = !strcmp(value, "TRUE");
-				else if (!strcmp(keyword, "JoystickSwap"))
+				} else if (!strcmp(keyword, "JoystickSwap")) {
 					JoystickSwap = !strcmp(value, "TRUE");
-				else if (!strcmp(keyword, "LimitSpeed"))
+				} else if (!strcmp(keyword, "LimitSpeed")) {
 					LimitSpeed = !strcmp(value, "TRUE");
-				else if (!strcmp(keyword, "FastReset"))
+				} else if (!strcmp(keyword, "FastReset")) {
 					FastReset = !strcmp(value, "TRUE");
-				else if (!strcmp(keyword, "CIAIRQHack"))
+				} else if (!strcmp(keyword, "CIAIRQHack")) {
 					CIAIRQHack = !strcmp(value, "TRUE");
-				else if (!strcmp(keyword, "MapSlash"))
+				} else if (!strcmp(keyword, "MapSlash")) {
 					MapSlash = !strcmp(value, "TRUE");
-				else if (!strcmp(keyword, "Emul1541Proc"))
+				} else if (!strcmp(keyword, "Emul1541Proc")) {
 					Emul1541Proc = !strcmp(value, "TRUE");
-				else if (!strcmp(keyword, "SIDFilters"))
+				} else if (!strcmp(keyword, "SIDFilters")) {
 					SIDFilters = !strcmp(value, "TRUE");
-				else if (!strcmp(keyword, "DoubleScan"))
+				} else if (!strcmp(keyword, "DoubleScan")) {
 					DoubleScan = !strcmp(value, "TRUE");
-				else if (!strcmp(keyword, "HideCursor"))
+				} else if (!strcmp(keyword, "HideCursor")) {
 					HideCursor = !strcmp(value, "TRUE");
-				else if (!strcmp(keyword, "DirectSound"))
-					DirectSound = !strcmp(value, "TRUE");
-				else if (!strcmp(keyword, "ExclusiveSound"))
-					ExclusiveSound = !strcmp(value, "TRUE");
-				else if (!strcmp(keyword, "AutoPause"))
+				} else if (!strcmp(keyword, "AutoPause")) {
 					AutoPause = !strcmp(value, "TRUE");
-				else if (!strcmp(keyword, "PrefsAtStartup"))
+				} else if (!strcmp(keyword, "PrefsAtStartup")) {
 					PrefsAtStartup = !strcmp(value, "TRUE");
-				else if (!strcmp(keyword, "SystemMemory"))
-					SystemMemory = !strcmp(value, "TRUE");
-				else if (!strcmp(keyword, "AlwaysCopy"))
-					AlwaysCopy = !strcmp(value, "TRUE");
-				else if (!strcmp(keyword, "SystemKeys"))
-					SystemKeys = !strcmp(value, "TRUE");
-				else if (!strcmp(keyword, "ShowLEDs"))
+				} else if (!strcmp(keyword, "ShowLEDs")) {
 					ShowLEDs = !strcmp(value, "TRUE");
+				}
 			}
 		}
 		fclose(file);
@@ -303,15 +265,11 @@ bool Prefs::Save(const char *filename)
 		fprintf(file, "CIACycles = %d\n", CIACycles);
 		fprintf(file, "FloppyCycles = %d\n", FloppyCycles);
 		fprintf(file, "SkipFrames = %d\n", SkipFrames);
-		fprintf(file, "LatencyMin = %d\n", LatencyMin);
-		fprintf(file, "LatencyMax = %d\n", LatencyMax);
-		fprintf(file, "LatencyAvg = %d\n", LatencyAvg);
 		fprintf(file, "ScalingNumerator = %d\n", ScalingNumerator);
 		fprintf(file, "ScalingDenominator = %d\n", ScalingDenominator);
-		for (int i=0; i<4; i++)
+		for (int i=0; i<4; i++) {
 			fprintf(file, "DrivePath%d = %s\n", i+8, DrivePath[i]);
-		fprintf(file, "ViewPort = %s\n", ViewPort);
-		fprintf(file, "DisplayMode = %s\n", DisplayMode);
+		}
 		fprintf(file, "SIDType = ");
 		switch (SIDType) {
 			case SIDTYPE_NONE:
@@ -353,13 +311,8 @@ bool Prefs::Save(const char *filename)
 		fprintf(file, "SIDFilters = %s\n", SIDFilters ? "TRUE" : "FALSE");
 		fprintf(file, "DoubleScan = %s\n", DoubleScan ? "TRUE" : "FALSE");
 		fprintf(file, "HideCursor = %s\n", HideCursor ? "TRUE" : "FALSE");
-		fprintf(file, "DirectSound = %s\n", DirectSound ? "TRUE" : "FALSE");
-		fprintf(file, "ExclusiveSound = %s\n", ExclusiveSound ? "TRUE" : "FALSE");
 		fprintf(file, "AutoPause = %s\n", AutoPause ? "TRUE" : "FALSE");
 		fprintf(file, "PrefsAtStartup = %s\n", PrefsAtStartup ? "TRUE" : "FALSE");
-		fprintf(file, "SystemMemory = %s\n", SystemMemory ? "TRUE" : "FALSE");
-		fprintf(file, "AlwaysCopy = %s\n", AlwaysCopy ? "TRUE" : "FALSE");
-		fprintf(file, "SystemKeys = %s\n", SystemKeys ? "TRUE" : "FALSE");
 		fprintf(file, "ShowLEDs = %s\n", ShowLEDs ? "TRUE" : "FALSE");
 		fclose(file);
 		ThePrefsOnDisk = *this;
@@ -374,9 +327,6 @@ bool Prefs::Save(const char *filename)
 
 #elif defined(HAVE_GLADE)
 #include "Prefs_glade.h"
-
-#elif defined(WIN32)
-#include "Prefs_WIN32.h"
 
 #else
 #include "Prefs_none.h"

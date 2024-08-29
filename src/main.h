@@ -115,48 +115,8 @@ extern Frodo *TheApp;  // Pointer to Frodo object
 #endif
 
 
-/*
- *  WIN32 specific stuff
- */
-
-#ifdef WIN32
-
-class Frodo {
-public:
-	Frodo();
-	~Frodo();
-	void ArgvReceived(int argc, char **argv);
-	void ReadyToRun();
-	void RunPrefsEditor();
-
-	char prefs_path[256];	// Pathname of current preferences file
-
-private:
-	void load_rom(const char *which, const char *path, uint8_t *where, size_t size, const uint8_t *builtin);
-	void load_rom_files();
-};
-
-// Global variables
-extern Frodo *TheApp;	// Pointer to Frodo object
-extern HINSTANCE hInstance;
-extern int nCmdShow;
-extern HWND hwnd;
-
-// Command line options.
-extern BOOL full_screen;
-
-#endif
-
-
 // Global C64 object
 extern C64 *TheC64;
 
-
-/*
- *  Functions
- */
-
-// Determine whether path name refers to a directory
-extern bool IsDirectory(const char *path);
 
 #endif

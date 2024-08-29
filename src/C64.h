@@ -150,28 +150,6 @@ private:
 	SDL_Joystick * joy[2] = { nullptr, nullptr };
 	SDL_GameController * controller[2] = { nullptr, nullptr };
 #endif
-
-#ifdef WIN32
-private:
-	void CheckTimerChange();
-	void StartTimer();
-	void StopTimer();
-	static void CALLBACK StaticTimeProc(UINT uID, UINT uMsg, DWORD dwUser, DWORD dw1, DWORD dw2);
-	void TimeProc(UINT id);
-#ifdef FRODO_SC
-	void EmulateCyclesWith1541();
-	void EmulateCyclesWithout1541();
-#endif
-
-	DWORD ref_time;				// when frame count was reset
-	int skipped_frames;			// number of skipped frames
-	int timer_every;			// frequency of timer in frames
-	HANDLE timer_semaphore;		// Timer semaphore for synch
-	MMRESULT timer_id;			// Timer identifier
-	int frame;					// current frame number
-	uint8_t joy_state;			// Current state of joystick
-	bool state_change;
-#endif
 };
 
 

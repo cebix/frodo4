@@ -982,7 +982,7 @@ inline void MOS6569::draw_sprites()
 			uint32_t sdata = (spr_draw_data[snum][0] << 24) | (spr_draw_data[snum][1] << 16) | (spr_draw_data[snum][2] << 8);
 
 			int spr_mask_pos = mx[snum] + 8;	// Sprite bit position in fore_mask_buf
-			
+
 			uint8_t *fmbp = fore_mask_buf + (spr_mask_pos / 8);
 			int sshift = spr_mask_pos & 7;
 			uint32_t fore_mask = (((*(fmbp+0) << 24) | (*(fmbp+1) << 16) | (*(fmbp+2) << 8)

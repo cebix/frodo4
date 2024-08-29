@@ -47,13 +47,6 @@ using std::vector;
 #include <dirent.h>
 #endif
 
-#ifdef WIN32
-#include <windows.h>
-#include <direct.h>
-#define S_ISDIR(m) (((m) & S_IFMT) == S_IFDIR)
-#define LITTLE_ENDIAN_UNALIGNED 1
-#endif
-
 #ifdef __BEOS__
 #include <support/SupportDefs.h>
 #endif
