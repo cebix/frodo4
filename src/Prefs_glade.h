@@ -46,6 +46,9 @@ static const char *prefs_path = nullptr;
 static GtkWidget *snapshot_dialog = nullptr;
 static GtkWidget *snapshot_accept_button = nullptr;
 
+// Dialog for creating disk image file
+static GtkWidget *create_image_dialog = nullptr;
+
 // Prototypes
 static void set_values();
 static void get_values();
@@ -89,6 +92,7 @@ bool Prefs::ShowEditor(bool startup, const char *prefs_name)
 			gtk_notebook_remove_page(GTK_NOTEBOOK(gtk_builder_get_object(builder, "tabs")), -1);
 		}
 
+		// Create dialog for loading/saving snapshot files
 		snapshot_dialog = gtk_file_chooser_dialog_new("", prefs_win,
 			GTK_FILE_CHOOSER_ACTION_SAVE, "Cancel", GTK_RESPONSE_CANCEL, nullptr
 		);
@@ -108,11 +112,32 @@ bool Prefs::ShowEditor(bool startup, const char *prefs_name)
 		gtk_file_filter_set_name(filter, "All Files (*.*)");
 		gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(snapshot_dialog), filter);
 
+		// Create dialog for creating blank disk image file
+		create_image_dialog = gtk_file_chooser_dialog_new("Create Disk Image File", prefs_win,
+			GTK_FILE_CHOOSER_ACTION_SAVE, "Cancel", GTK_RESPONSE_CANCEL, "Save", GTK_RESPONSE_ACCEPT, nullptr
+		);
+
+		gtk_file_chooser_set_current_name(GTK_FILE_CHOOSER(create_image_dialog), "Untitled.d64");
+		gtk_file_chooser_set_do_overwrite_confirmation(GTK_FILE_CHOOSER(create_image_dialog), true);
+
+		filter = gtk_file_filter_new();
+		gtk_file_filter_add_pattern(filter, "*.d64");
+		gtk_file_filter_set_name(filter, "C64 Disk Image Files (*.d64)");
+		gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(create_image_dialog), filter);
+		filter = gtk_file_filter_new();
+		gtk_file_filter_add_pattern(filter, "*");
+		gtk_file_filter_set_name(filter, "All Files (*.*)");
+		gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(create_image_dialog), filter);
+
+		// Adjust menus for startup
 		gtk_menu_item_set_label(GTK_MENU_ITEM(gtk_builder_get_object(builder, "ok_menu")), "Start");
 		gtk_button_set_label(GTK_BUTTON(gtk_builder_get_object(builder, "ok_button")), "Start");
 		gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object(builder, "load_snapshot_menu")), false);
 		gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object(builder, "save_snapshot_menu")), false);
+
 	} else {
+
+		// Adjust menus for running emulation
 		gtk_menu_item_set_label(GTK_MENU_ITEM(gtk_builder_get_object(builder, "ok_menu")), "Continue");
 		gtk_button_set_label(GTK_BUTTON(gtk_builder_get_object(builder, "ok_button")), "Continue");
 		gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object(builder, "load_snapshot_menu")), true);
@@ -290,7 +315,7 @@ extern "C" void on_quit_clicked(GtkButton *button, gpointer user_data)
 
 extern "C" void on_load_snapshot(GtkMenuItem *menuitem, gpointer user_data)
 {
-	gtk_window_set_title(GTK_WINDOW(snapshot_dialog), "Frodo: Load Snapshot");
+	gtk_window_set_title(GTK_WINDOW(snapshot_dialog), "Load Snapshot");
 	gtk_file_chooser_set_action(GTK_FILE_CHOOSER(snapshot_dialog), GTK_FILE_CHOOSER_ACTION_OPEN);
 	gtk_button_set_label(GTK_BUTTON(snapshot_accept_button), "Load");
 
@@ -321,7 +346,7 @@ extern "C" void on_load_snapshot(GtkMenuItem *menuitem, gpointer user_data)
 
 extern "C" void on_save_snapshot(GtkMenuItem *menuitem, gpointer user_data)
 {
-	gtk_window_set_title(GTK_WINDOW(snapshot_dialog), "Frodo: Save Snapshot");
+	gtk_window_set_title(GTK_WINDOW(snapshot_dialog), "Save Snapshot");
 	gtk_file_chooser_set_action(GTK_FILE_CHOOSER(snapshot_dialog), GTK_FILE_CHOOSER_ACTION_SAVE);
 	gtk_button_set_label(GTK_BUTTON(snapshot_accept_button), "Save");
 
@@ -344,6 +369,39 @@ extern "C" void on_save_snapshot(GtkMenuItem *menuitem, gpointer user_data)
 		gtk_dialog_run(GTK_DIALOG(msg));
 		gtk_widget_destroy(msg);
 	}
+
+	if (filename) {
+		g_free(filename);
+	}
+}
+
+extern "C" void on_create_image(GtkMenuItem *menuitem, gpointer user_data)
+{
+	bool save_ok = false;
+	char * filename = nullptr;
+
+	gint res = gtk_dialog_run(GTK_DIALOG(create_image_dialog));
+	if (res == GTK_RESPONSE_ACCEPT) {
+		filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(create_image_dialog));
+		save_ok = CreateImageFile(filename);
+	}
+
+	gtk_widget_hide(create_image_dialog);
+
+	GtkWidget * msg;
+	if (save_ok) {
+		msg = gtk_message_dialog_new(GTK_WINDOW(gtk_builder_get_object(builder, "prefs_win")),
+			GTK_DIALOG_MODAL, GTK_MESSAGE_INFO, GTK_BUTTONS_OK,
+			"Disk image file '%s' created.", filename
+		);
+	} else if (res == GTK_RESPONSE_ACCEPT) {
+		msg = gtk_message_dialog_new(GTK_WINDOW(gtk_builder_get_object(builder, "prefs_win")),
+			GTK_DIALOG_MODAL, GTK_MESSAGE_ERROR, GTK_BUTTONS_OK,
+			"Can't create disk image file '%s'.", filename
+		);
+	}
+	gtk_dialog_run(GTK_DIALOG(msg));
+	gtk_widget_destroy(msg);
 
 	if (filename) {
 		g_free(filename);

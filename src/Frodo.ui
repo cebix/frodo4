@@ -170,6 +170,21 @@ Lutz Vieweg</property>
                       </object>
                     </child>
                     <child>
+                      <object class="GtkMenuItem" id="create_image_menu">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">Create Disk Image File...</property>
+                        <property name="use-underline">True</property>
+                        <signal name="activate" handler="on_create_image" swapped="no"/>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkSeparatorMenuItem">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                      </object>
+                    </child>
+                    <child>
                       <object class="GtkImageMenuItem" id="ok_menu">
                         <property name="label">Continue</property>
                         <property name="visible">True</property>
