@@ -21,9 +21,19 @@
 #ifndef _SAM_H
 #define _SAM_H
 
+#include <string>
+
+
 class C64;
 
 // Exported functions
+extern void SAM_GetState(C64 *the_c64);
+extern void SAM_SetState(C64 *the_c64);
+
+extern std::string SAM_GetStartupMessage();
+extern std::string SAM_GetPrompt();
+extern void SAM_Exec(std::string line, std::string & retOutput, std::string & retError);
+
 extern void SAM(C64 *the_c64);
 
 #endif

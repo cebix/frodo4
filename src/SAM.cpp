@@ -28,6 +28,15 @@
 #include "SID.h"
 #include "CIA.h"
 
+#include <cctype>
+#include <format>
+#include <iostream>
+#include <ranges>
+#include <string>
+using std::format;
+
+#include <stdio.h>
+
 
 // Pointers to chips
 static MOS6510 *TheCPU;
@@ -46,30 +55,33 @@ static bool access_1541;	// false: accessing C64, true: accessing 1541
 // Access to 6510/6502 address space
 static inline uint8_t SAMReadByte(uint16_t adr)
 {
-	if (access_1541)
+	if (access_1541) {
 		return TheCPU1541->ExtReadByte(adr);
-	else
+	} else {
 		return TheCPU->ExtReadByte(adr);
+	}
 }
 
 static inline void SAMWriteByte(uint16_t adr, uint8_t byte)
 {
-	if (access_1541)
+	if (access_1541) {
 		TheCPU1541->ExtWriteByte(adr, byte);
-	else
+	} else {
 		TheCPU->ExtWriteByte(adr, byte);
+	}
 }
 
 
-// Streams for input, output and error messages
-static FILE *fin, *fout, *ferr;
-
 // Input line
-#define INPUT_LENGTH 80
-static char input[INPUT_LENGTH];
-static char *in_ptr;
+static std::string input;
+static size_t in_idx = 0;
+
+// Output text
+static std::string output, error_output;
 
 static uint16_t address, end_address;
+
+static bool assembling = false;
 
 
 // Input tokens
@@ -96,9 +108,9 @@ enum Token {
 	T_PR		// 'pr'	(get_reg_token() only)
 };
 
-static enum Token the_token;			// Last token read
-static uint16_t the_number;				// Contains the number if the_token==T_NUMBER
-static char the_string[INPUT_LENGTH];	// Contains the string if the_token==T_STRING
+static enum Token the_token;	// Last token read
+static uint16_t the_number;		// Contains the number if the_token == T_NUMBER
+static std::string the_string;	// Contains the string if the_token == T_STRING
 
 
 // Addressing modes
@@ -218,243 +230,20 @@ static const char adr_length[] = {1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 2, 2};
 
 
 // Prototypes
-static void error(const char *s);
-static void handle_abort(...);
-static void init_abort(void);
-static void exit_abort(void);
-static bool aborted(void);
-
-static void read_line(void);				// Scanner
-static char get_char(void);
-static void put_back(char c);
-static enum Token get_token(void);
-static enum Token get_reg_token(void);
-static uint16_t get_number(void);
-static enum Token get_string(char *str);
-
 static bool expression(uint16_t *number);	// Parser
 static bool term(uint16_t *number);
 static bool factor(uint16_t *number);
-static bool address_args(void);
-static bool range_args(int def_range);
-static bool instr_args(uint16_t *number, char *mode);
 
-static void help(void);						// Routines for commands
-static void registers(void);
-static void display_registers(void);
-static void memory_dump(void);
-static void ascii_dump(void);
-static char conv_from_64(char c);
-static void screen_dump(void);
-static char conv_from_scode(char c);
-static void binary_dump(void);
-static void sprite_dump(void);
-static void byte_to_bin(uint8_t byte, char *str);
-static void disassemble(void);
 static int disass_line(uint16_t adr, uint8_t op, uint8_t lo, uint8_t hi);
-static void assemble(void);
-static char find_mnemonic(char op1, char op2, char op3);
-static bool find_opcode(char mnem, char mode, uint8_t *opcode);
-static void mem_config(void);
-static void fill(void);
-static void compare(void);
-static void transfer(void);
-static void modify(void);
-static void print_expr(void);
-static void redir_output(void);
-static void int_vectors(void);
-static void view_state(void);
-static void view_cia_state(void);
-static void dump_cia_ints(uint8_t i);
-static void view_sid_state(void);
-static void dump_sid_waveform(uint8_t wave);
-static void view_vic_state(void);
-static void dump_spr_flags(uint8_t f);
-static void dump_vic_ints(uint8_t i);
-static void view_1541_state(void);
-static void dump_via_ints(uint8_t i);
-static void load_data(void);
-static void save_data(void);
-
-
-/*
- *  Open and handle SAM
- */
-
-void SAM(C64 *the_c64)
-{
-	bool done = false;
-	char c;
-
-	TheCPU = the_c64->TheCPU;
-	TheCPU1541 = the_c64->TheCPU1541;
-	TheVIC = the_c64->TheVIC;
-	TheSID = the_c64->TheSID;
-	TheCIA1 = the_c64->TheCIA1;
-	TheCIA2 = the_c64->TheCIA2;
-
-	// Get CPU registers and current memory configuration
-	TheCPU->GetState(&R64);
-	TheCPU->ExtConfig = (~R64.ddr | R64.pr) & 7;
-	TheCPU1541->GetState(&R1541);
-
-	fin = stdin;
-	fout = stdout;
-	ferr = stdout;
-
-	access_1541 = false;
-	address = R64.pc;
-
-	fprintf(ferr, "\n *** SAM - Simple Assembler and Monitor ***\n ***         Press 'h' for help         ***\n\n");
-	init_abort();
-	display_registers();
-
-	while (!done) {
-		if (access_1541)
-			fprintf(ferr, "1541> ");
-		else
-			fprintf(ferr, "C64> ");
-		fflush(ferr);
-		read_line();
-		while ((c = get_char()) == ' ') ;
-
-		switch (c) {
-			case 'a':		// Assemble
-				get_token();
-				assemble();
-				break;
-
-			case 'b':		// Binary dump
-				get_token();
-				binary_dump();
-				break;
-
-			case 'c':		// Compare
-				get_token();
-				compare();
-				break;
-
-			case 'd':		// Disassemble
-				get_token();
-				disassemble();
-				break;
-
-			case 'e':       // Interrupt vectors
-				int_vectors();
-				break;
-
-			case 'f':		// Fill
-				get_token();
-				fill();
-				break;
-
-			case 'h':		// Help
-				help();
-				break;
-
-			case 'i':		// ASCII dump
-				get_token();
-				ascii_dump();
-				break;
-
-			case 'k':		// Memory configuration
-				get_token();
-				mem_config();
-				break;
-
-			case 'l':		// Load data
-				get_token();
-				load_data();
-				break;
-
-			case 'm':		// Memory dump
-				get_token();
-				memory_dump();
-				break;
-
-			case 'n':		// Screen code dump
-				get_token();
-				screen_dump();
-				break;
-
-			case 'o':		// Redirect output
-				get_token();
-				redir_output();
-				break;
-
-			case 'p':		// Sprite dump
-				get_token();
-				sprite_dump();
-				break;
-
-			case 'r':		// Registers
-				get_reg_token();
-				registers();
-				break;
-
-			case 's':		// Save data
-				get_token();
-				save_data();
-				break;
-
-			case 't':		// Transfer
-				get_token();
-				transfer();
-				break;
-
-			case 'v':		// View machine state
-				view_state();
-				break;
-
-			case 'x':		// Exit
-				done = true;
-				break;
-
-			case ':':		// Change memory
-				get_token();
-				modify();
-				break;
-
-			case '1':		// Switch to 1541 mode
-				access_1541 = true;
-				break;
-
-			case '6':		// Switch to C64 mode
-				access_1541 = false;
-				break;
-
-			case '?':		// Compute expression
-				get_token();
-				print_expr();
-				break;
-
-			case '\n':		// Blank line
-				break;
-
-			default:		// Unknown command
-				error("Unknown command");
-				break;
-		}
-	}
-
-	exit_abort();
-
-	if (fout != ferr)
-		fclose(fout);
-
-	// Set CPU registers
-	TheCPU->SetState(&R64);
-	TheCPU1541->SetState(&R1541);
-}
 
 
 /*
  *  Print error message
  */
 
-static void error(const char *s)
+static void error(const std::string & s)
 {
-	fprintf(ferr, "*** %s\n", s);
+	error_output += format("*** {}\n", s);
 }
 
 
@@ -462,60 +251,9 @@ static void error(const char *s)
  *  CTRL-C pressed?
  */
 
-static bool WasAborted;
-
-#ifdef HAVE_SIGACTION
-struct sigaction my_sa;
-#endif
-
-static void handle_abort(...)
+static bool aborted()
 {
-	WasAborted = true;
-#if !defined(HAVE_SIGACTION) && defined(HAVE_SIGNAL)
-	signal(SIGINT, (sighandler_t) handle_abort);
-#endif
-}
-
-static void init_abort(void)
-{
-	WasAborted = false;
-#if defined(HAVE_SIGACTION)
-	my_sa.sa_handler = (void (*)(int))handle_abort;
-	my_sa.sa_flags = 0;
-	sigemptyset(&my_sa.sa_mask);
-	sigaction(SIGINT, &my_sa, NULL);
-#elif defined(HAVE_SIGNAL)
-	signal(SIGINT, (sighandler_t) handle_abort);
-#endif
-}
-
-static void exit_abort(void)
-{
-#if defined(HAVE_SIGACTION)
-	my_sa.sa_handler = SIG_DFL;
-	sigaction(SIGINT, &my_sa, NULL);
-#elif defined(HAVE_SIGNAL)
-	signal(SIGINT, SIG_DFL);
-#endif
-}
-
-static bool aborted(void)
-{
-	bool ret = WasAborted;
-
-	WasAborted = false;
-	return ret;
-}
-
-
-/*
- *  Read a line from the keyboard
- */
-
-static void read_line(void)
-{
-	while (fgets(in_ptr = input, INPUT_LENGTH, fin) == NULL && 
-	       errno == EINTR) { }
+	return false;
 }
 
 
@@ -523,9 +261,13 @@ static void read_line(void)
  *  Read a character from the input line
  */
 
-static char get_char(void)
+static char get_char()
 {
-	return *in_ptr++;
+	if (in_idx < input.size()) {
+		return input[in_idx++];
+	} else {
+		return '\n';  // End of string
+	}
 }
 
 
@@ -535,7 +277,9 @@ static char get_char(void)
 
 static void put_back(char c)
 {
-	*(--in_ptr) = c;
+	if (in_idx > 0) {
+		input[--in_idx] = c;
+	}
 }
 
 
@@ -543,7 +287,40 @@ static void put_back(char c)
  *  Scanner: Get a token from the input line
  */
 
-static enum Token get_token(void)
+static uint16_t get_number()
+{
+	char c;
+	uint16_t i = 0;
+
+	while (((c = get_char()) >= '0') && (c <= '9') || (c >= 'a') && (c <= 'f')) {
+		if (c < 'a') {
+			i = (i << 4) + (c - '0');
+		} else {
+			i = (i << 4) + (c - 'a' + 10);
+		}
+	}
+
+	put_back(c);
+	return i;
+}
+
+static enum Token get_string(std::string & str)
+{
+	str.clear();
+
+	char c;
+	while ((c = get_char()) != '\n') {
+		if (c == '"') {
+			return T_STRING;
+		}
+		str += c;
+	}
+
+	error("Unterminated string");
+	return T_NULL;
+}
+
+static enum Token get_token()
 {
 	char c;
 
@@ -601,7 +378,7 @@ static enum Token get_token(void)
 	}
 }
 
-static enum Token get_reg_token(void)
+static enum Token get_reg_token()
 {
 	char c;
 
@@ -646,37 +423,6 @@ static enum Token get_reg_token(void)
 	}
 }
 
-static uint16_t get_number(void)
-{
-	char c;
-	uint16_t i = 0;
-
-	while (((c = get_char()) >= '0') && (c <= '9') || (c >= 'a') && (c <= 'f'))
-		if (c < 'a')
-			i = (i << 4) + (c - '0');
-		else
-			i = (i << 4) + (c - 'a' + 10);
-
-	put_back(c);
-	return i;
-}
-
-static enum Token get_string(char *str)
-{
-	char c;
-
-	while ((c = get_char()) != '\n') {
-		if (c == '"') {
-			*str = 0;
-			return T_STRING;
-		}
-		*str++ = c;
-	}
-
-	error("Unterminated string");
-	return T_NULL;
-}
-
 
 /*
  *  expression = term {(ADD | SUB) term}
@@ -690,7 +436,7 @@ static bool expression(uint16_t *number)
 	if (!term(&accu))
 		return false;
 
-	for (;;)
+	while (true) {
 		switch (the_token) {
 			case T_ADD:
 				get_token();
@@ -710,6 +456,7 @@ static bool expression(uint16_t *number)
 				*number = accu;
 				return true;
 		}
+	}
 }
 
 
@@ -725,7 +472,7 @@ static bool term(uint16_t *number)
 	if (!factor(&accu))
 		return false;
 
-	for (;;)
+	while (true) {
 		switch (the_token) {
 			case T_MUL:
 				get_token();
@@ -749,6 +496,7 @@ static bool term(uint16_t *number)
 				*number = accu;
 				return true;
 		}
+	}
 }
 
 
@@ -777,7 +525,7 @@ static bool factor(uint16_t *number)
 
 		case T_LPAREN:
 			get_token();
-			if (expression(number))
+			if (expression(number)) {
 				if (the_token == T_RPAREN) {
 					get_token();
 					return true;
@@ -785,7 +533,7 @@ static bool factor(uint16_t *number)
 					error("Missing ')'");
 					return false;
 				}
-			else {
+			} else {
 				error("Error in expression");
 				return false;
 			}
@@ -809,11 +557,11 @@ static bool factor(uint16_t *number)
  *  true: OK, false: Error
  */
 
-static bool address_args(void)
+static bool address_args()
 {
-	if (the_token == T_END)
+	if (the_token == T_END) {
 		return true;
-	else {
+	} else {
 		if (!expression(&address))
 			return false;
 		return the_token == T_END;
@@ -833,15 +581,15 @@ static bool range_args(int def_range)
 {
 	end_address = address + def_range;
 
-	if (the_token == T_END)
+	if (the_token == T_END) {
 		return true;
-	else {
+	} else {
 		if (!expression(&address))
 			return false;
 		end_address = address + def_range;
-		if (the_token == T_END)
+		if (the_token == T_END) {
 			return true;
-		else {
+		} else {
 			if (the_token == T_COMMA) get_token();
 			if (!expression(&end_address))
 				return false;
@@ -888,10 +636,11 @@ static bool instr_args(uint16_t *number, char *mode)
 			switch (the_token) {
 
 				case T_END:
-					if (*number < 0x100)
+					if (*number < 0x100) {
 						*mode = A_ZERO;
-					else
+					} else {
 						*mode = A_ABS;
+					}
 					return true;
 
 				case T_COMMA:
@@ -900,18 +649,20 @@ static bool instr_args(uint16_t *number, char *mode)
 
 						case T_X:
 							get_token();
-							if (*number < 0x100)
+							if (*number < 0x100) {
 								*mode = A_ZEROX;
-							else
+							} else {
 								*mode = A_ABSX;
+							}
 							return the_token == T_END;
 
 						case T_Y:
 							get_token();
-							if (*number < 0x100)
+							if (*number < 0x100) {
 								*mode = A_ZEROY;
-							else
+							} else {
 								*mode = A_ABSY;
+							}
 							return the_token == T_END;
 
 						default:
@@ -992,34 +743,34 @@ static bool instr_args(uint16_t *number, char *mode)
  *  h
  */
 
-static void help(void)
+static void help()
 {
-	fprintf(fout, "a [start]           Assemble\n"
-				"b [start] [end]     Binary dump\n"
-				"c start end dest    Compare memory\n"
-				"d [start] [end]     Disassemble\n"
-				"e                   Show interrupt vectors\n"
-				"f start end byte    Fill memory\n"
-				"i [start] [end]     ASCII/PETSCII dump\n"
-				"k [config]          Show/set C64 memory configuration\n"
-				"l start \"file\"      Load data\n"
-				"m [start] [end]     Memory dump\n"
-				"n [start] [end]     Screen code dump\n"
-				"o [\"file\"]          Redirect output\n"
-				"p [start] [end]     Sprite dump\n"
-				"r [reg value]       Show/set CPU registers\n"
-				"s start end \"file\"  Save data\n"
-				"t start end dest    Transfer memory\n"
-				"vc1                 View CIA 1 state\n"
-				"vc2                 View CIA 2 state\n"
-				"vf                  View 1541 state\n"
-				"vs                  View SID state\n"
-				"vv                  View VIC state\n"
-				"x                   Return to Frodo\n"
-				": addr {byte}       Modify memory\n"
-				"1541                Switch to 1541\n"
-				"64                  Switch to C64\n"
-				"? expression        Calculate expression\n");
+	output += "a [start]           Assemble\n"
+	          "b [start] [end]     Binary dump\n"
+	          "c start end dest    Compare memory\n"
+	          "d [start] [end]     Disassemble\n"
+	          "e                   Show interrupt vectors\n"
+	          "f start end byte    Fill memory\n"
+	          "i [start] [end]     ASCII/PETSCII dump\n"
+	          "k [config]          Show/set C64 memory configuration\n"
+	          "l start \"file\"      Load data\n"
+	          "m [start] [end]     Memory dump\n"
+	          "n [start] [end]     Screen code dump\n"
+	          "o [\"file\"]          Copy output to file\n"
+	          "p [start] [end]     Sprite dump\n"
+	          "r [reg value]       Show/set CPU registers\n"
+	          "s start end \"file\"  Save data\n"
+	          "t start end dest    Transfer memory\n"
+	          "vc1                 View CIA 1 state\n"
+	          "vc2                 View CIA 2 state\n"
+	          "vf                  View 1541 state\n"
+	          "vs                  View SID state\n"
+	          "vv                  View VIC state\n"
+	          "x                   Return to Frodo\n"
+	          ": addr {byte}       Modify memory\n"
+	          "1541                Switch to 1541\n"
+	          "64                  Switch to C64\n"
+	          "? expression        Calculate expression\n";
 }
 
 
@@ -1028,12 +779,31 @@ static void help(void)
  *  r [reg value]
  */
 
-static void registers(void)
+static void display_registers()
+{
+	if (access_1541) {
+		output += " PC  A  X  Y   SP  NVDIZC  Instruction\n";
+		output += format("{:04x} {:02x} {:02x} {:02x} {:04x} {}{}{}{}{}{} ",
+		                      R1541.pc, R1541.a, R1541.x, R1541.y, R1541.sp,
+		                      R1541.p & 0x80 ? '1' : '0', R1541.p & 0x40 ? '1' : '0', R1541.p & 0x08 ? '1' : '0',
+		                      R1541.p & 0x04 ? '1' : '0', R1541.p & 0x02 ? '1' : '0', R1541.p & 0x01 ? '1' : '0');
+		disass_line(R1541.pc, SAMReadByte(R1541.pc), SAMReadByte(R1541.pc+1), SAMReadByte(R1541.pc+2));
+	} else {
+		output += " PC  A  X  Y   SP  DR PR NVDIZC  Instruction\n";
+		output += format("{:04x} {:02x} {:02x} {:02x} {:04x} {:02x} {:02x} {}{}{}{}{}{} ",
+		                      R64.pc, R64.a, R64.x, R64.y, R64.sp, R64.ddr, R64.pr,
+		                      R64.p & 0x80 ? '1' : '0', R64.p & 0x40 ? '1' : '0', R64.p & 0x08 ? '1' : '0',
+		                      R64.p & 0x04 ? '1' : '0', R64.p & 0x02 ? '1' : '0', R64.p & 0x01 ? '1' : '0');
+		disass_line(R64.pc, SAMReadByte(R64.pc), SAMReadByte(R64.pc+1), SAMReadByte(R64.pc+2));
+	}
+}
+
+static void registers()
 {
 	enum Token the_reg;
 	uint16_t value;
 
-	if (the_token != T_END)
+	if (the_token != T_END) {
 		switch (the_reg = the_token) {
 			case T_A:
 			case T_X:
@@ -1048,42 +818,49 @@ static void registers(void)
 
 				switch (the_reg) {
 					case T_A:
-						if (access_1541)
+						if (access_1541) {
 							R1541.a = value;
-						else
+						} else {
 							R64.a = value;
+						}
 						break;
 					case T_X:
-						if (access_1541)
+						if (access_1541) {
 							R1541.x = value;
-						else
+						} else {
 							R64.x = value;
+						}
 						break;
 					case T_Y:
-						if (access_1541)
+						if (access_1541) {
 							R1541.y = value;
-						else
+						} else {
 							R64.y = value;
+						}
 						break;
 					case T_PC:
-						if (access_1541)
+						if (access_1541) {
 							R1541.pc = value;
-						else
+						} else {
 							R64.pc = value;
+						}
 						break;
 					case T_SP:
-						if (access_1541)
+						if (access_1541) {
 							R1541.sp = (value & 0xff) | 0x0100;
-						else
+						} else {
 							R64.sp = (value & 0xff) | 0x0100;
+						}
 						break;
 					case T_DR:
-						if (!access_1541)
+						if (!access_1541) {
 							R64.ddr = value;
+						}
 						break;
 					case T_PR:
-						if (!access_1541)
+						if (!access_1541) {
 							R64.pr = value;
+						}
 						break;
 					default:
 						break;
@@ -1093,26 +870,22 @@ static void registers(void)
 			default:
 				return;
 		}
+	}
 
 	display_registers();
 }
 
-static void display_registers(void)
+
+/*
+ *  Convert PETSCII->ASCII (roughly...)
+ */
+
+static char conv_from_64(char c)
 {
-	if (access_1541) {
-		fprintf(fout, " PC  A  X  Y   SP  NVDIZC  Instruction\n");
-		fprintf(fout, "%04x %02x %02x %02x %04x %c%c%c%c%c%c ",
-			R1541.pc, R1541.a, R1541.x, R1541.y, R1541.sp,
-			R1541.p & 0x80 ? '1' : '0', R1541.p & 0x40 ? '1' : '0', R1541.p & 0x08 ? '1' : '0',
-			R1541.p & 0x04 ? '1' : '0', R1541.p & 0x02 ? '1' : '0', R1541.p & 0x01 ? '1' : '0');
-		disass_line(R1541.pc, SAMReadByte(R1541.pc), SAMReadByte(R1541.pc+1), SAMReadByte(R1541.pc+2));
+	if ((c >= 'A') && (c <= 'Z') || (c >= 'a') && (c <= 'z')) {
+		return c ^ 0x20;
 	} else {
-		fprintf(fout, " PC  A  X  Y   SP  DR PR NVDIZC  Instruction\n");
-		fprintf(fout, "%04x %02x %02x %02x %04x %02x %02x %c%c%c%c%c%c ",
-			R64.pc, R64.a, R64.x, R64.y, R64.sp, R64.ddr, R64.pr,
-			R64.p & 0x80 ? '1' : '0', R64.p & 0x40 ? '1' : '0', R64.p & 0x08 ? '1' : '0',
-			R64.p & 0x04 ? '1' : '0', R64.p & 0x02 ? '1' : '0', R64.p & 0x01 ? '1' : '0');
-		disass_line(R64.pc, SAMReadByte(R64.pc), SAMReadByte(R64.pc+1), SAMReadByte(R64.pc+2));
+		return c;
 	}
 }
 
@@ -1124,30 +897,29 @@ static void display_registers(void)
 
 #define MEMDUMP_BPL 16  // Bytes per line
 
-static void memory_dump(void)
+static void memory_dump()
 {
 	bool done = false;
-	short i;
-	uint8_t mem[MEMDUMP_BPL + 2];
-	uint8_t byte;
-
-	mem[MEMDUMP_BPL] = 0;
+	std::string mem;
 
 	if (!range_args(16 * MEMDUMP_BPL - 1))  // 16 lines unless end address specified
 		return;
 
 	do {
-		fprintf(fout, "%04x:", address);
-		for (i=0; i<MEMDUMP_BPL; i++, address++) {
+		output += format("{:04x}:", address);
+		for (unsigned i = 0; i < MEMDUMP_BPL; ++i, ++address) {
 			if (address == end_address) done = true;
 
-			fprintf(fout, " %02x", byte = SAMReadByte(address));
-			if ((byte >= ' ') && (byte <= '~'))
-				mem[i] = conv_from_64(byte);
-			else
-				mem[i] = '.';
+			uint8_t byte = SAMReadByte(address);
+			output += format(" {:02x}", byte);
+			if ((byte >= ' ') && (byte <= '~')) {
+				mem += conv_from_64(byte);
+			} else {
+				mem += '.';
+			}
 		}
-		fprintf(fout, "  '%s'\n", mem);
+		output += format("  '{}'\n", mem);
+		mem.clear();
 	} while (!done && !aborted());
 }
 
@@ -1159,78 +931,28 @@ static void memory_dump(void)
 
 #define ASCIIDUMP_BPL 64  // Bytes per line
 
-static void ascii_dump(void)
+static void ascii_dump()
 {
 	bool done = false;
-	short i;
-	uint8_t mem[ASCIIDUMP_BPL + 2];
-	uint8_t byte;
-
-	mem[ASCIIDUMP_BPL] = 0;
+	std::string mem;
 
 	if (!range_args(16 * ASCIIDUMP_BPL - 1))  // 16 lines unless end address specified
 		return;
 
 	do {
-		fprintf(fout, "%04x:", address);
-		for (i=0; i<ASCIIDUMP_BPL; i++, address++) {
+		output += format("{:04x}:", address);
+		for (unsigned i = 0; i < ASCIIDUMP_BPL; ++i, ++address) {
 			if (address == end_address) done = true;
 
-			byte = SAMReadByte(address);
-			if ((byte >= ' ') && (byte <= '~'))
-				mem[i] = conv_from_64(byte);
-			else
-				mem[i] = '.';
+			uint8_t byte = SAMReadByte(address);
+			if ((byte >= ' ') && (byte <= '~')) {
+				mem += conv_from_64(byte);
+			} else {
+				mem += '.';
+			}
 		}
-		fprintf(fout, " '%s'\n", mem);
-	} while (!done && !aborted());
-}
-
-
-/*
- *  Convert PETSCII->ASCII
- */
-
-static char conv_from_64(char c)
-{
-	if ((c >= 'A') && (c <= 'Z') || (c >= 'a') && (c <= 'z'))
-		return c ^ 0x20;
-	else
-		return c;
-}
-
-
-/*
- *  Screen code dump
- *  n [start] [end]
- */
-
-#define SCRDUMP_BPL 64  // Bytes per line
-
-static void screen_dump(void)
-{
-	bool done = false;
-	short i;
-	uint8_t mem[SCRDUMP_BPL + 2];
-	uint8_t byte;
-
-	mem[SCRDUMP_BPL] = 0;
-
-	if (!range_args(16 * SCRDUMP_BPL - 1))  // 16 Zeilen unless end address specified
-		return;
-
-	do {
-		fprintf(fout, "%04x:", address);
-		for (i=0; i<SCRDUMP_BPL; i++, address++) {
-			if (address == end_address) done = true;
-
-			byte = SAMReadByte(address);
-			if (byte < 90)
-				mem[i] = conv_from_scode(byte);
-			else
-				mem[i] = '.';
-		}
-		fprintf(fout, " '%s'\n", mem);
+		output += format(" '{}'\n", mem);
+		mem.clear();
 	} while (!done && !aborted());
 }
 
@@ -1243,13 +965,64 @@ static char conv_from_scode(char c)
 {
 	c &= 0x7f;
 
-	if (c <= 31)
+	if (c <= 31) {
 		return c + 64;
-	else
-		if (c >= 64)
+	} else {
+		if (c >= 64) {
 			return c + 32;
-		else
+		} else {
 			return c;
+		}
+	}
+}
+
+
+/*
+ *  Screen code dump
+ *  n [start] [end]
+ */
+
+#define SCRDUMP_BPL 40  // Bytes per line
+
+static void screen_dump()
+{
+	bool done = false;
+	std::string mem;
+
+	if (!range_args(16 * SCRDUMP_BPL - 1))  // 16 Zeilen unless end address specified
+		return;
+
+	do {
+		output += format("{:04x}:", address);
+		for (unsigned i = 0; i < SCRDUMP_BPL; ++i, ++address) {
+			if (address == end_address) done = true;
+
+			uint8_t byte = SAMReadByte(address);
+			if (byte < 90) {
+				mem += conv_from_scode(byte);
+			} else {
+				mem += '.';
+			}
+		}
+		output += format(" '{}'\n", mem);
+		mem.clear();
+	} while (!done && !aborted());
+}
+
+
+/*
+ *  Convert byte to binary representation
+ */
+
+static void byte_to_bin(uint8_t byte, char *str)
+{
+	for (unsigned i = 0; i < 8; ++i, byte <<= 1) {
+		if (byte & 0x80) {
+			str[i] = '#';
+		} else {
+			str[i] = '.';
+		}
+	}
 }
 
 
@@ -1258,7 +1031,7 @@ static char conv_from_scode(char c)
  *  b [start] [end]
  */
 
-static void binary_dump(void)
+static void binary_dump()
 {
 	bool done = false;
 	char bin[10];
@@ -1272,7 +1045,7 @@ static void binary_dump(void)
 		if (address == end_address) done = true;
 
 		byte_to_bin(SAMReadByte(address), bin);
-		fprintf(fout, "%04x: %s\n", address++, bin);
+		output += format("{:04x}: {}\n", address++, bin);
 	} while (!done && !aborted());
 }
 
@@ -1282,43 +1055,26 @@ static void binary_dump(void)
  *  p [start] [end]
  */
 
-static void sprite_dump(void)
+static void sprite_dump()
 {
 	bool done = false;
-	short i;
-	char bin[10];
 
+	char bin[10];
 	bin[8] = 0;
 
 	if (!range_args(21 * 3 - 1))  // 21 lines unless end address specified
 		return;
 
 	do {
-		fprintf(fout, "%04x: ", address);
-		for (i=0; i<3; i++, address++) {
+		output += format("{:04x}: ", address);
+		for (unsigned i = 0; i < 3; ++i, ++address) {
 			if (address == end_address) done = true;
 
 			byte_to_bin(SAMReadByte(address), bin);
-			fprintf(fout, "%s", bin);
+			output += bin;
 		}
-		fputc('\n', fout);
+		output += '\n';
 	} while (!done && !aborted());
-}
-
-
-/*
- *  Convert byte to binary representation
- */
-
-static void byte_to_bin(uint8_t byte, char *str)
-{
-	short i;
-
-	for (i=0; i<8; i++, byte<<=1)
-		if (byte & 0x80)
-			str[i] = '#';
-		else
-			str[i] = '.';
 }
 
 
@@ -1327,19 +1083,19 @@ static void byte_to_bin(uint8_t byte, char *str)
  *  d [start] [end]
  */
 
-static void disassemble(void)
+static void disassemble()
 {
 	bool done = false;
-	short i;
+
 	uint8_t op[3];
-	uint16_t adr;
 
 	if (!range_args(31))  // 32 bytes unless end address specified
 		return;
 
 	do {
-		fprintf(fout, "%04x:", adr = address);
-		for (i=0; i<3; i++, adr++) {
+		uint16_t adr = address;
+		output += format("{:04x}:", adr);
+		for (unsigned i = 0; i < 3; ++i, ++adr) {
 			if (adr == end_address) done = true;
 			op[i] = SAMReadByte(adr);
 		}
@@ -1359,26 +1115,27 @@ static int disass_line(uint16_t adr, uint8_t op, uint8_t lo, uint8_t hi)
 	// Display instruction bytes in hex
 	switch (adr_length[mode]) {
 		case 1:
-			fprintf(fout, " %02x       ", op);
+			output += format(" {:02x}       ", op);
 			break;
 
 		case 2:
-			fprintf(fout, " %02x %02x    ", op, lo);
+			output += format(" {:02x} {:02x}    ", op, lo);
 			break;
 
 		case 3:
-			fprintf(fout, " %02x %02x %02x ", op, lo, hi);
+			output += format(" {:02x} {:02x} {:02x} ", op, lo, hi);
 			break;
 	}
 
 	// Tag undocumented opcodes with an asterisk
-	if (mnem > M_ILLEGAL)
-		fputc('*', fout);
-	else
-		fputc(' ', fout);
+	if (mnem > M_ILLEGAL) {
+		output += '*';
+	} else {
+		output += ' ';
+	}
 
 	// Print mnemonic
-	fprintf(fout, "%c%c%c ", mnem_1[mnem], mnem_2[mnem], mnem_3[mnem]);
+	output = output + mnem_1[mnem] + mnem_2[mnem] + mnem_3[mnem] + ' ';
 
 	// Pring argument
 	switch (mode) {
@@ -1386,147 +1143,57 @@ static int disass_line(uint16_t adr, uint8_t op, uint8_t lo, uint8_t hi)
 			break;
 
 		case A_ACCU:
-			fprintf(fout, "a");
+			output += "a";
 			break;
 
 		case A_IMM:
-			fprintf(fout, "#%02x", lo);
+			output += format("#{:02x}", lo);
 			break;
 
 		case A_REL:
-			fprintf(fout, "%04x", ((adr + 2) + (int8_t)lo) & 0xffff);
+			output += format("{:04x}", ((adr + 2) + (int8_t)lo) & 0xffff);
 			break;
 
 		case A_ZERO:
-			fprintf(fout, "%02x", lo);
+			output += format("{:02x}", lo);
 			break;
 
 		case A_ZEROX:
-			fprintf(fout, "%02x,x", lo);
+			output += format("{:02x},x", lo);
 			break;
 
 		case A_ZEROY:
-			fprintf(fout, "%02x,y", lo);
+			output += format("{:02x},y", lo);
 			break;
 
 		case A_ABS:
-			fprintf(fout, "%04x", (hi << 8) | lo);
+			output += format("{:04x}", (hi << 8) | lo);
 			break;
 
 		case A_ABSX:
-			fprintf(fout, "%04x,x", (hi << 8) | lo);
+			output += format("{:04x},x", (hi << 8) | lo);
 			break;
 
 		case A_ABSY:
-			fprintf(fout, "%04x,y", (hi << 8) | lo);
+			output += format("{:04x},y", (hi << 8) | lo);
 			break;
 
 		case A_IND:
-			fprintf(fout, "(%04x)", (hi << 8) | lo);
+			output += format("({:04x})", (hi << 8) | lo);
 			break;
 
 		case A_INDX:
-			fprintf(fout, "(%02x,x)", lo);
+			output += format("({:02x},x)", lo);
 			break;
 
 		case A_INDY:
-			fprintf(fout, "(%02x),y", lo);
+			output += format("({:02x}),y", lo);
 			break;
 	}
 
-	fputc('\n', fout);
+	output += '\n';
+
 	return adr_length[mode];
-}
-
-
-/*
- *  Assemble
- *  a [start]
- */
-
-static void assemble(void)
-{
-	bool done = false;
-	char c1, c2, c3;
-	char mnem, mode;
-	uint8_t opcode;
-	uint16_t arg;
-	int16_t rel;
-
-	// Read parameters
-	if (!address_args())
-		return;
-
-	do {
-		fprintf(fout, "%04x> ", address);
-		fflush(ferr);
-		read_line();
-
-		c1 = get_char();
-		c2 = get_char();
-		c3 = get_char();
-
-		if (c1 != '\n') {
-
-			if ((mnem = find_mnemonic(c1, c2, c3)) != M_ILLEGAL) {
-
-				get_token();
-				if (instr_args(&arg, &mode)) {
-
-					// Convert A_IMPL -> A_ACCU if necessary
-					if ((mode == A_IMPL) && find_opcode(mnem, A_ACCU, &opcode))
-						mode = A_ACCU;
-
-					// Handle relative addressing seperately
-					if (((mode == A_ABS) || (mode == A_ZERO)) && find_opcode(mnem, A_REL, &opcode)) {
-						mode = A_REL;
-						rel = arg - (address + 2) & 0xffff;
-						if ((rel < -128) || (rel > 127)) {
-							error("Branch too long");
-							continue;
-						} else
-							arg = rel & 0xff;
-					}
-
-					if (find_opcode(mnem, mode, &opcode)) {
-
-						// Print disassembled line
-						fprintf(fout, "\v%04x:", address);
-						disass_line(address, opcode, arg & 0xff, arg >> 8);
-
-						switch (adr_length[mode]) {
-							case 1:
-								SAMWriteByte(address++, opcode);
-								break;
-
-							case 2:
-								SAMWriteByte(address++, opcode);
-								SAMWriteByte(address++, arg);
-								break;
-
-							case 3:
-								SAMWriteByte(address++, opcode);
-								SAMWriteByte(address++, arg & 0xff);
-								SAMWriteByte(address++, arg >> 8);
-								break;
-
-							default:
-								error("Internal error");
-								break;
-						}
-
-					} else
-						error("Addressing mode not supported by instruction");
-
-				} else
-					error("Unrecognized addressing mode");
-
-			} else
-				error("Unknown instruction");
-
-		} else			// Input is terminated with a blank line
-			done = true;
-	} while (!done);
 }
 
 
@@ -1537,11 +1204,10 @@ static void assemble(void)
 
 static char find_mnemonic(char op1, char op2, char op3)
 {
-	int i;
-
-	for (i=0; i<M_MAXIMUM; i++)
+	for (unsigned i = 0; i < M_MAXIMUM; ++i) {
 		if ((mnem_1[i] == op1) && (mnem_2[i] == op2) && (mnem_3[i] == op3))
 			return i;
+	}
 
 	return M_ILLEGAL;
 }
@@ -1554,15 +1220,109 @@ static char find_mnemonic(char op1, char op2, char op3)
 
 static bool find_opcode(char mnem, char mode, uint8_t *opcode)
 {
-	int i;
-
-	for (i=0; i<256; i++)
+	for (unsigned i = 0; i < 256; ++i) {
 		if ((mnemonic[i] == mnem) && (adr_mode[i] == mode)) {
 			*opcode = i;
 			return true;
 		}
+	}
 
 	return false;
+}
+
+
+/*
+ *  Assemble
+ *  a [start]
+ */
+
+static void assemble()
+{
+	// Read parameters
+	if (!address_args())
+		return;
+
+	// Switch to assembler mode
+	assembling = true;
+}
+
+static void assemble_line()
+{
+	char c1 = get_char();
+	char c2 = get_char();
+	char c3 = get_char();
+
+	// Assembler mode is terminated with a blank line
+	if (c1 == '\n') {
+		assembling = false;
+		return;
+	}
+
+	char mnem = find_mnemonic(c1, c2, c3);
+	if (mnem != M_ILLEGAL) {
+		get_token();
+
+		char mode;
+		uint16_t arg;
+
+		if (instr_args(&arg, &mode)) {
+			uint8_t opcode;
+
+			// Convert A_IMPL -> A_ACCU if necessary
+			if ((mode == A_IMPL) && find_opcode(mnem, A_ACCU, &opcode)) {
+				mode = A_ACCU;
+			}
+
+			// Handle relative addressing seperately
+			if (((mode == A_ABS) || (mode == A_ZERO)) && find_opcode(mnem, A_REL, &opcode)) {
+				mode = A_REL;
+				int16_t rel = arg - (address + 2) & 0xffff;
+				if ((rel < -128) || (rel > 127)) {
+					error("Branch too far");
+					return;
+				} else {
+					arg = rel & 0xff;
+				}
+			}
+
+			if (find_opcode(mnem, mode, &opcode)) {
+
+				// Print disassembled line
+				output += format("{:04x}:", address);
+				disass_line(address, opcode, arg & 0xff, arg >> 8);
+
+				switch (adr_length[mode]) {
+					case 1:
+						SAMWriteByte(address++, opcode);
+						break;
+
+					case 2:
+						SAMWriteByte(address++, opcode);
+						SAMWriteByte(address++, arg);
+						break;
+
+					case 3:
+						SAMWriteByte(address++, opcode);
+						SAMWriteByte(address++, arg & 0xff);
+						SAMWriteByte(address++, arg >> 8);
+						break;
+
+					default:
+						error("Internal error");
+						break;
+				}
+
+			} else {
+				error("Addressing mode not supported by instruction");
+			}
+
+		} else {
+			error("Unrecognized addressing mode");
+		}
+
+	} else {
+		error("Unknown instruction");
+	}
 }
 
 
@@ -1571,22 +1331,24 @@ static bool find_opcode(char mnem, char mode, uint8_t *opcode)
  *  k [config]
  */
 
-static void mem_config(void)
+static void mem_config()
 {
 	uint16_t con;
 
-	if (the_token != T_END)
-		if (!expression(&con))
+	if (the_token != T_END) {
+		if (!expression(&con)) {
 			return;
-		else
+		} else {
 			TheCPU->ExtConfig = con;
-	else
+		}
+	} else {
 		con = TheCPU->ExtConfig;
+	}
 
-	fprintf(fout, "Configuration: %ld\n", con & 7);
-	fprintf(fout, "A000-BFFF: %s\n", (con & 3) == 3 ? "Basic" : "RAM");
-	fprintf(fout, "D000-DFFF: %s\n", (con & 3) ? ((con & 4) ? "I/O" : "Char") : "RAM");
-	fprintf(fout, "E000-FFFF: %s\n", (con & 2) ? "Kernal" : "RAM");
+	output += format("Configuration: {}\n", con & 7);
+	output += format("A000-BFFF: {}\n", (con & 3) == 3 ? "Basic" : "RAM");
+	output += format("D000-DFFF: {}\n", (con & 3) ? ((con & 4) ? "I/O" : "Char") : "RAM");
+	output += format("E000-FFFF: {}\n", (con & 2) ? "Kernal" : "RAM");
 }
 
 
@@ -1595,7 +1357,7 @@ static void mem_config(void)
  *  f start end byte
  */
 
-static void fill(void)
+static void fill()
 {
 	bool done = false;
 	uint16_t adr, end_adr, value;
@@ -1620,11 +1382,11 @@ static void fill(void)
  *  c start end dest
  */
 
-static void compare(void)
+static void compare()
 {
 	bool done = false;
 	uint16_t adr, end_adr, dest;
-	int num = 0;
+	size_t num = 0;
 
 	if (!expression(&adr))
 		return;
@@ -1637,17 +1399,19 @@ static void compare(void)
 		if (adr == end_adr) done = true;
 
 		if (SAMReadByte(adr) != SAMReadByte(dest)) {
-			fprintf(fout, "%04x ", adr);
+			output += format("{:04x} ", adr);
 			num++;
-			if (!(num & 7))
-				fputc('\n', fout);
+			if (!(num & 7)) {
+				output += '\n';
+			}
 		}
 		adr++; dest++;
 	} while (!done && !aborted());
 
-	if (num & 7)
-		fputc('\n', fout);
-	fprintf(fout, "%ld byte(s) different\n", num);
+	if (num & 7) {
+		output += '\n';
+	}
+	output += format("{} byte(s) different\n", num);
 }
 
 
@@ -1656,7 +1420,7 @@ static void compare(void)
  *  t start end dest
  */
 
-static void transfer(void)
+static void transfer()
 {
 	bool done = false;
 	uint16_t adr, end_adr, dest;
@@ -1668,12 +1432,12 @@ static void transfer(void)
 	if (!expression(&dest))
 		return;
 
-	if (dest < adr)
+	if (dest < adr) {
 		do {
 			if (adr == end_adr) done = true;
 			SAMWriteByte(dest++, SAMReadByte(adr++));
 		} while (!done);
-	else {
+	} else {
 		dest += end_adr - adr;
 		do {
 			if (adr == end_adr) done = true;
@@ -1688,18 +1452,20 @@ static void transfer(void)
  *  : addr {byte}
  */
 
-static void modify(void)
+static void modify()
 {
 	uint16_t adr, val;
 
 	if (!expression(&adr))
 		return;
 
-	while (the_token != T_END)
-		if (expression(&val))
+	while (the_token != T_END) {
+		if (expression(&val)) {
 			SAMWriteByte(adr++, val);
-		else
+		} else {
 			return;
+		}
+	}
 }
 
 
@@ -1708,41 +1474,14 @@ static void modify(void)
  *  ? expression
  */
 
-static void print_expr(void)
+static void print_expr()
 {
 	uint16_t val;
 
 	if (!expression(&val))
 		return;
 
-	fprintf(fout, "Hex: %04x\nDec: %lu\n", val, val);
-}
-
-
-/*
- *  Redirect output
- *  o [file]
- */
-
-static void redir_output(void)
-{
-	// Close old file
-	if (fout != ferr) {
-		fclose(fout);
-		fout = ferr;
-		return;
-	}
-
-	// No argument given?
-	if (the_token == T_END)
-		return;
-
-	// Otherwise open file
-	if (the_token == T_STRING) {
-		if (!(fout = fopen(the_string, "w")))
-			error("Unable to open file");
-	} else
-		error("'\"' around file name expected");
+	output += format("Hex: {:04x}\nDec: {}\n", val, val);
 }
 
 
@@ -1750,20 +1489,21 @@ static void redir_output(void)
  *  Display interrupt vectors
  */
 
-static void int_vectors(void)
+static void int_vectors()
 {
-	fprintf(fout, "        IRQ  BRK  NMI\n");
-	fprintf(fout, "%d  : %04x %04x %04x\n",
-		access_1541 ? 6502 : 6510,
-		SAMReadByte(0xffff) << 8 | SAMReadByte(0xfffe),
-		SAMReadByte(0xffff) << 8 | SAMReadByte(0xfffe),
-		SAMReadByte(0xfffb) << 8 | SAMReadByte(0xfffa));
+	output += "        IRQ  BRK  NMI\n";
+	output += format("{}  : {:04x} {:04x} {:04x}\n",
+	                 access_1541 ? 6502 : 6510,
+	                 SAMReadByte(0xffff) << 8 | SAMReadByte(0xfffe),
+	                 SAMReadByte(0xffff) << 8 | SAMReadByte(0xfffe),
+	                 SAMReadByte(0xfffb) << 8 | SAMReadByte(0xfffa));
 
-	if (!access_1541 && TheCPU->ExtConfig & 2)
-		fprintf(fout, "Kernal: %04x %04x %04x\n",
-			SAMReadByte(0x0315) << 8 | SAMReadByte(0x0314),
-			SAMReadByte(0x0317) << 8 | SAMReadByte(0x0316),
-			SAMReadByte(0x0319) << 8 | SAMReadByte(0x0318));
+	if (!access_1541 && TheCPU->ExtConfig & 2) {
+		output += format("Kernal: {:04x} {:04x} {:04x}\n",
+		                 SAMReadByte(0x0315) << 8 | SAMReadByte(0x0314),
+		                 SAMReadByte(0x0317) << 8 | SAMReadByte(0x0316),
+		                 SAMReadByte(0x0319) << 8 | SAMReadByte(0x0318));
+	}
 }
 
 
@@ -1771,7 +1511,338 @@ static void int_vectors(void)
  *  Display state of custom chips
  */
 
-static void view_state(void)
+static void dump_cia_ints(uint8_t i)
+{
+	if (i & 0x1f) {
+		if (i & 1) output += "TA ";
+		if (i & 2) output += "TB ";
+		if (i & 4) output += "Alarm ";
+		if (i & 8) output += "Serial ";
+		if (i & 0x10) output += "Flag";
+	} else {
+		output += "None";
+	}
+	output += '\n';
+}
+
+static void view_cia_state()
+{
+	MOS6526State cs;
+
+	switch (get_char()) {
+		case '1':
+			TheCIA1->GetState(&cs);
+			break;
+		case '2':
+			TheCIA2->GetState(&cs);
+			break;
+		default:
+			error("Unknown command");
+			return;
+	}
+
+	output += format("Timer A  : {}\n", cs.cra & 1 ? "On" : "Off");
+	output += format(" Counter : {:04x}  Latch: {:04x}\n", (cs.ta_hi << 8) | cs.ta_lo, cs.latcha);
+	output += format(" Run mode: {}\n", cs.cra & 8 ? "One-shot" : "Continuous");
+	output += format(" Input   : {}\n", cs.cra & 0x20 ? "CNT" : "Phi2");
+	output += " Output  : ";
+	if (cs.cra & 2) {
+		if (cs.cra & 4) {
+			output += "PB6 Toggle\n\n";
+		} else {
+			output += "PB6 Pulse\n\n";
+		}
+	} else {
+		output += "None\n\n";
+	}
+
+	output += format("Timer B  : {}\n", cs.crb & 1 ? "On" : "Off");
+	output += format(" Counter : {:04x}  Latch: {:04x}\n", (cs.tb_hi << 8) | cs.tb_lo, cs.latchb);
+	output += format(" Run mode: {}\n", cs.crb & 8 ? "One-shot" : "Continuous");
+	output += " Input   : ";
+	if (cs.crb & 0x40) {
+		if (cs.crb & 0x20) {
+			output += "Timer A underflow (CNT high)\n";
+		} else {
+			output += "Timer A underflow\n";
+		}
+	} else {
+		if (cs.crb & 0x20) {
+			output += "CNT\n";
+		} else {
+			output += "Phi2\n";
+		}
+	}
+	output += " Output  : ";
+	if (cs.crb & 2) {
+		if (cs.crb & 4) {
+			output += "PB7 Toggle\n\n";
+		} else {
+			output += "PB7 Pulse\n\n";
+		}
+	} else {
+		output += "None\n\n";
+	}
+
+	output += format("TOD         : {:x}{:x}:{:x}{:x}:{:x}{:x}.{:x} {}\n",
+	                 (cs.tod_hr >> 4) & 1, cs.tod_hr & 0x0f,
+	                 (cs.tod_min >> 4) & 7, cs.tod_min & 0x0f,
+	                 (cs.tod_sec >> 4) & 7, cs.tod_sec & 0x0f,
+	                 cs.tod_10ths & 0x0f, cs.tod_hr & 0x80 ? "PM" : "AM");
+	output += format("Alarm       : {:x}{:x}:{:x}{:x}:{:x}{:x}.{:x} {}\n",
+	                 (cs.alm_hr >> 4) & 1, cs.alm_hr & 0x0f,
+	                 (cs.alm_min >> 4) & 7, cs.alm_min & 0x0f,
+	                 (cs.alm_sec >> 4) & 7, cs.alm_sec & 0x0f,
+	                 cs.alm_10ths & 0x0f, cs.alm_hr & 0x80 ? "PM" : "AM");
+	output += format("TOD input   : {}\n", cs.cra & 0x80 ? "50Hz" : "60Hz");
+	output += format("Write to    : {} registers\n\n", cs.crb & 0x80 ? "Alarm" : "TOD");
+
+	output += format("Serial data : {:02x}\n", cs.sdr);
+	output += format("Serial mode : {}\n\n", cs.cra & 0x40 ? "Output" : "Input");
+
+	output += "Pending int.: ";
+	dump_cia_ints(cs.int_data);
+	output += "Enabled int.: ";
+	dump_cia_ints(cs.int_mask);
+}
+
+
+static void dump_sid_waveform(uint8_t wave)
+{
+	if (wave & 0xf0) {
+		if (wave & 0x10) output += "Triangle ";
+		if (wave & 0x20) output += "Sawtooth ";
+		if (wave & 0x40) output += "Rectangle ";
+		if (wave & 0x80) output += "Noise";
+	} else {
+		output += "None";
+	}
+	output += '\n';
+}
+
+static void view_sid_state()
+{
+	MOS6581State ss;
+
+	TheSID->GetState(&ss);
+
+	output += "Voice 1\n";
+	output += format(" Frequency  : {:04x}\n", (ss.freq_hi_1 << 8) | ss.freq_lo_1);
+	output += format(" Pulse Width: {:04x}\n", ((ss.pw_hi_1 & 0x0f) << 8) | ss.pw_lo_1);
+	output += format(" Env. (ADSR): {:x} {:x} {:x} {:x}\n", ss.AD_1 >> 4, ss.AD_1 & 0x0f, ss.SR_1 >> 4, ss.SR_1 & 0x0f);
+	output += " Waveform   : ";
+	dump_sid_waveform(ss.ctrl_1);
+	output += format(" Gate       : {}  Ring mod.: {}\n", ss.ctrl_1 & 0x01 ? "On " : "Off", ss.ctrl_1 & 0x04 ? "On" : "Off");
+	output += format(" Test bit   : {}  Synchron.: {}\n", ss.ctrl_1 & 0x08 ? "On " : "Off", ss.ctrl_1 & 0x02 ? "On" : "Off");
+	output += format(" Filter     : {}\n", ss.res_filt & 0x01 ? "On" : "Off");
+
+	output += "\nVoice 2\n";
+	output += format(" Frequency  : {:04x}\n", (ss.freq_hi_2 << 8) | ss.freq_lo_2);
+	output += format(" Pulse Width: {:04x}\n", ((ss.pw_hi_2 & 0x0f) << 8) | ss.pw_lo_2);
+	output += format(" Env. (ADSR): {:x} {:x} {:x} {:x}\n", ss.AD_2 >> 4, ss.AD_2 & 0x0f, ss.SR_2 >> 4, ss.SR_2 & 0x0f);
+	output += " Waveform   : ";
+	dump_sid_waveform(ss.ctrl_2);
+	output += format(" Gate       : {}  Ring mod.: {}\n", ss.ctrl_2 & 0x01 ? "On " : "Off", ss.ctrl_2 & 0x04 ? "On" : "Off");
+	output += format(" Test bit   : {}  Synchron.: {}\n", ss.ctrl_2 & 0x08 ? "On " : "Off", ss.ctrl_2 & 0x02 ? "On" : "Off");
+	output += format(" Filter     : {}\n", ss.res_filt & 0x02 ? "On" : "Off");
+
+	output += "\nVoice 3\n";
+	output += format(" Frequency  : {:04x}\n", (ss.freq_hi_3 << 8) | ss.freq_lo_3);
+	output += format(" Pulse Width: {:04x}\n", ((ss.pw_hi_3 & 0x0f) << 8) | ss.pw_lo_3);
+	output += format(" Env. (ADSR): {:x} {:x} {:x} {:x}\n", ss.AD_3 >> 4, ss.AD_3 & 0x0f, ss.SR_3 >> 4, ss.SR_3 & 0x0f);
+	output += " Waveform   : ";
+	dump_sid_waveform(ss.ctrl_3);
+	output += format(" Gate       : {}  Ring mod.: {}\n", ss.ctrl_3 & 0x01 ? "On " : "Off", ss.ctrl_3 & 0x04 ? "On" : "Off");
+	output += format(" Test bit   : {}  Synchron.: {}\n", ss.ctrl_3 & 0x08 ? "On " : "Off", ss.ctrl_3 & 0x02 ? "On" : "Off");
+	output += format(" Filter     : {}  Mute     : {}\n", ss.res_filt & 0x04 ? "On" : "Off", ss.mode_vol & 0x80 ? "Yes" : "No");
+
+	output += "\nFilters/Volume\n";
+	output += format(" Frequency: {:04x}\n", (ss.fc_hi << 3) | (ss.fc_lo & 0x07));
+	output += format(" Resonance: {:x}\n", ss.res_filt >> 4);
+	output += " Mode     : ";
+	if (ss.mode_vol & 0x70) {
+		if (ss.mode_vol & 0x10) output += "Low-pass ";
+		if (ss.mode_vol & 0x20) output += "Band-pass ";
+		if (ss.mode_vol & 0x40) output += "High-pass";
+	} else {
+		output += "None";
+	}
+	output += format("\n Volume   : {:x}\n", ss.mode_vol & 0x0f);
+}
+
+
+static void dump_spr_flags(uint8_t f)
+{
+	for (unsigned i = 0; i < 8; ++i) {
+		if (f & (1<<i)) {
+			output += "Yes    ";
+		} else {
+			output += "No     ";
+		}
+	}
+
+	output += '\n';
+}
+
+static void dump_vic_ints(uint8_t i)
+{
+	if (i & 0x1f) {
+		if (i & 1) output += "Raster ";
+		if (i & 2) output += "Spr-Data ";
+		if (i & 4) output += "Spr-Spr ";
+		if (i & 8) output += "Lightpen";
+	} else {
+		output += "None";
+	}
+
+	output += '\n';
+}
+
+static void view_vic_state()
+{
+	MOS6569State vs;
+
+	TheVIC->GetState(&vs);
+
+	output += format("Raster line       : {:04x}\n", vs.raster | ((vs.ctrl1 & 0x80) << 1));
+	output += format("IRQ raster line   : {:04x}\n\n", vs.irq_raster);
+
+	output += format("X scroll          : {}\n", vs.ctrl2 & 7);
+	output += format("Y scroll          : {}\n", vs.ctrl1 & 7);
+	output += format("Horizontal border : {} columns\n", vs.ctrl2 & 8 ? 40 : 38);
+	output += format("Vertical border   : {} rows\n\n", vs.ctrl1 & 8 ? 25 : 24);
+
+	output += "Display mode      : ";
+	switch (((vs.ctrl1 >> 4) & 6) | ((vs.ctrl2 >> 4) & 1)) {
+		case 0:
+			output += "Standard text\n";
+			break;
+		case 1:
+			output += "Multicolor text\n";
+			break;
+		case 2:
+			output += "Standard bitmap\n";
+			break;
+		case 3:
+			output += "Multicolor bitmap\n";
+			break;
+		case 4:
+			output += "ECM text\n";
+			break;
+		case 5:
+			output += "Invalid text (ECM+MCM)\n";
+			break;
+		case 6:
+			output += "Invalid bitmap (ECM+BMM)\n";
+			break;
+		case 7:
+			output += "Invalid bitmap (ECM+BMM+ECM)\n";
+			break;
+	}
+	output += format("Sequencer state   : {}\n", vs.display_state ? "Display" : "Idle");
+	output += format("Bad line state    : {}\n", vs.bad_line ? "Yes" : "No");
+	output += format("Bad lines enabled : {}\n", vs.bad_line_enable ? "Yes" : "No");
+	output += format("Video counter     : {:04x}\n", vs.vc);
+	output += format("Video counter base: {:04x}\n", vs.vc_base);
+	output += format("Row counter       : {}\n\n", vs.rc);
+
+	output += format("VIC bank          : {:04x}-{:04x}\n", vs.bank_base, vs.bank_base + 0x3fff);
+	output += format("Video matrix base : {:04x}\n", vs.matrix_base);
+	output += format("Character base    : {:04x}\n", vs.char_base);
+	output += format("Bitmap base       : {:04x}\n\n", vs.bitmap_base);
+
+	output += "         Spr.0  Spr.1  Spr.2  Spr.3  Spr.4  Spr.5  Spr.6  Spr.7\n";
+	output += "Enabled: "; dump_spr_flags(vs.me);
+	output += format("Data   : {:04x}   {:04x}   {:04x}   {:04x}   {:04x}   {:04x}   {:04x}   {:04x}\n",
+	                 vs.sprite_base[0], vs.sprite_base[1], vs.sprite_base[2], vs.sprite_base[3],
+	                 vs.sprite_base[4], vs.sprite_base[5], vs.sprite_base[6], vs.sprite_base[7]);
+	output += format("MC     : {:02x}     {:02x}     {:02x}     {:02x}     {:02x}     {:02x}     {:02x}     {:02x}\n",
+	                 vs.mc[0], vs.mc[1], vs.mc[2], vs.mc[3],
+	                 vs.mc[4], vs.mc[5], vs.mc[6], vs.mc[7]);
+	output += format("MCBASE : {:02x}     {:02x}     {:02x}     {:02x}     {:02x}     {:02x}     {:02x}     {:02x}\n",
+	                 vs.mc_base[0], vs.mc_base[1], vs.mc_base[2], vs.mc_base[3],
+	                 vs.mc_base[4], vs.mc_base[5], vs.mc_base[6], vs.mc_base[7]);
+
+	output += "Mode   : ";
+	for (unsigned i = 0; i < 8; ++i) {
+		if (vs.mmc & (1<<i)) {
+			output += "Multi  ";
+		} else {
+			output += "Std.   ";
+		}
+	}
+
+	output += format("\nX Pos  : {:04x}   {:04x}   {:04x}   {:04x}   {:04x}   {:04x}   {:04x}   {:04x}\n",
+	                 vs.m0x + ((vs.mx8 & 0x01) ? 0x100 : 0), vs.m1x + ((vs.mx8 & 0x02) ? 0x100 : 0), vs.m2x + ((vs.mx8 & 0x04) ? 0x100 : 0), vs.m3x + ((vs.mx8 & 0x08) ? 0x100 : 0),
+	                 vs.m4x + ((vs.mx8 & 0x10) ? 0x100 : 0), vs.m5x + ((vs.mx8 & 0x20) ? 0x100 : 0), vs.m6x + ((vs.mx8 & 0x40) ? 0x100 : 0), vs.m7x + ((vs.mx8 & 0x80) ? 0x100 : 0));
+	output += format("Y Pos  : {:04x}   {:04x}   {:04x}   {:04x}   {:04x}   {:04x}   {:04x}   {:04x}\n",
+	                 vs.m0y, vs.m1y, vs.m2y, vs.m3y,
+	                 vs.m4y, vs.m5y, vs.m6y, vs.m7y);
+
+	output += "X Exp  : "; dump_spr_flags(vs.mxe);
+	output += "Y Exp  : "; dump_spr_flags(vs.mye);
+
+	output += "Prio   : ";
+	for (unsigned i = 0; i < 8; ++i) {
+		if (vs.mdp & (1<<i)) {
+			output += "Back   ";
+		} else {
+			output += "Fore   ";
+		}
+	}
+
+	output += "\nSS Coll: "; dump_spr_flags(vs.mm);
+	output += "SD Coll: "; dump_spr_flags(vs.md);
+
+	output += "\nPending interrupts: ";
+	dump_vic_ints(vs.irq_flag);
+	output += "Enabled interrupts: ";
+	dump_vic_ints(vs.irq_mask);
+}
+
+
+static void dump_via_ints(uint8_t i)
+{
+	if (i & 0x7f) {
+		if (i & 0x40) output += "T1 ";
+		if (i & 0x20) output += "T2 ";
+		if (i & 0x02) output += "CA1 ";
+		if (i & 0x01) output += "CA2 ";
+		if (i & 0x10) output += "CB1 ";
+		if (i & 0x08) output += "CB2 ";
+		if (i & 0x04) output += "Serial ";
+	} else {
+		output += "None";
+	}
+
+	output += '\n';
+}
+
+static void view_1541_state()
+{
+	output += "VIA 1:\n";
+	output += format(" Timer 1 Counter: {:04x}  Latch: {:04x}\n", R1541.via1_t1c, R1541.via1_t1l);
+	output += format(" Timer 2 Counter: {:04x}  Latch: {:04x}\n", R1541.via1_t2c, R1541.via1_t2l);
+	output += format(" ACR: {:02x}\n", R1541.via1_acr);
+	output += format(" PCR: {:02x}\n", R1541.via1_pcr);
+	output += " Pending interrupts: ";
+	dump_via_ints(R1541.via1_ifr);
+	output += " Enabled interrupts: ";
+	dump_via_ints(R1541.via1_ier);
+
+	output += "\nVIA 2:\n";
+	output += format(" Timer 1 Counter: {:04x}  Latch: {:04x}\n", R1541.via2_t1c, R1541.via2_t1l);
+	output += format(" Timer 2 Counter: {:04x}  Latch: {:04x}\n", R1541.via2_t2c, R1541.via2_t2l);
+	output += format(" ACR: {:02x}\n", R1541.via2_acr);
+	output += format(" PCR: {:02x}\n", R1541.via2_pcr);
+	output += " Pending interrupts: ";
+	dump_via_ints(R1541.via2_ifr);
+	output += " Enabled interrupts: ";
+	dump_via_ints(R1541.via2_ier);
+}
+
+
+static void view_state()
 {
 	switch (get_char()) {
 		case 'c':		// CIA
@@ -1796,323 +1867,13 @@ static void view_state(void)
 	}
 }
 
-static void view_cia_state(void)
-{
-	MOS6526State cs;
-
-	switch (get_char()) {
-		case '1':
-			TheCIA1->GetState(&cs);
-			break;
-		case '2':
-			TheCIA2->GetState(&cs);
-			break;
-		default:
-			error("Unknown command");
-			return;
-	}
-
-	fprintf(fout, "Timer A  : %s\n", cs.cra & 1 ? "On" : "Off");
-	fprintf(fout, " Counter : %04x  Latch: %04x\n", (cs.ta_hi << 8) | cs.ta_lo, cs.latcha);
-	fprintf(fout, " Run mode: %s\n", cs.cra & 8 ? "One-shot" : "Continuous");
-	fprintf(fout, " Input   : %s\n", cs.cra & 0x20 ? "CNT" : "Phi2");
-	fprintf(fout, " Output  : ");
-	if (cs.cra & 2)
-		if (cs.cra & 4)
-			fprintf(fout, "PB6 Toggle\n\n");
-		else
-			fprintf(fout, "PB6 Pulse\n\n");
-	else
-		fprintf(fout, "None\n\n");
-
-	fprintf(fout, "Timer B  : %s\n", cs.crb & 1 ? "On" : "Off");
-	fprintf(fout, " Counter : %04x  Latch: %04x\n", (cs.tb_hi << 8) | cs.tb_lo, cs.latchb);
-	fprintf(fout, " Run mode: %s\n", cs.crb & 8 ? "One-shot" : "Continuous");
-	fprintf(fout, " Input   : ");
-	if (cs.crb & 0x40)
-		if (cs.crb & 0x20)
-			fprintf(fout, "Timer A underflow (CNT high)\n");
-		else
-			fprintf(fout, "Timer A underflow\n");
-	else
-		if (cs.crb & 0x20)
-			fprintf(fout, "CNT\n");
-		else
-			fprintf(fout, "Phi2\n");
-	fprintf(fout, " Output  : ");
-	if (cs.crb & 2)
-		if (cs.crb & 4)
-			fprintf(fout, "PB7 Toggle\n\n");
-		else
-			fprintf(fout, "PB7 Pulse\n\n");
-	else
-		fprintf(fout, "None\n\n");
-
-	fprintf(fout, "TOD         : %lx%lx:%lx%lx:%lx%lx.%lx %s\n",
-		(cs.tod_hr >> 4) & 1, cs.tod_hr & 0x0f,
-		(cs.tod_min >> 4) & 7, cs.tod_min & 0x0f,
-		(cs.tod_sec >> 4) & 7, cs.tod_sec & 0x0f,
-		cs.tod_10ths & 0x0f, cs.tod_hr & 0x80 ? "PM" : "AM");
-	fprintf(fout, "Alarm       : %lx%lx:%lx%lx:%lx%lx.%lx %s\n",
-		(cs.alm_hr >> 4) & 1, cs.alm_hr & 0x0f,
-		(cs.alm_min >> 4) & 7, cs.alm_min & 0x0f,
-		(cs.alm_sec >> 4) & 7, cs.alm_sec & 0x0f,
-		cs.alm_10ths & 0x0f, cs.alm_hr & 0x80 ? "PM" : "AM");
-	fprintf(fout, "TOD input   : %s\n", cs.cra & 0x80 ? "50Hz" : "60Hz");
-	fprintf(fout, "Write to    : %s registers\n\n", cs.crb & 0x80 ? "Alarm" : "TOD");
-
-	fprintf(fout, "Serial data : %02x\n", cs.sdr);
-	fprintf(fout, "Serial mode : %s\n\n", cs.cra & 0x40 ? "Output" : "Input");
-
-	fprintf(fout, "Pending int.: ");
-	dump_cia_ints(cs.int_data);
-	fprintf(fout, "Enabled int.: ");
-	dump_cia_ints(cs.int_mask);
-}
-
-static void dump_cia_ints(uint8_t i)
-{
-	if (i & 0x1f) {
-		if (i & 1) fprintf(fout, "TA ");
-		if (i & 2) fprintf(fout, "TB ");
-		if (i & 4) fprintf(fout, "Alarm ");
-		if (i & 8) fprintf(fout, "Serial ");
-		if (i & 0x10) fprintf(fout, "Flag");
-	} else
-		fprintf(fout, "None");
-	fputc('\n', fout);
-}
-
-static void view_sid_state(void)
-{
-	MOS6581State ss;
-
-	TheSID->GetState(&ss);
-
-	fprintf(fout, "Voice 1\n");
-	fprintf(fout, " Frequency  : %04x\n", (ss.freq_hi_1 << 8) | ss.freq_lo_1);
-	fprintf(fout, " Pulse Width: %04x\n", ((ss.pw_hi_1 & 0x0f) << 8) | ss.pw_lo_1);
-	fprintf(fout, " Env. (ADSR): %lx %lx %lx %lx\n", ss.AD_1 >> 4, ss.AD_1 & 0x0f, ss.SR_1 >> 4, ss.SR_1 & 0x0f);
-	fprintf(fout, " Waveform   : ");
-	dump_sid_waveform(ss.ctrl_1);
-	fprintf(fout, " Gate       : %s  Ring mod.: %s\n", ss.ctrl_1 & 0x01 ? "On " : "Off", ss.ctrl_1 & 0x04 ? "On" : "Off");
-	fprintf(fout, " Test bit   : %s  Synchron.: %s\n", ss.ctrl_1 & 0x08 ? "On " : "Off", ss.ctrl_1 & 0x02 ? "On" : "Off");
-	fprintf(fout, " Filter     : %s\n", ss.res_filt & 0x01 ? "On" : "Off");
-
-	fprintf(fout, "\nVoice 2\n");
-	fprintf(fout, " Frequency  : %04x\n", (ss.freq_hi_2 << 8) | ss.freq_lo_2);
-	fprintf(fout, " Pulse Width: %04x\n", ((ss.pw_hi_2 & 0x0f) << 8) | ss.pw_lo_2);
-	fprintf(fout, " Env. (ADSR): %lx %lx %lx %lx\n", ss.AD_2 >> 4, ss.AD_2 & 0x0f, ss.SR_2 >> 4, ss.SR_2 & 0x0f);
-	fprintf(fout, " Waveform   : ");
-	dump_sid_waveform(ss.ctrl_2);
-	fprintf(fout, " Gate       : %s  Ring mod.: %s\n", ss.ctrl_2 & 0x01 ? "On " : "Off", ss.ctrl_2 & 0x04 ? "On" : "Off");
-	fprintf(fout, " Test bit   : %s  Synchron.: %s\n", ss.ctrl_2 & 0x08 ? "On " : "Off", ss.ctrl_2 & 0x02 ? "On" : "Off");
-	fprintf(fout, " Filter     : %s\n", ss.res_filt & 0x02 ? "On" : "Off");
-
-	fprintf(fout, "\nVoice 3\n");
-	fprintf(fout, " Frequency  : %04x\n", (ss.freq_hi_3 << 8) | ss.freq_lo_3);
-	fprintf(fout, " Pulse Width: %04x\n", ((ss.pw_hi_3 & 0x0f) << 8) | ss.pw_lo_3);
-	fprintf(fout, " Env. (ADSR): %lx %lx %lx %lx\n", ss.AD_3 >> 4, ss.AD_3 & 0x0f, ss.SR_3 >> 4, ss.SR_3 & 0x0f);
-	fprintf(fout, " Waveform   : ");
-	dump_sid_waveform(ss.ctrl_3);
-	fprintf(fout, " Gate       : %s  Ring mod.: %s\n", ss.ctrl_3 & 0x01 ? "On " : "Off", ss.ctrl_3 & 0x04 ? "On" : "Off");
-	fprintf(fout, " Test bit   : %s  Synchron.: %s\n", ss.ctrl_3 & 0x08 ? "On " : "Off", ss.ctrl_3 & 0x02 ? "On" : "Off");
-	fprintf(fout, " Filter     : %s  Mute     : %s\n", ss.res_filt & 0x04 ? "On" : "Off", ss.mode_vol & 0x80 ? "Yes" : "No");
-
-	fprintf(fout, "\nFilters/Volume\n");
-	fprintf(fout, " Frequency: %04x\n", (ss.fc_hi << 3) | (ss.fc_lo & 0x07));
-	fprintf(fout, " Resonance: %lx\n", ss.res_filt >> 4);
-	fprintf(fout, " Mode     : ");
-	if (ss.mode_vol & 0x70) {
-		if (ss.mode_vol & 0x10) fprintf(fout, "Low-pass ");
-		if (ss.mode_vol & 0x20) fprintf(fout, "Band-pass ");
-		if (ss.mode_vol & 0x40) fprintf(fout, "High-pass");
-	} else
-		fprintf(fout, "None");
-	fprintf(fout, "\n Volume   : %lx\n", ss.mode_vol & 0x0f);
-}
-
-static void dump_sid_waveform(uint8_t wave)
-{
-	if (wave & 0xf0) {
-		if (wave & 0x10) fprintf(fout, "Triangle ");
-		if (wave & 0x20) fprintf(fout, "Sawtooth ");
-		if (wave & 0x40) fprintf(fout, "Rectangle ");
-		if (wave & 0x80) fprintf(fout, "Noise");
-	} else
-		fprintf(fout, "None");
-	fputc('\n', fout);
-}
-
-static void view_vic_state(void)
-{
-	MOS6569State vs;
-	short i;
-
-	TheVIC->GetState(&vs);
-
-	fprintf(fout, "Raster line       : %04x\n", vs.raster | ((vs.ctrl1 & 0x80) << 1));
-	fprintf(fout, "IRQ raster line   : %04x\n\n", vs.irq_raster);
-
-	fprintf(fout, "X scroll          : %ld\n", vs.ctrl2 & 7);
-	fprintf(fout, "Y scroll          : %ld\n", vs.ctrl1 & 7);
-	fprintf(fout, "Horizontal border : %ld columns\n", vs.ctrl2 & 8 ? 40 : 38);
-	fprintf(fout, "Vertical border   : %ld rows\n\n", vs.ctrl1 & 8 ? 25 : 24);
-
-	fprintf(fout, "Display mode      : ");
-	switch (((vs.ctrl1 >> 4) & 6) | ((vs.ctrl2 >> 4) & 1)) {
-		case 0:
-			fprintf(fout, "Standard text\n");
-			break;
-		case 1:
-			fprintf(fout, "Multicolor text\n");
-			break;
-		case 2:
-			fprintf(fout, "Standard bitmap\n");
-			break;
-		case 3:
-			fprintf(fout, "Multicolor bitmap\n");
-			break;
-		case 4:
-			fprintf(fout, "ECM text\n");
-			break;
-		case 5:
-			fprintf(fout, "Invalid text (ECM+MCM)\n");
-			break;
-		case 6:
-			fprintf(fout, "Invalid bitmap (ECM+BMM)\n");
-			break;
-		case 7:
-			fprintf(fout, "Invalid bitmap (ECM+BMM+ECM)\n");
-			break;
-	}
-	fprintf(fout, "Sequencer state   : %s\n", vs.display_state ? "Display" : "Idle");
-	fprintf(fout, "Bad line state    : %s\n", vs.bad_line ? "Yes" : "No");
-	fprintf(fout, "Bad lines enabled : %s\n", vs.bad_line_enable ? "Yes" : "No");
-	fprintf(fout, "Video counter     : %04x\n", vs.vc);
-	fprintf(fout, "Video counter base: %04x\n", vs.vc_base);
-	fprintf(fout, "Row counter       : %d\n\n", vs.rc);
-
-	fprintf(fout, "VIC bank          : %04x-%04x\n", vs.bank_base, vs.bank_base + 0x3fff);
-	fprintf(fout, "Video matrix base : %04x\n", vs.matrix_base);
-	fprintf(fout, "Character base    : %04x\n", vs.char_base);
-	fprintf(fout, "Bitmap base       : %04x\n\n", vs.bitmap_base);
-
-	fprintf(fout, "         Spr.0  Spr.1  Spr.2  Spr.3  Spr.4  Spr.5  Spr.6  Spr.7\n");
-	fprintf(fout, "Enabled: "); dump_spr_flags(vs.me);
-	fprintf(fout, "Data   : %04x   %04x   %04x   %04x   %04x   %04x   %04x   %04x\n",
-		vs.sprite_base[0], vs.sprite_base[1], vs.sprite_base[2], vs.sprite_base[3],
-		vs.sprite_base[4], vs.sprite_base[5], vs.sprite_base[6], vs.sprite_base[7]);
-	fprintf(fout, "MC     : %02x     %02x     %02x     %02x     %02x     %02x     %02x     %02x\n",
-		vs.mc[0], vs.mc[1], vs.mc[2], vs.mc[3],
-		vs.mc[4], vs.mc[5], vs.mc[6], vs.mc[7]);
-	fprintf(fout, "MCBASE : %02x     %02x     %02x     %02x     %02x     %02x     %02x     %02x\n",
-		vs.mc_base[0], vs.mc_base[1], vs.mc_base[2], vs.mc_base[3],
-		vs.mc_base[4], vs.mc_base[5], vs.mc_base[6], vs.mc_base[7]);
-
-	fprintf(fout, "Mode   : ");
-	for (i=0; i<8; i++)
-		if (vs.mmc & (1<<i))
-			fprintf(fout, "Multi  ");
-		else
-			fprintf(fout, "Std.   ");
-
-	fprintf(fout, "\nX Pos  : %04x   %04x   %04x   %04x   %04x   %04x   %04x   %04x\n",
-		vs.m0x + ((vs.mx8 & 0x01) ? 0x100 : 0), vs.m1x + ((vs.mx8 & 0x02) ? 0x100 : 0), vs.m2x + ((vs.mx8 & 0x04) ? 0x100 : 0), vs.m3x + ((vs.mx8 & 0x08) ? 0x100 : 0),
-		vs.m4x + ((vs.mx8 & 0x10) ? 0x100 : 0), vs.m5x + ((vs.mx8 & 0x20) ? 0x100 : 0), vs.m6x + ((vs.mx8 & 0x40) ? 0x100 : 0), vs.m7x + ((vs.mx8 & 0x80) ? 0x100 : 0));
-	fprintf(fout, "Y Pos  : %02x     %02x     %02x     %02x     %02x     %02x     %02x     %02x\n",
-		vs.m0y, vs.m1y, vs.m2y, vs.m3y,
-		vs.m4y, vs.m5y, vs.m6y, vs.m7y);
-
-	fprintf(fout, "X Exp  : "); dump_spr_flags(vs.mxe);
-	fprintf(fout, "Y Exp  : "); dump_spr_flags(vs.mye);
-
-	fprintf(fout, "Prio   : ");
-	for (i=0; i<8; i++)
-		if (vs.mdp & (1<<i))
-			fprintf(fout, "Back   ");
-		else
-			fprintf(fout, "Fore   ");
-
-	fprintf(fout, "\nSS Coll: "); dump_spr_flags(vs.mm);
-	fprintf(fout, "SD Coll: "); dump_spr_flags(vs.md);
-
-	fprintf(fout, "\nPending interrupts: ");
-	dump_vic_ints(vs.irq_flag);
-	fprintf(fout, "Enabled interrupts: ");
-	dump_vic_ints(vs.irq_mask);
-}
-
-static void dump_spr_flags(uint8_t f)
-{
-	short i;
-
-	for (i=0; i<8; i++)
-		if (f & (1<<i))
-			fprintf(fout, "Yes    ");
-		else
-			fprintf(fout, "No     ");
-
-	fputc('\n', fout);
-}
-
-static void dump_vic_ints(uint8_t i)
-{
-	if (i & 0x1f) {
-		if (i & 1) fprintf(fout, "Raster ");
-		if (i & 2) fprintf(fout, "Spr-Data ");
-		if (i & 4) fprintf(fout, "Spr-Spr ");
-		if (i & 8) fprintf(fout, "Lightpen");
-	} else
-		fprintf(fout, "None");
-	fputc('\n', fout);
-}
-
-static void view_1541_state(void)
-{
-	fprintf(fout, "VIA 1:\n");
-	fprintf(fout, " Timer 1 Counter: %04x  Latch: %04x\n", R1541.via1_t1c, R1541.via1_t1l);
-	fprintf(fout, " Timer 2 Counter: %04x  Latch: %04x\n", R1541.via1_t2c, R1541.via1_t2l);
-	fprintf(fout, " ACR: %02x\n", R1541.via1_acr);
-	fprintf(fout, " PCR: %02x\n", R1541.via1_pcr);
-	fprintf(fout, " Pending interrupts: ");
-	dump_via_ints(R1541.via1_ifr);
-	fprintf(fout, " Enabled interrupts: ");
-	dump_via_ints(R1541.via1_ier);
-
-	fprintf(fout, "\nVIA 2:\n");
-	fprintf(fout, " Timer 1 Counter: %04x  Latch: %04x\n", R1541.via2_t1c, R1541.via2_t1l);
-	fprintf(fout, " Timer 2 Counter: %04x  Latch: %04x\n", R1541.via2_t2c, R1541.via2_t2l);
-	fprintf(fout, " ACR: %02x\n", R1541.via2_acr);
-	fprintf(fout, " PCR: %02x\n", R1541.via2_pcr);
-	fprintf(fout, " Pending interrupts: ");
-	dump_via_ints(R1541.via2_ifr);
-	fprintf(fout, " Enabled interrupts: ");
-	dump_via_ints(R1541.via2_ier);
-}
-
-static void dump_via_ints(uint8_t i)
-{
-	if (i & 0x7f) {
-		if (i & 0x40) fprintf(fout, "T1 ");
-		if (i & 0x20) fprintf(fout, "T2 ");
-		if (i & 2) fprintf(fout, "CA1 ");
-		if (i & 1) fprintf(fout, "CA2 ");
-		if (i & 0x10) fprintf(fout, "CB1 ");
-		if (i & 8) fprintf(fout, "CB2 ");
-		if (i & 4) fprintf(fout, "Serial ");
-	} else
-		fprintf(fout, "None");
-	fputc('\n', fout);
-}
-
 
 /*
  *  Load data
  *  l start "file"
  */
 
-static void load_data(void)
+static void load_data()
 {
 	uint16_t adr;
 	FILE *file;
@@ -2129,11 +1890,12 @@ static void load_data(void)
 		return;
 	}
 
-	if (!(file = fopen(the_string, "rb")))
+	if (!(file = fopen(the_string.c_str(), "rb"))) {
 		error("Unable to open file");
-	else {
-		while ((fc = fgetc(file)) != EOF)
+	} else {
+		while ((fc = fgetc(file)) != EOF) {
 			SAMWriteByte(adr++, fc);
+		}
 		fclose(file);
 	}
 }
@@ -2144,7 +1906,7 @@ static void load_data(void)
  *  s start end "file"
  */
 
-static void save_data(void)
+static void save_data()
 {
 	bool done = false;
 	uint16_t adr, end_adr;
@@ -2163,9 +1925,9 @@ static void save_data(void)
 		return;
 	}
 
-	if (!(file = fopen(the_string, "wb")))
+	if (!(file = fopen(the_string.c_str(), "wb"))) {
 		error("Unable to create file");
-	else {
+	} else {
 		do {
 			if (adr == end_adr) done = true;
 
@@ -2173,4 +1935,322 @@ static void save_data(void)
 		} while (!done);
 		fclose(file);
 	}
+}
+
+
+/*
+ *  Get C64 state for SAM
+ */
+
+void SAM_GetState(C64 *the_c64)
+{
+	TheCPU = the_c64->TheCPU;
+	TheCPU1541 = the_c64->TheCPU1541;
+	TheVIC = the_c64->TheVIC;
+	TheSID = the_c64->TheSID;
+	TheCIA1 = the_c64->TheCIA1;
+	TheCIA2 = the_c64->TheCIA2;
+
+	// Get CPU registers and current memory configuration
+	TheCPU->GetState(&R64);
+	TheCPU->ExtConfig = (~R64.ddr | R64.pr) & 7;
+	TheCPU1541->GetState(&R1541);
+
+	address = R64.pc;
+}
+
+
+/*
+ *  Set C64 state from SAM
+ */
+
+void SAM_SetState(C64 *the_c64)
+{
+	// Set CPU registers
+	the_c64->TheCPU->SetState(&R64);
+	the_c64->TheCPU1541->SetState(&R1541);
+}
+
+
+/*
+ *  Execute command string
+ */
+
+void SAM_Exec(std::string line, std::string & retOutput, std::string & retError)
+{
+	input = line + '\n';
+	in_idx = 0;
+
+	output.clear();
+	error_output.clear();
+
+	if (assembling) {
+
+		// Handle assembler mode
+		assemble_line();
+
+	} else {
+
+		// Parse and execute command
+		char c = get_char();
+		switch (c) {
+			case 'a':		// Assemble
+				get_token();
+				assemble();
+				break;
+
+			case 'b':		// Binary dump
+				get_token();
+				binary_dump();
+				break;
+
+			case 'c':		// Compare
+				get_token();
+				compare();
+				break;
+
+			case 'd':		// Disassemble
+				get_token();
+				disassemble();
+				break;
+
+			case 'e':       // Interrupt vectors
+				int_vectors();
+				break;
+
+			case 'f':		// Fill
+				get_token();
+				fill();
+				break;
+
+			case 'h':		// Help
+				help();
+				break;
+
+			case 'i':		// ASCII dump
+				get_token();
+				ascii_dump();
+				break;
+
+			case 'k':		// Memory configuration
+				get_token();
+				mem_config();
+				break;
+
+			case 'l':		// Load data
+				get_token();
+				load_data();
+				break;
+
+			case 'm':		// Memory dump
+				get_token();
+				memory_dump();
+				break;
+
+			case 'n':		// Screen code dump
+				get_token();
+				screen_dump();
+				break;
+
+			case 'p':		// Sprite dump
+				get_token();
+				sprite_dump();
+				break;
+
+			case 'r':		// Registers
+				get_reg_token();
+				registers();
+				break;
+
+			case 's':		// Save data
+				get_token();
+				save_data();
+				break;
+
+			case 't':		// Transfer
+				get_token();
+				transfer();
+				break;
+
+			case 'v':		// View machine state
+				view_state();
+				break;
+
+			case ':':		// Change memory
+				get_token();
+				modify();
+				break;
+
+			case '1':		// Switch to 1541 mode
+				access_1541 = true;
+				break;
+
+			case '6':		// Switch to C64 mode
+				access_1541 = false;
+				break;
+
+			case '?':		// Compute expression
+				get_token();
+				print_expr();
+				break;
+
+			case '\n':		// Blank line
+				break;
+
+			default:		// Unknown command
+				error("Unknown command");
+				break;
+		}
+	}
+
+	retOutput = output;
+	retError = error_output;
+}
+
+
+/*
+ *  Return startup message
+ */
+
+std::string SAM_GetStartupMessage()
+{
+	return "\n"
+	       " *** SAM - Simple Assembler and Monitor ***\n"
+	       " ***         Press 'h' for help         ***\n\n";
+}
+
+
+/*
+ *  Return prompt string
+ */
+
+std::string SAM_GetPrompt()
+{
+	if (assembling) {
+		return format("{:04x}> ", address);
+	} else if (access_1541) {
+		return "1541> ";
+	} else {
+		return "C64> ";
+	}
+}
+
+
+/*
+ *  Run SAM in interactive mode
+ */
+
+void SAM(C64 *the_c64)
+{
+	// Get C64 system state
+	SAM_GetState(the_c64);
+
+	clearerr(stdin);
+
+	access_1541 = false;
+	assembling = false;
+
+	FILE * logfile = nullptr;
+
+	// Show startup message
+	std::cout << SAM_GetStartupMessage();
+	display_registers();
+	std::cout << output;
+
+	bool done = false;
+	while (!done) {
+
+		// Show prompt
+		std::cout << SAM_GetPrompt() << std::flush;
+
+		// Read input
+		if (std::cin.fail()) {
+			std::cin.clear();
+		}
+
+		std::string line;
+		std::getline(std::cin, line);
+
+		// EOF leaves the assembler, then SAM
+		if (std::cin.eof()) {
+			if (assembling) {
+				clearerr(stdin);
+				std::cout << std::endl;
+				assembling = false;
+				continue;
+			} else {
+				std::cout << "x\n";
+				done = true;
+				continue;
+			}
+		}
+
+		// Trim leading and trailing whitespace
+		auto is_space = [](char c) -> bool { return std::isspace(static_cast<unsigned char>(c)); };
+		auto trimmed = line | std::views::drop_while(is_space) | std::views::reverse | std::views::drop_while(is_space) | std::views::reverse;
+		line = std::string(std::begin(trimmed), std::end(trimmed));
+
+		// Parse and execute command
+		if (! assembling) {
+
+			// Handle "x" and "o" commands separately because they are
+			// special to interactive mode
+			if (line == "x") {
+
+				done = true;
+				continue;
+
+			} else if (line[0] == 'o') {
+
+				input = line + '\n';
+				in_idx = 0;
+
+				error_output.clear();
+
+				get_char();
+				get_token();
+
+				// Close old file
+				if (logfile) {
+					fclose(logfile);
+					logfile = nullptr;
+					continue;
+				}
+
+				// No argument given?
+				if (the_token == T_END)
+					continue;
+
+				// Otherwise open file
+				if (the_token == T_STRING) {
+					logfile = fopen(the_string.c_str(), "w");
+					if (logfile == nullptr) {
+						error("Unable to open file");
+					}
+				} else {
+					error("'\"' around file name expected");
+				}
+
+				std::cout << error_output;
+				continue;
+			}
+		}
+
+		std::string cmdOutput, cmdError;
+		SAM_Exec(std::move(line), cmdOutput, cmdError);
+
+		std::cout << cmdOutput;
+		std::cout << cmdError;
+
+		if (logfile) {
+			fprintf(logfile, cmdOutput.c_str());
+		}
+	}
+
+	if (logfile != nullptr) {
+		fclose(logfile);
+	}
+
+	// Copy back C64 system state
+	SAM_SetState(the_c64);
 }
