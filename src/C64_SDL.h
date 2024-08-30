@@ -45,8 +45,11 @@ void C64::c64_ctor1()
 	// Initialize joystick variables
 	joy_minx[0] = joy_miny[0] = -JOYSTICK_DEAD_ZONE;
 	joy_maxx[0] = joy_maxy[0] = +JOYSTICK_DEAD_ZONE;
+	joy_maxtrigger[0] = +JOYSTICK_DEAD_ZONE;
+
 	joy_minx[1] = joy_miny[1] = -JOYSTICK_DEAD_ZONE;
 	joy_maxx[1] = joy_maxy[1] = +JOYSTICK_DEAD_ZONE;
+	joy_maxtrigger[1] = +JOYSTICK_DEAD_ZONE;
 }
 
 void C64::c64_ctor2()
@@ -288,10 +291,18 @@ uint8_t C64::poll_joystick(int port)
 			j &= 0xfd;							// Down
 		}
 		if (SDL_GameControllerGetButton(controller[port], SDL_CONTROLLER_BUTTON_A) ||
-		    SDL_GameControllerGetButton(controller[port], SDL_CONTROLLER_BUTTON_B) ||
-		    SDL_GameControllerGetButton(controller[port], SDL_CONTROLLER_BUTTON_X) ||
-		    SDL_GameControllerGetButton(controller[port], SDL_CONTROLLER_BUTTON_Y)) {
+		    SDL_GameControllerGetButton(controller[port], SDL_CONTROLLER_BUTTON_B)) {
 			j &= 0xef;							// Button
+		}
+
+		// Left trigger controls rewind
+		int trigger = SDL_GameControllerGetAxis(controller[port], SDL_CONTROLLER_AXIS_TRIGGERLEFT);
+		if (trigger > joy_maxtrigger[port]) {
+			SetRewindMode(true);
+			joy_maxtrigger[port] = +(JOYSTICK_DEAD_ZONE - JOYSTICK_HYSTERESIS);
+		} else {
+			SetRewindMode(false);
+			joy_maxtrigger[port] = +JOYSTICK_DEAD_ZONE;
 		}
 
 		// Left stick is an alternative to D-pad

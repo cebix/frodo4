@@ -118,6 +118,7 @@ private:
 	bool have_a_break;			// Emulation thread shall pause
 
 	int joy_minx[2], joy_maxx[2], joy_miny[2], joy_maxy[2]; // For dynamic joystick calibration
+	int joy_maxtrigger[2];
 	uint8_t joykey;				// Joystick keyboard emulation mask value
 
 	uint8_t orig_kernal_1d84,	// Original contents of kernal locations $1d84 and $1d85
