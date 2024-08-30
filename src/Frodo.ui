@@ -152,6 +152,7 @@ Lutz Vieweg</property>
                         <property name="label" translatable="yes">Load Snapshot...</property>
                         <property name="use-underline">True</property>
                         <signal name="activate" handler="on_load_snapshot" swapped="no"/>
+                        <accelerator key="o" signal="activate" modifiers="GDK_CONTROL_MASK"/>
                       </object>
                     </child>
                     <child>
@@ -161,6 +162,7 @@ Lutz Vieweg</property>
                         <property name="label" translatable="yes">Save Snapshot...</property>
                         <property name="use-underline">True</property>
                         <signal name="activate" handler="on_save_snapshot" swapped="no"/>
+                        <accelerator key="s" signal="activate" modifiers="GDK_CONTROL_MASK"/>
                       </object>
                     </child>
                     <child>
@@ -193,6 +195,7 @@ Lutz Vieweg</property>
                         <property name="use-stock">False</property>
                         <property name="always-show-image">True</property>
                         <signal name="activate" handler="on_ok_clicked" swapped="no"/>
+                        <accelerator key="w" signal="activate" modifiers="GDK_CONTROL_MASK"/>
                       </object>
                     </child>
                     <child>
@@ -210,6 +213,7 @@ Lutz Vieweg</property>
                         <property name="use-stock">True</property>
                         <property name="always-show-image">True</property>
                         <signal name="activate" handler="on_quit_clicked" swapped="no"/>
+                        <accelerator key="q" signal="activate" modifiers="GDK_CONTROL_MASK"/>
                       </object>
                     </child>
                   </object>
