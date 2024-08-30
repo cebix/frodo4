@@ -9,8 +9,10 @@ Changes from V4.2 to V4.3:
  - Removed classic MacOS support
  - Removed Qtopia/Maemo support
  - SDL: numeric keypad Enter key toggles fullscreen mode
- - SDL: numeric keypad Plus key toggles speed limiter
- - SDL: numeric keypad Minus key for instant rewind
+ - SDL: numeric keypad Minus key (or left game controller trigger) for
+   instant rewind
+ - SDL: numeric keypad Plus key (or right game controller trigger) to
+   fast-forward
  - SDL: D-pad on game controllers now works
  - SDL: replaced status bar with overlay
  - SDL: added setting for status overlay display (ShowLEDs)

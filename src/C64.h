@@ -45,6 +45,13 @@ constexpr int DRIVE_ROM_SIZE = 0x4000;
 extern bool IsFrodoSC;
 
 
+enum PlayMode {
+	PLAY_MODE_PLAY,
+	PLAY_MODE_REWIND,
+	PLAY_MODE_FORWARD,
+};
+
+
 class Prefs;
 class C64Display;
 class MOS6510;
@@ -77,9 +84,8 @@ public:
 	void RestoreSnapshot(const Snapshot * s);
 	bool SaveSnapshot(const char * filename);
 	bool LoadSnapshot(const char * filename);
-	void SetRewindMode(bool on);
-	void ResetRewind();
-	bool Rewinding() { return rewinding; }
+	void SetPlayMode(PlayMode mode);
+	PlayMode GetPlayMode() { return play_mode; }
 
 	uint8_t *RAM, *Basic, *Kernal,
 	        *Char, *Color;		// C64
@@ -112,22 +118,24 @@ private:
 #endif
 	void thread_func();
 	void handle_rewind();
+	void reset_play_mode();
 
 	bool thread_running;		// Emulation thread is running
 	bool quit_thyself;			// Emulation thread shall quit
 	bool have_a_break;			// Emulation thread shall pause
 
 	int joy_minx[2], joy_maxx[2], joy_miny[2], joy_maxy[2]; // For dynamic joystick calibration
-	int joy_maxtrigger[2];
+	int joy_maxtrigl[2], joy_maxtrigr[2];
+	bool joy_trigl_on[2], joy_trigr_on[2];
 	uint8_t joykey;				// Joystick keyboard emulation mask value
 
 	uint8_t orig_kernal_1d84,	// Original contents of kernal locations $1d84 and $1d85
 	        orig_kernal_1d85;	// (for undoing the Fast Reset patch)
 
-	Snapshot * rewind_buffer = nullptr;	// Snapshot buffer for rewinding
-	size_t rewind_start = 0;			// Index of first recorded snapshot
-	size_t rewind_fill = 0;				// Number of recorded snapshots
-	bool rewinding = false;				// Whether in rewind mode
+	PlayMode play_mode = PLAY_MODE_PLAY;	// Current play mode
+	Snapshot * rewind_buffer = nullptr;		// Snapshot buffer for rewinding
+	size_t rewind_start = 0;				// Index of first recorded snapshot
+	size_t rewind_fill = 0;					// Number of recorded snapshots
 
 #ifdef __BEOS__
 public:

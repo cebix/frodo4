@@ -210,10 +210,12 @@ void C64Display::Update()
 			}
 		}
 
-		// Draw rewind marker
-		if (TheC64->Rewinding()) {
-			draw_string(DISPLAY_X - 24, DISPLAY_Y - 8, "<<", black);
-			draw_string(DISPLAY_X - 24, DISPLAY_Y - 9, "<<", shine_gray);
+		// Draw rewind/forward marker
+		PlayMode mode = TheC64->GetPlayMode();
+		if (mode != PLAY_MODE_PLAY) {
+			const char * str = (mode == PLAY_MODE_REWIND) ? "<<" : ">>";
+			draw_string(DISPLAY_X - 24, DISPLAY_Y - 8, str, black);
+			draw_string(DISPLAY_X - 24, DISPLAY_Y - 9, str, shine_gray);
 		}
 	}
 
@@ -557,12 +559,16 @@ void C64Display::PollKeyboard(uint8_t *key_matrix, uint8_t *rev_matrix, uint8_t 
 						}
 						break;
 
-					case SDL_SCANCODE_KP_PLUS:	// Plus on keypad: Toggle speed limiter
-						ThePrefs.LimitSpeed = !ThePrefs.LimitSpeed;
+					case SDL_SCANCODE_KP_PLUS:	// Plus on keypad: Fast-forward while pressed
+						if (TheC64->GetPlayMode() == PLAY_MODE_PLAY) {
+							TheC64->SetPlayMode(PLAY_MODE_FORWARD);
+						}
 						break;
 
 					case SDL_SCANCODE_KP_MINUS:	// Minus on keypad: Rewind while pressed
-						TheC64->SetRewindMode(true);
+						if (TheC64->GetPlayMode() == PLAY_MODE_PLAY) {
+							TheC64->SetPlayMode(PLAY_MODE_REWIND);
+						}
 						break;
 
 					default:
@@ -573,8 +579,14 @@ void C64Display::PollKeyboard(uint8_t *key_matrix, uint8_t *rev_matrix, uint8_t 
 
 			// Key released
 			case SDL_KEYUP:
-				if (event.key.keysym.scancode == SDL_SCANCODE_KP_MINUS) {
-					TheC64->SetRewindMode(false);
+				if (event.key.keysym.scancode == SDL_SCANCODE_KP_PLUS) {
+					if (TheC64->GetPlayMode() == PLAY_MODE_FORWARD) {
+						TheC64->SetPlayMode(PLAY_MODE_PLAY);
+					}
+				} else if (event.key.keysym.scancode == SDL_SCANCODE_KP_MINUS) {
+					if (TheC64->GetPlayMode() == PLAY_MODE_REWIND) {
+						TheC64->SetPlayMode(PLAY_MODE_PLAY);
+					}
 				} else {
 					translate_key(event.key.keysym.scancode, true, key_matrix, rev_matrix, joystick);
 				}

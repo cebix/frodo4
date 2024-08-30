@@ -197,7 +197,7 @@ void C64::Reset()
 	TheCIA2->Reset();
 	TheIEC->Reset();
 
-	ResetRewind();
+	reset_play_mode();
 }
 
 
@@ -235,7 +235,7 @@ void C64::NewPrefs(const Prefs *prefs)
 		TheCPU1541->AsyncReset();
 	}
 
-	ResetRewind();
+	reset_play_mode();
 }
 
 
@@ -504,7 +504,7 @@ bool C64::LoadSnapshot(const char * filename)
 	}
 
 	RestoreSnapshot(s.get());
-	ResetRewind();
+	reset_play_mode();
 
 	fclose(f);
 	return true;
@@ -512,24 +512,24 @@ bool C64::LoadSnapshot(const char * filename)
 
 
 /*
- *  Stop rewind mode and clear rewind buffer
+ *  Stop rewind/forward mode and clear rewind buffer
  */
 
-void C64::ResetRewind()
+void C64::reset_play_mode()
 {
-	SetRewindMode(false);
+	SetPlayMode(PLAY_MODE_PLAY);
 	rewind_start = 0;
 	rewind_fill = 0;
 }
 
 
 /*
- *  Start or stop rewind mode
+ *  Set rewind/forward mode
  */
 
-void C64::SetRewindMode(bool on)
+void C64::SetPlayMode(PlayMode mode)
 {
-	rewinding = on;
+	play_mode = mode;
 }
 
 
@@ -540,19 +540,7 @@ void C64::SetRewindMode(bool on)
 void C64::handle_rewind()
 {
 	if (rewind_buffer != nullptr) {
-		if (! rewinding) {
-
-			// Add snapshot to ring buffer
-			size_t write_index = (rewind_start + rewind_fill) % REWIND_LENGTH;
-			MakeSnapshot(rewind_buffer + write_index);
-
-			if (rewind_fill < REWIND_LENGTH) {
-				++rewind_fill;
-			} else {
-				rewind_start = (rewind_start + 1) % REWIND_LENGTH;
-			}
-
-		} else {
+		if (play_mode == PLAY_MODE_REWIND) {
 
 			// Pop snapshot from ring buffer
 			if (rewind_fill > 0) {
@@ -564,6 +552,18 @@ void C64::handle_rewind()
 				if (rewind_fill > 1) {
 					--rewind_fill;
 				}
+			}
+
+		} else {
+
+			// Add snapshot to ring buffer
+			size_t write_index = (rewind_start + rewind_fill) % REWIND_LENGTH;
+			MakeSnapshot(rewind_buffer + write_index);
+
+			if (rewind_fill < REWIND_LENGTH) {
+				++rewind_fill;
+			} else {
+				rewind_start = (rewind_start + 1) % REWIND_LENGTH;
 			}
 		}
 	}

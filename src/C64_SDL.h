@@ -29,7 +29,8 @@ namespace chrono = std::chrono;
 
 // For speed limiting to 50 fps
 static chrono::time_point<chrono::steady_clock> frame_start;
-constexpr int FRAME_TIME_us = 20000;  // 20 ms for 50 fps
+constexpr int FRAME_TIME_us = 20000;	// 20 ms for 50 fps
+constexpr int FORWARD_SCALE = 4;		// Fast-forward is four times faster
 
 // Joystick dead zone around center (+/-), and hysteresis to prevent jitter
 constexpr int JOYSTICK_DEAD_ZONE = 12000;
@@ -45,11 +46,13 @@ void C64::c64_ctor1()
 	// Initialize joystick variables
 	joy_minx[0] = joy_miny[0] = -JOYSTICK_DEAD_ZONE;
 	joy_maxx[0] = joy_maxy[0] = +JOYSTICK_DEAD_ZONE;
-	joy_maxtrigger[0] = +JOYSTICK_DEAD_ZONE;
+	joy_maxtrigl[0] = joy_maxtrigr[0] = +JOYSTICK_DEAD_ZONE;
+	joy_trigl_on[0] = joy_trigr_on[0] = false;
 
 	joy_minx[1] = joy_miny[1] = -JOYSTICK_DEAD_ZONE;
 	joy_maxx[1] = joy_maxy[1] = +JOYSTICK_DEAD_ZONE;
-	joy_maxtrigger[1] = +JOYSTICK_DEAD_ZONE;
+	joy_maxtrigl[1] = joy_maxtrigr[1] = +JOYSTICK_DEAD_ZONE;
+	joy_trigl_on[1] = joy_trigr_on[1] = false;
 }
 
 void C64::c64_ctor2()
@@ -101,12 +104,6 @@ void C64::Run()
 
 void C64::VBlank(bool draw_frame)
 {
-	// Poll keyboard
-	TheDisplay->PollKeyboard(TheCIA1->KeyMatrix, TheCIA1->RevMatrix, &joykey);
-	if (TheDisplay->quit_requested) {
-		quit_thyself = true;
-	}
-
 	// Poll joysticks
 	TheCIA1->Joystick1 = poll_joystick(0);
 	TheCIA1->Joystick2 = poll_joystick(1);
@@ -115,6 +112,12 @@ void C64::VBlank(bool draw_frame)
 		uint8_t tmp = TheCIA1->Joystick1;
 		TheCIA1->Joystick1 = TheCIA1->Joystick2;
 		TheCIA1->Joystick2 = tmp;
+	}
+
+	// Poll keyboard
+	TheDisplay->PollKeyboard(TheCIA1->KeyMatrix, TheCIA1->RevMatrix, &joykey);
+	if (TheDisplay->quit_requested) {
+		quit_thyself = true;
 	}
 
 	// Joystick keyboard emulation
@@ -145,8 +148,12 @@ void C64::VBlank(bool draw_frame)
 	// Limit speed to 100% if desired
 	if ((elapsed_us < FRAME_TIME_us) && ThePrefs.LimitSpeed) {
 		std::this_thread::sleep_until(frame_start);
-		frame_start += chrono::microseconds(FRAME_TIME_us);
-		speed_index = 100;
+		if (play_mode == PLAY_MODE_FORWARD) {
+			frame_start += chrono::microseconds(FRAME_TIME_us / FORWARD_SCALE);
+		} else {
+			frame_start += chrono::microseconds(FRAME_TIME_us);
+		}
+		speed_index = 100;	// Hide speed display even in fast-forwarding mode
 	} else {
 		frame_start = now;
 	}
@@ -297,12 +304,42 @@ uint8_t C64::poll_joystick(int port)
 
 		// Left trigger controls rewind
 		int trigger = SDL_GameControllerGetAxis(controller[port], SDL_CONTROLLER_AXIS_TRIGGERLEFT);
-		if (trigger > joy_maxtrigger[port]) {
-			SetRewindMode(true);
-			joy_maxtrigger[port] = +(JOYSTICK_DEAD_ZONE - JOYSTICK_HYSTERESIS);
+		if (trigger > joy_maxtrigl[port]) {
+			if (! joy_trigl_on[port]) {
+				if (GetPlayMode() == PLAY_MODE_PLAY) {
+					SetPlayMode(PLAY_MODE_REWIND);
+				}
+				joy_trigl_on[port] = true;
+			}
+			joy_maxtrigl[port] = +(JOYSTICK_DEAD_ZONE - JOYSTICK_HYSTERESIS);
 		} else {
-			SetRewindMode(false);
-			joy_maxtrigger[port] = +JOYSTICK_DEAD_ZONE;
+			if (joy_trigl_on[port]) {
+				if (GetPlayMode() == PLAY_MODE_REWIND) {
+					SetPlayMode(PLAY_MODE_PLAY);
+				}
+				joy_trigl_on[port] = false;
+			}
+			joy_maxtrigl[port] = +JOYSTICK_DEAD_ZONE;
+		}
+
+		// Right trigger controls fast-forward
+		trigger = SDL_GameControllerGetAxis(controller[port], SDL_CONTROLLER_AXIS_TRIGGERRIGHT);
+		if (trigger > joy_maxtrigr[port]) {
+			if (! joy_trigr_on[port]) {
+				if (GetPlayMode() == PLAY_MODE_PLAY) {
+					SetPlayMode(PLAY_MODE_FORWARD);
+				}
+				joy_trigr_on[port] = true;
+			}
+			joy_maxtrigr[port] = +(JOYSTICK_DEAD_ZONE - JOYSTICK_HYSTERESIS);
+		} else {
+			if (joy_trigr_on[port]) {
+				if (GetPlayMode() == PLAY_MODE_FORWARD) {
+					SetPlayMode(PLAY_MODE_PLAY);
+				}
+				joy_trigr_on[port] = false;
+			}
+			joy_maxtrigr[port] = +JOYSTICK_DEAD_ZONE;
 		}
 
 		// Left stick is an alternative to D-pad
