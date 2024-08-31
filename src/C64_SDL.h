@@ -57,8 +57,7 @@ void C64::c64_ctor1()
 
 void C64::c64_ctor2()
 {
-   	printf("Use F9 to enter the SAM machine language monitor,\n"
-   	       "F10 to edit preferences or quit,\n"
+   	printf("Use F10 to edit preferences or quit,\n"
    	       "F11 to cause an NMI (RESTORE key) and\n"
    	       "F12 to reset the C64.\n\n");
   

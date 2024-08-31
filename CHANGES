@@ -8,6 +8,8 @@ Changes from V4.2 to V4.3:
  - Removed RiscOS support
  - Removed classic MacOS support
  - Removed Qtopia/Maemo support
+ - SDL: SAM is now started from the "Tools" menu in the settings window
+   instead of by pressing F9
  - SDL: numeric keypad Enter key toggles fullscreen mode
  - SDL: numeric keypad Minus key (or left game controller trigger) for
    instant rewind

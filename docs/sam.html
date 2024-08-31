@@ -13,16 +13,14 @@ tears almost blinding him. "It's Sam, I've come!"
 
 <HR>
 
-Frodo has a built-in machine language monitor that can be activated at any
-time by pressing F9 (SDL, not available in full-screen mode) or selecting
-the appropriate menu item (BeOS): SAM (Simple Assembler and Monitor).
-It provides full access to the memory and hardware of the emulated C64 and
-1541 (under BeOS, you should only start SAM if you launched Frodo from the
-Shell).<P>
+Frodo has a built-in machine language monitor that can be activated from the
+"Tools" menu of the <A HREF="settings.html">settings window</A>: SAM (Simple
+Assembler and Monitor). It provides full access to the memory and hardware
+of the emulated C64 and 1541 (under BeOS, you should only start SAM if you
+launched Frodo from the Shell).<P>
 
 SAM is controlled by a command-based interface, all numbers are in hex.
-With the command "h" you can display a list of all commands. The command
-"x" quits SAM and returns to Frodo.<P>
+With the command "h" you can display a list of all commands.<P>
 
 SAM has two modes of operation, indicated by the prompt "C64>" or "1541>".
 You can switch between them with the "64" and "1541" commands. In "C64"
@@ -161,12 +159,12 @@ each byte as a screen code of the standard character set.<P>
 
 
 <PRE>
- o ["file"]          Redirect output
+ o ["file"]          Copy output
 </PRE><P>
 
-When a file name is specified, all following output is redirected to this
-file. The file name must be enclosed in quotation marks even if it contains
-no spaces. Entering "o" without parameters closes the file and directs the
+When a file name is specified, all following output is written to this file.
+The file name must be enclosed in quotation marks even if it contains no
+spaces. Entering "o" without parameters closes the file and directs the
 output into the window of SAM again.<P>
 
 
@@ -240,13 +238,6 @@ shows the state of the SID.<P>
 </PRE><P>
 
 shows the state of the VIC.<P>
-
-
-<PRE>
- x                   Return to Frodo
-</PRE><P>
-
-quits SAM and returns to Frodo.<P>
 
 
 <PRE>

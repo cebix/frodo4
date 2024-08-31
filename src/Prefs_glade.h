@@ -21,6 +21,7 @@
 #include "Version.h"
 
 #include "1541d64.h"
+#include "SAM.h"
 
 #include <gtk/gtk.h>
 
@@ -49,10 +50,16 @@ static GtkWidget *snapshot_accept_button = nullptr;
 // Dialog for creating disk image file
 static GtkWidget *create_image_dialog = nullptr;
 
+// SAM text view and buffer
+static GtkTextView *sam_view = nullptr;
+static GtkTextBuffer *sam_buffer = nullptr;
+static GtkTextMark *sam_input_start = nullptr;
+
 // Prototypes
 static void set_values();
 static void get_values();
 static void ghost_widgets();
+static void write_sam_output(std::string s, bool error = false);
 
 
 /*
@@ -128,11 +135,26 @@ bool Prefs::ShowEditor(bool startup, const char *prefs_name)
 		gtk_file_filter_set_name(filter, "All Files (*.*)");
 		gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(create_image_dialog), filter);
 
+		// Set up SAM view
+		sam_view = GTK_TEXT_VIEW(gtk_builder_get_object(builder, "sam_view"));
+		sam_buffer = gtk_text_view_get_buffer(sam_view);
+
+		gtk_text_buffer_create_tag(sam_buffer, "protected", "editable", false, nullptr);
+		gtk_text_buffer_create_tag(sam_buffer, "error", "foreground", "red", nullptr);
+
+		GtkTextIter start;
+		gtk_text_buffer_get_start_iter(sam_buffer, &start);
+		sam_input_start = gtk_text_buffer_create_mark(sam_buffer, "input_start", &start, true);
+
+		write_sam_output(SAM_GetStartupMessage());
+		write_sam_output(SAM_GetPrompt());
+
 		// Adjust menus for startup
 		gtk_menu_item_set_label(GTK_MENU_ITEM(gtk_builder_get_object(builder, "ok_menu")), "Start");
 		gtk_button_set_label(GTK_BUTTON(gtk_builder_get_object(builder, "ok_button")), "Start");
 		gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object(builder, "load_snapshot_menu")), false);
 		gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object(builder, "save_snapshot_menu")), false);
+		gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object(builder, "sam_menu")), false);
 
 	} else {
 
@@ -141,6 +163,9 @@ bool Prefs::ShowEditor(bool startup, const char *prefs_name)
 		gtk_button_set_label(GTK_BUTTON(gtk_builder_get_object(builder, "ok_button")), "Continue");
 		gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object(builder, "load_snapshot_menu")), true);
 		gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object(builder, "save_snapshot_menu")), true);
+		gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object(builder, "sam_menu")), true);
+
+		SAM_GetState(TheC64);
 	}
 
 	// Run editor
@@ -294,16 +319,128 @@ static void ghost_widgets()
 
 
 /*
+ *  SAM window handling
+ *  (inspired by https://github.com/SvenFestersen/GtkPyInterpreter)
+ */
+
+static void write_sam_output(std::string s, bool error)
+{
+	// Append non-editable text
+	GtkTextIter end;
+	gtk_text_buffer_get_end_iter(sam_buffer, &end);
+	if (error) {
+		gtk_text_buffer_insert_with_tags_by_name(sam_buffer, &end, s.c_str(), -1, "protected", "error", nullptr);
+	} else {
+		gtk_text_buffer_insert_with_tags_by_name(sam_buffer, &end, s.c_str(), -1, "protected", nullptr);
+	}
+
+	// Make cursor visible
+	gtk_text_view_scroll_mark_onscreen(sam_view, gtk_text_buffer_get_insert(sam_buffer));
+
+	// Move "start of input" mark to end of text
+	gtk_text_buffer_get_end_iter(sam_buffer, &end);
+	gtk_text_buffer_move_mark(sam_buffer, sam_input_start, &end);
+}
+
+extern "C" gboolean on_sam_view_key_press_event(GtkWidget *widget, GdkEventKey *event, gpointer user_data)
+{
+	const char * key = gdk_keyval_name(event->keyval);
+	if (strcmp(key, "Return") == 0) {
+
+		// Return pressed, fetch text input since last mark set
+		GtkTextIter start, end;
+		gtk_text_buffer_get_iter_at_mark(sam_buffer, &start, sam_input_start);
+		gtk_text_buffer_get_end_iter(sam_buffer, &end);
+		const char * input = gtk_text_buffer_get_text(sam_buffer, &start, &end, true);
+
+		// Append newline and make input non-editable
+		gtk_text_buffer_insert(sam_buffer, &end, "\n", -1);
+		gtk_text_buffer_get_iter_at_mark(sam_buffer, &start, sam_input_start);	// 'insert' has invalidated the iterators
+		gtk_text_buffer_get_end_iter(sam_buffer, &end);
+		gtk_text_buffer_apply_tag_by_name(sam_buffer, "protected", &start, &end);
+
+		// Execute command
+		std::string cmdOutput, cmdError;
+		SAM_Exec(input, cmdOutput, cmdError);
+
+		// Show output and prompt
+		write_sam_output(cmdOutput.c_str());
+		if (! cmdError.empty()) {
+			write_sam_output(cmdError.c_str(), true);
+		}
+		write_sam_output(SAM_GetPrompt());
+
+		return true;
+
+	} else if (strcmp(key, "Up") == 0) {
+
+		// Suppress "up" key
+		// TODO: command history?
+		return true;
+
+	} else if (strcmp(key, "Left") == 0) {
+
+		// Prevent cursor from moving into prompt
+		GtkTextIter cursor, input_start;
+		gtk_text_buffer_get_iter_at_mark(sam_buffer, &cursor, gtk_text_buffer_get_insert(sam_buffer));
+		gtk_text_buffer_get_iter_at_mark(sam_buffer, &input_start, sam_input_start);
+		return gtk_text_iter_equal(&cursor, &input_start);
+
+	} else if (strcmp(key, "Home") == 0) {
+
+		// Move cursor to start of input
+		GtkTextIter input_start;
+		gtk_text_buffer_get_iter_at_mark(sam_buffer, &input_start, sam_input_start);
+		gtk_text_buffer_place_cursor(sam_buffer, &input_start);
+		return true;
+	}
+
+	return false;
+}
+
+extern "C" void on_sam_copy_activate(GtkMenuItem *menuitem, gpointer user_data)
+{
+	gtk_text_buffer_copy_clipboard(sam_buffer, gtk_clipboard_get_default(gdk_display_get_default()));
+}
+
+extern "C" void on_sam_select_all_activate(GtkMenuItem *menuitem, gpointer user_data)
+{
+	GtkTextIter start, end;
+	gtk_text_buffer_get_start_iter(sam_buffer, &start);
+	gtk_text_buffer_get_end_iter(sam_buffer, &end);
+	gtk_text_buffer_select_range(sam_buffer, &start, &end);
+}
+
+extern "C" void on_sam_clear_activate(GtkMenuItem *menuitem, gpointer user_data)
+{
+	gtk_text_buffer_set_text(sam_buffer, "", -1);
+	write_sam_output(SAM_GetPrompt());
+}
+
+extern "C" void on_sam_close_activate(GtkMenuItem *menuitem, gpointer user_data)
+{
+	gtk_widget_hide(GTK_WIDGET(gtk_builder_get_object(builder, "sam_win")));
+}
+
+
+/*
  *  Signal handlers
  */
 
 extern "C" void on_ok_clicked(GtkButton *button, gpointer user_data)
 {
-	result = true;
 	get_values();
 	prefs->Save(prefs_path);
+
+	if (! in_startup) {
+		SAM_SetState(TheC64);
+	}
+
 	gtk_widget_hide(GTK_WIDGET(gtk_builder_get_object(builder, "prefs_win")));
 	gtk_widget_hide(GTK_WIDGET(gtk_builder_get_object(builder, "about_win")));
+	gtk_widget_hide(GTK_WIDGET(gtk_builder_get_object(builder, "sam_win")));
+
+	result = true;
 	gtk_main_quit();
 }
 
@@ -410,9 +547,21 @@ extern "C" void on_create_image(GtkMenuItem *menuitem, gpointer user_data)
 
 extern "C" void on_about_activate(GtkMenuItem *menuitem, gpointer user_data)
 {
-	GtkAboutDialog *about_win = GTK_ABOUT_DIALOG(gtk_builder_get_object(builder, "about_win"));
+	GtkAboutDialog * about_win = GTK_ABOUT_DIALOG(gtk_builder_get_object(builder, "about_win"));
 	gtk_about_dialog_set_program_name(about_win, VERSION_STRING);
 	gtk_window_present(GTK_WINDOW(about_win));
+}
+
+extern "C" void on_show_sam_monitor(GtkMenuItem *menuitem, gpointer user_data)
+{
+	GtkWindow * sam_win = GTK_WINDOW(gtk_builder_get_object(builder, "sam_win"));
+	gtk_window_present(sam_win);
+
+	// Place cursor at end
+	GtkTextIter end;
+	gtk_text_buffer_get_end_iter(sam_buffer, &end);
+	gtk_text_buffer_place_cursor(sam_buffer, &end);
+	gtk_text_view_scroll_mark_onscreen(sam_view, gtk_text_buffer_get_insert(sam_buffer));
 }
 
 extern "C" void on_emul1541_proc_toggled(GtkToggleButton *button, gpointer user_data)
@@ -477,6 +626,12 @@ extern "C" gboolean on_prefs_win_delete_event(GtkWidget *widget, GdkEvent *event
 }
 
 extern "C" gboolean on_about_win_delete_event(GtkWidget *widget, GdkEvent *event, gpointer user_data)
+{
+	// Prevent destruction
+	return gtk_widget_hide_on_delete(widget);
+}
+
+extern "C" gboolean on_sam_win_delete_event(GtkWidget *widget, GdkEvent *event, gpointer user_data)
 {
 	// Prevent destruction
 	return gtk_widget_hide_on_delete(widget);

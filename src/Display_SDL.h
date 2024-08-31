@@ -517,12 +517,6 @@ void C64Display::PollKeyboard(uint8_t *key_matrix, uint8_t *rev_matrix, uint8_t 
 			case SDL_KEYDOWN:
 				switch (event.key.keysym.scancode) {
 
-					case SDL_SCANCODE_F9:	// F9: Invoke SAM
-						if (ThePrefs.DisplayType == DISPTYPE_WINDOW) {  // don't invoke in fullscreen mode
-							SAM(TheC64);
-						}
-						break;
-
 					case SDL_SCANCODE_F10:	// F10: Prefs/Quit
 						TheC64->Pause();
 						if (ThePrefs.DisplayType == DISPTYPE_SCREEN) {  // exit fullscreen mode

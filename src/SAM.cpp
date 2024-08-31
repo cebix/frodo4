@@ -79,9 +79,13 @@ static size_t in_idx = 0;
 // Output text
 static std::string output, error_output;
 
-static uint16_t address, end_address;
+// True if SAM is running in command-line interactive mode
+static bool is_interactive = false;
 
+// True if in assembler mode
 static bool assembling = false;
+
+static uint16_t address, end_address;
 
 
 // Input tokens
@@ -755,9 +759,11 @@ static void help()
 	          "k [config]          Show/set C64 memory configuration\n"
 	          "l start \"file\"      Load data\n"
 	          "m [start] [end]     Memory dump\n"
-	          "n [start] [end]     Screen code dump\n"
-	          "o [\"file\"]          Copy output to file\n"
-	          "p [start] [end]     Sprite dump\n"
+	          "n [start] [end]     Screen code dump\n";
+	if (is_interactive) {
+		output += "o [\"file\"]          Copy output to file\n";
+	}
+	output += "p [start] [end]     Sprite dump\n"
 	          "r [reg value]       Show/set CPU registers\n"
 	          "s start end \"file\"  Save data\n"
 	          "t start end dest    Transfer memory\n"
@@ -765,9 +771,11 @@ static void help()
 	          "vc2                 View CIA 2 state\n"
 	          "vf                  View 1541 state\n"
 	          "vs                  View SID state\n"
-	          "vv                  View VIC state\n"
-	          "x                   Return to Frodo\n"
-	          ": addr {byte}       Modify memory\n"
+	          "vv                  View VIC state\n";
+	if (is_interactive) {
+		output += "x                   Return to Frodo\n";
+	}
+	output += ": addr {byte}       Modify memory\n"
 	          "1541                Switch to 1541\n"
 	          "64                  Switch to C64\n"
 	          "? expression        Calculate expression\n";
@@ -2142,6 +2150,8 @@ std::string SAM_GetPrompt()
 
 void SAM(C64 *the_c64)
 {
+	is_interactive = true;
+
 	// Get C64 system state
 	SAM_GetState(the_c64);
 
@@ -2253,4 +2263,6 @@ void SAM(C64 *the_c64)
 
 	// Copy back C64 system state
 	SAM_SetState(the_c64);
+
+	is_interactive = false;
 }
