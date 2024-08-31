@@ -20,12 +20,15 @@
  */
 
 #include "C64.h"
+#include "IEC.h"
 #include "SAM.h"
 #include "Version.h"
 
 #include <SDL.h>
 
+#include <filesystem>
 #include <format>
+namespace fs = std::filesystem;
 
 #include <stdlib.h>
 
@@ -591,6 +594,37 @@ void C64Display::PollKeyboard(uint8_t *key_matrix, uint8_t *rev_matrix, uint8_t 
 					translate_key(event.key.keysym.scancode, true, key_matrix, rev_matrix, joystick);
 				}
 				break;
+
+			// File dropped
+			case SDL_DROPFILE: {
+				char * filename = event.drop.file;
+				int type;
+
+				if (fs::is_directory(filename)) {
+
+					// Turn off 1541 processor emulation and mount directory
+					TheC64->Pause();
+					TheC64->SetEmul1541Proc(false, filename);
+					TheC64->Resume();
+
+				} else if (IsMountableFile(filename, type)) {
+
+					// Mount disk image file
+					TheC64->Pause();
+					TheC64->SetEmul1541Proc(ThePrefs.Emul1541Proc, filename);
+					TheC64->Resume();
+
+				} else if (IsSnapshotFile(filename)) {
+
+					// Load snapshot
+					TheC64->Pause();
+					TheC64->LoadSnapshot(filename);
+					TheC64->Resume();
+				}
+
+				SDL_free(filename);
+				break;
+			}
 
 			// Quit Frodo
 			case SDL_QUIT:

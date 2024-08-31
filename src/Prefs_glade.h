@@ -76,7 +76,6 @@ bool Prefs::ShowEditor(bool startup, const char *prefs_name)
 			builder = nullptr;
 		} else {
 			gtk_builder_connect_signals(builder, nullptr);
-			set_values();
 		}
 	}
 
@@ -146,6 +145,7 @@ bool Prefs::ShowEditor(bool startup, const char *prefs_name)
 
 	// Run editor
 	result = false;
+	set_values();
 
 	gtk_window_present(prefs_win);
 	gtk_main();

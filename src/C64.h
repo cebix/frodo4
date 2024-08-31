@@ -75,15 +75,22 @@ public:
 	void Quit();
 	void Pause();
 	void Resume();
+
 	void Reset();
 	void NMI();
+
 	void VBlank(bool draw_frame);
+
 	void NewPrefs(const Prefs *prefs);
+	void SetEmul1541Proc(bool on, const char * path = nullptr);
+
 	void PatchKernal(bool fast_reset, bool emul_1541_proc);
+
 	void MakeSnapshot(Snapshot * s);
 	void RestoreSnapshot(const Snapshot * s);
 	bool SaveSnapshot(const char * filename);
 	bool LoadSnapshot(const char * filename);
+
 	void SetPlayMode(PlayMode mode);
 	PlayMode GetPlayMode() { return play_mode; }
 
@@ -161,5 +168,12 @@ private:
 #endif
 };
 
+
+/*
+ *  Functions
+ */
+
+// Check whether file is a snapshot file
+extern bool IsSnapshotFile(const char * filename);
 
 #endif

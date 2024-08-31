@@ -945,15 +945,18 @@ void petscii2ascii(char *dest, const uint8_t *src, int n)
 bool IsMountableFile(const char *path, int &type)
 {
 	// Read header and determine file size
-	uint8_t header[64];
-	memset(header, 0, sizeof(header));
 	FILE *f = fopen(path, "rb");
-	if (f == NULL)
+	if (f == nullptr)
 		return false;
+
 	fseek(f, 0, SEEK_END);
 	long size = ftell(f);
 	fseek(f, 0, SEEK_SET);
+
+	uint8_t header[64];
+	memset(header, 0, sizeof(header));
 	fread(header, 1, sizeof(header), f);
+
 	fclose(f);
 
 	if (IsImageFile(path, header, size)) {

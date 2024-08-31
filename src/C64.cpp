@@ -240,6 +240,23 @@ void C64::NewPrefs(const Prefs *prefs)
 
 
 /*
+ *  Turn 1541 processor emulation on or off, and optionally set the drive path.
+ *  The emulation must be in the paused state!
+ */
+
+void C64::SetEmul1541Proc(bool on, const char * path)
+{
+	auto prefs = std::make_unique<Prefs>(ThePrefs);
+	if (path && strlen(path) < sizeof(Prefs::DrivePath[0])) {
+		strcpy(prefs->DrivePath[0], path);
+	}
+	prefs->Emul1541Proc = on;
+	NewPrefs(prefs.get());
+	ThePrefs = *prefs;
+}
+
+
+/*
  *  Patch kernal IEC routines
  */
 
@@ -428,11 +445,7 @@ void C64::RestoreSnapshot(const Snapshot * s)
 
 		// Switch on 1541 processor emulation if it is off
 		if (! ThePrefs.Emul1541Proc) {
-			auto prefs = std::make_unique<Prefs>(ThePrefs);
-			strcpy(prefs->DrivePath[0], s->drive8Path);
-			prefs->Emul1541Proc = true;
-			NewPrefs(prefs.get());
-			ThePrefs = *prefs;
+			SetEmul1541Proc(true, s->drive8Path);
 		}
 
 		TheCPU1541->SetState(&(s->driveCpu));
@@ -442,10 +455,7 @@ void C64::RestoreSnapshot(const Snapshot * s)
 
 		// Switch off 1541 processor emulation if it is on
 		if (ThePrefs.Emul1541Proc) {
-			auto prefs = std::make_unique<Prefs>(ThePrefs);
-			prefs->Emul1541Proc = false;
-			NewPrefs(prefs.get());
-			ThePrefs = *prefs;
+			SetEmul1541Proc(false);
 		}
 	}
 }
@@ -483,7 +493,7 @@ bool C64::SaveSnapshot(const char * filename)
 
 bool C64::LoadSnapshot(const char * filename)
 {
-	FILE * f = f = fopen(filename, "rb");
+	FILE * f = fopen(filename, "rb");
 	if (f == nullptr) {
 		ShowRequester("Can't open snapshot file", "OK", nullptr);
 		return false;
@@ -567,6 +577,32 @@ void C64::handle_rewind()
 			}
 		}
 	}
+}
+
+
+/*
+ *  Check whether file is a snapshot file
+ */
+
+bool IsSnapshotFile(const char * filename)
+{
+	FILE * f = fopen(filename, "rb");
+	if (f == nullptr)
+		return false;
+
+	fseek(f, 0, SEEK_END);
+	long size = ftell(f);
+	fseek(f, 0, SEEK_SET);
+
+	if (size != sizeof(Snapshot))
+		return false;
+
+	uint8_t magic[sizeof(Snapshot::magic)];
+	memset(magic, 0, sizeof(magic));
+	fread(magic, sizeof(magic), 1, f);
+	fclose(f);
+
+	return memcmp(magic, SNAPSHOT_HEADER, sizeof(magic)) == 0;
 }
 
 

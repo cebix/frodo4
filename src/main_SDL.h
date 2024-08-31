@@ -28,8 +28,7 @@
 
 #include <cstdlib>
 #include <ctime>
-
-#include <iostream>
+#include <memory>
 
 
 // Global variables
@@ -100,6 +99,15 @@ void Frodo::ArgvReceived(int argc, char **argv)
  *  Arguments processed, run emulation
  */
 
+#ifdef HAVE_GLADE
+static gboolean pump_sdl_events(gpointer user_data)
+{
+	SDL_Event event;
+	SDL_WaitEventTimeout(&event, 5);
+	return true;
+}
+#endif
+
 void Frodo::ReadyToRun()
 {
 	getcwd(AppDirPath, 256);
@@ -111,10 +119,13 @@ void Frodo::ReadyToRun()
 	}
 	ThePrefs.Load(prefs_path.c_str());
 
-	// Show preferences editor
 #ifdef HAVE_GLADE
+	// Show preferences editor
 	if (!ThePrefs.ShowEditor(true, prefs_path.c_str()))
 		return;  // "Quit" clicked
+
+	// Keep SDL event loop running while preferences editor is open the next time
+	g_idle_add(pump_sdl_events, nullptr);
 #endif
 
 	// Create and start C64
@@ -131,12 +142,11 @@ void Frodo::ReadyToRun()
 
 bool Frodo::RunPrefsEditor()
 {
-	Prefs *prefs = new Prefs(ThePrefs);
+	auto prefs = std::make_unique<Prefs>(ThePrefs);
 	bool result = prefs->ShowEditor(false, prefs_path.c_str());
 	if (result) {
-		TheC64->NewPrefs(prefs);
+		TheC64->NewPrefs(prefs.get());
 		ThePrefs = *prefs;
 	}
-	delete prefs;
 	return result;
 }
