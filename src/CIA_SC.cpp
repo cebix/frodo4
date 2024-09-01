@@ -50,18 +50,6 @@
 #include "Prefs.h"
 
 
-// Timer states
-enum {
-	T_STOP,
-	T_WAIT_THEN_COUNT,
-	T_LOAD_THEN_STOP,
-	T_LOAD_THEN_COUNT,
-	T_LOAD_THEN_WAIT_THEN_COUNT,
-	T_COUNT,
-	T_COUNT_THEN_STOP
-};
-
-
 /*
  *  Constructors
  */
@@ -156,6 +144,17 @@ void MOS6526::GetState(MOS6526State *cs)
 
 	cs->int_data = icr;
 	cs->int_mask = int_mask;
+
+	cs->ta_irq_next_cycle = ta_irq_next_cycle;
+	cs->tb_irq_next_cycle = tb_irq_next_cycle;
+	cs->has_new_cra = has_new_cra;
+	cs->has_new_crb = has_new_crb;
+	cs->ta_toggle = ta_toggle;
+	cs->tb_toggle = tb_toggle;
+	cs->ta_state = ta_state;
+	cs->tb_state = tb_state;
+	cs->new_cra = new_cra;
+	cs->new_crb = new_crb;
 }
 
 
@@ -196,8 +195,16 @@ void MOS6526::SetState(const MOS6526State *cs)
 	tb_cnt_phi2 = ((crb & 0x60) == 0x00);
 	tb_cnt_ta = ((crb & 0x40) == 0x40);		// Ignore CNT, which is pulled high
 
-	ta_state = (cra & 1) ? T_COUNT : T_STOP;
-	tb_state = (crb & 1) ? T_COUNT : T_STOP;
+	ta_irq_next_cycle = cs->ta_irq_next_cycle;
+	tb_irq_next_cycle = cs->tb_irq_next_cycle;
+	has_new_cra = cs->has_new_cra;
+	has_new_crb = cs->has_new_crb;
+	ta_toggle = cs->ta_toggle;
+	tb_toggle = cs->tb_toggle;
+	ta_state = cs->ta_state;
+	tb_state = cs->tb_state;
+	new_cra = cs->new_cra;
+	new_crb = cs->new_crb;
 }
 
 
@@ -283,6 +290,12 @@ uint8_t MOS6526_1::ReadRegister(uint16_t adr)
 		case 0x0d: {
 			uint8_t ret = icr;			// Read and clear ICR
 			icr = 0;
+			if (ta_irq_next_cycle) {
+				ta_irq_next_cycle = false;
+			}
+			if (tb_irq_next_cycle) {
+				tb_irq_next_cycle = false;
+			}
 			the_cpu->ClearCIAIRQ();		// Clear IRQ
 			return ret;
 		}
@@ -327,6 +340,12 @@ uint8_t MOS6526_2::ReadRegister(uint16_t adr)
 		case 0x0d: {
 			uint8_t ret = icr; // Read and clear ICR
 			icr = 0;
+			if (ta_irq_next_cycle) {
+				ta_irq_next_cycle = false;
+			}
+			if (tb_irq_next_cycle) {
+				tb_irq_next_cycle = false;
+			}
 			the_cpu->ClearNMI();
 			return ret;
 		}

@@ -122,6 +122,17 @@ private:
 };
 
 
+// Timer states
+enum {
+	T_STOP,
+	T_WAIT_THEN_COUNT,
+	T_LOAD_THEN_STOP,
+	T_LOAD_THEN_COUNT,
+	T_LOAD_THEN_WAIT_THEN_COUNT,
+	T_COUNT,
+	T_COUNT_THEN_STOP
+};
+
 // CIA state
 struct MOS6526State {
 	uint8_t pra;
@@ -148,6 +159,18 @@ struct MOS6526State {
 	uint8_t alm_min;
 	uint8_t alm_hr;
 	uint8_t int_mask;	// Enabled interrupts
+
+						// FrodoSC:
+	bool ta_irq_next_cycle;
+	bool tb_irq_next_cycle;
+	bool has_new_cra;
+	bool has_new_crb;
+	bool ta_toggle;
+	bool tb_toggle;
+	char ta_state;
+	char tb_state;
+	uint8_t new_cra;
+	uint8_t new_crb;
 };
 
 

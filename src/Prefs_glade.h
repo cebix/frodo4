@@ -494,6 +494,7 @@ extern "C" void on_save_snapshot(GtkMenuItem *menuitem, gpointer user_data)
 	if (res == GTK_RESPONSE_ACCEPT) {
 		filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(snapshot_dialog));
 		save_ok = TheC64->SaveSnapshot(filename);
+		SAM_GetState(TheC64);	// Saving a snapshot may advance the state a few cycles
 	}
 
 	gtk_widget_hide(snapshot_dialog);
