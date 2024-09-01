@@ -82,8 +82,8 @@ static uint8_t sid_random()
 
 MOS6581::MOS6581(C64 *c64) : the_c64(c64)
 {
-	the_renderer = NULL;
-	for (int i=0; i<32; i++) {
+	the_renderer = nullptr;
+	for (unsigned i = 0; i < 32; ++i) {
 		regs[i] = 0;
 	}
 
@@ -109,14 +109,16 @@ MOS6581::~MOS6581()
 
 void MOS6581::Reset()
 {
-	for (int i=0; i<32; i++) {
+	for (unsigned i = 0; i < 32; ++i) {
 		regs[i] = 0;
 	}
 	last_sid_byte = 0;
+	fake_v3_count = 0;
 
 	// Reset the renderer
-	if (the_renderer != NULL)
+	if (the_renderer != nullptr) {
 		the_renderer->Reset();
+	}
 }
 
 
@@ -127,7 +129,7 @@ void MOS6581::Reset()
 void MOS6581::NewPrefs(const Prefs *prefs)
 {
 	open_close_renderer(ThePrefs.SIDType, prefs->SIDType);
-	if (the_renderer != NULL) {
+	if (the_renderer != nullptr) {
 		the_renderer->NewPrefs(prefs);
 	}
 }
@@ -139,7 +141,7 @@ void MOS6581::NewPrefs(const Prefs *prefs)
 
 void MOS6581::PauseSound()
 {
-	if (the_renderer != NULL) {
+	if (the_renderer != nullptr) {
 		the_renderer->Pause();
 	}
 }
@@ -151,8 +153,40 @@ void MOS6581::PauseSound()
 
 void MOS6581::ResumeSound()
 {
-	if (the_renderer != NULL) {
+	if (the_renderer != nullptr) {
 		the_renderer->Resume();
+	}
+}
+
+
+/*
+ *  Simulate oscillator 3 read-back
+ */
+
+uint8_t MOS6581::read_osc3() const
+{
+	uint8_t v3_ctrl = regs[0x12];   // Voice 3 control register
+	if (v3_ctrl & 0x10) {			// Triangle wave
+		// TODO: ring modulation from voice 2
+		if (fake_v3_count & 0x800000) {
+			return (fake_v3_count >> 15) ^ 0xff;
+		} else {
+			return fake_v3_count >> 15;
+		}
+	} else if (v3_ctrl & 0x20) {	// Sawtooth wave
+		return fake_v3_count >> 16;
+	} else if (v3_ctrl & 0x40) {	// Rectangle wave
+		uint32_t pw = ((regs[0x11] & 0x0f) << 8) | regs[0x10];
+		if (fake_v3_count > (pw << 12)) {
+			return 0xff;
+		} else {
+			return 0x00;
+		}
+	} else if (v3_ctrl & 0x80) {	// Noise wave
+		return sid_random();
+	} else {
+		// TODO: combined waveforms
+		return 0;
 	}
 }
 
@@ -194,8 +228,10 @@ void MOS6581::GetState(MOS6581State *ss)
 
 	ss->pot_x = 0xff;
 	ss->pot_y = 0xff;
-	ss->osc_3 = 0;
+	ss->osc_3 = read_osc3();
 	ss->env_3 = 0;
+
+	ss->v3_count = fake_v3_count;
 }
 
 
@@ -234,9 +270,11 @@ void MOS6581::SetState(const MOS6581State *ss)
 	regs[23] = ss->res_filt;
 	regs[24] = ss->mode_vol;
 
+	fake_v3_count = ss->v3_count;
+
 	// Stuff the new register values into the renderer
-	if (the_renderer != NULL) {
-		for (int i=0; i<25; i++) {
+	if (the_renderer != nullptr) {
+		for (unsigned i = 0; i < 25; ++i) {
 			the_renderer->WriteRegister(i, regs[i]);
 		}
 	}
@@ -293,8 +331,8 @@ struct DRVoice {
 	DRVoice *mod_by;	// Voice that modulates this one
 	DRVoice *mod_to;	// Voice that is modulated by this one
 
-	uint32_t count;		// Counter for waveform generator, 8.16 fixed
-	uint32_t add;		// Added to counter in every frame
+	uint32_t count;		// Phase accumulator for waveform generator, 8.16 fixed
+	uint32_t add;		// Added to accumulator in every frame
 
 	uint16_t freq;		// SID frequency value
 	uint16_t pw;		// SID pulse-width value
@@ -341,7 +379,6 @@ private:
 	bool ready;						// Flag: Renderer has initialized and is ready
 	uint8_t volume;					// Master volume
 
-	static uint16_t TriTable[0x1000*2];	// Tables for certain waveforms
 	static const uint16_t TriSawTable[0x100];
 	static const uint16_t TriRectTable[0x100];
 	static const uint16_t SawRectTable[0x100];
@@ -378,8 +415,6 @@ private:
 };
 
 // Static data members
-uint16_t DigitalRenderer::TriTable[0x1000*2];
-
 #ifndef EMUL_MOS8580
 // Sampled from a 6581R4
 const uint16_t DigitalRenderer::TriSawTable[0x100] = {
@@ -714,14 +749,8 @@ DigitalRenderer::DigitalRenderer(C64 *c64) : the_c64(c64)
 	voice[1].mod_to = &voice[2];
 	voice[2].mod_to = &voice[0];
 
-	// Calculate triangle table
-	for (int i=0; i<0x1000; i++) {
-		TriTable[i] = (i << 4) | (i >> 8);
-		TriTable[0x1fff-i] = (i << 4) | (i >> 8);
-	}
-
 #ifdef PRECOMPUTE_RESONANCE
-	for (int i=0; i<256; i++) {
+	for (unsigned i = 0; i < 256; ++i) {
 		resonanceLP[i] = CALC_RESONANCE_LP(i);
 		resonanceHP[i] = CALC_RESONANCE_HP(i);
 	}
@@ -742,7 +771,7 @@ void DigitalRenderer::Reset()
 {
 	volume = 0;
 
-	for (int v=0; v<3; v++) {
+	for (unsigned v = 0; v < 3; ++v) {
 		voice[v].wave = WAVE_NONE;
 		voice[v].eg_state = EG_IDLE;
 		voice[v].count = voice[v].add = 0;
@@ -770,6 +799,7 @@ void DigitalRenderer::Reset()
 
 void DigitalRenderer::EmulateLine()
 {
+	// Record sampled voice produced via volume control bits
 	sample_buf[sample_in_ptr] = volume;
 	sample_in_ptr = (sample_in_ptr + 1) % SAMPLE_BUF_SIZE;
 }
@@ -1096,7 +1126,7 @@ void DigitalRenderer::calc_buffer(int16_t *buf, long count)
 		int32_t sum_output_filter = 0;
 
 		// Loop for all three voices
-		for (int j=0; j<3; j++) {
+		for (unsigned j = 0; j < 3; ++j) {
 			DRVoice *v = &voice[j];
 
 			// Envelope generators
@@ -1133,8 +1163,6 @@ void DigitalRenderer::calc_buffer(int16_t *buf, long count)
 			envelope = (v->eg_level * master_volume) >> 20;
 
 			// Waveform generator
-			if (v->mute)
-				continue;
 			uint16_t output;
 
 			if (!v->test) {
@@ -1148,13 +1176,18 @@ void DigitalRenderer::calc_buffer(int16_t *buf, long count)
 			v->count &= 0xffffff;
 
 			switch (v->wave) {
-				case WAVE_TRI:
+				case WAVE_TRI: {
+					uint32_t ctrl = v->count;
 					if (v->ring) {
-						output = TriTable[(v->count ^ (v->mod_by->count & 0x800000)) >> 11];
+						ctrl ^= v->mod_by->count;
+					}
+					if (ctrl & 0x800000) {
+						output = (v->count >> 7) ^ 0xffff;
 					} else {
-						output = TriTable[v->count >> 11];
+						output = v->count >> 7;
 					}
 					break;
+				}
 				case WAVE_SAW:
 					output = v->count >> 8;
 					break;
@@ -1203,7 +1236,7 @@ void DigitalRenderer::calc_buffer(int16_t *buf, long count)
 			}
 			if (v->filter) {
 				sum_output_filter += (int16_t)(output ^ 0x8000) * envelope;
-			} else {
+			} else if (!v->mute) {
 				sum_output += (int16_t)(output ^ 0x8000) * envelope;
 			}
 		}
@@ -1224,7 +1257,7 @@ void DigitalRenderer::calc_buffer(int16_t *buf, long count)
 		}
 
 		// Write to buffer
-		*buf++ = (sum_output + sum_output_filter) >> 10;
+		*buf++ = (sum_output - sum_output_filter) >> 10;
 	}
 }
 
@@ -1267,12 +1300,12 @@ void MOS6581::open_close_renderer(int old_type, int new_type)
 		the_renderer = new CatweaselRenderer;
 #endif
 	} else {
-		the_renderer = NULL;
+		the_renderer = nullptr;
 	}
 
 	// Stuff the current register values into the new renderer
-	if (the_renderer != NULL) {
-		for (int i=0; i<25; i++) {
+	if (the_renderer != nullptr) {
+		for (unsigned i = 0; i < 25; ++i) {
 			the_renderer->WriteRegister(i, regs[i]);
 		}
 	}

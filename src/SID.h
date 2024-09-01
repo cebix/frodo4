@@ -21,6 +21,8 @@
 #ifndef _SID_H
 #define _SID_H
 
+#include "Prefs.h"
+
 #include <stdlib.h>
 
 
@@ -29,7 +31,6 @@
 #undef EMUL_MOS8580
 
 
-class Prefs;
 class C64;
 class SIDRenderer;
 struct MOS6581State;
@@ -52,11 +53,14 @@ public:
 
 private:
 	void open_close_renderer(int old_type, int new_type);
+	uint8_t read_osc3() const;
 
 	C64 *the_c64;				// Pointer to C64 object
 	SIDRenderer *the_renderer;	// Pointer to current renderer
+
 	uint8_t regs[32];			// Copies of the 25 write-only SID registers
 	uint8_t last_sid_byte;		// Last value written to SID
+	uint32_t fake_v3_count;		// Fake voice 3 phase accumulator for oscillator read-back
 };
 
 
@@ -108,6 +112,8 @@ struct MOS6581State {
 	uint8_t pot_y;
 	uint8_t osc_3;
 	uint8_t env_3;
+
+	uint32_t v3_count;
 };
 
 
@@ -117,6 +123,15 @@ struct MOS6581State {
 
 inline void MOS6581::EmulateLine()
 {
+	// Simulate voice 3 phase accumulator
+	uint8_t v3_ctrl = regs[0x12];	// Voice 3 control register
+	if (v3_ctrl & 0x08) {			// Test bit
+		fake_v3_count = 0;
+	} else {
+		uint32_t add = (regs[0x0f] << 8) | regs[0x0e];
+		fake_v3_count = (fake_v3_count + add * ThePrefs.NormalCycles) & 0xffffff;
+	}
+
 	if (the_renderer != NULL) {
 		the_renderer->EmulateLine();
 	}
@@ -129,14 +144,20 @@ inline void MOS6581::EmulateLine()
 
 inline uint8_t MOS6581::ReadRegister(uint16_t adr)
 {
-	// A/D converters
+	// A/D converters are not implemented
 	if (adr == 0x19 || adr == 0x1a) {
 		last_sid_byte = 0;
 		return 0xff;
 	}
 
-	// Voice 3 oscillator/EG readout
-	if (adr == 0x1b || adr == 0x1c) {
+	// Voice 3 oscillator read-back
+	if (adr == 0x1b) {
+		last_sid_byte = 0;
+		return read_osc3();
+	}
+
+	// TODO: Voice 3 EG read-back is not implemented
+	if (adr == 0x1c) {
 		last_sid_byte = 0;
 		return rand();
 	}

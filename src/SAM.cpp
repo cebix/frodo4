@@ -1662,7 +1662,7 @@ static void view_sid_state()
 	dump_sid_waveform(ss.ctrl_3);
 	output += format(" Gate       : {}  Ring mod.: {}\n", ss.ctrl_3 & 0x01 ? "On " : "Off", ss.ctrl_3 & 0x04 ? "On" : "Off");
 	output += format(" Test bit   : {}  Synchron.: {}\n", ss.ctrl_3 & 0x08 ? "On " : "Off", ss.ctrl_3 & 0x02 ? "On" : "Off");
-	output += format(" Filter     : {}  Mute     : {}\n", ss.res_filt & 0x04 ? "On" : "Off", ss.mode_vol & 0x80 ? "Yes" : "No");
+	output += format(" Filter     : {}  Mute     : {}\n", ss.res_filt & 0x04 ? "On " : "Off", ss.mode_vol & 0x80 ? "Yes" : "No");
 
 	output += "\nFilters/Volume\n";
 	output += format(" Frequency: {:04x}\n", (ss.fc_hi << 3) | (ss.fc_lo & 0x07));

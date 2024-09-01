@@ -10,6 +10,8 @@ Changes from V4.2 to V4.3:
  - Removed Qtopia/Maemo support
  - SDL: SAM is now started from the "Tools" menu in the settings window
    instead of by pressing F9
+ - SDL: snapshot files can be loaded and disk image files attached by
+   dragging them onto the emulator window
  - SDL: numeric keypad Enter key toggles fullscreen mode
  - SDL: numeric keypad Minus key (or left game controller trigger) for
    instant rewind
@@ -19,6 +21,7 @@ Changes from V4.2 to V4.3:
  - SDL: replaced status bar with overlay
  - SDL: added setting for status overlay display (ShowLEDs)
  - SDL: added setting for initial window size (ScalingNumerator)
+ - Added simulation of SID register 27 (oscillator 3 read-back)
 
 Changes from V4.1b to V4.2:
  - Changed license to GPL
