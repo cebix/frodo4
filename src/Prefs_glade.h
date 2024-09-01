@@ -570,6 +570,20 @@ extern "C" void on_emul1541_proc_toggled(GtkToggleButton *button, gpointer user_
 	ghost_widgets();
 }
 
+extern "C" void on_drive_path_file_set(GtkFileChooserButton *button, gpointer user_data)
+{
+	gchar *path = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(button));
+	int type;
+	if (! IsMountableFile(path, type)) {
+
+		// Not a disk image file, mount the parent directory instead
+		gchar *dir = g_path_get_dirname(path);
+		gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(button), dir);
+		g_free(dir);
+	}
+	g_free(path);
+}
+
 extern "C" void on_drive8_next_disk_clicked(GtkButton *button, gpointer user_data)
 {
 	get_drive_path(0, "drive8_path");

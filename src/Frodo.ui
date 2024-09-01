@@ -523,6 +523,7 @@ Lutz Vieweg</property>
                                 <property name="visible">True</property>
                                 <property name="can-focus">False</property>
                                 <property name="title" translatable="yes"/>
+                                <signal name="file-set" handler="on_drive_path_file_set" swapped="no"/>
                               </object>
                               <packing>
                                 <property name="left-attach">1</property>
@@ -534,6 +535,7 @@ Lutz Vieweg</property>
                                 <property name="visible">True</property>
                                 <property name="can-focus">False</property>
                                 <property name="title" translatable="yes"/>
+                                <signal name="file-set" handler="on_drive_path_file_set" swapped="no"/>
                               </object>
                               <packing>
                                 <property name="left-attach">1</property>
@@ -545,6 +547,7 @@ Lutz Vieweg</property>
                                 <property name="visible">True</property>
                                 <property name="can-focus">False</property>
                                 <property name="title" translatable="yes"/>
+                                <signal name="file-set" handler="on_drive_path_file_set" swapped="no"/>
                               </object>
                               <packing>
                                 <property name="left-attach">1</property>
@@ -556,6 +559,7 @@ Lutz Vieweg</property>
                                 <property name="visible">True</property>
                                 <property name="can-focus">False</property>
                                 <property name="title" translatable="yes"/>
+                                <signal name="file-set" handler="on_drive_path_file_set" swapped="no"/>
                               </object>
                               <packing>
                                 <property name="left-attach">1</property>
