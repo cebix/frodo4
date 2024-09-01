@@ -174,7 +174,7 @@ void MOS6526::SetState(const MOS6526State *cs)
 	tod_halt = false;
 	ta_cnt_phi2 = ((cra & 0x21) == 0x01);
 	tb_cnt_phi2 = ((crb & 0x61) == 0x01);
-	tb_cnt_ta = ((crb & 0x61) == 0x41);
+	tb_cnt_ta = ((crb & 0x41) == 0x41);		// Ignore CNT, which is pulled high
 }
 
 
@@ -373,7 +373,7 @@ void MOS6526_1::WriteRegister(uint16_t adr, uint8_t byte)
 				tb = latchb;
 			}
 			tb_cnt_phi2 = ((byte & 0x61) == 0x01);
-			tb_cnt_ta = ((byte & 0x61) == 0x41);
+			tb_cnt_ta = ((byte & 0x41) == 0x41);	// Ignore CNT, which is pulled high
 			break;
 	}
 }
@@ -489,7 +489,7 @@ void MOS6526_2::WriteRegister(uint16_t adr, uint8_t byte)
 				tb = latchb;
 			}
 			tb_cnt_phi2 = ((byte & 0x61) == 0x01);
-			tb_cnt_ta = ((byte & 0x61) == 0x41);
+			tb_cnt_ta = ((byte & 0x41) == 0x41);	// Ignore CNT, which is pulled high
 			break;
 	}
 }
