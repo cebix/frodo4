@@ -147,6 +147,7 @@ void MOS6526::GetState(MOS6526State *cs)
 	cs->tb_state = (crb & 1) ? T_COUNT : T_STOP;
 	cs->new_cra = 0;
 	cs->new_crb = 0;
+	cs->ta_output = 0;
 }
 
 

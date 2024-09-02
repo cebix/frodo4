@@ -84,6 +84,7 @@ void MOS6526::Reset()
 	has_new_cra = has_new_crb = false;
 	ta_toggle = tb_toggle = false;
 	ta_state = tb_state = T_STOP;
+	ta_output = 0;
 }
 
 void MOS6526_1::Reset()
@@ -155,6 +156,7 @@ void MOS6526::GetState(MOS6526State *cs)
 	cs->tb_state = tb_state;
 	cs->new_cra = new_cra;
 	cs->new_crb = new_crb;
+	cs->ta_output = ta_output;
 }
 
 
@@ -205,6 +207,7 @@ void MOS6526::SetState(const MOS6526State *cs)
 	tb_state = cs->tb_state;
 	new_cra = cs->new_cra;
 	new_crb = cs->new_crb;
+	ta_output = cs->ta_output;
 }
 
 
@@ -718,21 +721,28 @@ ta_idle:
 
 	// Count timer B
 tb_count:
-	if (tb_cnt_phi2 || (tb_cnt_ta && ta_underflow)) {
-		if (!tb || !--tb) {				// Decrement timer, underflow?
+	if (tb_cnt_phi2 || tb_cnt_ta) {
+		if (tb != 0) {	// Decrement timer if != 0
+			if (tb_cnt_phi2 || (tb_cnt_ta && (ta_output & 0x03) == 0x02)) {	// Cascaded mode takes two cycles to count
+				--tb;
+			}
+		}
+		if (tb == 0) {	// Timer expired?
 			if (tb_state != T_STOP) {
 tb_interrupt:
-				tb = latchb;			// Reload timer
-				tb_irq_next_cycle = true; // Trigger interrupt in next cycle
-				icr |= 2;				// But set ICR bit now
-				tb_toggle = !tb_toggle;	// Toggle PB7 output
+				if (!tb_cnt_ta || (ta_output & 0x06) == 0x00) {	// Cascaded mode takes two cycles to reset while tb == 0
+					tb = latchb;			// Reload timer
+					tb_irq_next_cycle = true; // Trigger interrupt in next cycle
+					icr |= 2;				// But set ICR bit now
+					tb_toggle = !tb_toggle;	// Toggle PB7 output
 
-				if (crb & 8) {			// One-shot?
-					crb &= 0xfe;		// Yes, stop timer
-					new_crb &= 0xfe;
-					tb_state = T_LOAD_THEN_STOP;	// Reload in next cycle
-				} else {
-					tb_state = T_LOAD_THEN_COUNT;	// No, delay one cycle (and reload)
+					if (crb & 8) {			// One-shot?
+						crb &= 0xfe;		// Yes, stop timer
+						new_crb &= 0xfe;
+						tb_state = T_LOAD_THEN_STOP;	// Reload in next cycle
+					} else {
+						tb_state = T_LOAD_THEN_COUNT;	// No, delay one cycle (and reload)
+					}
 				}
 			}
 		}
@@ -791,6 +801,9 @@ tb_idle:
 		tb_cnt_phi2 = ((crb & 0x60) == 0x00);
 		tb_cnt_ta = ((crb & 0x40) == 0x40);	// Ignore CNT, which is pulled high
 	}
+
+	// Shift TA output along
+	ta_output = (ta_output << 1) | ta_underflow;
 }
 
 

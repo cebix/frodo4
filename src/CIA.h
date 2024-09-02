@@ -77,6 +77,7 @@ protected:
 		 tb_toggle;				// TB output to PB7 toggle state
 	char ta_state, tb_state;	// Timer A/B states
 	uint8_t new_cra, new_crb;	// New values for CRA/CRB
+	uint8_t ta_output;			// Shift register for previous TA output states
 #endif
 };
 
@@ -171,6 +172,7 @@ struct MOS6526State {
 	char tb_state;
 	uint8_t new_cra;
 	uint8_t new_crb;
+	uint8_t ta_output;
 };
 
 
