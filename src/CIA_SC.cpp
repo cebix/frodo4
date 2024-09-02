@@ -290,12 +290,8 @@ uint8_t MOS6526_1::ReadRegister(uint16_t adr)
 		case 0x0d: {
 			uint8_t ret = icr;			// Read and clear ICR
 			icr = 0;
-			if (ta_irq_next_cycle) {
-				ta_irq_next_cycle = false;
-			}
-			if (tb_irq_next_cycle) {
-				tb_irq_next_cycle = false;
-			}
+			ta_irq_next_cycle = false;
+			tb_irq_next_cycle = false;
 			the_cpu->ClearCIAIRQ();		// Clear IRQ
 			return ret;
 		}
@@ -340,12 +336,8 @@ uint8_t MOS6526_2::ReadRegister(uint16_t adr)
 		case 0x0d: {
 			uint8_t ret = icr; // Read and clear ICR
 			icr = 0;
-			if (ta_irq_next_cycle) {
-				ta_irq_next_cycle = false;
-			}
-			if (tb_irq_next_cycle) {
-				tb_irq_next_cycle = false;
-			}
+			ta_irq_next_cycle = false;
+			tb_irq_next_cycle = false;
 			the_cpu->ClearNMI();
 			return ret;
 		}
@@ -372,18 +364,24 @@ inline void MOS6526_1::check_lp()
 void MOS6526_1::WriteRegister(uint16_t adr, uint8_t byte)
 {
 	switch (adr) {
-		case 0x0: pra = byte; break;
+		case 0x0:
+			pra = byte;
+			break;
 		case 0x1:
 			prb = byte;
 			check_lp();
 			break;
-		case 0x2: ddra = byte; break;
+		case 0x2:
+			ddra = byte;
+			break;
 		case 0x3:
 			ddrb = byte;
 			check_lp();
 			break;
 
-		case 0x4: latcha = (latcha & 0xff00) | byte; break;
+		case 0x4:
+			latcha = (latcha & 0xff00) | byte;
+			break;
 		case 0x5:
 			latcha = (latcha & 0xff) | (byte << 8);
 			if (!(cra & 1)) {	// Reload timer if stopped
@@ -391,7 +389,9 @@ void MOS6526_1::WriteRegister(uint16_t adr, uint8_t byte)
 			}
 			break;
 
-		case 0x6: latchb = (latchb & 0xff00) | byte; break;
+		case 0x6:
+			latchb = (latchb & 0xff00) | byte;
+			break;
 		case 0x7:
 			latchb = (latchb & 0xff) | (byte << 8);
 			if (!(crb & 1)) {	// Reload timer if stopped
@@ -448,14 +448,11 @@ void MOS6526_1::WriteRegister(uint16_t adr, uint8_t byte)
 		case 0xe:
 			has_new_cra = true;		// Delay write by 1 cycle
 			new_cra = byte;
-			ta_cnt_phi2 = ((byte & 0x20) == 0x00);
 			break;
 
 		case 0xf:
 			has_new_crb = true;		// Delay write by 1 cycle
 			new_crb = byte;
-			tb_cnt_phi2 = ((byte & 0x60) == 0x00);
-			tb_cnt_ta = ((byte & 0x40) == 0x40);	// Ignore CNT, which is pulled high
 			break;
 	}
 }
@@ -483,15 +480,21 @@ void MOS6526_2::WriteRegister(uint16_t adr, uint8_t byte)
 			}
 			break;
 		}
-		case 0x1: prb = byte; break;
+		case 0x1:
+			prb = byte;
+			break;
 
 		case 0x2:
 			ddra = byte;
 			the_vic->ChangedVA(~(pra | ~ddra) & 3);
 			break;
-		case 0x3: ddrb = byte; break;
+		case 0x3:
+			ddrb = byte;
+			break;
 
-		case 0x4: latcha = (latcha & 0xff00) | byte; break;
+		case 0x4:
+			latcha = (latcha & 0xff00) | byte;
+			break;
 		case 0x5:
 			latcha = (latcha & 0xff) | (byte << 8);
 			if (!(cra & 1)) {	// Reload timer if stopped
@@ -499,7 +502,9 @@ void MOS6526_2::WriteRegister(uint16_t adr, uint8_t byte)
 			}
 			break;
 
-		case 0x6: latchb = (latchb & 0xff00) | byte; break;
+		case 0x6:
+			latchb = (latchb & 0xff00) | byte;
+			break;
 		case 0x7:
 			latchb = (latchb & 0xff) | (byte << 8);
 			if (!(crb & 1)) {	// Reload timer if stopped
@@ -608,7 +613,7 @@ void MOS6526::EmulateCycle()
 
 	// Count timer A
 ta_count:
-	if (ta_cnt_phi2)
+	if (ta_cnt_phi2) {
 		if (!ta || !--ta) {				// Decrement timer, underflow?
 			if (ta_state != T_STOP) {
 ta_interrupt:
@@ -627,6 +632,7 @@ ta_interrupt:
 			}
 			ta_underflow = true;
 		}
+	}
 
 	// Delayed write to CRA?
 ta_idle:
@@ -655,8 +661,10 @@ ta_idle:
 				} else {					// Timer stopped, was running
 					if (new_cra & 0x10) {	// Force load
 						ta_state = T_LOAD_THEN_STOP;
-					} else {				// No force load
+					} else if (ta_cnt_phi2) {	// No force load
 						ta_state = T_COUNT_THEN_STOP;
+					} else {
+						ta_state = T_STOP;
 					}
 				}
 				break;
@@ -674,8 +682,9 @@ ta_idle:
 				}
 				break;
 		}
-		cra = new_cra & 0xef;
+		cra = new_cra & 0xef;	// Clear force load
 		has_new_cra = false;
+		ta_cnt_phi2 = ((cra & 0x20) == 0x00);
 	}
 
 	// Timer B state machine
@@ -709,7 +718,7 @@ ta_idle:
 
 	// Count timer B
 tb_count:
-	if (tb_cnt_phi2 || (tb_cnt_ta && ta_underflow))
+	if (tb_cnt_phi2 || (tb_cnt_ta && ta_underflow)) {
 		if (!tb || !--tb) {				// Decrement timer, underflow?
 			if (tb_state != T_STOP) {
 tb_interrupt:
@@ -727,6 +736,7 @@ tb_interrupt:
 				}
 			}
 		}
+	}
 
 	// Delayed write to CRB?
 tb_idle:
@@ -755,8 +765,10 @@ tb_idle:
 				} else {					// Timer stopped, was running
 					if (new_crb & 0x10) {	// Force load
 						tb_state = T_LOAD_THEN_STOP;
-					} else {				// No force load
+					} else if (tb_cnt_phi2) {	// No force load
 						tb_state = T_COUNT_THEN_STOP;
+					} else {
+						tb_state = T_STOP;
 					}
 				}
 				break;
@@ -774,8 +786,10 @@ tb_idle:
 				}
 				break;
 		}
-		crb = new_crb & 0xef;
+		crb = new_crb & 0xef;	// Clear force load
 		has_new_crb = false;
+		tb_cnt_phi2 = ((crb & 0x60) == 0x00);
+		tb_cnt_ta = ((crb & 0x40) == 0x40);	// Ignore CNT, which is pulled high
 	}
 }
 
@@ -834,8 +848,9 @@ void MOS6526::CountTOD()
 						hi++;
 					}
 					tod_hr |= (hi << 4) | lo;
-					if ((tod_hr & 0x1f) > 0x11)
+					if ((tod_hr & 0x1f) > 0x11) {
 						tod_hr = tod_hr & 0x80 ^ 0x80;
+					}
 				} else {
 					tod_min = (hi << 4) | lo;
 				}
