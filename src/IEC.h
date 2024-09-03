@@ -21,6 +21,8 @@
 #ifndef _IEC_H
 #define _IEC_H
 
+#include <vector>
+
 
 /*
  *  Definitions
@@ -253,6 +255,6 @@ extern void petscii2ascii(char *dest, const uint8_t *src, int max);
 extern bool IsMountableFile(const char *path, int &type);
 
 // Read directory of mountable disk image or archive file into c64_dir_entry vector
-extern bool ReadDirectory(const char *path, int type, vector<c64_dir_entry> &vec);
+extern bool ReadDirectory(const char *path, int type, std::vector<c64_dir_entry> &vec);
 
 #endif

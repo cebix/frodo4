@@ -24,6 +24,7 @@
 #include "IEC.h"
 
 #include <string>
+#include <vector>
 
 
 /*
@@ -76,10 +77,10 @@ public:
 	virtual uint8_t Close(int channel);
 	virtual uint8_t Read(int channel, uint8_t &byte);
 	virtual uint8_t Write(int channel, uint8_t byte, bool eoi);
-	virtual void Reset(void);
+	virtual void Reset();
 
 private:
-	void close_image(void);
+	void close_image();
 	bool change_image(const char *path);
 
 	uint8_t open_file(int channel, const uint8_t *name, int name_len);
@@ -87,7 +88,7 @@ private:
 	uint8_t create_file(int channel, const uint8_t *name, int name_len, int type, bool overwrite = false);
 	uint8_t open_directory(const uint8_t *pattern, int pattern_len);
 	uint8_t open_direct(int channel, const uint8_t *filename);
-	void close_all_channels(void);
+	void close_all_channels();
 
 	int alloc_buffer(int want);
 	void free_buffer(int buf);
@@ -107,7 +108,7 @@ private:
 
 	bool read_sector(int track, int sector, uint8_t *buffer);
 	bool write_sector(int track, int sector, uint8_t *buffer);
-	void write_error_info(void);
+	void write_error_info();
 
 	virtual void block_read_cmd(int channel, int track, int sector, bool user_cmd = false);
 	virtual void block_write_cmd(int channel, int track, int sector, bool user_cmd = false);
@@ -119,9 +120,9 @@ private:
 	virtual void copy_cmd(const uint8_t *new_file, int new_file_len, const uint8_t *old_files, int old_files_len);
 	virtual void rename_cmd(const uint8_t *new_file, int new_file_len, const uint8_t *old_file, int old_file_len);
 	virtual void scratch_cmd(const uint8_t *files, int files_len);
-	virtual void initialize_cmd(void);
+	virtual void initialize_cmd();
 	virtual void new_cmd(const uint8_t *name, int name_len, const uint8_t *comma);
-	virtual void validate_cmd(void);
+	virtual void validate_cmd();
 
 	FILE *the_file;			// File pointer for image file
 	image_file_desc desc;	// Image file descriptor
@@ -146,7 +147,7 @@ private:
 extern bool IsImageFile(const char *path, const uint8_t *header, long size);
 
 // Read directory of disk image file into (empty) c64_dir_entry vector
-extern bool ReadImageDirectory(const char *path, vector<c64_dir_entry> &vec);
+extern bool ReadImageDirectory(const char *path, std::vector<c64_dir_entry> &vec);
 
 // Create new blank disk image file
 extern bool CreateImageFile(const char *path);

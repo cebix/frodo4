@@ -23,6 +23,8 @@
 
 #include "IEC.h"
 
+#include <vector>
+
 
 /*
  *  Definitions
@@ -45,7 +47,7 @@ public:
 	virtual uint8_t Close(int channel);
 	virtual uint8_t Read(int channel, uint8_t &byte);
 	virtual uint8_t Write(int channel, uint8_t byte, bool eoi);
-	virtual void Reset(void);
+	virtual void Reset();
 
 private:
 	bool change_arch(const char *path);
@@ -53,15 +55,15 @@ private:
 	uint8_t open_file(int channel, const uint8_t *name, int name_len);
 	uint8_t open_directory(int channel, const uint8_t *pattern, int pattern_len);
 	bool find_first_file(const uint8_t *pattern, int pattern_len, int &num);
-	void close_all_channels(void);
+	void close_all_channels();
 
 	virtual void rename_cmd(const uint8_t *new_file, int new_file_len, const uint8_t *old_file, int old_file_len);
-	virtual void initialize_cmd(void);
-	virtual void validate_cmd(void);
+	virtual void initialize_cmd();
+	virtual void validate_cmd();
 
 	FILE *the_file;			// File pointer for archive file
 	int archive_type;		// File/archive type (see defines above)
-	vector<c64_dir_entry> file_info;	// Vector of file information structs for all files in the archive
+	std::vector<c64_dir_entry> file_info;	// Vector of file information structs for all files in the archive
 
 	char dir_title[16];		// Directory title
 	FILE *file[16];			// File pointers for each of the 16 channels (all temporary files)
@@ -79,6 +81,6 @@ private:
 extern bool IsArchFile(const char *path, const uint8_t *header, long size);
 
 // Read directory of archive file into (empty) c64_dir_entry vector
-extern bool ReadArchDirectory(const char *path, vector<c64_dir_entry> &vec);
+extern bool ReadArchDirectory(const char *path, std::vector<c64_dir_entry> &vec);
 
 #endif

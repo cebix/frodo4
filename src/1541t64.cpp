@@ -49,24 +49,26 @@
 static bool is_t64_header(const uint8_t *header);
 static bool is_lynx_header(const uint8_t *header);
 static bool is_p00_header(const uint8_t *header);
-static bool parse_t64_file(FILE *f, vector<c64_dir_entry> &vec, char *dir_title);
-static bool parse_lynx_file(FILE *f, vector<c64_dir_entry> &vec, char *dir_title);
-static bool parse_p00_file(FILE *f, vector<c64_dir_entry> &vec, char *dir_title);
+static bool parse_t64_file(FILE *f, std::vector<c64_dir_entry> &vec, char *dir_title);
+static bool parse_lynx_file(FILE *f, std::vector<c64_dir_entry> &vec, char *dir_title);
+static bool parse_p00_file(FILE *f, std::vector<c64_dir_entry> &vec, char *dir_title);
 
 
 /*
  *  Constructor: Prepare emulation
  */
 
-ArchDrive::ArchDrive(IEC *iec, const char *filepath) : Drive(iec), the_file(NULL)
+ArchDrive::ArchDrive(IEC *iec, const char *filepath) : Drive(iec), the_file(nullptr)
 {
-	for (int i=0; i<16; i++)
-		file[i] = NULL;
+	for (unsigned i = 0; i < 16; ++i) {
+		file[i] = nullptr;
+	}
 	Reset();
 
 	// Open archive file
-	if (change_arch(filepath))
+	if (change_arch(filepath)) {
 		Ready = true;
+	}
 }
 
 
@@ -94,7 +96,7 @@ bool ArchDrive::change_arch(const char *path)
 	FILE *new_file;
 
 	// Open new archive file
-	if ((new_file = fopen(path, "rb")) != NULL) {
+	if ((new_file = fopen(path, "rb")) != nullptr) {
 
 		file_info.clear();
 
@@ -118,7 +120,7 @@ bool ArchDrive::change_arch(const char *path)
 			if (the_file) {
 				close_all_channels();
 				fclose(the_file);
-				the_file = NULL;
+				the_file = nullptr;
 			}
 			return false;
 		}
@@ -127,7 +129,7 @@ bool ArchDrive::change_arch(const char *path)
 		if (the_file) {
 			close_all_channels();
 			fclose(the_file);
-			the_file = NULL;
+			the_file = nullptr;
 		}
 		the_file = new_file;
 		return true;
@@ -155,7 +157,7 @@ uint8_t ArchDrive::Open(int channel, const uint8_t *name, int name_len)
 	// Close previous file if still open
 	if (file[channel]) {
 		fclose(file[channel]);
-		file[channel] = NULL;
+		file[channel] = nullptr;
 	}
 
 	if (name[0] == '#') {
@@ -163,7 +165,7 @@ uint8_t ArchDrive::Open(int channel, const uint8_t *name, int name_len)
 		return ST_OK;
 	}
 
-	if (the_file == NULL) {
+	if (the_file == nullptr) {
 		set_error(ERR_NOTREADY);
 		return ST_OK;
 	}
@@ -191,8 +193,9 @@ uint8_t ArchDrive::open_file(int channel, const uint8_t *name, int name_len)
 	// Channel 0 is READ, channel 1 is WRITE
 	if (channel == 0 || channel == 1) {
 		mode = channel ? FMODE_WRITE : FMODE_READ;
-		if (type == FTYPE_DEL)
+		if (type == FTYPE_DEL) {
 			type = FTYPE_PRG;
+		}
 	}
 
 	bool writing = (mode == FMODE_WRITE || mode == FMODE_APPEND);
@@ -220,7 +223,7 @@ uint8_t ArchDrive::open_file(int channel, const uint8_t *name, int name_len)
 	if (find_first_file(plain_name, plain_name_len, num)) {
 
 		// Open temporary file
-		if ((file[channel] = tmpfile()) != NULL) {
+		if ((file[channel] = tmpfile()) != nullptr) {
 
 			// Write load address (.t64 only)
 			if (archive_type == TYPE_T64) {
@@ -236,11 +239,13 @@ uint8_t ArchDrive::open_file(int channel, const uint8_t *name, int name_len)
 			rewind(file[channel]);
 			delete[] buf;
 
-			if (mode == FMODE_READ)	// Read and buffer first byte
+			if (mode == FMODE_READ) {	// Read and buffer first byte
 				read_char[channel] = getc(file[channel]);
+			}
 		}
-	} else
+	} else {
 		set_error(ERR_FILENOTFOUND);
+	}
 
 	return ST_OK;
 }
@@ -266,7 +271,7 @@ static bool match(const uint8_t *p, int p_len, const uint8_t *n)
 
 bool ArchDrive::find_first_file(const uint8_t *pattern, int pattern_len, int &num)
 {
-	vector<c64_dir_entry>::const_iterator i, end = file_info.end();
+	std::vector<c64_dir_entry>::const_iterator i, end = file_info.end();
 	for (i = file_info.begin(), num = 0; i != end; i++, num++) {
 		if (match(pattern, pattern_len, (uint8_t *)i->name))
 			return true;
@@ -296,7 +301,7 @@ uint8_t ArchDrive::open_directory(int channel, const uint8_t *pattern, int patte
 	}
 
 	// Create temporary file
-	if ((file[channel] = tmpfile()) == NULL)
+	if ((file[channel] = tmpfile()) == nullptr)
 		return ST_OK;
 
 	// Create directory title
@@ -306,7 +311,7 @@ uint8_t ArchDrive::open_directory(int channel, const uint8_t *pattern, int patte
 	fwrite(buf, 1, 32, file[channel]);
 
 	// Create and write one line for every directory entry
-	vector<c64_dir_entry>::const_iterator i, end = file_info.end();
+	std::vector<c64_dir_entry>::const_iterator i, end = file_info.end();
 	for (i = file_info.begin(); i != end; i++) {
 
 		// Include only files matching the pattern
@@ -402,7 +407,7 @@ uint8_t ArchDrive::Close(int channel)
 
 	if (file[channel]) {
 		fclose(file[channel]);
-		file[channel] = NULL;
+		file[channel] = nullptr;
 	}
 
 	return ST_OK;
@@ -413,10 +418,11 @@ uint8_t ArchDrive::Close(int channel)
  *  Close all channels
  */
 
-void ArchDrive::close_all_channels(void)
+void ArchDrive::close_all_channels()
 {
-	for (int i=0; i<15; i++)
+	for (unsigned i = 0; i < 15; ++i) {
 		Close(i);
+	}
 
 	cmd_len = 0;
 }
@@ -434,9 +440,9 @@ uint8_t ArchDrive::Read(int channel, uint8_t &byte)
 	if (channel == 15) {
 		byte = *error_ptr++;
 
-		if (byte != '\x0d')
+		if (byte != '\x0d') {
 			return ST_OK;
-		else {	// End of message
+		} else {	// End of message
 			set_error(ERR_OK);
 			return ST_EOF;
 		}
@@ -447,9 +453,9 @@ uint8_t ArchDrive::Read(int channel, uint8_t &byte)
 	// Get char from buffer and read next
 	byte = read_char[channel];
 	int c = getc(file[channel]);
-	if (c == EOF)
+	if (c == EOF) {
 		return ST_EOF;
-	else {
+	} else {
 		read_char[channel] = c;
 		return ST_OK;
 	}
@@ -480,10 +486,11 @@ uint8_t ArchDrive::Write(int channel, uint8_t byte, bool eoi)
 		return ST_OK;
 	}
 
-	if (!file[channel])
+	if (!file[channel]) {
 		set_error(ERR_FILENOTOPEN);
-	else
+	} else {
 		set_error(ERR_WRITEPROTECT);
+	}
 
 	return ST_TIMEOUT;
 }
@@ -515,13 +522,13 @@ void ArchDrive::rename_cmd(const uint8_t *new_file, int new_file_len, const uint
 }
 
 // INITIALIZE
-void ArchDrive::initialize_cmd(void)
+void ArchDrive::initialize_cmd()
 {
 	close_all_channels();
 }
 
 // VALIDATE
-void ArchDrive::validate_cmd(void)
+void ArchDrive::validate_cmd()
 {
 }
 
@@ -530,7 +537,7 @@ void ArchDrive::validate_cmd(void)
  *  Reset drive
  */
 
-void ArchDrive::Reset(void)
+void ArchDrive::Reset()
 {
 	close_all_channels();
 	cmd_len = 0;	
@@ -547,10 +554,11 @@ static bool is_t64_header(const uint8_t *header)
 {
 	if (memcmp(header, "C64S tape file", 14) == 0
 	 || memcmp(header, "C64 tape image", 14) == 0
-	 || memcmp(header, "C64S tape image", 15) == 0)
+	 || memcmp(header, "C64S tape image", 15) == 0) {
 		return true;
-	else
+	} else {
 		return false;
+	}
 }
 
 static bool is_lynx_header(const uint8_t *header)
@@ -574,15 +582,16 @@ bool IsArchFile(const char *path, const uint8_t *header, long size)
  *  returns false on error
  */
 
-static bool parse_t64_file(FILE *f, vector<c64_dir_entry> &vec, char *dir_title)
+static bool parse_t64_file(FILE *f, std::vector<c64_dir_entry> &vec, char *dir_title)
 {
 	// Read header and get maximum number of files contained
 	fseek(f, 32, SEEK_SET);
 	uint8_t buf[32];
 	fread(&buf, 32, 1, f);
 	int max = (buf[3] << 8) | buf[2];
-	if (max == 0)
+	if (max == 0) {
 		max = 1;
+	}
 
 	memcpy(dir_title, buf+8, 16);
 
@@ -592,9 +601,11 @@ static bool parse_t64_file(FILE *f, vector<c64_dir_entry> &vec, char *dir_title)
 
 	// Determine number of files contained
 	int num_files = 0;
-	for (int i=0; i<max; i++)
-		if (buf2[i*32] == 1)
+	for (int i=0; i<max; i++) {
+		if (buf2[i*32] == 1) {
 			num_files++;
+		}
+	}
 
 	if (!num_files) {
 		delete[] buf2;
@@ -628,7 +639,7 @@ static bool parse_t64_file(FILE *f, vector<c64_dir_entry> &vec, char *dir_title)
 	return true;
 }
 
-static bool parse_lynx_file(FILE *f, vector<c64_dir_entry> &vec, char *dir_title)
+static bool parse_lynx_file(FILE *f, std::vector<c64_dir_entry> &vec, char *dir_title)
 {
 	// Dummy directory title
 	strcpy(dir_title, "LYNX ARCHIVE    ");
@@ -637,9 +648,10 @@ static bool parse_lynx_file(FILE *f, vector<c64_dir_entry> &vec, char *dir_title
 	fseek(f, 0x60, SEEK_SET);
 	int dir_blocks;
 	fscanf(f, "%d", &dir_blocks);
-	while (getc(f) != 0x0d)
+	while (getc(f) != 0x0d) {
 		if (feof(f))
 			return false;
+	}
 	int num_files;
 	fscanf(f, "%d\x0d", &num_files);
 
@@ -653,7 +665,7 @@ static bool parse_lynx_file(FILE *f, vector<c64_dir_entry> &vec, char *dir_title
 		fread(name_buf, 16, 1, f);
 		name_buf[16] = 0xa0;
 		uint8_t *p = name_buf + 16;
-		while (*p-- == 0xa0) ;
+		while (*p-- == 0xa0) { }
 		p[2] = 0;
 
 		// Read file length and type
@@ -695,7 +707,7 @@ static bool parse_lynx_file(FILE *f, vector<c64_dir_entry> &vec, char *dir_title
 	return true;
 }
 
-static bool parse_p00_file(FILE *f, vector<c64_dir_entry> &vec, char *dir_title)
+static bool parse_p00_file(FILE *f, std::vector<c64_dir_entry> &vec, char *dir_title)
 {
 	// Dummy directory title
 	strcpy(dir_title, ".P00 FILE       ");
@@ -722,7 +734,7 @@ static bool parse_p00_file(FILE *f, vector<c64_dir_entry> &vec, char *dir_title)
 	return true;
 }
 
-bool ReadArchDirectory(const char *path, vector<c64_dir_entry> &vec)
+bool ReadArchDirectory(const char *path, std::vector<c64_dir_entry> &vec)
 {
 	// Open file
 	FILE *f = fopen(path, "rb");
@@ -744,6 +756,7 @@ bool ReadArchDirectory(const char *path, vector<c64_dir_entry> &vec)
 
 		fclose(f);
 		return result;
-	} else
+	} else {
 		return false;
+	}
 }

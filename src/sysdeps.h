@@ -23,29 +23,10 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <assert.h>
-#include <ctype.h>
-#include <errno.h>
-#include <signal.h>
 #include <string.h>
 #include <time.h>
 
 #include <cstdint>
-
-#include <vector>
-using std::vector;
-
-#ifdef HAVE_SYS_TYPES_H
-#include <sys/types.h>
-#endif
-
-#ifdef HAVE_SYS_STAT_H
-#include <sys/stat.h>
-#endif
-
-#if HAVE_DIRENT_H
-#include <dirent.h>
-#endif
 
 #ifdef __BEOS__
 #include <support/SupportDefs.h>

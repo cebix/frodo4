@@ -96,14 +96,16 @@ void Frodo::RefsReceived(BMessage *message)
 		entry_ref the_ref;
 		BEntry the_entry;
 
-		if (message->FindRef("refs", &the_ref) == B_NO_ERROR)
-			if (the_entry.SetTo(&the_ref) == B_NO_ERROR)
+		if (message->FindRef("refs", &the_ref) == B_NO_ERROR) {
+			if (the_entry.SetTo(&the_ref) == B_NO_ERROR) {
 				if (the_entry.IsFile()) {
 					BPath the_path;
 					the_entry.GetPath(&the_path);
 					strncpy(prefs_path, the_path.Path(), 1023);
 					prefs_path[1023] = 0;
 				}
+			}
+		}
 	}
 }
 
@@ -121,9 +123,7 @@ void Frodo::ReadyToRun()
 	the_file.GetParent(&AppDirectory);
 	BPath the_path;
 	AppDirectory.GetPath(&the_path);
-	strncpy(AppDirPath, the_path.Path(), 1023);
-	AppDirPath[1023] = 0;
-	chdir(AppDirPath);
+	chdir(the_path.Path());
 
 	// Set up "about" window bitmap
 	AboutBitmap = new BBitmap(AboutFrame, B_COLOR_8_BIT);
@@ -191,13 +191,15 @@ void Frodo::MessageReceived(BMessage *msg)
 		}
 
 		case MSG_RESET:	// Reset C64
-			if (TheC64 != NULL)
+			if (TheC64 != NULL) {
 				TheC64->Reset();
+			}
 			break;
 
 		case MSG_NMI:	// NMI
-			if (TheC64 != NULL)
+			if (TheC64 != NULL) {
 				TheC64->NMI();
+			}
 			break;
 
 		case MSG_SAM:	// Invoke SAM
@@ -229,8 +231,9 @@ void Frodo::MessageReceived(BMessage *msg)
 							p[0] = 'A';
 						else
 							p[0] = 'a';
-					} else
+					} else {
 						fclose(file);
+					}
 
 					// Set new prefs
 					TheC64->Pause();
@@ -257,21 +260,23 @@ void Frodo::MessageReceived(BMessage *msg)
 			break;
 
 		case MSG_OPEN_SNAPSHOT:
-			if (TheC64 != NULL && !prefs_showing)
+			if (TheC64 != NULL && !prefs_showing) {
 				open_panel->Show();
+			}
 			break;
 
 		case MSG_SAVE_SNAPSHOT:
-			if (TheC64 != NULL && !prefs_showing)
+			if (TheC64 != NULL && !prefs_showing) {
 				save_panel->Show();
+			}
 			break;
 
 		case MSG_OPEN_SNAPSHOT_RETURNED:
 			if (TheC64 != NULL && !prefs_showing) {
 				entry_ref the_ref;
 				BEntry the_entry;
-				if (msg->FindRef("refs", &the_ref) == B_NO_ERROR)
-					if (the_entry.SetTo(&the_ref) == B_NO_ERROR)
+				if (msg->FindRef("refs", &the_ref) == B_NO_ERROR) {
+					if (the_entry.SetTo(&the_ref) == B_NO_ERROR) {
 						if (the_entry.IsFile()) {
 							char path[1024];
 							BPath the_path;
@@ -282,6 +287,8 @@ void Frodo::MessageReceived(BMessage *msg)
 							TheC64->LoadSnapshot(path);
 							TheC64->Resume();
 						}
+					}
+				}
 			}
 			break;
 
@@ -289,7 +296,7 @@ void Frodo::MessageReceived(BMessage *msg)
 			if (TheC64 != NULL && !prefs_showing) {
 				entry_ref the_ref;
 				BEntry the_entry;
-				if (msg->FindRef("directory", &the_ref) == B_NO_ERROR)
+				if (msg->FindRef("directory", &the_ref) == B_NO_ERROR) {
 					if (the_entry.SetTo(&the_ref) == B_NO_ERROR) {
 						char path[1024];
 						BPath the_path;
@@ -302,6 +309,7 @@ void Frodo::MessageReceived(BMessage *msg)
 						TheC64->SaveSnapshot(path);
 						TheC64->Resume();
 					}
+				}
 			}
 			break;
 

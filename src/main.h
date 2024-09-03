@@ -26,9 +26,6 @@
 
 class C64;
 
-// Global variables
-extern char AppDirPath[1024];	// Path of application directory
-
 
 /*
  *  BeOS specific stuff

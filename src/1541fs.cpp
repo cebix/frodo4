@@ -42,6 +42,11 @@
 #include "main.h"
 #include "Prefs.h"
 
+#include <algorithm>
+#include <filesystem>
+#include <vector>
+namespace fs = std::filesystem;
+
 
 // Prototypes
 static bool match(const char *p, const char *n);
@@ -53,12 +58,10 @@ static bool match(const char *p, const char *n);
 
 FSDrive::FSDrive(IEC *iec, const char *path) : Drive(iec)
 {
-	strcpy(orig_dir_path, path);
-	dir_path[0] = 0;
-
-	if (change_dir(orig_dir_path)) {
-		for (int i=0; i<16; i++)
-			file[i] = NULL;
+	if (change_dir(path)) {
+		for (unsigned i = 0; i < 16; ++i) {
+			file[i] = nullptr;
+		}
 
 		Reset();
 
@@ -84,17 +87,24 @@ FSDrive::~FSDrive()
  *  Change emulation directory
  */
 
-bool FSDrive::change_dir(char *dirpath)
+bool FSDrive::change_dir(const char *path)
 {
-	DIR *dir;
+	if (fs::is_directory(path)) {
+		dir_path = path;
 
-	if ((dir = opendir(dirpath)) != NULL) {
-		closedir(dir);
-		strcpy(dir_path, dirpath);
-		strncpy(dir_title, dir_path, 16);
+		auto dir_name = dir_path.filename().string();
+		memset(dir_title, ' ', sizeof(dir_title));
+		for (unsigned i = 0; i < dir_name.length(); ++i) {
+			dir_title[i] = ascii2petscii(dir_name[i]);
+		}
+
 		return true;
-	} else
+
+	} else {
+
+		dir_path.clear();
 		return false;
+	}
 }
 
 
@@ -115,7 +125,7 @@ uint8_t FSDrive::Open(int channel, const uint8_t *name, int name_len)
 	// Close previous file if still open
 	if (file[channel]) {
 		fclose(file[channel]);
-		file[channel] = NULL;
+		file[channel] = nullptr;
 	}
 
 	if (name[0] == '#') {
@@ -146,8 +156,9 @@ uint8_t FSDrive::open_file(int channel, const uint8_t *name, int name_len)
 	// Channel 0 is READ, channel 1 is WRITE
 	if (channel == 0 || channel == 1) {
 		mode = channel ? FMODE_WRITE : FMODE_READ;
-		if (type == FTYPE_DEL)
+		if (type == FTYPE_DEL) {
 			type = FTYPE_PRG;
+		}
 	}
 
 	bool writing = (mode == FMODE_WRITE || mode == FMODE_APPEND);
@@ -157,8 +168,9 @@ uint8_t FSDrive::open_file(int channel, const uint8_t *name, int name_len)
 		if (writing) {
 			set_error(ERR_SYNTAX33);
 			return ST_OK;
-		} else
+		} else {
 			find_first_file(plain_name);
+		}
 	}
 
 	// Relative files are not supported
@@ -179,16 +191,42 @@ uint8_t FSDrive::open_file(int channel, const uint8_t *name, int name_len)
 	}
 
 	// Open file
-	if (chdir(dir_path))
+	auto file_path = dir_path / plain_name;
+
+	if (! fs::is_directory(dir_path)) {
 		set_error(ERR_NOTREADY);
-	else if ((file[channel] = fopen(plain_name, mode_str)) != NULL) {
-		if (mode == FMODE_READ || mode == FMODE_M)	// Read and buffer first byte
+	} else if ((file[channel] = fopen(file_path.c_str(), mode_str)) != nullptr) {
+		if (mode == FMODE_READ || mode == FMODE_M) {	// Read and buffer first byte
 			read_char[channel] = fgetc(file[channel]);
-	} else
+		}
+	} else {
 		set_error(ERR_FILENOTFOUND);
-	chdir(AppDirPath);
+	}
 
 	return ST_OK;
+}
+
+
+/*
+ *  Scan directory for entries matching a pattern and return a sorted list
+ *  of entry names
+ */
+
+static std::vector<std::string> scan_directory(const fs::path & dir_path, const char *pattern)
+{
+	// Scan directory for matching entries
+	std::vector<std::string> entries;
+	for (const auto & entry : fs::directory_iterator{dir_path}) {
+		auto file_name = entry.path().filename();
+		if (match(pattern, file_name.c_str())) {
+			entries.push_back(file_name);
+		}
+	}
+
+	// Sort entries by name
+	std::sort(entries.begin(), entries.end());
+
+	return entries;
 }
 
 
@@ -215,30 +253,20 @@ static bool match(const char *p, const char *n)
 
 void FSDrive::find_first_file(char *pattern)
 {
-	DIR *dir;
-	struct dirent *de;
-
-	// Open directory for reading and skip '.' and '..'
-	if ((dir = opendir(dir_path)) == NULL)
+	if (! fs::is_directory(dir_path)) {
 		return;
-	de = readdir(dir);
-	while (de && (0 == strcmp(".", de->d_name) || 0 == strcmp("..", de->d_name))) 
-		de = readdir(dir);
-
-	while (de) {
-
-		// Match found? Then copy real file name
-		if (match(pattern, de->d_name)) {
-			strncpy(pattern, de->d_name, NAMEBUF_LENGTH);
-			closedir(dir);
-			return;
-		}
-
-		// Get next directory entry
-		de = readdir(dir);
 	}
 
-	closedir(dir);
+	// Scan directory for matching entries
+	auto entries = scan_directory(dir_path, pattern);
+
+	// Return first match which is a file
+	for (const auto & entry : entries) {
+		if (fs::is_regular_file(dir_path / entry)) {
+			strncpy(pattern, entry.c_str(), NAMEBUF_LENGTH);
+			return;
+		}
+	}
 }
 
 
@@ -248,18 +276,6 @@ void FSDrive::find_first_file(char *pattern)
 
 uint8_t FSDrive::open_directory(int channel, const uint8_t *pattern, int pattern_len)
 {
-	char buf[] = "\001\004\001\001\0\0\022\042                \042 00 2A";
-	char str[NAMEBUF_LENGTH];
-	char *p, *q;
-	int i;
-	int filemode;
-	int filetype;
-	bool wildflag;
-
-	DIR *dir;
-	struct dirent *de;
-	struct stat statbuf;
-
 	// Special treatment for "$0"
 	if (pattern[0] == '0' && pattern[1] == 0) {
 		pattern++;
@@ -268,73 +284,77 @@ uint8_t FSDrive::open_directory(int channel, const uint8_t *pattern, int pattern
 
 	// Skip everything before the ':' in the pattern
 	uint8_t *t = (uint8_t *)memchr(pattern, ':', pattern_len);
-	if (t)
+	if (t) {
 		pattern = t + 1;
+	}
 
 	// Convert pattern to ASCII
 	char ascii_pattern[NAMEBUF_LENGTH];
 	petscii2ascii(ascii_pattern, pattern, NAMEBUF_LENGTH);
 
-	// Open directory for reading and skip '.' and '..'
-	if ((dir = opendir(dir_path)) == NULL) {
+	// Scan directory for matching entries
+	if (! fs::is_directory(dir_path)) {
 		set_error(ERR_NOTREADY);
 		return ST_OK;
 	}
-	de = readdir(dir);
-	while (de && (0 == strcmp(".", de->d_name) || 0 == strcmp("..", de->d_name))) 
-		de = readdir(dir);
+
+	auto entries = scan_directory(dir_path, ascii_pattern);
 
 	// Create temporary file
-	if ((file[channel] = tmpfile()) == NULL) {
-		closedir(dir);
+	if ((file[channel] = tmpfile()) == nullptr) {
 		return ST_OK;
 	}
 
 	// Create directory title
-	p = &buf[8];
-	for (i=0; i<16 && dir_title[i]; i++)
-		*p++ = ascii2petscii(dir_title[i]);
-	fwrite(buf, 1, 32, file[channel]);
+	uint8_t buf[32] = "\x01\x04\x01\x01\0\0\x12\x22                \x22 FR 2A";
+	memcpy(buf + 8, dir_title, sizeof(dir_title));
+	fwrite(buf, 1, sizeof(buf), file[channel]);
 
 	// Create and write one line for every directory entry
-	while (de) {
+	for (const auto & file_name : entries) {
 
 		// Include only files matching the ascii_pattern
-		if (match(ascii_pattern, de->d_name)) {
+		if (match(ascii_pattern, file_name.c_str())) {
 
 			// Get file statistics
-			chdir(dir_path);
-			stat(de->d_name, &statbuf);
-			chdir(AppDirPath);
+			auto file_path = dir_path / file_name;
 
 			// Clear line with spaces and terminate with null byte
-			memset(buf, ' ', 31);
-			buf[31] = 0;
+			memset(buf, ' ', sizeof(buf));
+			buf[sizeof(buf) - 1] = 0;
 
-			p = buf;
+			uint8_t *p = buf;
 			*p++ = 0x01;	// Dummy line link
 			*p++ = 0x01;
 
-			// Calculate size in blocks (254 bytes each)
-			i = (statbuf.st_size + 254) / 254;
-			*p++ = i & 0xff;
-			*p++ = (i >> 8) & 0xff;
+			// Calculate size in blocks (of 254 bytes each)
+			std::uintmax_t num_blocks;
+			if (fs::is_directory(file_path)) {
+				num_blocks = 0;
+			} else {
+				num_blocks = (fs::file_size(file_path) + 254) / 254;
+				if (num_blocks > 0xffff) {
+					num_blocks = 0xffff;
+				}
+			}
+			*p++ = num_blocks & 0xff;
+			*p++ = (num_blocks >> 8) & 0xff;
 
 			p++;
-			if (i < 10) p++;	// Less than 10: add one space
-			if (i < 100) p++;	// Less than 100: add another space
+			if (num_blocks < 10) p++;	// Less than 10: add one space
+			if (num_blocks < 100) p++;	// Less than 100: add another space
 
 			// Convert and insert file name
-			strcpy(str, de->d_name);
 			*p++ = '\"';
-			q = p;
-			for (i=0; i<16 && str[i]; i++)
-				*q++ = ascii2petscii(str[i]);
+			uint8_t *q = p;
+			for (unsigned i = 0; i < 16 && i < file_name.length(); ++i) {
+				*q++ = ascii2petscii(file_name[i]);
+			}
 			*q++ = '\"';
 			p += 18;
 
 			// File type
-			if (S_ISDIR(statbuf.st_mode)) {
+			if (fs::is_directory(file_path)) {
 				*p++ = 'D';
 				*p++ = 'I';
 				*p++ = 'R';
@@ -345,11 +365,8 @@ uint8_t FSDrive::open_directory(int channel, const uint8_t *pattern, int pattern
 			}
 
 			// Write line
-			fwrite(buf, 1, 32, file[channel]);
+			fwrite(buf, 1, sizeof(buf), file[channel]);
 		}
-
-		// Get next directory entry
-		de = readdir(dir);
 	}
 
 	// Final line
@@ -358,9 +375,6 @@ uint8_t FSDrive::open_directory(int channel, const uint8_t *pattern, int pattern
 	// Rewind file for reading and read first byte
 	rewind(file[channel]);
 	read_char[channel] = fgetc(file[channel]);
-
-	// Close directory
-	closedir(dir);
 
 	return ST_OK;
 }
@@ -379,7 +393,7 @@ uint8_t FSDrive::Close(int channel)
 
 	if (file[channel]) {
 		fclose(file[channel]);
-		file[channel] = NULL;
+		file[channel] = nullptr;
 	}
 
 	return ST_OK;
@@ -390,10 +404,11 @@ uint8_t FSDrive::Close(int channel)
  *  Close all channels
  */
 
-void FSDrive::close_all_channels(void)
+void FSDrive::close_all_channels()
 {
-	for (int i=0; i<15; i++)
+	for (unsigned i = 0; i < 15; ++i) {
 		Close(i);
+	}
 
 	cmd_len = 0;
 }
@@ -405,15 +420,13 @@ void FSDrive::close_all_channels(void)
 
 uint8_t FSDrive::Read(int channel, uint8_t &byte)
 {
-	int c;
-
 	// Channel 15: Error channel
 	if (channel == 15) {
 		byte = *error_ptr++;
 
-		if (byte != '\r')
+		if (byte != '\r') {
 			return ST_OK;
-		else {	// End of message
+		} else {	// End of message
 			set_error(ERR_OK);
 			return ST_EOF;
 		}
@@ -423,10 +436,10 @@ uint8_t FSDrive::Read(int channel, uint8_t &byte)
 
 	// Read one byte
 	byte = read_char[channel];
-	c = fgetc(file[channel]);
-	if (c == EOF)
+	int c = fgetc(file[channel]);
+	if (c == EOF) {
 		return ST_EOF;
-	else {
+	} else {
 		read_char[channel] = c;
 		return ST_OK;
 	}
@@ -472,14 +485,15 @@ uint8_t FSDrive::Write(int channel, uint8_t byte, bool eoi)
  */
 
 // INITIALIZE
-void FSDrive::initialize_cmd(void)
+void FSDrive::initialize_cmd()
 {
 	close_all_channels();
 }
 
 // VALIDATE
-void FSDrive::validate_cmd(void)
+void FSDrive::validate_cmd()
 {
+	// Nothing to do
 }
 
 
@@ -487,7 +501,7 @@ void FSDrive::validate_cmd(void)
  *  Reset drive
  */
 
-void FSDrive::Reset(void)
+void FSDrive::Reset()
 {
 	close_all_channels();
 	cmd_len = 0;	

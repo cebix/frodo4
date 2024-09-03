@@ -37,6 +37,7 @@
 #include <cctype>
 #include <filesystem>
 #include <regex>
+#include <vector>
 namespace fs = std::filesystem;
 
 #define DEBUG 0
@@ -2134,7 +2135,7 @@ static bool parse_image_file(FILE *f, image_file_desc &desc)
  *  returns false on error
  */
 
-bool ReadImageDirectory(const char *path, vector<c64_dir_entry> &vec)
+bool ReadImageDirectory(const char *path, std::vector<c64_dir_entry> &vec)
 {
 	bool result = false;
 

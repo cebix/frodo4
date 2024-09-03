@@ -23,6 +23,8 @@
 
 #include "IEC.h"
 
+#include <filesystem>
+
 
 class FSDrive : public Drive {
 public:
@@ -33,23 +35,22 @@ public:
 	virtual uint8_t Close(int channel);
 	virtual uint8_t Read(int channel, uint8_t &byte);
 	virtual uint8_t Write(int channel, uint8_t byte, bool eoi);
-	virtual void Reset(void);
+	virtual void Reset();
 
 private:
-	bool change_dir(char *dirpath);
+	bool change_dir(const char *path);
 
 	uint8_t open_file(int channel, const uint8_t *name, int name_len);
 	uint8_t open_directory(int channel, const uint8_t *pattern, int pattern_len);
 	void find_first_file(char *pattern);
-	void close_all_channels(void);
+	void close_all_channels();
 
-	virtual void initialize_cmd(void);
-	virtual void validate_cmd(void);
+	virtual void initialize_cmd();
+	virtual void validate_cmd();
 
-	char dir_path[256];		// Path to directory
-	char orig_dir_path[256]; // Original directory path
-	char dir_title[16];		// Directory title
-	FILE *file[16];			// File pointers for each of the 16 channels
+	std::filesystem::path dir_path;	// Path to directory
+	uint8_t dir_title[16];			// Directory title in PETSCII
+	FILE *file[16];					// File pointers for each of the 16 channels
 
 	uint8_t read_char[16];	// Buffers for one-byte read-ahead
 };

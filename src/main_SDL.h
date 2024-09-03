@@ -112,8 +112,6 @@ static gboolean pump_sdl_events(gpointer user_data)
 
 void Frodo::ReadyToRun()
 {
-	getcwd(AppDirPath, 256);
-
 	// Load preferences
 	if (prefs_path.empty()) {
 		auto path = SDL_GetPrefPath("cebix", "Frodo");

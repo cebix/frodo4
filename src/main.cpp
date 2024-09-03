@@ -29,7 +29,6 @@
 
 // Global variables
 C64 *TheC64 = NULL;		// Global C64 object
-char AppDirPath[1024];	// Path of application directory
 
 
 // ROM file names

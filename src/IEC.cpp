@@ -93,7 +93,7 @@ Drive *IEC::create_drive(const char *path)
 		} else {
 			// Unknown file type
 			// TODO: print error?
-			return NULL;
+			return nullptr;
 		}
 	}
 }
@@ -104,7 +104,7 @@ IEC::IEC(C64Display *display) : the_display(display)
 
 	// Create drives 8..11
 	for (i=0; i<4; i++) {
-		drive[i] = NULL;	// Important because UpdateLEDs is called from the drive constructors (via set_error)
+		drive[i] = nullptr;	// Important because UpdateLEDs is called from the drive constructors (via set_error)
 	}
 
 	if (!ThePrefs.Emul1541Proc) {
@@ -137,7 +137,7 @@ IEC::~IEC()
 void IEC::Reset()
 {
 	for (int i=0; i<4; i++) {
-		if (drive[i] != NULL && drive[i]->Ready) {
+		if (drive[i] != nullptr && drive[i]->Ready) {
 			drive[i]->Reset();
 		}
 	}
@@ -158,7 +158,7 @@ void IEC::NewPrefs(const Prefs *prefs)
 	for (int i=0; i<4; i++) {
 		if (strcmp(ThePrefs.DrivePath[i], prefs->DrivePath[i]) || ThePrefs.Emul1541Proc != prefs->Emul1541Proc) {
 			delete drive[i];
-			drive[i] = NULL;	// Important because UpdateLEDs is called from drive constructors (via set_error())
+			drive[i] = nullptr;	// Important because UpdateLEDs is called from drive constructors (via set_error())
 			if (!prefs->Emul1541Proc) {
 				drive[i] = create_drive(prefs->DrivePath[i]);
 			}
@@ -313,7 +313,7 @@ void IEC::Release()
 uint8_t IEC::listen(int device)
 {
 	if ((device >= 8) && (device <= 11)) {
-		if ((listener = drive[device-8]) != NULL && listener->Ready) {
+		if ((listener = drive[device-8]) != nullptr && listener->Ready) {
 			listener_active = true;
 			return ST_OK;
 		}
@@ -331,7 +331,7 @@ uint8_t IEC::listen(int device)
 uint8_t IEC::talk(int device)
 {
 	if ((device >= 8) && (device <= 11)) {
-		if ((talker = drive[device-8]) != NULL && talker->Ready) {
+		if ((talker = drive[device-8]) != nullptr && talker->Ready) {
 			talker_active = true;
 			return ST_OK;
 		}
@@ -630,7 +630,7 @@ void Drive::execute_cmd(const uint8_t *cmd, int cmd_len)
 
 	// Find token delimiters
 	const uint8_t *colon = (const uint8_t *)memchr(cmd, ':', cmd_len);
-	const uint8_t *equal = colon ? (const uint8_t *)memchr(colon, '=', cmd_len - (colon - cmd)) : NULL;
+	const uint8_t *equal = colon ? (const uint8_t *)memchr(colon, '=', cmd_len - (colon - cmd)) : nullptr;
 	const uint8_t *comma = (const uint8_t *)memchr(cmd, ',', cmd_len);
 	const uint8_t *minus = (const uint8_t *)memchr(cmd, '-', cmd_len);
 
@@ -976,7 +976,7 @@ bool IsMountableFile(const char *path, int &type)
  *  returns false on error
  */
 
-bool ReadDirectory(const char *path, int type, vector<c64_dir_entry> &vec)
+bool ReadDirectory(const char *path, int type, std::vector<c64_dir_entry> &vec)
 {
 	vec.clear();
 	switch (type) {

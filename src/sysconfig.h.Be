@@ -3,9 +3,6 @@
 /* define if the compiler supports basic C++20 syntax */
 #define HAVE_CXX20 1
 
-/* Define to 1 if you have the <dirent.h> header file. */
-#define HAVE_DIRENT_H 1
-
 /* GTK preferences GUI is enabled */
 /* #undef HAVE_GLADE */
 
@@ -14,9 +11,6 @@
 
 /* SDL support is enabled */
 /* #undef HAVE_SDL */
-
-/* Define to 1 if you have the `sigaction' function. */
-#define HAVE_SIGACTION 1
 
 /* Define to 1 if you have the <stdint.h> header file. */
 #define HAVE_STDINT_H 1

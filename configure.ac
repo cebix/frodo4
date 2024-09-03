@@ -25,14 +25,8 @@ fi
 GUI_OBJS=""
 dnl GUI_OBJS="sdlgui.o file.o dlgFileSelect.o dlgMain.o dlgDrives.o dlgOptions.o dlgVideoSound.o dlgAdvanced.o dlgInput.o"
 
-dnl Checks for headers.
-AC_CHECK_HEADERS(sys/types.h sys/stat.h dirent.h)
-
 dnl Checks for typedefs, structures, and compiler characteristics.
 AC_TYPE_OFF_T
-
-dnl Checks for library functions.
-AC_CHECK_FUNCS(sigaction)
 
 AC_CONFIG_HEADERS([src/sysconfig.h])
 AC_SUBST(HAVE_SDL)
