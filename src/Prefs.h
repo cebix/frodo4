@@ -21,6 +21,8 @@
 #ifndef _PREFS_H
 #define _PREFS_H
 
+#include <string>
+
 
 // SID types
 enum {
@@ -51,7 +53,7 @@ class Prefs {
 public:
 	Prefs();
 #ifdef HAVE_GLADE
-	bool ShowEditor(bool startup, const char *prefs_name);
+	bool ShowEditor(bool startup, std::string prefs_path, std::string snapshot_path);
 #else
 	bool ShowEditor(bool startup, char *prefs_name);
 #endif

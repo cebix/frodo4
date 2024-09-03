@@ -77,8 +77,8 @@ private:
 	void load_rom(const char *which, const char *path, uint8_t *where, size_t size, const uint8_t *builtin);
 	void load_rom_files();
 
-	char prefs_path[1024];	// Pathname of current preferences file
-	bool prefs_showing;		// true: Preferences editor is on screen
+	char prefs_path[1024];		// Pathname of current preferences file
+	bool prefs_showing;			// true: Preferences editor is on screen
 
 	BMessenger this_messenger;
 	BFilePanel *open_panel;
@@ -107,7 +107,8 @@ private:
 	void load_rom(const char *which, const char *path, uint8_t *where, size_t size, const uint8_t *builtin);
 	void load_rom_files();
 
-	std::string prefs_path;	// Pathname of current preferences file
+	std::string prefs_path;		// Pathname of current preferences file
+	std::string snapshot_path;	// Directory for saving snapshots
 };
 
 extern Frodo *TheApp;  // Pointer to Frodo object

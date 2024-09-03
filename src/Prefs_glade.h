@@ -40,9 +40,6 @@ static bool result = false;
 // Pointer to preferences being edited
 static Prefs *prefs = nullptr;
 
-// Prefs file name
-static const char *prefs_path = nullptr;
-
 // Dialog for selecting snapshot file
 static GtkWidget *snapshot_dialog = nullptr;
 static GtkWidget *snapshot_accept_button = nullptr;
@@ -64,14 +61,14 @@ static void write_sam_output(std::string s, bool error = false);
 
 /*
  *  Show preferences editor (synchronously)
- *  prefs_name points to the file name of the preferences (which may be changed)
+ *  prefs_path is the preferences file name
+ *  snapshot_path is the default directory for snapshots
  */
 
-bool Prefs::ShowEditor(bool startup, const char *prefs_name)
+bool Prefs::ShowEditor(bool startup, std::string prefs_path, std::string snapshot_path)
 {
 	in_startup = startup;
 	prefs = this;
-	prefs_path = prefs_name;
 
 	// Load user interface file on startup
 	if (startup) {
@@ -105,6 +102,8 @@ bool Prefs::ShowEditor(bool startup, const char *prefs_name)
 		snapshot_accept_button = gtk_dialog_add_button(GTK_DIALOG(snapshot_dialog), "Save", GTK_RESPONSE_ACCEPT);
 		gtk_dialog_set_default_response(GTK_DIALOG(snapshot_dialog), GTK_RESPONSE_ACCEPT);
 
+		gtk_file_chooser_add_shortcut_folder(GTK_FILE_CHOOSER(snapshot_dialog), snapshot_path.c_str(), nullptr);
+		gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(snapshot_dialog), snapshot_path.c_str());
 		gtk_file_chooser_set_current_name(GTK_FILE_CHOOSER(snapshot_dialog), "Untitled.snap");
 		gtk_file_chooser_set_do_overwrite_confirmation(GTK_FILE_CHOOSER(snapshot_dialog), true);
 
@@ -174,6 +173,16 @@ bool Prefs::ShowEditor(bool startup, const char *prefs_name)
 
 	gtk_window_present(prefs_win);
 	gtk_main();
+
+	// Save preferences if "Start"/"Continue" clicked
+	if (result) {
+		get_values();
+		prefs->Save(prefs_path.c_str());
+
+		if (! startup) {
+			SAM_SetState(TheC64);
+		}
+	}
 
 	return result;
 }
@@ -429,13 +438,6 @@ extern "C" void on_sam_close_activate(GtkMenuItem *menuitem, gpointer user_data)
 
 extern "C" void on_ok_clicked(GtkButton *button, gpointer user_data)
 {
-	get_values();
-	prefs->Save(prefs_path);
-
-	if (! in_startup) {
-		SAM_SetState(TheC64);
-	}
-
 	gtk_widget_hide(GTK_WIDGET(gtk_builder_get_object(builder, "prefs_win")));
 	gtk_widget_hide(GTK_WIDGET(gtk_builder_get_object(builder, "about_win")));
 	gtk_widget_hide(GTK_WIDGET(gtk_builder_get_object(builder, "sam_win")));
@@ -463,6 +465,7 @@ extern "C" void on_load_snapshot(GtkMenuItem *menuitem, gpointer user_data)
 	if (res == GTK_RESPONSE_ACCEPT) {
 		filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(snapshot_dialog));
 		load_ok = TheC64->LoadSnapshot(filename);
+		SAM_GetState(TheC64);	// Get new state from snapshot
 	}
 
 	gtk_widget_hide(snapshot_dialog);
@@ -494,7 +497,7 @@ extern "C" void on_save_snapshot(GtkMenuItem *menuitem, gpointer user_data)
 	if (res == GTK_RESPONSE_ACCEPT) {
 		filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(snapshot_dialog));
 		save_ok = TheC64->SaveSnapshot(filename);
-		SAM_GetState(TheC64);	// Saving a snapshot may advance the state a few cycles
+		SAM_GetState(TheC64);	// Saving a snapshot may advance the state a few cycles in Frodo SC
 	}
 
 	gtk_widget_hide(snapshot_dialog);

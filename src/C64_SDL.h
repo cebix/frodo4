@@ -57,10 +57,6 @@ void C64::c64_ctor1()
 
 void C64::c64_ctor2()
 {
-   	printf("Use F10 to edit preferences or quit,\n"
-   	       "F11 to cause an NMI (RESTORE key) and\n"
-   	       "F12 to reset the C64.\n\n");
-  
 	frame_start = chrono::steady_clock::now();
 }
 

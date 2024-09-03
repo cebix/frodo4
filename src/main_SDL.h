@@ -28,7 +28,9 @@
 
 #include <cstdlib>
 #include <ctime>
+#include <filesystem>
 #include <memory>
+namespace fs = std::filesystem;
 
 
 // Global variables
@@ -114,14 +116,20 @@ void Frodo::ReadyToRun()
 
 	// Load preferences
 	if (prefs_path.empty()) {
-		prefs_path = SDL_GetPrefPath("cebix", "Frodo");
-		prefs_path += "config";
+		auto path = SDL_GetPrefPath("cebix", "Frodo");
+		prefs_path = std::string(path) + "config";
+		snapshot_path = std::string(path) + "snapshots";
+
+		// Create snapshot directory if it doesn't exist
+		if (! fs::exists(snapshot_path)) {
+			fs::create_directories(snapshot_path);
+		}
 	}
 	ThePrefs.Load(prefs_path.c_str());
 
 #ifdef HAVE_GLADE
 	// Show preferences editor
-	if (!ThePrefs.ShowEditor(true, prefs_path.c_str()))
+	if (!ThePrefs.ShowEditor(true, prefs_path, snapshot_path))
 		return;  // "Quit" clicked
 
 	// Keep SDL event loop running while preferences editor is open the next time
@@ -143,7 +151,7 @@ void Frodo::ReadyToRun()
 bool Frodo::RunPrefsEditor()
 {
 	auto prefs = std::make_unique<Prefs>(ThePrefs);
-	bool result = prefs->ShowEditor(false, prefs_path.c_str());
+	bool result = prefs->ShowEditor(false, prefs_path, snapshot_path);
 	if (result) {
 		TheC64->NewPrefs(prefs.get());
 		ThePrefs = *prefs;
