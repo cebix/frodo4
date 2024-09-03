@@ -120,11 +120,11 @@ private:
 
 #ifdef FRODO_SC
 	uint32_t first_irq_cycle;
+	uint32_t first_nmi_cycle;	// Unused
 
 	enum {
 		OPFLAG_IRQ_DISABLED = 0x01,
 		OPFLAG_IRQ_ENABLED = 0x02,
-		OPFLAG_INT_DELAYED = 0x04
 	};
 	uint8_t opflags;		// Interrupt operation flags
 

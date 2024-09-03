@@ -56,15 +56,18 @@
 		read_to(pc++, data);  \
 		if (flag) { \
 			ar = pc + (int8_t)data; \
-			if ((ar >> 8) != (pc >> 8)) { \
-				if (data & 0x80) \
+			if ((ar ^ pc) & 0xff00) { \
+				if (data & 0x80) { \
 					state = O_BRANCH_BP; \
-				else \
+				} else { \
 					state = O_BRANCH_FP; \
-			} else \
+				} \
+			} else { \
 				state = O_BRANCH_NP; \
-		} else \
+			} \
+		} else { \
 			state = 0; \
+		} \
 		break;
 
 // Set N and Z flags according to byte
@@ -850,16 +853,18 @@
 			push_flags(true);
 			i_flag = true;
 #ifndef IS_CPU_1541
-			if (interrupt.intr[INT_NMI]) {  // BRK interrupted by NMI?
+			if (interrupt.intr[INT_NMI] && (the_c64->CycleCounter - first_nmi_cycle) >= 1) {  // BRK interrupted by NMI?
 				interrupt.intr[INT_NMI] = false;	// Simulate an edge-triggered input
 				state = 0x0015;						// Jump to NMI sequence
 				break;
 			}
 #endif
+			++first_nmi_cycle;	// Delay pending NMI by one cycle
 			state = O_BRK4;
 			break;
 		case O_BRK4:
 			read_to(0xfffe, pc);
+			++first_nmi_cycle;	// Delay pending NMI by one cycle
 			state = O_BRK5;
 			break;
 		case O_BRK5:
@@ -900,13 +905,16 @@
 			Branch(!(n_flag & 0x80));
 
 		case O_BRANCH_NP:	// No page crossed
-			opflags |= OPFLAG_INT_DELAYED;
 			read_idle(pc);
 			pc = ar;
+			++first_irq_cycle;	// Delay pending interrupts by one cycle
+			++first_nmi_cycle;
 			Last;
 		case O_BRANCH_BP:	// Page crossed, branch backwards
 			read_idle(pc);
 			pc = ar;
+			--first_irq_cycle;	// Advance pending interrupts by one cycle
+			--first_nmi_cycle;
 			state = O_BRANCH_BP1;
 			break;
 		case O_BRANCH_BP1:
@@ -915,6 +923,8 @@
 		case O_BRANCH_FP:	// Page crossed, branch forwards
 			read_idle(pc);
 			pc = ar;
+			--first_irq_cycle;	// Advance pending interrupts by one cycle
+			--first_nmi_cycle;
 			state = O_BRANCH_FP1;
 			break;
 		case O_BRANCH_FP1:
@@ -945,15 +955,17 @@
 
 		case O_SEI:
 			read_idle(pc);
-			if (!i_flag)
+			if (!i_flag) {
 				opflags |= OPFLAG_IRQ_DISABLED;
+			}
 			i_flag = true;
 			Last;
 
 		case O_CLI:
 			read_idle(pc);
-			if (i_flag)
+			if (i_flag) {
 				opflags |= OPFLAG_IRQ_ENABLED;
+			}
 			i_flag = false;
 			Last;
 

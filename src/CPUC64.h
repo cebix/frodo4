@@ -147,7 +147,6 @@ private:
 	enum {
 		OPFLAG_IRQ_DISABLED = 0x01,
 		OPFLAG_IRQ_ENABLED = 0x02,
-		OPFLAG_INT_DELAYED = 0x04
 	};
 	uint8_t opflags;			// Interrupt operation flags
 
@@ -172,7 +171,11 @@ struct MOS6510State {
 	uint8_t intr[4];			// Interrupt state
 	bool nmi_state;	
 	uint8_t dfff_byte;
+								// Frodo SC:
 	bool instruction_complete;
+	uint8_t opflags;
+	uint32_t first_irq_cycle;
+	uint32_t first_nmi_cycle;
 };
 
 

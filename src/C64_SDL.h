@@ -170,7 +170,6 @@ void C64::thread_func()
 		if (ThePrefs.Emul1541Proc) {
 			emulate_1541_cycle();
 		}
-		CycleCounter++;
 #else
 		// The order of calls is important here
 		int cycles = TheVIC->EmulateLine();

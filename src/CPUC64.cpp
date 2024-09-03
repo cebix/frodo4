@@ -626,7 +626,11 @@ void MOS6510::GetState(MOS6510State *s)
 	s->intr[INT_RESET] = interrupt.intr[INT_RESET];
 	s->nmi_state = nmi_state;
 	s->dfff_byte = dfff_byte;
+
 	s->instruction_complete = true;
+	s->opflags = 0;
+	s->first_irq_cycle = 0;
+	s->first_nmi_cycle = 0;
 }
 
 

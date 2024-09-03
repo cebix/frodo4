@@ -98,7 +98,7 @@ MOS6502_1541::MOS6502_1541(C64 *c64, Job1541 *job, C64Display *disp, uint8_t *Ra
 	via2_t1c = via2_t1l = via2_t2c = via2_t2l = 0;
 	via2_sr = 0;
 
-	first_irq_cycle = 0;
+	first_irq_cycle = first_nmi_cycle = 0;
 	opflags = 0;
 	Idle = false;
 }
@@ -641,8 +641,7 @@ void MOS6502_1541::EmulateCycle()
 			Reset();
 		} else if ((interrupt.intr[INT_VIA1IRQ] || interrupt.intr[INT_VIA2IRQ] || interrupt.intr[INT_IECIRQ]) &&
 				   (!i_flag || (opflags & OPFLAG_IRQ_DISABLED)) && !(opflags & OPFLAG_IRQ_ENABLED)) {
-			uint32_t int_delay = (opflags & OPFLAG_INT_DELAYED) ? 1 : 0;  // Taken branches to the same page delay the IRQ
-			if (the_c64->CycleCounter - first_irq_cycle - int_delay >= 2) {
+			if (the_c64->CycleCounter - first_irq_cycle >= 2) {
 				state = 0x0008;
 				opflags = 0;
 			}

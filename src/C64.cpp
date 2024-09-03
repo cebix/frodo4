@@ -60,6 +60,8 @@ struct Snapshot {
 
 	uint8_t driveRam[DRIVE_RAM_SIZE];
 
+	uint32_t cycleCounter;
+
 	MOS6510State cpu;
 	MOS6569State vic;
 	MOS6581State sid;
@@ -340,6 +342,7 @@ void C64::emulate_c64_cycle()
 	TheCIA1->EmulateCycle();
 	TheCIA2->EmulateCycle();
 	TheCPU->EmulateCycle();
+	++CycleCounter;
 }
 
 
@@ -387,6 +390,7 @@ void C64::MakeSnapshot(Snapshot * s)
 #else
 	TheCPU->GetState(&(s->cpu));
 #endif
+	s->cycleCounter = CycleCounter;
 
 	TheVIC->GetState(&(s->vic));
 	TheSID->GetState(&(s->sid));
@@ -433,6 +437,7 @@ void C64::RestoreSnapshot(const Snapshot * s)
 	memcpy(RAM, s->ram, C64_RAM_SIZE);
 	memcpy(Color, s->color, COLOR_RAM_SIZE);
 
+	CycleCounter = s->cycleCounter;
 	TheCPU->SetState(&(s->cpu));
 	TheVIC->SetState(&(s->vic));
 	TheSID->SetState(&(s->sid));

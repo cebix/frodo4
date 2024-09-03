@@ -100,8 +100,10 @@ MOS6510::MOS6510(C64 *c64, uint8_t *Ram, uint8_t *Basic, uint8_t *Kernal, uint8_
 	n_flag = z_flag = 0;
 	v_flag = d_flag = c_flag = false;
 	i_flag = true;
+
 	dfff_byte = 0x55;
 	BALow = false;
+
 	first_irq_cycle = first_nmi_cycle = 0;
 	opflags = 0;
 }
@@ -159,7 +161,11 @@ void MOS6510::GetState(MOS6510State *s)
 	s->intr[INT_RESET] = interrupt.intr[INT_RESET];
 	s->nmi_state = nmi_state;
 	s->dfff_byte = dfff_byte;
+
 	s->instruction_complete = (state == 0);
+	s->opflags = opflags;
+	s->first_irq_cycle = first_irq_cycle;
+	s->first_nmi_cycle = first_nmi_cycle;
 }
 
 
@@ -194,9 +200,13 @@ void MOS6510::SetState(const MOS6510State *s)
 	interrupt.intr[INT_RESET] = s->intr[INT_RESET];
 	nmi_state = s->nmi_state;
 	dfff_byte = s->dfff_byte;
+
 	if (s->instruction_complete) {
 		state = 0;
 	}
+	opflags = s->opflags;
+	first_irq_cycle = s->first_irq_cycle;
+	first_nmi_cycle = s->first_nmi_cycle;
 }
 
 
@@ -619,16 +629,14 @@ void MOS6510::EmulateCycle()
 		if (interrupt.intr[INT_RESET]) {
 			Reset();
 		} else if (interrupt.intr[INT_NMI]) {
-			uint32_t int_delay = (opflags & OPFLAG_INT_DELAYED) ? 1 : 0;  // Taken branches to the same page delay the NMI
-			if (the_c64->CycleCounter - first_nmi_cycle - int_delay >= 2) {
+			if (the_c64->CycleCounter - first_nmi_cycle >= 2) {
 				interrupt.intr[INT_NMI] = false;	// Simulate an edge-triggered input
 				state = 0x0010;
 				opflags = 0;
 			}
 		} else if ((interrupt.intr[INT_VICIRQ] || interrupt.intr[INT_CIAIRQ]) &&
 				   (!i_flag || (opflags & OPFLAG_IRQ_DISABLED)) && !(opflags & OPFLAG_IRQ_ENABLED)) {
-			uint32_t int_delay = (opflags & OPFLAG_INT_DELAYED) ? 1 : 0;  // Taken branches to the same page delay the IRQ
-			if (the_c64->CycleCounter - first_irq_cycle - int_delay >= 2) {
+			if (the_c64->CycleCounter - first_irq_cycle >= 2) {
 				state = 0x0008;
 				opflags = 0;
 			}

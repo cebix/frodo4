@@ -346,7 +346,6 @@ static bigtime_t cpu_time_acc = 0;
 		if (ThePrefs.Emul1541Proc) {
 			emulate_1541_cycle();
 		}
-		CycleCounter++;
 #else
 	while (!quit_thyself) {
 		// The order of calls is important here
