@@ -319,6 +319,9 @@ static void ghost_widgets()
 	ghost_widget("drive9_path", prefs->Emul1541Proc);
 	ghost_widget("drive10_path", prefs->Emul1541Proc);
 	ghost_widget("drive11_path", prefs->Emul1541Proc);
+	ghost_widget("drive9_next_disk", prefs->Emul1541Proc);
+	ghost_widget("drive10_next_disk", prefs->Emul1541Proc);
+	ghost_widget("drive11_next_disk", prefs->Emul1541Proc);
 
 	ghost_widget("scaling_numerator", prefs->DisplayType == DISPTYPE_SCREEN);
 
