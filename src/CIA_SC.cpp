@@ -80,7 +80,7 @@ void MOS6526::Reset()
 
 	ta_cnt_phi2 = tb_cnt_phi2 = tb_cnt_ta = false;
 
-	ta_irq_next_cycle = tb_irq_next_cycle = false;
+	ta_int_next_cycle = tb_int_next_cycle = false;
 	has_new_cra = has_new_crb = false;
 	ta_toggle = tb_toggle = false;
 	ta_state = tb_state = T_STOP;
@@ -146,8 +146,8 @@ void MOS6526::GetState(MOS6526State *cs)
 	cs->int_data = icr;
 	cs->int_mask = int_mask;
 
-	cs->ta_irq_next_cycle = ta_irq_next_cycle;
-	cs->tb_irq_next_cycle = tb_irq_next_cycle;
+	cs->ta_int_next_cycle = ta_int_next_cycle;
+	cs->tb_int_next_cycle = tb_int_next_cycle;
 	cs->has_new_cra = has_new_cra;
 	cs->has_new_crb = has_new_crb;
 	cs->ta_toggle = ta_toggle;
@@ -197,8 +197,8 @@ void MOS6526::SetState(const MOS6526State *cs)
 	tb_cnt_phi2 = ((crb & 0x60) == 0x00);
 	tb_cnt_ta = ((crb & 0x40) == 0x40);		// Ignore CNT, which is pulled high
 
-	ta_irq_next_cycle = cs->ta_irq_next_cycle;
-	tb_irq_next_cycle = cs->tb_irq_next_cycle;
+	ta_int_next_cycle = cs->ta_int_next_cycle;
+	tb_int_next_cycle = cs->tb_int_next_cycle;
 	has_new_cra = cs->has_new_cra;
 	has_new_crb = cs->has_new_crb;
 	ta_toggle = cs->ta_toggle;
@@ -220,7 +220,7 @@ inline uint8_t MOS6526::timer_on_pb(uint8_t prb)
 	if (cra & 0x02) {
 
 		// TA output to PB6
-		if ((cra & 0x04) ? ta_toggle : ta_irq_next_cycle) {
+		if ((cra & 0x04) ? ta_toggle : ta_int_next_cycle) {
 			prb |= 0x40;
 		} else {
 			prb &= 0xbf;
@@ -230,7 +230,7 @@ inline uint8_t MOS6526::timer_on_pb(uint8_t prb)
 	if (crb & 0x02) {
 
 		// TB output to PB7
-		if ((crb & 0x04) ? tb_toggle : tb_irq_next_cycle) {
+		if ((crb & 0x04) ? tb_toggle : tb_int_next_cycle) {
 			prb |= 0x80;
 		} else {
 			prb &= 0x7f;
@@ -293,8 +293,8 @@ uint8_t MOS6526_1::ReadRegister(uint16_t adr)
 		case 0x0d: {
 			uint8_t ret = icr;			// Read and clear ICR
 			icr = 0;
-			ta_irq_next_cycle = false;
-			tb_irq_next_cycle = false;
+			ta_int_next_cycle = false;
+			tb_int_next_cycle = false;
 			the_cpu->ClearCIAIRQ();		// Clear IRQ
 			return ret;
 		}
@@ -339,8 +339,8 @@ uint8_t MOS6526_2::ReadRegister(uint16_t adr)
 		case 0x0d: {
 			uint8_t ret = icr; // Read and clear ICR
 			icr = 0;
-			ta_irq_next_cycle = false;
-			tb_irq_next_cycle = false;
+			ta_int_next_cycle = false;
+			tb_int_next_cycle = false;
 			the_cpu->ClearNMI();
 			return ret;
 		}
@@ -438,11 +438,11 @@ void MOS6526_1::WriteRegister(uint16_t adr, uint8_t byte)
 
 		case 0xd:
 			if (byte & 0x80) {
-				int_mask |= byte & 0x7f;
+				int_mask |= byte & 0x1f;
 			} else {
-				int_mask &= ~byte;
+				int_mask &= ~(byte & 0x1f);
 			}
-			if (icr & int_mask & 0x7f) { // Trigger IRQ if pending
+			if ((byte & 0x80) && (icr & int_mask & 0x1f)) { // Trigger IRQ if pending
 				icr |= 0x80;
 				the_cpu->TriggerCIAIRQ();
 			}
@@ -551,11 +551,11 @@ void MOS6526_2::WriteRegister(uint16_t adr, uint8_t byte)
 
 		case 0xd:
 			if (byte & 0x80) {
-				int_mask |= byte & 0x7f;
+				int_mask |= byte & 0x1f;
 			} else {
-				int_mask &= ~byte;
+				int_mask &= ~(byte & 0x1f);
 			}
-			if (icr & int_mask & 0x1f) { // Trigger NMI if pending
+			if ((byte & 0x80) && (icr & int_mask & 0x1f)) { // Trigger NMI if pending
 				icr |= 0x80;
 				the_cpu->TriggerNMI();
 			}
@@ -621,7 +621,7 @@ ta_count:
 			if (ta_state != T_STOP) {
 ta_interrupt:
 				ta = latcha;			// Reload timer
-				ta_irq_next_cycle = true; // Trigger interrupt in next cycle
+				ta_int_next_cycle = true; // Trigger interrupt in next cycle
 				icr |= 1;				// But set ICR bit now
 				ta_toggle = !ta_toggle;	// Toggle PB6 output
 
@@ -732,7 +732,7 @@ tb_count:
 tb_interrupt:
 				if (!tb_cnt_ta || (ta_output & 0x06) == 0x00) {	// Cascaded mode takes two cycles to reset while tb == 0
 					tb = latchb;			// Reload timer
-					tb_irq_next_cycle = true; // Trigger interrupt in next cycle
+					tb_int_next_cycle = true; // Trigger interrupt in next cycle
 					icr |= 2;				// But set ICR bit now
 					tb_toggle = !tb_toggle;	// Toggle PB7 output
 

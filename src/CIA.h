@@ -33,6 +33,7 @@ struct MOS6526State;
 class MOS6526 {
 public:
 	MOS6526(MOS6510 *CPU);
+	virtual ~MOS6526() { }
 
 	void Reset();
 	void GetState(MOS6526State *cs);
@@ -69,12 +70,12 @@ protected:
 #ifdef FRODO_SC
 	uint8_t timer_on_pb(uint8_t prb);
 
-	bool ta_irq_next_cycle,		// Flag: Trigger TA IRQ in next cycle
-		 tb_irq_next_cycle,		// Flag: Trigger TB IRQ in next cycle
+	bool ta_int_next_cycle,		// Flag: Trigger Timer A interrupt in next cycle
+		 tb_int_next_cycle,		// Flag: Trigger Timer B interrupt in next cycle
 		 has_new_cra,			// Flag: New value for CRA pending
 		 has_new_crb,			// Flag: New value for CRB pending
-		 ta_toggle,				// TA output to PB6 toggle state
-		 tb_toggle;				// TB output to PB7 toggle state
+		 ta_toggle,				// Timer A output to PB6 toggle state
+		 tb_toggle;				// Timer B output to PB7 toggle state
 	char ta_state, tb_state;	// Timer A/B states
 	uint8_t new_cra, new_crb;	// New values for CRA/CRB
 	uint8_t ta_output;			// Shift register for previous TA output states
@@ -162,8 +163,8 @@ struct MOS6526State {
 	uint8_t int_mask;	// Enabled interrupts
 
 						// FrodoSC:
-	bool ta_irq_next_cycle;
-	bool tb_irq_next_cycle;
+	bool ta_int_next_cycle;
+	bool tb_int_next_cycle;
 	bool has_new_cra;
 	bool has_new_crb;
 	bool ta_toggle;
@@ -184,12 +185,12 @@ struct MOS6526State {
 inline void MOS6526::CheckIRQs()
 {
 	// Trigger pending interrupts
-	if (ta_irq_next_cycle) {
-		ta_irq_next_cycle = false;
+	if (ta_int_next_cycle) {
+		ta_int_next_cycle = false;
 		TriggerInterrupt(1);
 	}
-	if (tb_irq_next_cycle) {
-		tb_irq_next_cycle = false;
+	if (tb_int_next_cycle) {
+		tb_int_next_cycle = false;
 		TriggerInterrupt(2);
 	}
 }

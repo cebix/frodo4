@@ -79,9 +79,9 @@ C64Display::C64Display(C64 *the_c64) : TheC64(the_c64)
 	// Create window and renderer
 	uint32_t flags;
 	if (ThePrefs.DisplayType == DISPTYPE_SCREEN) {
-	    flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
+	    flags = SDL_WINDOW_FULLSCREEN_DESKTOP;
 	} else {
-	    flags |= SDL_WINDOW_RESIZABLE;
+	    flags = SDL_WINDOW_RESIZABLE;
 	}
 
 	int result = SDL_CreateWindowAndRenderer(

@@ -153,7 +153,7 @@ enum {
 };
 
 // Mnemonic for each opcode
-static const char mnemonic[256] = {
+static const uint8_t mnemonic[256] = {
 	M_BRK , M_ORA , M_IJAM, M_ISLO, M_INOP, M_ORA, M_ASL , M_ISLO,	// 00
 	M_PHP , M_ORA , M_ASL , M_IANC, M_INOP, M_ORA, M_ASL , M_ISLO,
 	M_BPL , M_ORA , M_IJAM, M_ISLO, M_INOP, M_ORA, M_ASL , M_ISLO,	// 10
@@ -189,7 +189,7 @@ static const char mnemonic[256] = {
 };
 
 // Addressing mode for each opcode
-static const char adr_mode[256] = {
+static const uint8_t adr_mode[256] = {
 	A_IMPL, A_INDX, A_IMPL, A_INDX, A_ZERO , A_ZERO , A_ZERO , A_ZERO,	// 00
 	A_IMPL, A_IMM , A_ACCU, A_IMM , A_ABS  , A_ABS  , A_ABS  , A_ABS,
 	A_REL , A_INDY, A_IMPL, A_INDY, A_ZEROX, A_ZEROX, A_ZEROX, A_ZEROX,	// 10
@@ -230,7 +230,7 @@ static const char mnem_2[] = "dnscceimnprvvllllmppeeeonnnmsdddsorhhlloottbeeettt
 static const char mnem_3[] = "cdlcsqtielkcscdivpxycxyrcxypraxyrpaapaplrisccdiaxyxyxasa?cerrpbmpsxaaaxcxasxyoe";
 
 // Instruction length for each addressing mode
-static const char adr_length[] = {1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 2, 2};
+static const uint8_t adr_length[] = {1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 2, 2};
 
 
 // Prototypes
@@ -614,7 +614,7 @@ static bool range_args(int def_range)
  *  true: OK, false: Error
  */
 
-static bool instr_args(uint16_t *number, char *mode)
+static bool instr_args(uint16_t *number, uint8_t *mode)
 {
 	switch (the_token) {
 
@@ -1118,7 +1118,7 @@ static void disassemble()
 
 static int disass_line(uint16_t adr, uint8_t op, uint8_t lo, uint8_t hi)
 {
-	char mode = adr_mode[op], mnem = mnemonic[op];
+	uint8_t mode = adr_mode[op], mnem = mnemonic[op];
 
 	// Display instruction bytes in hex
 	switch (adr_length[mode]) {
@@ -1210,7 +1210,7 @@ static int disass_line(uint16_t adr, uint8_t op, uint8_t lo, uint8_t hi)
  *  M_ILLEGAL: No matching mnemonic found
  */
 
-static char find_mnemonic(char op1, char op2, char op3)
+static uint8_t find_mnemonic(char op1, char op2, char op3)
 {
 	for (unsigned i = 0; i < M_MAXIMUM; ++i) {
 		if ((mnem_1[i] == op1) && (mnem_2[i] == op2) && (mnem_3[i] == op3))
@@ -1226,7 +1226,7 @@ static char find_mnemonic(char op1, char op2, char op3)
  *  true: OK, false: Mnemonic can't have specified addressing mode
  */
 
-static bool find_opcode(char mnem, char mode, uint8_t *opcode)
+static bool find_opcode(uint8_t mnem, uint8_t mode, uint8_t *opcode)
 {
 	for (unsigned i = 0; i < 256; ++i) {
 		if ((mnemonic[i] == mnem) && (adr_mode[i] == mode)) {
@@ -1266,12 +1266,12 @@ static void assemble_line()
 		return;
 	}
 
-	char mnem = find_mnemonic(c1, c2, c3);
+	uint8_t mnem = find_mnemonic(c1, c2, c3);
 	if (mnem != M_ILLEGAL) {
 		get_token();
 
-		char mode;
-		uint16_t arg;
+		uint8_t mode;
+		uint16_t arg = 0;
 
 		if (instr_args(&arg, &mode)) {
 			uint8_t opcode;

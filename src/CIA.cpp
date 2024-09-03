@@ -137,8 +137,8 @@ void MOS6526::GetState(MOS6526State *cs)
 	cs->int_data = icr;
 	cs->int_mask = int_mask;
 
-	cs->ta_irq_next_cycle = false;
-	cs->tb_irq_next_cycle = false;
+	cs->ta_int_next_cycle = false;
+	cs->tb_int_next_cycle = false;
 	cs->has_new_cra = false;
 	cs->has_new_crb = false;
 	cs->ta_toggle = false;

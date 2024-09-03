@@ -532,7 +532,7 @@ extern "C" void on_create_image(GtkMenuItem *menuitem, gpointer user_data)
 
 	gtk_widget_hide(create_image_dialog);
 
-	GtkWidget * msg;
+	GtkWidget * msg = nullptr;
 	if (save_ok) {
 		msg = gtk_message_dialog_new(GTK_WINDOW(gtk_builder_get_object(builder, "prefs_win")),
 			GTK_DIALOG_MODAL, GTK_MESSAGE_INFO, GTK_BUTTONS_OK,
@@ -544,8 +544,10 @@ extern "C" void on_create_image(GtkMenuItem *menuitem, gpointer user_data)
 			"Can't create disk image file '%s'.", filename
 		);
 	}
-	gtk_dialog_run(GTK_DIALOG(msg));
-	gtk_widget_destroy(msg);
+	if (msg) {
+		gtk_dialog_run(GTK_DIALOG(msg));
+		gtk_widget_destroy(msg);
+	}
 
 	if (filename) {
 		g_free(filename);
