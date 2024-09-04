@@ -162,6 +162,7 @@ private:
 	uint16_t mc_base[8];			// Sprite data counter bases
 
 	uint16_t raster_x;				// Current raster x position
+	uint16_t prev_x_scroll;			// Previous XSCROLL value
 
 	unsigned ml_index;				// Index in matrix/color_line[]
 	uint8_t gfx_data, char_data, color_data, last_char_data;

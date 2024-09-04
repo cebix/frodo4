@@ -171,7 +171,7 @@ MOS6569::MOS6569(C64 *c64, C64Display *disp, MOS6510 *CPU, uint8_t *RAM, uint8_t
 	// Initialize other variables
 	raster_y = TOTAL_RASTERS - 1;
 	rc = 7;
-	irq_raster = vc = vc_base = x_scroll = y_scroll = 0;
+	irq_raster = vc = vc_base = x_scroll = prev_x_scroll = y_scroll = 0;
 	dy_start = ROW24_YSTART;
 	dy_stop = ROW24_YSTOP;
 	ml_index = 0;
@@ -356,6 +356,7 @@ void MOS6569::SetState(const MOS6569State *vd)
 	ctrl1 = vd->ctrl1;
 	ctrl2 = vd->ctrl2;
 	x_scroll = ctrl2 & 7;
+	prev_x_scroll = x_scroll;
 	y_scroll = ctrl1 & 7;
 	if (ctrl1 & 8) {
 		dy_start = ROW25_YSTART;
@@ -606,6 +607,7 @@ void MOS6569::WriteRegister(uint16_t adr, uint8_t byte)
 
 		case 0x16:	// Control register 2
 			ctrl2 = byte;
+			prev_x_scroll = x_scroll;
 			x_scroll = byte & 7;
 			display_idx = ((ctrl1 & 0x60) | (ctrl2 & 0x10)) >> 4;
 			break;
@@ -889,6 +891,12 @@ void MOS6569::draw_graphics()
 
 		case 5:		// Invalid multicolor text
 			memset8(p, colors[0]);
+
+			for (unsigned i = prev_x_scroll; i < x_scroll; ++i) {
+				chunky_ptr[i] = colors[0];
+			}
+			prev_x_scroll = x_scroll;
+
 			if (color_data & 8) {
 				fore_mask_ptr[0] |= ((gfx_data & 0xaa) | ((gfx_data & 0xaa) >> 1)) >> x_scroll;
 				fore_mask_ptr[1] |= ((gfx_data & 0xaa) | ((gfx_data & 0xaa) >> 1)) << (8-x_scroll);
@@ -900,12 +908,24 @@ void MOS6569::draw_graphics()
 
 		case 6:		// Invalid standard bitmap
 			memset8(p, colors[0]);
+
+			for (unsigned i = prev_x_scroll; i < x_scroll; ++i) {
+				chunky_ptr[i] = colors[0];
+			}
+			prev_x_scroll = x_scroll;
+
 			fore_mask_ptr[0] |= gfx_data >> x_scroll;
 			fore_mask_ptr[1] |= gfx_data << (8-x_scroll);
 			return;
 
 		case 7:		// Invalid multicolor bitmap
 			memset8(p, colors[0]);
+
+			for (unsigned i = prev_x_scroll; i < x_scroll; ++i) {
+				chunky_ptr[i] = colors[0];
+			}
+			prev_x_scroll = x_scroll;
+
 			fore_mask_ptr[0] |= ((gfx_data & 0xaa) | ((gfx_data & 0xaa) >> 1)) >> x_scroll;
 			fore_mask_ptr[1] |= ((gfx_data & 0xaa) | ((gfx_data & 0xaa) >> 1)) << (8-x_scroll);
 			return;
@@ -928,6 +948,13 @@ draw_std:
 	p[2] = c[data & 1]; data >>= 1;
 	p[1] = c[data & 1]; data >>= 1;
 	p[0] = c[data];
+
+	// Insert some background pixels if XSCROLL has increased
+	for (unsigned i = prev_x_scroll; i < x_scroll; ++i) {
+		chunky_ptr[i] = c[0];
+	}
+
+	prev_x_scroll = x_scroll;
 	return;
 
 draw_multi:
@@ -940,6 +967,13 @@ draw_multi:
 	p[5] = p[4] = c[data & 3]; data >>= 2;
 	p[3] = p[2] = c[data & 3]; data >>= 2;
 	p[1] = p[0] = c[data];
+
+	// Insert some background pixels if XSCROLL has increased
+	for (unsigned i = prev_x_scroll; i < x_scroll; ++i) {
+		chunky_ptr[i] = c[0];
+	}
+
+	prev_x_scroll = x_scroll;
 	return;
 }
 
@@ -1346,7 +1380,7 @@ bool MOS6569::EmulateCycle()
 	switch (cycle) {
 
 		// Fetch sprite pointer 3, increment raster counter, trigger raster IRQ,
-		// test for Bad Line, reset BA if sprites 3 and 4 off, read data of sprite 3
+		// test for Bad Line, reset BA if sprites 3 and 4 off
 		case 1:
 			if (raster_y == TOTAL_RASTERS-1) {
 
@@ -1430,7 +1464,7 @@ bool MOS6569::EmulateCycle()
 			}
 			break;
 
-		// Fetch sprite pointer 4, reset BA is sprite 4 and 5 off
+		// Fetch sprite pointer 4, reset BA is sprites 4 and 5 off
 		case 3:
 			SprPtrAccess(4);
 			SprDataAccess(4, 0);
@@ -1450,7 +1484,7 @@ bool MOS6569::EmulateCycle()
 			}
 			break;
 
-		// Fetch sprite pointer 5, reset BA if sprite 5 and 6 off
+		// Fetch sprite pointer 5, reset BA if sprites 5 and 6 off
 		case 5:
 			SprPtrAccess(5);
 			SprDataAccess(5, 0);
@@ -1470,7 +1504,7 @@ bool MOS6569::EmulateCycle()
 			}
 			break;
 
-		// Fetch sprite pointer 6, reset BA if sprite 6 and 7 off
+		// Fetch sprite pointer 6, reset BA if sprites 6 and 7 off
 		case 7:
 			SprPtrAccess(6);
 			SprDataAccess(6, 0);
@@ -1724,7 +1758,7 @@ bool MOS6569::EmulateCycle()
 			break;
 
 		// Fetch sprite pointer 0, mc_base->mc, turn on sprite display if necessary,
-		// turn off display if RC=7, read data of sprite 0
+		// reset BA if sprites 0 and 1 off, turn off display if RC=7
 		case 58:
 			draw_background();
 			SampleBorder;
@@ -1736,8 +1770,12 @@ bool MOS6569::EmulateCycle()
 					spr_disp_on |= mask;
 				}
 			}
+
 			SprPtrAccess(0);
 			SprDataAccess(0, 0);
+			if (!(spr_dma_on & 0x03)) {
+				the_cpu->BALow = false;
+			}
 
 			if (rc == 7) {
 				vc_base = vc;
@@ -1761,7 +1799,7 @@ bool MOS6569::EmulateCycle()
 			}
 			break;
 
-		// Fetch sprite pointer 1, reset BA if sprite 1 and 2 off, graphics display ends here
+		// Fetch sprite pointer 1, reset BA if sprites 1 and 2 off, graphics display ends here
 		case 60:
 			draw_background();
 			SampleBorder;
@@ -1818,7 +1856,7 @@ bool MOS6569::EmulateCycle()
 			}
 			break;
 
-		// Read sprite pointer 2, reset BA if sprite 2 and 3 off, read data of sprite 2
+		// Fetch sprite pointer 2, reset BA if sprites 2 and 3 off
 		case 62:
 			SprPtrAccess(2);
 			SprDataAccess(2, 0);
@@ -1833,6 +1871,9 @@ bool MOS6569::EmulateCycle()
 			SprDataAccess(2, 1);
 			SprDataAccess(2, 2);
 			DisplayIfBadLine;
+			if (spr_dma_on & 0x10) {
+				SetBALow;
+			}
 
 			if (raster_y == dy_stop) {
 				ud_border_on = true;
@@ -1840,10 +1881,6 @@ bool MOS6569::EmulateCycle()
 				if (ctrl1 & 0x10 && raster_y == dy_start) {
 					ud_border_on = false;
 				}
-			}
-
-			if (spr_dma_on & 0x10) {
-				SetBALow;
 			}
 
 			// Last cycle
