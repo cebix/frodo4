@@ -949,40 +949,40 @@ inline void MOS6569::el_mc_idle(uint8_t *p, uint8_t *r)
 
 inline void MOS6569::el_sprites(uint8_t *chunky_ptr)
 {
-	int i;
-	int snum, sbit;		// Sprite number/bit mask
-	int spr_coll=0, gfx_coll=0;
+	unsigned spr_coll=0, gfx_coll=0;
 
 	// Draw each active sprite
-	for (snum=0, sbit=1; snum<8; snum++, sbit<<=1) {
-		if ((sprite_on & sbit) && mx[snum] < DISPLAY_X-32) {
-			int spr_mask_pos;	// Sprite bit position in fore_mask_buf
-			uint32_t sdata, fore_mask;
+	for (unsigned snum = 0; snum < 8; ++snum) {
+		uint8_t sbit = 1 << snum;
 
+		// Is sprite visible?
+		if ((sprite_on & sbit) && mx[snum] < DISPLAY_X-32) {
 			uint8_t *p = chunky_ptr + mx[snum] + 8;
 			uint8_t *q = spr_coll_buf + mx[snum] + 8;
 
+			// Fetch sprite data and mask
 			uint8_t *sdatap = get_physical(matrix_base[0x3f8 + snum] << 6 | mc[snum]);
-			sdata = (*sdatap << 24) | (*(sdatap+1) << 16) | (*(sdatap+2) << 8);
+			uint32_t sdata = (*sdatap << 24) | (*(sdatap+1) << 16) | (*(sdatap+2) << 8);
 
 			uint8_t color = spr_color[snum];
 
-			spr_mask_pos = mx[snum] + 8 - x_scroll;
+			unsigned spr_mask_pos = mx[snum] + 8 - x_scroll;	// Sprite bit position in fore_mask_buf
+			unsigned sshift = spr_mask_pos & 7;
 			
 			uint8_t *fmbp = fore_mask_buf + (spr_mask_pos / 8);
-			int sshift = spr_mask_pos & 7;
-			fore_mask = (((*(fmbp+0) << 24) | (*(fmbp+1) << 16) | (*(fmbp+2) << 8)
-				      | (*(fmbp+3))) << sshift) | (*(fmbp+4) >> (8-sshift));
+			uint32_t fore_mask = (fmbp[0] << 24) | (fmbp[1] << 16) | (fmbp[2] << 8) | (fmbp[3] << 0);
+			fore_mask = (fore_mask << sshift) | (fmbp[4] >> (8-sshift));
 
 			if (mxe & sbit) {		// X-expanded
 				if (mx[snum] >= DISPLAY_X-56)
 					continue;
 
-				uint32_t sdata_l = 0, sdata_r = 0, fore_mask_r;
-				fore_mask_r = (((*(fmbp+4) << 24) | (*(fmbp+5) << 16) | (*(fmbp+6) << 8)
-						| (*(fmbp+7))) << sshift) | (*(fmbp+8) >> (8-sshift));
+				// Fetch extra sprite mask
+				uint32_t sdata_l = 0, sdata_r = 0;
+				uint32_t fore_mask_r = (fmbp[4] << 24) | (fmbp[5] << 16) | (fmbp[6] << 8);
+				fore_mask_r <<= sshift;
 
-				if (mmc & sbit) {	// Multicolor mode
+				if (mmc & sbit) {	// X-expanded multicolor mode
 					uint32_t plane0_l, plane0_r, plane1_l, plane1_r;
 
 					// Expand sprite data
@@ -998,16 +998,16 @@ inline void MOS6569::el_sprites(uint8_t *chunky_ptr)
 					// Collision with graphics?
 					if ((fore_mask & (plane0_l | plane1_l)) || (fore_mask_r & (plane0_r | plane1_r))) {
 						gfx_coll |= sbit;
-						if (mdp & sbit)	{
-							plane0_l &= ~fore_mask;	// Mask sprite if in background
-							plane1_l &= ~fore_mask;
-							plane0_r &= ~fore_mask_r;
-							plane1_r &= ~fore_mask_r;
-						}
+					}
+
+					// Mask sprite if in background
+					if ((mdp & sbit) == 0) {
+						fore_mask = 0;
+						fore_mask_r = 0;
 					}
 
 					// Paint sprite
-					for (i=0; i<32; i++, plane0_l<<=1, plane1_l<<=1) {
+					for (unsigned i = 0; i < 32; ++i, plane0_l <<= 1, plane1_l <<= 1, fore_mask <<= 1) {
 						uint8_t col;
 						if (plane1_l & 0x80000000) {
 							if (plane0_l & 0x80000000) {
@@ -1022,14 +1022,14 @@ inline void MOS6569::el_sprites(uint8_t *chunky_ptr)
 								continue;
 							}
 						}
-						if (q[i]) {
+						if (q[i]) {	// Obscured by higher-priority data?
 							spr_coll |= q[i] | sbit;
-						} else {
+						} else if ((fore_mask & 0x80000000) == 0) {
 							p[i] = col;
-							q[i] = sbit;
 						}
+						q[i] |= sbit;
 					}
-					for (; i<48; i++, plane0_r<<=1, plane1_r<<=1) {
+					for (unsigned i = 32; i < 48; ++i, plane0_r <<= 1, plane1_r <<= 1, fore_mask_r <<= 1) {
 						uint8_t col;
 						if (plane1_r & 0x80000000) {
 							if (plane0_r & 0x80000000) {
@@ -1044,15 +1044,15 @@ inline void MOS6569::el_sprites(uint8_t *chunky_ptr)
 								continue;
 							}
 						}
-						if (q[i]) {
+						if (q[i]) {	// Obscured by higher-priority data?
 							spr_coll |= q[i] | sbit;
-						} else {
+						} else if ((fore_mask_r & 0x80000000) == 0) {
 							p[i] = col;
-							q[i] = sbit;
 						}
+						q[i] |= sbit;
 					}
 
-				} else {			// Standard mode
+				} else {			// X-expanded standard mode
 
 					// Expand sprite data
 					sdata_l = ExpTable[sdata >> 24 & 0xff] << 16 | ExpTable[sdata >> 16 & 0xff];
@@ -1061,38 +1061,40 @@ inline void MOS6569::el_sprites(uint8_t *chunky_ptr)
 					// Collision with graphics?
 					if ((fore_mask & sdata_l) || (fore_mask_r & sdata_r)) {
 						gfx_coll |= sbit;
-						if (mdp & sbit)	{
-							sdata_l &= ~fore_mask;	// Mask sprite if in background
-							sdata_r &= ~fore_mask_r;
-						}
+					}
+
+					// Mask sprite if in background
+					if ((mdp & sbit) == 0) {
+						fore_mask = 0;
+						fore_mask_r = 0;
 					}
 
 					// Paint sprite
-					for (i=0; i<32; i++, sdata_l<<=1) {
+					for (unsigned i = 0; i < 32; ++i, sdata_l <<= 1, fore_mask <<= 1) {
 						if (sdata_l & 0x80000000) {
-							if (q[i]) {	// Collision with sprite?
+							if (q[i]) {	// Obscured by higher-priority data?
 								spr_coll |= q[i] | sbit;
-							} else {	// Draw pixel if no collision
+							} else if ((fore_mask & 0x80000000) == 0) {
 								p[i] = color;
-								q[i] = sbit;
 							}
+							q[i] |= sbit;
 						}
 					}
-					for (; i<48; i++, sdata_r<<=1) {
+					for (unsigned i = 32; i < 48; ++i, sdata_r <<= 1, fore_mask_r <<= 1) {
 						if (sdata_r & 0x80000000) {
-							if (q[i]) {	// Collision with sprite?
+							if (q[i]) {	// Obscured by higher-priority data?
 								spr_coll |= q[i] | sbit;
-							} else {	// Draw pixel if no collision
+							} else if ((fore_mask_r & 0x80000000) == 0) {
 								p[i] = color;
-								q[i] = sbit;
 							}
+							q[i] |= sbit;
 						}
 					}
 				}
 
 			} else {				// Unexpanded
 
-				if (mmc & sbit) {	// Multicolor mode
+				if (mmc & sbit) {	// Unexpanded multicolor mode
 					uint32_t plane0, plane1;
 
 					// Convert sprite chunky pixels to bitplanes
@@ -1102,14 +1104,15 @@ inline void MOS6569::el_sprites(uint8_t *chunky_ptr)
 					// Collision with graphics?
 					if (fore_mask & (plane0 | plane1)) {
 						gfx_coll |= sbit;
-						if (mdp & sbit) {
-							plane0 &= ~fore_mask;	// Mask sprite if in background
-							plane1 &= ~fore_mask;
-						}
+					}
+
+					// Mask sprite if in background
+					if ((mdp & sbit) == 0) {
+						fore_mask = 0;
 					}
 
 					// Paint sprite
-					for (i=0; i<24; i++, plane0<<=1, plane1<<=1) {
+					for (unsigned i = 0; i < 24; ++i, plane0 <<= 1, plane1 <<= 1, fore_mask <<= 1) {
 						uint8_t col;
 						if (plane1 & 0x80000000) {
 							if (plane0 & 0x80000000) {
@@ -1124,33 +1127,35 @@ inline void MOS6569::el_sprites(uint8_t *chunky_ptr)
 								continue;
 							}
 						}
-						if (q[i]) {
+						if (q[i]) {	// Obscured by higher-priority data?
 							spr_coll |= q[i] | sbit;
-						} else {
+						} else if ((fore_mask & 0x80000000) == 0) {
 							p[i] = col;
-							q[i] = sbit;
 						}
+						q[i] |= sbit;
 					}
 
-				} else {			// Standard mode
+				} else {			// Unexpanded standard mode
 
 					// Collision with graphics?
 					if (fore_mask & sdata) {
 						gfx_coll |= sbit;
-						if (mdp & sbit) {
-							sdata &= ~fore_mask;	// Mask sprite if in background
-						}
 					}
 	
+					// Mask sprite if in background
+					if ((mdp & sbit) == 0) {
+						fore_mask = 0;
+					}
+
 					// Paint sprite
-					for (i=0; i<24; i++, sdata<<=1) {
+					for (unsigned i = 0; i < 24; ++i, sdata <<= 1, fore_mask <<= 1) {
 						if (sdata & 0x80000000) {
-							if (q[i]) {		// Collision with sprite?
+							if (q[i]) {		// Obscured by higher-priority data?
 								spr_coll |= q[i] | sbit;
-							} else {		// Draw pixel if no collision
+							} else if ((fore_mask & 0x80000000) == 0) {
 								p[i] = color;
-								q[i] = sbit;
 							}
+							q[i] |= sbit;
 						}
 					}
 				}
