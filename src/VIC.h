@@ -95,9 +95,6 @@ private:
 	uint8_t matrix_line[40];		// Buffer for video line, read in Bad Lines
 	uint8_t color_line[40];			// Buffer for color line, read in Bad Lines
 
-#ifdef __POWERPC__
-	double chunky_tmp[0x180/8];		// Temporary line buffer for speedup
-#endif
 	uint8_t *chunky_line_start;		// Pointer to start of current line in bitmap buffer
 	int xmod;						// Number of bytes per row
 
@@ -118,10 +115,10 @@ private:
 	int skip_counter;				// Counter for frame-skipping
 
 	long pad0;	// Keep buffers long-aligned
-	uint8_t spr_coll_buf[0x180];	// Buffer for sprite-sprite collisions and priorities
-	uint8_t fore_mask_buf[0x180/8];	// Foreground mask for sprite-graphics collisions and priorities
+	uint8_t spr_coll_buf[0x1f8];				// Buffer for sprite-sprite collisions and priorities
+	uint8_t fore_mask_buf[(0x200 + 64) / 8];	// Foreground mask for sprite-graphics collisions and priorities
 #ifndef CAN_ACCESS_UNALIGNED
-	uint8_t text_chunky_buf[40*8];	// Line graphics buffer
+	uint8_t text_chunky_buf[40*8];				// Line graphics buffer
 #endif
 
 	bool display_state;				// true: Display state, false: Idle state

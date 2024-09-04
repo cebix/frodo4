@@ -22,15 +22,12 @@
  * Incompatibilities:
  * ------------------
  *
- *  - Color of $ff bytes read when BA is low and AEC is high
- *    is not correct
- *  - Changes to border/background color are visible 7 pixels
- *    too late
+ *  - Color of $ff bytes read when BA is low and AEC is high is not correct
  *  - Sprite data access doesn't respect BA
- *  - Sprite collisions are only detected within the visible
- *    screen area (excluding borders)
- *  - Sprites are only drawn if they completely fit within the
- *    left/right limits of the chunky bitmap
+ *  - Changes to border/background color are visible 7 pixels too late
+ *  - Sprites are effectively drawn in a line-based fashion in cycle 60,
+ *    so changes to sprite registers (except for Y position) within the
+ *    line are not displayed properly
  */
 
 #include "sysdeps.h"
@@ -196,8 +193,8 @@ MOS6569::MOS6569(C64 *c64, C64Display *disp, MOS6510 *CPU, uint8_t *RAM, uint8_t
 	frame_skipped = false;
 	skip_counter = 1;
 
-	memset(spr_coll_buf, 0, 0x180);
-	memset(fore_mask_buf, 0, 0x180/8);
+	memset(spr_coll_buf, 0, sizeof(spr_coll_buf));
+	memset(fore_mask_buf, 0, sizeof(fore_mask_buf));
 
 	// Preset colors to black
 	disp->InitColors(colors);
@@ -953,45 +950,55 @@ draw_multi:
 
 inline void MOS6569::draw_sprites()
 {
-	int i;
-	int snum, sbit;		// Sprite number/bit mask
-	int spr_coll=0, gfx_coll=0;
+	unsigned spr_coll = 0, gfx_coll = 0;
 
-	// Clear sprite collision buffer
-	{
-		uint32_t *lp = (uint32_t *)spr_coll_buf - 1;
-		for (i=0; i<DISPLAY_X/4; i++) {
-			*++lp = 0;
-		}
-	}
+	// Clear sprite collision/priority buffer
+	memset(spr_coll_buf, 0, sizeof(spr_coll_buf));
 
-	// Loop for all sprites
-	for (snum=0, sbit=1; snum<8; snum++, sbit<<=1) {
+	// Loop for all sprites in descending order of priority
+	for (unsigned snum = 0; snum < 8; ++snum) {
+		uint8_t sbit = 1 << snum;
 
 		// Is sprite visible?
-		if ((spr_draw & sbit) && mx[snum] <= DISPLAY_X-32) {
-#ifdef __POWERPC__
-			uint8_t *p = (uint8_t *)chunky_tmp + mx[snum] + 8;
-#else
-			uint8_t *p = chunky_line_start + mx[snum] + 8;
-#endif
-			uint8_t *q = spr_coll_buf + mx[snum] + 8;
+		if ((spr_draw & sbit) && mx[snum] < 0x1f8) {
+			unsigned x = mx[snum];
+
+			uint8_t *p = chunky_line_start + 8 + x;	// Start of sprite in pixel buffer
+			if (x >= DISPLAY_X - 8) {
+				p -= 0x1f8;
+			}
+			uint8_t *q = spr_coll_buf;
+
 			uint8_t color = spr_color[snum];
 
 			// Fetch sprite data and mask
 			uint32_t sdata = (spr_draw_data[snum][0] << 24) | (spr_draw_data[snum][1] << 16) | (spr_draw_data[snum][2] << 8);
 
-			int spr_mask_pos = mx[snum] + 8;	// Sprite bit position in fore_mask_buf
+			unsigned spr_mask_pos = x + 8;	// Sprite bit position in fore_mask_buf
 
 			uint8_t *fmbp = fore_mask_buf + (spr_mask_pos / 8);
-			int sshift = spr_mask_pos & 7;
+			unsigned sshift = spr_mask_pos & 7;
 			uint32_t fore_mask = (((*(fmbp+0) << 24) | (*(fmbp+1) << 16) | (*(fmbp+2) << 8)
 				  		    | (*(fmbp+3))) << sshift) | (*(fmbp+4) >> (8-sshift));
 
 			if (mxe & sbit) {		// X-expanded
-				if (mx[snum] > DISPLAY_X-56)
-					continue;
 
+				// Perform clipping
+				unsigned first_pix = 0;
+				if (x > 0x1c0 && x < 0x1f0) {
+					first_pix = 0x1f0 - x;		// Clipped on the left
+				}
+
+				unsigned last_pix = 48;
+				if (x > (DISPLAY_X - 8 - 48)) {
+					if (x < (DISPLAY_X - 8)) {	// Clipped on the right
+						last_pix = DISPLAY_X - 8 - x;
+					} else if (x <= 0x1c0) {		// Too far to the left to be visible
+						last_pix = 0;
+					}
+				}
+
+				// Fetch extra sprite mask
 				uint32_t sdata_l = 0, sdata_r = 0, fore_mask_r;
 				fore_mask_r = (((*(fmbp+4) << 24) | (*(fmbp+5) << 16) | (*(fmbp+6) << 8)
 						| (*(fmbp+7))) << sshift) | (*(fmbp+8) >> (8-sshift));
@@ -1021,7 +1028,8 @@ inline void MOS6569::draw_sprites()
 					}
 
 					// Paint sprite
-					for (i=0; i<32; i++, plane0_l<<=1, plane1_l<<=1) {
+					unsigned i;
+					for (i = 0; i < 32; ++i, plane0_l <<= 1, plane1_l <<= 1) {
 						uint8_t col;
 						if (plane1_l & 0x80000000) {
 							if (plane0_l & 0x80000000) {
@@ -1036,14 +1044,20 @@ inline void MOS6569::draw_sprites()
 								continue;
 							}
 						}
-						if (q[i]) {
-							spr_coll |= q[i] | sbit;
+
+						unsigned qi = x + i;
+						if (qi >= 0x1f8) { qi -= 0x1f8; }
+
+						if (q[qi]) {	// Obscured by higher-priority data?
+							spr_coll |= q[qi] | sbit;
 						} else {
-							p[i] = col;
-							q[i] = sbit;
+							if (i >= first_pix && i < last_pix) {
+								p[i] = col;
+							}
+							q[qi] = sbit;
 						}
 					}
-					for (; i<48; i++, plane0_r<<=1, plane1_r<<=1) {
+					for (; i < 48; ++i, plane0_r <<= 1, plane1_r <<= 1) {
 						uint8_t col;
 						if (plane1_r & 0x80000000) {
 							if (plane0_r & 0x80000000) {
@@ -1058,11 +1072,17 @@ inline void MOS6569::draw_sprites()
 								continue;
 							}
 						}
-						if (q[i]) {
-							spr_coll |= q[i] | sbit;
+
+						unsigned qi = x + i;
+						if (qi >= 0x1f8) { qi -= 0x1f8; }
+
+						if (q[qi]) {		// Obscured by higher-priority data?
+							spr_coll |= q[qi] | sbit;
 						} else {
-							p[i] = col;
-							q[i] = sbit;
+							if (i >= first_pix && i < last_pix) {
+								p[i] = col;
+							}
+							q[qi] = sbit;
 						}
 					}
 
@@ -1082,29 +1102,55 @@ inline void MOS6569::draw_sprites()
 					}
 
 					// Paint sprite
-					for (i=0; i<32; i++, sdata_l<<=1) {
+					unsigned i;
+					for (i = 0; i < 32; ++i, sdata_l <<= 1) {
 						if (sdata_l & 0x80000000) {
-							if (q[i]) {	// Collision with sprite?
-								spr_coll |= q[i] | sbit;
-							} else {	// Draw pixel if no collision
-								p[i] = color;
-								q[i] = sbit;
+							unsigned qi = x + i;
+							if (qi >= 0x1f8) { qi -= 0x1f8; }
+
+							if (q[qi]) {	// Obscured by higher-priority data?
+								spr_coll |= q[qi] | sbit;
+							} else {
+								if (i >= first_pix && i < last_pix) {
+									p[i] = color;
+								}
+								q[qi] = sbit;
 							}
 						}
 					}
-					for (; i<48; i++, sdata_r<<=1) {
+					for (; i < 48; ++i, sdata_r <<= 1) {
 						if (sdata_r & 0x80000000) {
-							if (q[i]) {	// Collision with sprite?
-								spr_coll |= q[i] | sbit;
-							} else {	// Draw pixel if no collision
-								p[i] = color;
-								q[i] = sbit;
+							unsigned qi = x + i;
+							if (qi >= 0x1f8) { qi -= 0x1f8; }
+
+							if (q[qi]) {	// Obscured by higher-priority data?
+								spr_coll |= q[qi] | sbit;
+							} else {
+								if (i >= first_pix && i < last_pix) {
+									p[i] = color;
+								}
+								q[qi] = sbit;
 							}
 						}
 					}
 				}
 
 			} else {				// Unexpanded
+
+				// Perform clipping
+				unsigned first_pix = 0;
+				if (x > 0x1d8 && x < 0x1f0) {
+					first_pix = 0x1f0 - x;		// Clipped on the left
+				}
+
+				unsigned last_pix = 24;
+				if (x > (DISPLAY_X - 8 - 24)) {
+					if (x < (DISPLAY_X - 8)) {	// Clipped on the right
+						last_pix = DISPLAY_X - 8 - x;
+					} else if (x <= 0x1d8) {		// Too far to the left to be visible
+						last_pix = 0;
+					}
+				}
 
 				if (mmc & sbit) {	// Multicolor mode
 					uint32_t plane0, plane1;
@@ -1123,7 +1169,7 @@ inline void MOS6569::draw_sprites()
 					}
 
 					// Paint sprite
-					for (i=0; i<24; i++, plane0<<=1, plane1<<=1) {
+					for (unsigned i = 0; i < 24; ++i, plane0 <<= 1, plane1 <<= 1) {
 						uint8_t col;
 						if (plane1 & 0x80000000) {
 							if (plane0 & 0x80000000) {
@@ -1138,11 +1184,17 @@ inline void MOS6569::draw_sprites()
 								continue;
 							}
 						}
-						if (q[i]) {
-							spr_coll |= q[i] | sbit;
+
+						unsigned qi = x + i;
+						if (qi >= 0x1f8) { qi -= 0x1f8; }
+
+						if (q[qi]) {	// Obscured by higher-priority data?
+							spr_coll |= q[qi] | sbit;
 						} else {
-							p[i] = col;
-							q[i] = sbit;
+							if (i >= first_pix && i < last_pix) {
+								p[i] = col;
+							}
+							q[qi] = sbit;
 						}
 					}
 
@@ -1155,15 +1207,20 @@ inline void MOS6569::draw_sprites()
 							sdata &= ~fore_mask;	// Mask sprite if in background
 						}
 					}
-	
+
 					// Paint sprite
-					for (i=0; i<24; i++, sdata<<=1) {
+					for (unsigned i = 0; i < 24; ++i, sdata <<= 1) {
 						if (sdata & 0x80000000) {
-							if (q[i]) {	// Collision with sprite?
-								spr_coll |= q[i] | sbit;
-							} else {		// Draw pixel if no collision
-								p[i] = color;
-								q[i] = sbit;
+							unsigned qi = x + i;
+							if (qi >= 0x1f8) { qi -= 0x1f8; }
+
+							if (q[qi]) {	// Obscured by higher-priority data?
+								spr_coll |= q[qi] | sbit;
+							} else {
+								if (i >= first_pix && i < last_pix) {
+									p[i] = color;
+								}
+								q[qi] = sbit;
 							}
 						}
 					}
@@ -1199,128 +1256,6 @@ inline void MOS6569::draw_sprites()
 		}
 	}
 }
-
-
-#ifdef __POWERPC__
-static asm void fastcopy(register uchar *dst, register uchar *src);
-static asm void fastcopy(register uchar *dst, register uchar *src)
-{
-	lfd		fp0,0(src)
-	lfd		fp1,8(src)
-	lfd		fp2,16(src)
-	lfd		fp3,24(src)
-	lfd		fp4,32(src)
-	lfd		fp5,40(src)
-	lfd		fp6,48(src)
-	lfd		fp7,56(src)
-	addi	src,src,64
-	stfd	fp0,0(dst)
-	stfd	fp1,8(dst)
-	stfd	fp2,16(dst)
-	stfd	fp3,24(dst)
-	stfd	fp4,32(dst)
-	stfd	fp5,40(dst)
-	stfd	fp6,48(dst)
-	stfd	fp7,56(dst)
-	addi	dst,dst,64
-
-	lfd		fp0,0(src)
-	lfd		fp1,8(src)
-	lfd		fp2,16(src)
-	lfd		fp3,24(src)
-	lfd		fp4,32(src)
-	lfd		fp5,40(src)
-	lfd		fp6,48(src)
-	lfd		fp7,56(src)
-	addi	src,src,64
-	stfd	fp0,0(dst)
-	stfd	fp1,8(dst)
-	stfd	fp2,16(dst)
-	stfd	fp3,24(dst)
-	stfd	fp4,32(dst)
-	stfd	fp5,40(dst)
-	stfd	fp6,48(dst)
-	stfd	fp7,56(dst)
-	addi	dst,dst,64
-
-	lfd		fp0,0(src)
-	lfd		fp1,8(src)
-	lfd		fp2,16(src)
-	lfd		fp3,24(src)
-	lfd		fp4,32(src)
-	lfd		fp5,40(src)
-	lfd		fp6,48(src)
-	lfd		fp7,56(src)
-	addi	src,src,64
-	stfd	fp0,0(dst)
-	stfd	fp1,8(dst)
-	stfd	fp2,16(dst)
-	stfd	fp3,24(dst)
-	stfd	fp4,32(dst)
-	stfd	fp5,40(dst)
-	stfd	fp6,48(dst)
-	stfd	fp7,56(dst)
-	addi	dst,dst,64
-
-	lfd		fp0,0(src)
-	lfd		fp1,8(src)
-	lfd		fp2,16(src)
-	lfd		fp3,24(src)
-	lfd		fp4,32(src)
-	lfd		fp5,40(src)
-	lfd		fp6,48(src)
-	lfd		fp7,56(src)
-	addi	src,src,64
-	stfd	fp0,0(dst)
-	stfd	fp1,8(dst)
-	stfd	fp2,16(dst)
-	stfd	fp3,24(dst)
-	stfd	fp4,32(dst)
-	stfd	fp5,40(dst)
-	stfd	fp6,48(dst)
-	stfd	fp7,56(dst)
-	addi	dst,dst,64
-
-	lfd		fp0,0(src)
-	lfd		fp1,8(src)
-	lfd		fp2,16(src)
-	lfd		fp3,24(src)
-	lfd		fp4,32(src)
-	lfd		fp5,40(src)
-	lfd		fp6,48(src)
-	lfd		fp7,56(src)
-	addi	src,src,64
-	stfd	fp0,0(dst)
-	stfd	fp1,8(dst)
-	stfd	fp2,16(dst)
-	stfd	fp3,24(dst)
-	stfd	fp4,32(dst)
-	stfd	fp5,40(dst)
-	stfd	fp6,48(dst)
-	stfd	fp7,56(dst)
-	addi	dst,dst,64
-
-	lfd		fp0,0(src)
-	lfd		fp1,8(src)
-	lfd		fp2,16(src)
-	lfd		fp3,24(src)
-	lfd		fp4,32(src)
-	lfd		fp5,40(src)
-	lfd		fp6,48(src)
-	lfd		fp7,56(src)
-	addi	src,src,64
-	stfd	fp0,0(dst)
-	stfd	fp1,8(dst)
-	stfd	fp2,16(dst)
-	stfd	fp3,24(dst)
-	stfd	fp4,32(dst)
-	stfd	fp5,40(dst)
-	stfd	fp6,48(dst)
-	stfd	fp7,56(dst)
-	addi	dst,dst,64
-	blr		
-}
-#endif
 
 
 /*
@@ -1478,14 +1413,10 @@ bool MOS6569::EmulateCycle()
 			}
 
 			// Our output goes here
-#ifdef __POWERPC__
-			chunky_ptr = (uint8_t *)chunky_tmp;
-#else
 			chunky_ptr = chunky_line_start;
-#endif
 
 			// Clear foreground mask
-			memset(fore_mask_buf, 0, DISPLAY_X/8);
+			memset(fore_mask_buf, 0, sizeof(fore_mask_buf));
 			fore_mask_ptr = fore_mask_buf;
 
 			SprDataAccess(3,1);
@@ -1840,29 +1771,6 @@ bool MOS6569::EmulateCycle()
 				}
 
 				// Draw border
-#ifdef __POWERPC__
-				if (border_on_sample[0]) {
-					for (i=0; i<4; i++) {
-						memset8((uint8_t *)chunky_tmp+i*8, border_color_sample[i]);
-					}
-				}
-				if (border_on_sample[1]) {
-					memset8((uint8_t *)chunky_tmp+4*8, border_color_sample[4]);
-				}
-				if (border_on_sample[2]) {
-					for (i=5; i<43; i++) {
-						memset8((uint8_t *)chunky_tmp+i*8, border_color_sample[i]);
-					}
-				}
-				if (border_on_sample[3]) {
-					memset8((uint8_t *)chunky_tmp+43*8, border_color_sample[43]);
-				}
-				if (border_on_sample[4]) {
-					for (i=44; i<DISPLAY_X/8; i++) {
-						memset8((uint8_t *)chunky_tmp+i*8, border_color_sample[i]);
-					}
-				}
-#else
 				if (border_on_sample[0]) {
 					for (i=0; i<4; i++) {
 						memset8(chunky_line_start+i*8, border_color_sample[i]);
@@ -1884,12 +1792,6 @@ bool MOS6569::EmulateCycle()
 						memset8(chunky_line_start+i*8, border_color_sample[i]);
 					}
 				}
-#endif
-
-#ifdef __POWERPC__
-				// Copy temporary buffer to bitmap
-				fastcopy(chunky_line_start, (uint8_t *)chunky_tmp);
-#endif
 
 				// Increment pointer in chunky buffer
 				chunky_line_start += xmod;
