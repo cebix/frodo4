@@ -65,7 +65,7 @@ public:
 #endif
 	void Reset();
 	void AsyncReset();					// Reset the CPU asynchronously
-	void GetState(MOS6502State *s);
+	void GetState(MOS6502State *s) const;
 	void SetState(const MOS6502State *s);
 	uint8_t ExtReadByte(uint16_t adr);
 	void ExtWriteByte(uint16_t adr, uint8_t byte);
@@ -213,7 +213,7 @@ struct MOS6502State {
 inline void MOS6502_1541::TriggerJobIRQ()
 {
 	if (!(interrupt.intr[INT_VIA2IRQ])) {
-		first_irq_cycle = the_c64->CycleCounter;
+		first_irq_cycle = the_c64->CycleCounter();
 	}
 	interrupt.intr[INT_VIA2IRQ] = true;
 	Idle = false;

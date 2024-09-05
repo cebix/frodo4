@@ -547,7 +547,7 @@ void MOS6502_1541::do_sbc(uint8_t byte)
  *  Get 6502 register state
  */
 
-void MOS6502_1541::GetState(MOS6502State *s)
+void MOS6502_1541::GetState(MOS6502State *s) const
 {
 	s->a = a;
 	s->x = x;

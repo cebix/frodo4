@@ -596,7 +596,7 @@ void MOS6510::do_sbc(uint8_t byte)
  *  Get 6510 register state
  */
 
-void MOS6510::GetState(MOS6510State *s)
+void MOS6510::GetState(MOS6510State *s) const
 {
 	s->a = a;
 	s->x = x;

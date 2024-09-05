@@ -116,7 +116,7 @@ void MOS6526_2::Reset()
  *  Get CIA state
  */
 
-void MOS6526::GetState(MOS6526State *cs)
+void MOS6526::GetState(MOS6526State *cs) const
 {
 	cs->pra = pra;
 	cs->prb = prb;

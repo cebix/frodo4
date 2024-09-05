@@ -180,6 +180,7 @@ MOS6569::MOS6569(C64 *c64, C64Display *disp, MOS6510 *CPU, uint8_t *RAM, uint8_t
 	display_idx = 0;
 	display_state = false;
 	border_on = ud_border_on = vblanking = hold_off_raster_irq = false;
+	bad_lines_enabled = false;
 	lp_triggered = draw_this_line = false;
 	is_bad_line = false;
 
@@ -258,7 +259,7 @@ void MOS6569::ReInitColors()
  *  Get VIC state
  */
 
-void MOS6569::GetState(MOS6569State *vd)
+void MOS6569::GetState(MOS6569State *vd) const
 {
 	vd->m0x = mx[0] & 0xff; vd->m0y = my[0];
 	vd->m1x = mx[1] & 0xff; vd->m1y = my[1];
@@ -736,7 +737,7 @@ inline void memset8(uint8_t *p, uint8_t c)
 void MOS6569::matrix_access()
 {
 	if (the_cpu->BALow) {
-		if (the_c64->CycleCounter-first_ba_cycle < 3) {
+		if (the_c64->CycleCounter() - first_ba_cycle < 3) {
 			matrix_line[ml_index] = color_line[ml_index] = 0xff;
 		} else {
 			uint16_t adr = (vc & 0x03ff) | matrix_base;
@@ -1296,13 +1297,15 @@ inline void MOS6569::draw_sprites()
 
 
 /*
- *  Emulate one clock cycle, returns true if new raster line has started
+ *  Emulate one clock cycle.
+ *  Returns VIC_HBLANK if new raster line has started.
+ *  Returns VIC_VBLANK if new frame has started.
  */
 
 // Set BA low
 #define SetBALow \
 	if (!the_cpu->BALow) { \
-		first_ba_cycle = the_c64->CycleCounter; \
+		first_ba_cycle = the_c64->CycleCounter(); \
 		the_cpu->BALow = true; \
 	}
 
@@ -1337,8 +1340,8 @@ inline void MOS6569::draw_sprites()
 
 // Turn on sprite DMA if necessary
 #define CheckSpriteDMA \
-	mask = 1; \
-	for (i=0; i<8; i++, mask<<=1) { \
+	for (unsigned i = 0; i < 8; ++i) { \
+		uint8_t mask = 1 << i; \
 		if ((me & mask) && (raster_y & 0xff) == my[i]) { \
 			spr_dma_on |= mask; \
 			mc_base[i] = 0; \
@@ -1372,10 +1375,9 @@ inline void MOS6569::draw_sprites()
 	}
 
 
-bool MOS6569::EmulateCycle()
+unsigned MOS6569::EmulateCycle()
 {
-	uint8_t mask;
-	int i;
+	unsigned retFlags = 0;
 
 	switch (cycle) {
 
@@ -1421,7 +1423,7 @@ bool MOS6569::EmulateCycle()
 			}
 			break;
 
-		// Set BA for sprite 5, read data of sprite 3
+		// Set BA for sprite 5, tell C64 that frame is over, read data of sprite 3
 		case 2:
 			if (vblanking) {
 
@@ -1430,15 +1432,8 @@ bool MOS6569::EmulateCycle()
 				ref_cnt = 0xff;
 				lp_triggered = vblanking = false;
 
-				if (!(frame_skipped = --skip_counter)) {
-					skip_counter = ThePrefs.SkipFrames;
-				}
+				retFlags = VIC_VBLANK;
 
-				the_c64->VBlank(!frame_skipped);
-
-				// Get bitmap pointer for next frame. This must be done
-				// after calling the_c64->VBlank() because the preferences
-				// and screen configuration may have been changed there
 				chunky_line_start = the_display->BitmapBase();
 				xmod = the_display->BitmapXMod();
 
@@ -1466,6 +1461,19 @@ bool MOS6569::EmulateCycle()
 
 		// Fetch sprite pointer 4, reset BA is sprites 4 and 5 off
 		case 3:
+			if (raster_y == 0) {
+
+				// Update frameskip after C64 has redrawn the display when
+				// we returned VIC_VBLANK in the previous cycle
+				--skip_counter;
+				if (skip_counter == 0) {
+					frame_skipped = false;
+					skip_counter = ThePrefs.SkipFrames;
+				} else {
+					frame_skipped = true;
+				}
+			}
+
 			SprPtrAccess(4);
 			SprDataAccess(4, 0);
 			DisplayIfBadLine;
@@ -1576,7 +1584,7 @@ bool MOS6569::EmulateCycle()
 			RefreshAccess;
 			FetchIfBadLine;
 
-			for (i=0; i<8; i++) {
+			for (unsigned i = 0; i < 8; ++i) {
 				if (spr_exp_y & (1 << i)) {
 					mc_base[i] += 2;
 				}
@@ -1594,8 +1602,8 @@ bool MOS6569::EmulateCycle()
 			graphics_access();
 			FetchIfBadLine;
 
-			mask = 1;
-			for (i=0; i<8; i++, mask<<=1) {
+			for (unsigned i = 0; i < 8; ++i) {
+				uint8_t mask = 1 << i;
 				if (spr_exp_y & mask) {
 					mc_base[i]++;
 				}
@@ -1691,8 +1699,8 @@ bool MOS6569::EmulateCycle()
 			DisplayIfBadLine;
 
 			// Invert y expansion flipflop if bit in MYE is set
-			mask = 1;
-			for (i=0; i<8; i++, mask<<=1) {
+			for (unsigned i = 0; i < 8; ++i) {
+				uint8_t mask = 1 << i;
 				if (mye & mask) {
 					spr_exp_y ^= mask;
 				}
@@ -1737,12 +1745,13 @@ bool MOS6569::EmulateCycle()
 			border_on_sample[4] = border_on;
 
 			// Sample spr_disp_on and spr_data for sprite drawing
-			if ((spr_draw = spr_disp_on) != 0)
+			if ((spr_draw = spr_disp_on) != 0) {
 				memcpy(spr_draw_data, spr_data, 8*4);
+			}
 
 			// Turn off sprite display if DMA is off
-			mask = 1;
-			for (i=0; i<8; i++, mask<<=1) {
+			for (unsigned i = 0; i < 8; ++i) {
+				uint8_t mask = 1 << i;
 				if ((spr_disp_on & mask) && !(spr_dma_on & mask)) {
 					spr_disp_on &= ~mask;
 				}
@@ -1763,8 +1772,8 @@ bool MOS6569::EmulateCycle()
 			draw_background();
 			SampleBorder;
 
-			mask = 1;
-			for (i=0; i<8; i++, mask<<=1) {
+			for (unsigned i = 0; i < 8; ++i) {
+				uint8_t mask = 1 << i;
 				mc[i] = mc_base[i];
 				if ((spr_dma_on & mask) && (raster_y & 0xff) == my[i]) {
 					spr_disp_on |= mask;
@@ -1813,7 +1822,7 @@ bool MOS6569::EmulateCycle()
 
 				// Draw border
 				if (border_on_sample[0]) {
-					for (i=0; i<4; i++) {
+					for (unsigned i = 0; i < 4; ++i) {
 						memset8(chunky_line_start+i*8, border_color_sample[i]);
 					}
 				}
@@ -1821,7 +1830,7 @@ bool MOS6569::EmulateCycle()
 					memset8(chunky_line_start+4*8, border_color_sample[4]);
 				}
 				if (border_on_sample[2]) {
-					for (i=5; i<43; i++) {
+					for (unsigned i = 5; i < 43; ++i) {
 						memset8(chunky_line_start+i*8, border_color_sample[i]);
 					}
 				}
@@ -1829,7 +1838,7 @@ bool MOS6569::EmulateCycle()
 					memset8(chunky_line_start+43*8, border_color_sample[43]);
 				}
 				if (border_on_sample[4]) {
-					for (i=44; i<DISPLAY_X/8; i++) {
+					for (unsigned i = 44; i < DISPLAY_X/8; ++i) {
 						memset8(chunky_line_start+i*8, border_color_sample[i]);
 					}
 				}
@@ -1886,11 +1895,11 @@ bool MOS6569::EmulateCycle()
 			// Last cycle
 			raster_x += 8;
 			cycle = 1;
-			return true;
+			return VIC_HBLANK;
 	}
 
 	// Next cycle
 	raster_x += 8;
 	cycle++;
-	return false;
+	return retFlags;
 }

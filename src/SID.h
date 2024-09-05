@@ -47,7 +47,7 @@ public:
 	void NewPrefs(const Prefs *prefs);
 	void PauseSound();
 	void ResumeSound();
-	void GetState(MOS6581State *ss);
+	void GetState(MOS6581State *ss) const;
 	void SetState(const MOS6581State *ss);
 	void EmulateLine();
 

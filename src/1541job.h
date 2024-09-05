@@ -31,7 +31,7 @@ public:
 	Job1541(uint8_t *ram1541);
 	~Job1541();
 
-	void GetState(Job1541State *state);
+	void GetState(Job1541State *state) const;
 	void SetState(const Job1541State *state);
 	void NewPrefs(const Prefs *prefs);
 	void MoveHeadOut();

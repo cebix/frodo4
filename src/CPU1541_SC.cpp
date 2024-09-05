@@ -119,7 +119,7 @@ void MOS6502_1541::AsyncReset()
  *  Get 6502 register state
  */
 
-void MOS6502_1541::GetState(MOS6502State *s)
+void MOS6502_1541::GetState(MOS6502State *s) const
 {
 	s->a = a;
 	s->x = x;
@@ -641,7 +641,7 @@ void MOS6502_1541::EmulateCycle()
 			Reset();
 		} else if ((interrupt.intr[INT_VIA1IRQ] || interrupt.intr[INT_VIA2IRQ] || interrupt.intr[INT_IECIRQ]) &&
 				   (!i_flag || (opflags & OPFLAG_IRQ_DISABLED)) && !(opflags & OPFLAG_IRQ_ENABLED)) {
-			if (the_c64->CycleCounter - first_irq_cycle >= 2) {
+			if (the_c64->CycleCounter() - first_irq_cycle >= 2) {
 				state = 0x0008;
 				opflags = 0;
 			}

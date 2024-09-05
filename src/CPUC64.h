@@ -73,7 +73,7 @@ public:
 	void Reset();
 	void AsyncReset();					// Reset the CPU asynchronously
 	void AsyncNMI();					// Raise NMI asynchronously (NMI pulse)
-	void GetState(MOS6510State *s);
+	void GetState(MOS6510State *s) const;
 	void SetState(const MOS6510State *s);
 	uint8_t ExtReadByte(uint16_t adr);
 	void ExtWriteByte(uint16_t adr, uint8_t byte);
@@ -184,7 +184,7 @@ struct MOS6510State {
 inline void MOS6510::TriggerVICIRQ()
 {
 	if (!(interrupt.intr[INT_VICIRQ] || interrupt.intr[INT_CIAIRQ])) {
-		first_irq_cycle = the_c64->CycleCounter;
+		first_irq_cycle = the_c64->CycleCounter();
 	}
 	interrupt.intr[INT_VICIRQ] = true;
 }
@@ -192,7 +192,7 @@ inline void MOS6510::TriggerVICIRQ()
 inline void MOS6510::TriggerCIAIRQ()
 {
 	if (!(interrupt.intr[INT_VICIRQ] || interrupt.intr[INT_CIAIRQ])) {
-		first_irq_cycle = the_c64->CycleCounter;
+		first_irq_cycle = the_c64->CycleCounter();
 	}
 	interrupt.intr[INT_CIAIRQ] = true;
 }
@@ -202,7 +202,7 @@ inline void MOS6510::TriggerNMI()
 	if (!nmi_state) {
 		nmi_state = true;
 		interrupt.intr[INT_NMI] = true;
-		first_nmi_cycle = the_c64->CycleCounter;
+		first_nmi_cycle = the_c64->CycleCounter();
 	}
 }
 #else

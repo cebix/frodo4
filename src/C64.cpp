@@ -144,7 +144,7 @@ C64::C64()
 	open_close_joysticks(0, 0, ThePrefs.Joystick1Port, ThePrefs.Joystick2Port);
 	joykey = 0xff;
 
-	CycleCounter = 0;
+	cycle_counter = 0;
 
 	rewind_buffer = new Snapshot[REWIND_LENGTH];
 
@@ -329,12 +329,14 @@ void C64::PatchKernal(bool fast_reset, bool emul_1541_proc)
 
 /*
  *  Emulate one cycle of the C64.
+ *  Returns true if a new video frame has started.
  */
 
-void C64::emulate_c64_cycle()
+bool C64::emulate_c64_cycle()
 {
 	// The order of calls is important here
-	if (TheVIC->EmulateCycle()) {
+	unsigned flags = TheVIC->EmulateCycle();
+	if (flags & VIC_HBLANK) {
 		TheSID->EmulateLine();
 	}
 	TheCIA1->CheckIRQs();
@@ -342,7 +344,9 @@ void C64::emulate_c64_cycle()
 	TheCIA1->EmulateCycle();
 	TheCIA2->EmulateCycle();
 	TheCPU->EmulateCycle();
-	++CycleCounter;
+	++cycle_counter;
+
+	return flags & VIC_VBLANK;
 }
 
 
@@ -390,7 +394,7 @@ void C64::MakeSnapshot(Snapshot * s)
 #else
 	TheCPU->GetState(&(s->cpu));
 #endif
-	s->cycleCounter = CycleCounter;
+	s->cycleCounter = cycle_counter;
 
 	TheVIC->GetState(&(s->vic));
 	TheSID->GetState(&(s->sid));
@@ -437,7 +441,7 @@ void C64::RestoreSnapshot(const Snapshot * s)
 	memcpy(RAM, s->ram, C64_RAM_SIZE);
 	memcpy(Color, s->color, COLOR_RAM_SIZE);
 
-	CycleCounter = s->cycleCounter;
+	cycle_counter = s->cycleCounter;
 	TheCPU->SetState(&(s->cpu));
 	TheVIC->SetState(&(s->vic));
 	TheSID->SetState(&(s->sid));
@@ -480,6 +484,9 @@ bool C64::SaveSnapshot(const char * filename)
 
 	auto s = std::make_unique<Snapshot>();
 	MakeSnapshot(s.get());
+
+	// TODO: Endianess and alignment should be taken care of
+	// to make snapshot files portable
 
 	if (fwrite(s.get(), sizeof(Snapshot), 1, f) != 1) {
 		ShowRequester("Error writing to snapshot file", "OK", nullptr);

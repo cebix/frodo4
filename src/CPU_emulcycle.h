@@ -853,7 +853,7 @@
 			push_flags(true);
 			i_flag = true;
 #ifndef IS_CPU_1541
-			if (interrupt.intr[INT_NMI] && (the_c64->CycleCounter - first_nmi_cycle) >= 1) {  // BRK interrupted by NMI?
+			if (interrupt.intr[INT_NMI] && (the_c64->CycleCounter() - first_nmi_cycle) >= 1) {  // BRK interrupted by NMI?
 				interrupt.intr[INT_NMI] = false;	// Simulate an edge-triggered input
 				state = 0x0015;						// Jump to NMI sequence
 				break;

@@ -94,10 +94,10 @@ void C64::Run()
 
 
 /*
- *  Vertical blank: Poll keyboard and joysticks, update window
+ *  Vertical blank: Poll keyboard and joysticks, update display
  */
 
-void C64::VBlank(bool draw_frame)
+void C64::vblank()
 {
 	// Poll joysticks
 	TheCIA1->Joystick1 = poll_joystick(0);
@@ -127,7 +127,7 @@ void C64::VBlank(bool draw_frame)
 	TheCIA2->CountTOD();
 
 	// Update window if needed
-	if (draw_frame) {
+	if (! TheVIC->FrameSkipped()) {
     	TheDisplay->Update();
 	}
 
@@ -164,15 +164,22 @@ void C64::VBlank(bool draw_frame)
 void C64::thread_func()
 {
 	while (!quit_thyself) {
+		bool new_frame;
 
 #ifdef FRODO_SC
-		emulate_c64_cycle();
+
+		new_frame = emulate_c64_cycle();
 		if (ThePrefs.Emul1541Proc) {
 			emulate_1541_cycle();
 		}
+
 #else
+
 		// The order of calls is important here
-		int cycles = TheVIC->EmulateLine();
+		unsigned cycles = 0;
+		unsigned flags = TheVIC->EmulateLine(cycles);
+		new_frame = (flags & VIC_VBLANK);
+
 		TheSID->EmulateLine();
 #if !PRECISE_CIA_CYCLES
 		TheCIA1->EmulateLine(ThePrefs.CIACycles);
@@ -200,7 +207,13 @@ void C64::thread_func()
 			// 1541 processor disabled, only emulate 6510
 			TheCPU->EmulateLine(cycles);
 		}
-#endif
+
+#endif  // def FRODO_SC
+
+		// Update display etc. if new frame has started
+		if (new_frame) {
+			vblank();
+		}
 	}
 }
 

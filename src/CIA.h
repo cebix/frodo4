@@ -36,7 +36,7 @@ public:
 	virtual ~MOS6526() { }
 
 	void Reset();
-	void GetState(MOS6526State *cs);
+	void GetState(MOS6526State *cs) const;
 	void SetState(const MOS6526State *cs);
 #ifdef FRODO_SC
 	void CheckIRQs();

@@ -140,7 +140,7 @@ void C64::Resume()
  *  Vertical blank: Poll keyboard and joysticks, update window
  */
 
-void C64::VBlank(bool draw_frame)
+void C64::vblank()
 {
 	bigtime_t elapsed_time;
 	long speed_index;
@@ -168,17 +168,18 @@ void C64::VBlank(bool draw_frame)
 	}
 
 	// Joystick keyboard emulation
-	if (TheDisplay->NumLock())
+	if (TheDisplay->NumLock()) {
 		TheCIA1->Joystick1 &= joykey;
-	else
+	} else {
 		TheCIA1->Joystick2 &= joykey;
+	}
 
 	// Count TOD clocks
 	TheCIA1->CountTOD();
 	TheCIA2->CountTOD();
 
 	// Update window if needed
-	if (draw_frame) {
+	if (! TheVIC->FrameSkipped()) {
 		TheDisplay->Update();
 
 		// Calculate time between VBlanks, display speedometer
@@ -195,8 +196,9 @@ void C64::VBlank(bool draw_frame)
 					acquire_sem_etc(sound_sync_sem, l+1, 0, 0);
 				else
 					acquire_sem(sound_sync_sem);
-			} else
+			} else {
 				snooze(ThePrefs.SkipFrames * 20000 - elapsed_time);
+			}
 			speed_index = 100;
 		}
 

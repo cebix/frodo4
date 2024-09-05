@@ -18,6 +18,7 @@ Changes from V4.2 to V4.3:
    of by pressing F9
  - Snapshot files can be loaded and disk image files attached by dragging
    them onto the emulator window
+ - Improved sprite display
  - Added simulation of SID register 27 (oscillator 3 read-back)
  - Fixed some CIA timer bugs
 

@@ -79,7 +79,7 @@ public:
 	void Reset();
 	void NMI();
 
-	void VBlank(bool draw_frame);
+	uint32_t CycleCounter() const { return cycle_counter; }
 
 	void NewPrefs(const Prefs *prefs);
 	void SetEmul1541Proc(bool on, const char * path = nullptr);
@@ -92,7 +92,7 @@ public:
 	bool LoadSnapshot(const char * filename);
 
 	void SetPlayMode(PlayMode mode);
-	PlayMode GetPlayMode() { return play_mode; }
+	PlayMode GetPlayMode() const { return play_mode; }
 
 	uint8_t *RAM, *Basic, *Kernal,
 	        *Char, *Color;		// C64
@@ -111,8 +111,6 @@ public:
 	MOS6502_1541 *TheCPU1541;	// 1541
 	Job1541 *TheJob1541;
 
-	uint32_t CycleCounter;		// Cycle counter for Frodo SC
-
 private:
 	void c64_ctor1();
 	void c64_ctor2();
@@ -120,9 +118,10 @@ private:
 	void open_close_joysticks(int oldjoy1, int oldjoy2, int newjoy1, int newjoy2);
 	uint8_t poll_joystick(int port);
 #ifdef FRODO_SC
-	void emulate_c64_cycle();
+	bool emulate_c64_cycle();
 	void emulate_1541_cycle();
 #endif
+	void vblank();
 	void thread_func();
 	void handle_rewind();
 	void reset_play_mode();
@@ -130,6 +129,8 @@ private:
 	bool thread_running;		// Emulation thread is running
 	bool quit_thyself;			// Emulation thread shall quit
 	bool have_a_break;			// Emulation thread shall pause
+
+	uint32_t cycle_counter;		// Cycle counter for Frodo SC
 
 	int joy_minx[2], joy_maxx[2], joy_miny[2], joy_maxy[2]; // For dynamic joystick calibration
 	int joy_maxtrigl[2], joy_maxtrigr[2];

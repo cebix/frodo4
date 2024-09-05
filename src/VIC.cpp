@@ -331,7 +331,7 @@ inline uint8_t *MOS6569::get_physical(uint16_t adr)
  *  Get VIC state
  */
 
-void MOS6569::GetState(MOS6569State *vd)
+void MOS6569::GetState(MOS6569State *vd) const
 {
 	vd->m0x = mx[0] & 0xff; vd->m0y = my[0];
 	vd->m1x = mx[1] & 0xff; vd->m1y = my[1];
@@ -765,27 +765,8 @@ void MOS6569::TriggerLightpen()
 
 
 /*
- *  VIC vertical blank: Reset counters and redraw screen
+ *  Display line drawing routines...
  */
-
-inline void MOS6569::vblank()
-{
-	raster_y = vc_base = 0;
-	lp_triggered = false;
-
-	if (!(frame_skipped = --skip_counter)) {
-		skip_counter = ThePrefs.SkipFrames;
-	}
-
-	the_c64->VBlank(!frame_skipped);
-
-	// Get bitmap pointer for next frame. This must be done
-	// after calling the_c64->VBlank() because the preferences
-	// and screen configuration may have been changed there
-	chunky_line_start = the_display->BitmapBase();
-	xmod = the_display->BitmapXMod();
-}
-
 
 inline void MOS6569::el_std_text(uint8_t *p, uint8_t *q, uint8_t *r)
 {
@@ -1246,24 +1227,47 @@ spr_off:
 
 
 /*
- *  Emulate one raster line
+ *  Emulate one raster line.
+ *  Returns VIC_VBLANK if new frame has started.
+ *  Also returns the number of cycles left for the CPU in this line.
  */
 
-int MOS6569::EmulateLine()
+unsigned MOS6569::EmulateLine(unsigned & retCyclesLeft)
 {
-	int cycles_left = ThePrefs.NormalCycles;	// Cycles left for CPU
+	unsigned cycles_left = ThePrefs.NormalCycles;	// Cycles left for CPU
 	bool is_bad_line = false;
 
 	// Get raster counter into local variable for faster access and increment
-	unsigned int raster = raster_y+1;
+	unsigned raster = raster_y + 1;
 
 	// End of screen reached?
-	if (raster != TOTAL_RASTERS) {
-		raster_y = raster;
-	} else {
-		vblank();
+	if (raster == TOTAL_RASTERS) {
+
+		// Yes, reset some stuff
 		raster = 0;
+		vc_base = 0;
+		lp_triggered = false;
+
+	} else if (raster == 1) {
+
+		// Update frameskip in line 1 (after C64 has redrawn the display in
+		// line 0)
+		--skip_counter;
+		if (skip_counter == 0) {
+			frame_skipped = false;
+			skip_counter = ThePrefs.SkipFrames;
+		} else {
+			frame_skipped = true;
+		}
+
+		// Get bitmap pointer for next frame. This must be done
+		// after the C64 VBlank activities because the preferences
+		// and screen configuration may have been changed there
+		chunky_line_start = the_display->BitmapBase();
+		xmod = the_display->BitmapXMod();
 	}
+
+	raster_y = raster;
 
 	// Trigger raster IRQ if IRQ line reached
 	if (raster == irq_raster) {
@@ -1592,5 +1596,11 @@ VIC_nop:
 		cycles_left -= el_update_mc(raster);
 	}
 
-	return cycles_left;
+	retCyclesLeft = cycles_left;
+
+	if (raster == 0) {
+		return VIC_VBLANK;
+	} else {
+		return 0;
+	}
 }

@@ -34,6 +34,12 @@ constexpr unsigned TOTAL_RASTERS = 0x138;
 // Screen refresh frequency (PAL)
 constexpr unsigned SCREEN_FREQ = 50;
 
+// Flags returned by EmulateCycle()/EmulateLine()
+enum {
+	VIC_HBLANK = 0x01,
+	VIC_VBLANK = 0x02,
+};
+
 
 class MOS6510;
 class C64Display;
@@ -47,15 +53,21 @@ public:
 
 	uint8_t ReadRegister(uint16_t adr);
 	void WriteRegister(uint16_t adr, uint8_t byte);
+
 #ifdef FRODO_SC
-	bool EmulateCycle();
+	unsigned EmulateCycle();
 #else
-	int EmulateLine();
+	unsigned EmulateLine(unsigned & retCyclesLeft);
 #endif
+
+	bool FrameSkipped() const { return frame_skipped; }
+
 	void ChangedVA(uint16_t new_va);	// CIA VA14/15 has changed
 	void TriggerLightpen();				// Trigger lightpen interrupt
+
 	void ReInitColors();
-	void GetState(MOS6569State *vd);
+
+	void GetState(MOS6569State *vd) const;
 	void SetState(const MOS6569State *vd);
 
 #ifdef FRODO_SC
@@ -121,11 +133,11 @@ private:
 	uint8_t text_chunky_buf[40*8];				// Line graphics buffer
 #endif
 
-	bool display_state;				// true: Display state, false: Idle state
-	bool border_on;					// Flag: Upper/lower border on (Frodo SC: Main border flipflop)
-	bool frame_skipped;				// Flag: Frame is being skipped
-	uint8_t bad_lines_enabled;		// Flag: Bad Lines enabled for this frame
-	bool lp_triggered;				// Flag: Lightpen was triggered in this frame
+	bool display_state;			// true: Display state, false: Idle state
+	bool border_on;				// Flag: Upper/lower border on (Frodo SC: Main border flipflop)
+	bool frame_skipped;			// Flag: Frame is being skipped
+	bool bad_lines_enabled;		// Flag: Bad Lines enabled for this frame
+	bool lp_triggered;			// Flag: Lightpen was triggered in this frame
 
 #ifdef FRODO_SC
 	uint8_t read_byte(uint16_t adr);

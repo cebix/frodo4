@@ -195,7 +195,7 @@ uint8_t MOS6581::read_osc3() const
  *  Get SID state
  */
 
-void MOS6581::GetState(MOS6581State *ss)
+void MOS6581::GetState(MOS6581State *ss) const
 {
 	ss->freq_lo_1 = regs[0];
 	ss->freq_hi_1 = regs[1];

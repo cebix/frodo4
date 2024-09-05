@@ -443,7 +443,7 @@ void Job1541::MoveHeadIn()
  *  Get state
  */
 
-void Job1541::GetState(Job1541State *state)
+void Job1541::GetState(Job1541State *state) const
 {
 	state->gcr_ptr = gcr_ptr - gcr_data;
 	state->current_halftrack = current_halftrack;
