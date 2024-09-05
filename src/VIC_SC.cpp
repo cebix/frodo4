@@ -1358,7 +1358,7 @@ inline void MOS6569::draw_sprites()
 // Fetch sprite data, increment data counter
 #define SprDataAccess(num, bytenum) \
 	if (spr_dma_on & (1 << num)) { \
-		spr_data[num][bytenum] = read_byte(mc[num] & 0x3f | spr_ptr[num]); \
+		spr_data[num][bytenum] = read_byte((mc[num] & 0x3f) | spr_ptr[num]); \
 		mc[num]++; \
 	} else if (bytenum == 1) { \
 		IdleAccess; \

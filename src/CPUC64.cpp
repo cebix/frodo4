@@ -183,7 +183,7 @@ inline uint8_t MOS6510::read_byte_io(uint16_t adr)
 					case 0x9:
 					case 0xa:
 					case 0xb:
-						return color_ram[adr & 0x03ff] | rand() & 0xf0;
+						return color_ram[adr & 0x03ff] | (rand() & 0xf0);
 					case 0xc:	// CIA 1
 						return TheCIA1->ReadRegister(adr & 0x0f);
 					case 0xd:	// CIA 2
@@ -730,7 +730,7 @@ void MOS6510::illegal_jump(uint16_t at, uint16_t to)
 #define pop_byte() ram[(++sp) | 0x0100]
 
 // Push a byte onto the stack
-#define push_byte(byte) (ram[(sp--) & 0xff | 0x0100] = (byte))
+#define push_byte(byte) (ram[((sp--) & 0xff) | 0x0100] = (byte))
 
 // Pop processor flags from the stack
 #define pop_flags() \

@@ -1525,7 +1525,7 @@ void ImageDrive::block_allocate_cmd(int track, int sector)
 		if (err == ERR_NOBLOCK) {
 			// Find next free block and return its track/sector address in the
 			// error message (only look on higher tracks)
-			for (;;) {
+			while (true) {
 				sector++;
 				if (sector >= num_sectors[track]) {
 					track++;

@@ -277,8 +277,8 @@ inline void MOS6502_1541::CountVIATimers(int cycles)
 inline void MOS6502_1541::NewATNState()
 {
 	uint8_t byte = ~via1_prb & via1_ddrb;
-	IECLines = (byte << 6) & ((~byte ^ TheCIA2->IECLines) << 3) & 0x80	// DATA (incl. ATN acknowledge)
-		| (byte << 3) & 0x40;											// CLK
+	IECLines = ((byte << 6) & ((~byte ^ TheCIA2->IECLines) << 3) & 0x80)	// DATA (incl. ATN acknowledge)
+	         | ((byte << 3) & 0x40);										// CLK
 }
 
 

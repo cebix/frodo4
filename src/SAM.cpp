@@ -1284,7 +1284,7 @@ static void assemble_line()
 			// Handle relative addressing seperately
 			if (((mode == A_ABS) || (mode == A_ZERO)) && find_opcode(mnem, A_REL, &opcode)) {
 				mode = A_REL;
-				int16_t rel = arg - (address + 2) & 0xffff;
+				int16_t rel = arg - ((address + 2) & 0xffff);
 				if ((rel < -128) || (rel > 127)) {
 					error("Branch too far");
 					return;
@@ -2253,7 +2253,7 @@ void SAM(C64 *the_c64)
 		std::cout << cmdError;
 
 		if (logfile) {
-			fprintf(logfile, cmdOutput.c_str());
+			fputs(cmdOutput.c_str(), logfile);
 		}
 	}
 

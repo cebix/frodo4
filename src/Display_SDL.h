@@ -255,8 +255,8 @@ void C64Display::Update()
 void C64Display::fill_rect(const SDL_Rect & r, uint8_t color) const
 {
 	uint8_t * p = pixel_buffer + DISPLAY_X*r.y + r.x;
-	for (unsigned y = 0; y < r.h; ++y) {
-		for (unsigned x = 0; x < r.w; ++x) {
+	for (int y = 0; y < r.h; ++y) {
+		for (int x = 0; x < r.w; ++x) {
 			p[x] = color;
 		}
 		p += DISPLAY_X;

@@ -216,10 +216,10 @@ inline uint8_t MOS6502_1541::read_byte_io(uint16_t adr)
 	if ((adr & 0xfc00) == 0x1800) {	// VIA 1
 		switch (adr & 0xf) {
 			case 0:
-				return (via1_prb & 0x1a
-					| ((IECLines & TheCIA2->IECLines) >> 7)			// DATA
-					| ((IECLines & TheCIA2->IECLines) >> 4) & 0x04	// CLK
-					| (TheCIA2->IECLines << 3) & 0x80) ^ 0x85;		// ATN
+				return ((via1_prb & 0x1a)
+				        | ((IECLines & TheCIA2->IECLines) >> 7)				// DATA
+				        | (((IECLines & TheCIA2->IECLines) >> 4) & 0x04)	// CLK
+				        | ((TheCIA2->IECLines << 3) & 0x80)) ^ 0x85;		// ATN
 			case 1:
 			case 15:
 				return 0xff;	// Keep 1541C ROMs happy (track 0 sensor)
@@ -259,9 +259,9 @@ inline uint8_t MOS6502_1541::read_byte_io(uint16_t adr)
 		switch (adr & 0xf) {
 			case 0:
 				if (the_job->SyncFound()) {
-					return via2_prb & 0x7f | the_job->WPState();
+					return (via2_prb & 0x7f) | the_job->WPState();
 				} else {
-					return via2_prb | 0x80 | the_job->WPState();
+					return (via2_prb | 0x80) | the_job->WPState();
 				}
 			case 1:
 			case 15:
@@ -342,8 +342,8 @@ void MOS6502_1541::write_byte_io(uint16_t adr, uint8_t byte)
 			case 0:
 				via1_prb = byte;
 				byte = ~via1_prb & via1_ddrb;
-				IECLines = (byte << 6) & ((~byte ^ TheCIA2->IECLines) << 3) & 0x80
-					| (byte << 3) & 0x40;
+				IECLines = ((byte << 6) & ((~byte ^ TheCIA2->IECLines) << 3) & 0x80)	// DATA
+				         | ((byte << 3) & 0x40);										// CLK
 				break;
 			case 1:
 			case 15:
@@ -352,29 +352,29 @@ void MOS6502_1541::write_byte_io(uint16_t adr, uint8_t byte)
 			case 2:
 				via1_ddrb = byte;
 				byte &= ~via1_prb;
-				IECLines = (byte << 6) & ((~byte ^ TheCIA2->IECLines) << 3) & 0x80
-					| (byte << 3) & 0x40;
+				IECLines = ((byte << 6) & ((~byte ^ TheCIA2->IECLines) << 3) & 0x80)	// DATA
+				         | ((byte << 3) & 0x40);										// CLK
 				break;
 			case 3:
 				via1_ddra = byte;
 				break;
 			case 4:
 			case 6:
-				via1_t1l = via1_t1l & 0xff00 | byte;
+				via1_t1l = (via1_t1l & 0xff00) | byte;
 				break;
 			case 5:
-				via1_t1l = via1_t1l & 0xff | (byte << 8);
+				via1_t1l = (via1_t1l & 0xff) | (byte << 8);
 				via1_ifr &= 0xbf;
 				via1_t1c = via1_t1l;
 				break;
 			case 7:
-				via1_t1l = via1_t1l & 0xff | (byte << 8);
+				via1_t1l = (via1_t1l & 0xff) | (byte << 8);
 				break;
 			case 8:
-				via1_t2l = via1_t2l & 0xff00 | byte;
+				via1_t2l = (via1_t2l & 0xff00) | byte;
 				break;
 			case 9:
-				via1_t2l = via1_t2l & 0xff | (byte << 8);
+				via1_t2l = (via1_t2l & 0xff) | (byte << 8);
 				via1_ifr &= 0xdf;
 				via1_t2c = via1_t2l;
 				break;
@@ -426,21 +426,21 @@ void MOS6502_1541::write_byte_io(uint16_t adr, uint8_t byte)
 				break;
 			case 4:
 			case 6:
-				via2_t1l = via2_t1l & 0xff00 | byte;
+				via2_t1l = (via2_t1l & 0xff00) | byte;
 				break;
 			case 5:
-				via2_t1l = via2_t1l & 0xff | (byte << 8);
+				via2_t1l = (via2_t1l & 0xff) | (byte << 8);
 				via2_ifr &= 0xbf;
 				via2_t1c = via2_t1l;
 				break;
 			case 7:
-				via2_t1l = via2_t1l & 0xff | (byte << 8);
+				via2_t1l = (via2_t1l & 0xff) | (byte << 8);
 				break;
 			case 8:
-				via2_t2l = via2_t2l & 0xff00 | byte;
+				via2_t2l = (via2_t2l & 0xff00) | byte;
 				break;
 			case 9:
-				via2_t2l = via2_t2l & 0xff | (byte << 8);
+				via2_t2l = (via2_t2l & 0xff) | (byte << 8);
 				via2_ifr &= 0xdf;
 				via2_t2c = via2_t2l;
 				break;

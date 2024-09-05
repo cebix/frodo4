@@ -313,8 +313,8 @@ uint8_t MOS6526_2::ReadRegister(uint16_t adr)
 {
 	switch (adr) {
 		case 0x00:
-			return (pra | ~ddra) & 0x3f
-				| IECLines & the_cpu_1541->IECLines;
+			return ((pra | ~ddra) & 0x3f)
+			     | (IECLines & the_cpu_1541->IECLines);
 		case 0x01: {
 			uint8_t ret = prb | ~ddrb;
 
@@ -358,10 +358,11 @@ uint8_t MOS6526_2::ReadRegister(uint16_t adr)
 // Write to port B, check for lightpen interrupt
 inline void MOS6526_1::check_lp()
 {
-	if ((prb | ~ddrb) & 0x10 != prev_lp) {
+	uint8_t new_lp = (prb | ~ddrb) & 0x10;
+	if (new_lp != prev_lp) {
 		the_vic->TriggerLightpen();
+		prev_lp = new_lp;
 	}
-	prev_lp = (prb | ~ddrb) & 0x10;
 }
 
 void MOS6526_1::WriteRegister(uint16_t adr, uint8_t byte)
@@ -470,11 +471,12 @@ void MOS6526_2::WriteRegister(uint16_t adr, uint8_t byte)
 	switch (adr) {
 		case 0x0:{
 			pra = byte;
-			the_vic->ChangedVA(~(pra | ~ddra) & 3);
+			byte = ~pra & ddra;
+			the_vic->ChangedVA(byte & 3);
 			uint8_t old_lines = IECLines;
-			IECLines = (~byte << 2) & 0x80	// DATA
-				| (~byte << 2) & 0x40		// CLK
-				| (~byte << 1) & 0x10;		// ATN
+			IECLines = ((byte << 2) & 0x80)		// DATA
+			         | ((byte << 2) & 0x40)		// CLK
+			         | ((byte << 1) & 0x10);		// ATN
 			if ((IECLines ^ old_lines) & 0x10) {	// ATN changed
 				the_cpu_1541->NewATNState();
 				if (old_lines & 0x10) {				// ATN 1->0
@@ -862,7 +864,7 @@ void MOS6526::CountTOD()
 					}
 					tod_hr |= (hi << 4) | lo;
 					if ((tod_hr & 0x1f) > 0x11) {
-						tod_hr = tod_hr & 0x80 ^ 0x80;
+						tod_hr = (tod_hr & 0x80) ^ 0x80;
 					}
 				} else {
 					tod_min = (hi << 4) | lo;

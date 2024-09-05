@@ -259,7 +259,7 @@ inline uint8_t MOS6510::read_byte_io(uint16_t adr)
 					case 0x9:
 					case 0xa:
 					case 0xb:
-						return color_ram[adr & 0x03ff] & 0x0f | TheVIC->LastVICByte & 0xf0;
+						return (color_ram[adr & 0x03ff] & 0x0f) | (TheVIC->LastVICByte & 0xf0);
 					case 0xc:	// CIA 1
 						return TheCIA1->ReadRegister(adr & 0x0f);
 					case 0xd:	// CIA 2
