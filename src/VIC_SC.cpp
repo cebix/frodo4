@@ -54,7 +54,7 @@ const int ROW24_YSTART = 0x37;
 const int ROW24_YSTOP = 0xf7;
 
 #if defined(SMALL_DISPLAY)
-/* This does not work yet, the sprite code doesn't know about it. */
+/* TODO: This does not work yet, the sprite code doesn't know about it. */
 const int COL40_XSTART = 0x14;
 const int COL40_XSTOP = 0x154;
 const int COL38_XSTART = 0x1B;
@@ -1814,6 +1814,13 @@ unsigned MOS6569::EmulateCycle()
 			SampleBorder;
 
 			if (draw_this_line) {
+
+				// Copy foreground mask from left side to higher X
+				// coordinates to properly handle X-expanded sprites under
+				// the left border (MxX = 0x1e1..0x1f7)
+				fore_mask_buf[0x218 / 8 + 0] = fore_mask_buf[COL40_XSTART / 8 + 0];
+				fore_mask_buf[0x218 / 8 + 1] = fore_mask_buf[COL40_XSTART / 8 + 1];
+				fore_mask_buf[0x218 / 8 + 2] = fore_mask_buf[COL40_XSTART / 8 + 2];
 
 				// Draw sprites
 				if (spr_draw && ThePrefs.SpritesOn) {

@@ -128,7 +128,9 @@ private:
 
 	long pad0;	// Keep buffers long-aligned
 	uint8_t spr_coll_buf[0x1f8];				// Buffer for sprite-sprite collisions and priorities
-	uint8_t fore_mask_buf[(0x200 + 64) / 8];	// Foreground mask for sprite-graphics collisions and priorities
+	uint8_t fore_mask_buf[(0x200 + 48) / 8];	// Foreground mask for sprite-graphics collisions and priorities
+												// (must be wider than line to handle X-expanded sprites under
+												// the left border (MxX = 0x1e1..0x1f7))
 #ifndef CAN_ACCESS_UNALIGNED
 	uint8_t text_chunky_buf[40*8];				// Line graphics buffer
 #endif
