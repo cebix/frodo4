@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=Frodo SC
+Comment=Commodore 64 emulator
+Exec=FrodoSC
+Icon=Frodo
+Type=Application
+Categories=Game;Emulator;

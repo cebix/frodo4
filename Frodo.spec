@@ -13,6 +13,7 @@ URL: https://frodo.cebix.net
 BuildRequires: gcc-c++
 BuildRequires: SDL2-devel >= 2.30
 BuildRequires: gtk3-devel >= 3.24
+BuildRequires: desktop-file-utils
 BuildRoot: %{_tmppath}/%{name}-root
 Prefix: %{_prefix}
 
@@ -36,6 +37,12 @@ make
 rm -rf ${RPM_BUILD_ROOT}
 make DESTDIR=${RPM_BUILD_ROOT} install
 
+%post
+update-desktop-database &> /dev/null || :
+
+%postun
+update-desktop-database &> /dev/null || :
+
 %clean
 rm -rf ${RPM_BUILD_ROOT}
 
@@ -47,3 +54,6 @@ rm -rf ${RPM_BUILD_ROOT}
 %{_bindir}/FrodoSC
 %{_datadir}/Frodo/Frodo.ui
 %{_datadir}/Frodo/Frodo_Logo.png
+%{_datadir}/applications/Frodo.desktop
+%{_datadir}/applications/FrodoSC.desktop
+%{_datadir}/icons/hicolor/128x128/Frodo.png
