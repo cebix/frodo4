@@ -57,7 +57,7 @@ public:
 #ifdef FRODO_SC
 	unsigned EmulateCycle();
 #else
-	unsigned EmulateLine(unsigned & retCyclesLeft);
+	unsigned EmulateLine(int & retCyclesLeft);
 #endif
 
 	bool FrameSkipped() const { return frame_skipped; }

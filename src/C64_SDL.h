@@ -176,7 +176,7 @@ void C64::thread_func()
 #else
 
 		// The order of calls is important here
-		unsigned cycles = 0;
+		int cycles = 0;
 		unsigned flags = TheVIC->EmulateLine(cycles);
 		new_frame = (flags & VIC_VBLANK);
 

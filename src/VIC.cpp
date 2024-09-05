@@ -1232,9 +1232,9 @@ spr_off:
  *  Also returns the number of cycles left for the CPU in this line.
  */
 
-unsigned MOS6569::EmulateLine(unsigned & retCyclesLeft)
+unsigned MOS6569::EmulateLine(int & retCyclesLeft)
 {
-	unsigned cycles_left = ThePrefs.NormalCycles;	// Cycles left for CPU
+	int cycles_left = ThePrefs.NormalCycles;	// Cycles left for CPU
 	bool is_bad_line = false;
 
 	// Get raster counter into local variable for faster access and increment
