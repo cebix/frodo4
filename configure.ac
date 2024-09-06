@@ -22,15 +22,12 @@ if [[ $HAVE_GLADE = yes ]]; then
   LIBS="$LIBS $GLADE_LIBS"
   LDFLAGS="$LDFLAGS -rdynamic"
 fi
-GUI_OBJS=""
-dnl GUI_OBJS="sdlgui.o file.o dlgFileSelect.o dlgMain.o dlgDrives.o dlgOptions.o dlgVideoSound.o dlgAdvanced.o dlgInput.o"
 
 dnl Checks for typedefs, structures, and compiler characteristics.
 AC_TYPE_OFF_T
 
 AC_CONFIG_HEADERS([src/sysconfig.h])
 AC_SUBST(HAVE_SDL)
-AC_SUBST(GUI_OBJS)
 
 dnl Generate Makefile.
 AC_CONFIG_FILES([Makefile src/Makefile docs/Makefile])
