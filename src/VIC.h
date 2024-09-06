@@ -65,8 +65,6 @@ public:
 	void ChangedVA(uint16_t new_va);	// CIA VA14/15 has changed
 	void TriggerLightpen();				// Trigger lightpen interrupt
 
-	void ReInitColors();
-
 	void GetState(MOS6569State *vd) const;
 	void SetState(const MOS6569State *vd);
 

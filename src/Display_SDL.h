@@ -110,8 +110,11 @@ C64Display::C64Display(C64 *the_c64) : TheC64(the_c64)
 		error_and_quit(std::format("Couldn't create SDL texture ({})\n", SDL_GetError()));
 	}
 
-	// Create 8-bit pixel buffer for VIC to draw into
+	// Create 8-bit indexed pixel buffer for VIC to draw into
 	pixel_buffer = new uint8_t[DISPLAY_X * DISPLAY_Y];
+
+	// Init color palette for pixel buffer
+	init_colors(ThePrefs.Palette);
 
 	// Hide mouse pointer in fullscreen mode
 	if (ThePrefs.DisplayType == DISPTYPE_SCREEN) {
@@ -160,12 +163,14 @@ void C64Display::error_and_quit(const std::string & msg) const
 
 
 /*
- *  Prefs may have changed
+ *  Prefs may have changed, recalculate palette
  */
 
 void C64Display::NewPrefs(const Prefs *prefs)
 {
-	// Unused
+	if (prefs->Palette != ThePrefs.Palette) {
+		init_colors(prefs->Palette);
+	}
 }
 
 
@@ -640,30 +645,36 @@ bool C64Display::NumLock()
 
 
 /*
- *  Allocate C64 colors
+ *  Set VIC color palette
  */
 
-void C64Display::InitColors(uint8_t *colors)
+void C64Display::init_colors(int palette_prefs)
 {
-	// Palette for indexed-to-ARGB conversion
+	// Create palette for indexed-to-ARGB conversion
 	memset(palette, 0, sizeof(palette));
 
-	for (unsigned i = 0; i < 16; ++i) {
-		palette[i] = (palette_red[i & 0x0f] << 16)
-		           | (palette_green[i & 0x0f] << 8)
-		           | (palette_blue[i & 0x0f] << 0);
+	const uint8_t * r, * g, * b;
+	if (palette_prefs == PALETTE_COLODORE) {
+		r = palette_colodore_red;
+		g = palette_colodore_green;
+		b = palette_colodore_blue;
+	} else {
+		r = palette_pepto_red;
+		g = palette_pepto_green;
+		b = palette_pepto_blue;
 	}
 
+	// Colors for VIC
+	for (unsigned i = 0; i < 16; ++i) {
+		palette[i] = (r[i] << 16) | (g[i] << 8) | (b[i] << 0);
+	}
+
+	// Extra colors for UI elements
 	palette[fill_gray]   = (0xd0 << 16) | (0xd0 << 8) | (0xd0 << 0);
 	palette[shine_gray]  = (0xf0 << 16) | (0xf0 << 8) | (0xf0 << 0);
 	palette[shadow_gray] = (0x80 << 16) | (0x80 << 8) | (0x80 << 0);
 	palette[red]         = (0xf0 << 16) | (0x00 << 8) | (0x00 << 0);
 	palette[green]       = (0x00 << 16) | (0xf0 << 8) | (0x00 << 0);
-
-	// One-to-one Palette for VIC
-	for (unsigned i = 0; i < 256; ++i) {
-		colors[i] = i & 0x0f;
-	}
 }
 
 

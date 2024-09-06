@@ -29,9 +29,6 @@
 // These are the active preferences
 Prefs ThePrefs;
 
-// These are the preferences on disk
-Prefs ThePrefsOnDisk;
-
 
 /*
  *  Constructor: Set up preferences with defaults
@@ -55,6 +52,7 @@ Prefs::Prefs()
 	SIDType = SIDTYPE_DIGITAL;
 	REUSize = REU_NONE;
 	DisplayType = DISPTYPE_WINDOW;
+	Palette = PALETTE_PEPTO;
 	Joystick1Port = 0;
 	Joystick2Port = 0;
 
@@ -96,6 +94,7 @@ bool Prefs::operator==(const Prefs &rhs) const
 		&& SIDType == rhs.SIDType
 		&& REUSize == rhs.REUSize
 		&& DisplayType == rhs.DisplayType
+		&& Palette == rhs.Palette
 		&& SpritesOn == rhs.SpritesOn
 		&& SpriteCollisions == rhs.SpriteCollisions
 		&& Joystick1Port == rhs.Joystick1Port
@@ -149,6 +148,10 @@ void Prefs::Check()
 
 	if (DisplayType < DISPTYPE_WINDOW || DisplayType > DISPTYPE_SCREEN) {
 		DisplayType = DISPTYPE_WINDOW;
+	}
+
+	if (Palette < PALETTE_PEPTO || Palette > PALETTE_COLODORE) {
+		Palette = PALETTE_PEPTO;
 	}
 }
 
@@ -207,6 +210,8 @@ void Prefs::Load(const char *filename)
 					}
 				} else if (!strcmp(keyword, "DisplayType")) {
 					DisplayType = strcmp(value, "SCREEN") ? DISPTYPE_WINDOW : DISPTYPE_SCREEN;
+				} else if (!strcmp(keyword, "Palette")) {
+					Palette = strcmp(value, "COLODORE") ? PALETTE_PEPTO : PALETTE_COLODORE;
 				} else if (!strcmp(keyword, "Joystick1Port")) {
 					Joystick1Port = atoi(value);
 				} else if (!strcmp(keyword, "Joystick2Port")) {
@@ -245,7 +250,6 @@ void Prefs::Load(const char *filename)
 		fclose(file);
 	}
 	Check();
-	ThePrefsOnDisk = *this;
 }
 
 
@@ -298,6 +302,7 @@ bool Prefs::Save(const char *filename)
 				break;
 		};
 		fprintf(file, "DisplayType = %s\n", DisplayType == DISPTYPE_WINDOW ? "WINDOW" : "SCREEN");
+		fprintf(file, "Palette = %s\n", Palette == PALETTE_COLODORE ? "COLODORE" : "PEPTO");
 		fprintf(file, "Joystick1Port = %d\n", Joystick1Port);
 		fprintf(file, "Joystick2Port = %d\n", Joystick2Port);
 		fprintf(file, "SpritesOn = %s\n", SpritesOn ? "TRUE" : "FALSE");
@@ -315,7 +320,6 @@ bool Prefs::Save(const char *filename)
 		fprintf(file, "PrefsAtStartup = %s\n", PrefsAtStartup ? "TRUE" : "FALSE");
 		fprintf(file, "ShowLEDs = %s\n", ShowLEDs ? "TRUE" : "FALSE");
 		fclose(file);
-		ThePrefsOnDisk = *this;
 		return true;
 	}
 	return false;

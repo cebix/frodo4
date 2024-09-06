@@ -11,6 +11,7 @@ Changes from V4.2 to V4.3:
  - Replaced status bar with overlay
  - Added setting for status overlay display (ShowLEDs)
  - Added setting for initial window size (ScalingNumerator)
+ - Added setting for color palette (Palette)
  - Added menu items for loading/saving snapshot files to the settings window
  - Added menu item for creating a blank D64 image to the settings window
  - Added "Next Disk" buttons to the drive paths in the settings window

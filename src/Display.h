@@ -60,7 +60,6 @@ public:
 	int BitmapXMod();
 	void PollKeyboard(uint8_t *key_matrix, uint8_t *rev_matrix, uint8_t *joystick);
 	bool NumLock();
-	void InitColors(uint8_t *colors);
 	void NewPrefs(const Prefs *prefs);
 
 	C64 *TheC64;
@@ -75,6 +74,8 @@ public:
 #endif
 
 private:
+	void init_colors(int palette_prefs);
+
 	int led_state[4];
 	int old_led_state[4];
 

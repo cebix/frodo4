@@ -48,6 +48,13 @@ enum {
 };
 
 
+// Color palettes
+enum {
+	PALETTE_PEPTO,
+	PALETTE_COLODORE
+};
+
+
 // Preferences data
 class Prefs {
 public:
@@ -75,6 +82,7 @@ public:
 	int SIDType;			// SID emulation type
 	int REUSize;			// Size of REU
 	int DisplayType;		// Display type (windowed or full-screen)
+	int Palette;			// Color palette to use
 	int Joystick1Port;		// Port that joystick 1 is connected to (0 = no joystick, all other values are system dependant)
 	int Joystick2Port;		// Port that joystick 2 is connected to
 	int ScalingNumerator;	// Window scaling numerator
@@ -100,8 +108,5 @@ public:
 
 // These are the active preferences
 extern Prefs ThePrefs;
-
-// Theses are the preferences on disk
-extern Prefs ThePrefsOnDisk;
 
 #endif
