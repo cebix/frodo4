@@ -23,7 +23,7 @@ of platforms, with a focus on the exact reproduction of special graphical
 effects possible on the C64.
 
 Frodo comes in two flavours: "Frodo SC" which is a cycle-exact emulation,
-and the "regular", line-based Frodo which is less compatible but runs better
+and the original, line-based Frodo which is less compatible but runs better
 on slower machines.
 
 %prep
