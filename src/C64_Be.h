@@ -137,7 +137,7 @@ void C64::Resume()
 
 
 /*
- *  Vertical blank: Poll keyboard and joysticks, update window
+ *  Vertical blank: Poll input devices, update window
  */
 
 void C64::vblank()
@@ -146,7 +146,8 @@ void C64::vblank()
 	long speed_index;
 
 	// To avoid deadlocks on quitting
-	if (quit_thyself) return;
+	if (quit_thyself)
+		return;
 
 	// Pause requested?
 	if (have_a_break) {
@@ -154,25 +155,8 @@ void C64::vblank()
 		acquire_sem(pause_sem);	// Wait for resume
 	}
 
-	// Poll keyboard
-	TheDisplay->PollKeyboard(TheCIA1->KeyMatrix, TheCIA1->RevMatrix, &joykey);
-
-	// Poll joysticks
-	TheCIA1->Joystick1 = poll_joystick(0);
-	TheCIA1->Joystick2 = poll_joystick(1);
-
-	if (ThePrefs.JoystickSwap) {
-		uint8_t tmp = TheCIA1->Joystick1;
-		TheCIA1->Joystick1 = TheCIA1->Joystick2;
-		TheCIA1->Joystick2 = tmp;
-	}
-
-	// Joystick keyboard emulation
-	if (TheDisplay->NumLock()) {
-		TheCIA1->Joystick1 &= joykey;
-	} else {
-		TheCIA1->Joystick2 &= joykey;
-	}
+	// Poll keyboard and joysticks
+	poll_input();
 
 	// Count TOD clocks
 	TheCIA1->CountTOD();
@@ -330,11 +314,11 @@ uint8_t C64::poll_joystick(int port)
 
 long C64::thread_invoc(void *obj)
 {
-	((C64 *)obj)->thread_func();
+	((C64 *)obj)->main_loop();
 	return 0;
 }
 
-void C64::thread_func()
+void C64::main_loop()
 {
 #ifdef PROFILING
 static bigtime_t vic_time_acc = 0;

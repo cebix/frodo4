@@ -33,6 +33,7 @@
 #include "Prefs.h"
 
 #include <memory>
+#include <utility>
 
 
 #ifdef FRODO_SC
@@ -363,6 +364,32 @@ void C64::emulate_1541_cycle()
 }
 
 #endif // def FRODO_SC
+
+
+/*
+ *  Poll keyboard and joysticks
+ */
+
+void C64::poll_input()
+{
+	// Poll joysticks
+	TheCIA1->Joystick1 = poll_joystick(0);
+	TheCIA1->Joystick2 = poll_joystick(1);
+
+	if (ThePrefs.JoystickSwap) {
+		std::swap(TheCIA1->Joystick1, TheCIA1->Joystick2);
+	}
+
+	// Poll keyboard
+	TheDisplay->PollKeyboard(TheCIA1->KeyMatrix, TheCIA1->RevMatrix, &joykey);
+
+	// Joystick keyboard emulation
+	if (TheDisplay->NumLock()) {
+		TheCIA1->Joystick1 &= joykey;
+	} else {
+		TheCIA1->Joystick2 &= joykey;
+	}
+}
 
 
 /*

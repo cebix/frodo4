@@ -121,8 +121,9 @@ private:
 	bool emulate_c64_cycle();
 	void emulate_1541_cycle();
 #endif
+	void main_loop();
+	void poll_input();
 	void vblank();
-	void thread_func();
 	void handle_rewind();
 	void reset_play_mode();
 

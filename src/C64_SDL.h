@@ -71,7 +71,7 @@ void C64::c64_dtor()
 
 
 /*
- *  Start main emulation thread
+ *  Start main emulation loop
  */
 
 void C64::Run()
@@ -89,37 +89,21 @@ void C64::Run()
 	PatchKernal(ThePrefs.FastReset, ThePrefs.Emul1541Proc);
 
 	quit_thyself = false;
-	thread_func();
+	main_loop();
 }
 
 
 /*
- *  Vertical blank: Poll keyboard and joysticks, update display
+ *  Vertical blank: Poll input devices, update display
  */
 
 void C64::vblank()
 {
-	// Poll joysticks
-	TheCIA1->Joystick1 = poll_joystick(0);
-	TheCIA1->Joystick2 = poll_joystick(1);
+	// Poll keyboard and joysticks
+	poll_input();
 
-	if (ThePrefs.JoystickSwap) {
-		uint8_t tmp = TheCIA1->Joystick1;
-		TheCIA1->Joystick1 = TheCIA1->Joystick2;
-		TheCIA1->Joystick2 = tmp;
-	}
-
-	// Poll keyboard
-	TheDisplay->PollKeyboard(TheCIA1->KeyMatrix, TheCIA1->RevMatrix, &joykey);
 	if (TheDisplay->quit_requested) {
 		quit_thyself = true;
-	}
-
-	// Joystick keyboard emulation
-	if (TheDisplay->NumLock()) {
-		TheCIA1->Joystick1 &= joykey;
-	} else {
-		TheCIA1->Joystick2 &= joykey;
 	}
 
 	// Count TOD clocks
@@ -161,8 +145,10 @@ void C64::vblank()
  *  The emulation's main loop
  */
 
-void C64::thread_func()
+void C64::main_loop()
 {
+	unsigned prev_raster_y = 0;
+
 	while (!quit_thyself) {
 		bool new_frame;
 
@@ -209,6 +195,27 @@ void C64::thread_func()
 		}
 
 #endif  // def FRODO_SC
+
+		// Poll keyboard and mouse, and delay execution at three points
+		// within the frame to reduce input lag. This also helps with the
+		// asynchronously running SID emulation.
+		if (ThePrefs.LimitSpeed && play_mode == PLAY_MODE_PLAY) {
+			unsigned raster_y = TheVIC->RasterY();
+			if (raster_y != prev_raster_y) {
+				if (raster_y == TOTAL_RASTERS * 1 / 4) {
+					std::this_thread::sleep_until(frame_start - chrono::microseconds(FRAME_TIME_us * 3 / 4));
+					poll_input();
+				} else if (raster_y == TOTAL_RASTERS * 2 / 4) {
+					std::this_thread::sleep_until(frame_start - chrono::microseconds(FRAME_TIME_us * 2 / 4));
+					poll_input();
+				} else if (raster_y == TOTAL_RASTERS * 3 / 4) {
+					std::this_thread::sleep_until(frame_start - chrono::microseconds(FRAME_TIME_us * 1 / 4));
+					poll_input();
+				}
+
+				prev_raster_y = raster_y;
+			}
+		}
 
 		// Update display etc. if new frame has started
 		if (new_frame) {

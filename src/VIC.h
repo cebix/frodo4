@@ -68,6 +68,9 @@ public:
 	void GetState(MOS6569State *vd) const;
 	void SetState(const MOS6569State *vd);
 
+	// Get current raster line
+	unsigned RasterY() const { return raster_y; }
+
 #ifdef FRODO_SC
 	uint8_t LastVICByte;
 #endif
