@@ -21,8 +21,6 @@
 #ifndef _SID_H
 #define _SID_H
 
-#include "Prefs.h"
-
 #include <stdlib.h>
 
 
@@ -33,6 +31,7 @@
 
 class C64;
 class SIDRenderer;
+class Prefs;
 struct MOS6581State;
 
 // Class for administrative functions
@@ -51,16 +50,24 @@ public:
 	void SetState(const MOS6581State *ss);
 	void EmulateLine();
 
+	static const int16_t EGDivTable[16];	// Clock divisors for A/D/R settings
+	static const uint8_t EGDRShift[256];	// For exponential approximation of D/R
+
 private:
 	void open_close_renderer(int old_type, int new_type);
+
 	uint8_t read_osc3() const;
+	uint8_t read_env3() const;
 
 	C64 *the_c64;				// Pointer to C64 object
 	SIDRenderer *the_renderer;	// Pointer to current renderer
 
 	uint8_t regs[32];			// Copies of the 25 write-only SID registers
 	uint8_t last_sid_byte;		// Last value written to SID
+
 	uint32_t fake_v3_count;		// Fake voice 3 phase accumulator for oscillator read-back
+	int32_t fake_v3_eg_level;	// Fake voice 3 EG level (8.16 fixed) for EG read-back
+	int fake_v3_eg_state;		// Fake voice 3 EG state
 };
 
 
@@ -114,22 +121,67 @@ struct MOS6581State {
 	uint8_t env_3;
 
 	uint32_t v3_count;
+	int32_t v3_eg_level;
+	uint32_t v3_eg_state;
+};
+
+
+// EG states
+enum {
+	EG_ATTACK,
+	EG_DECAY_SUSTAIN,
+	EG_RELEASE
 };
 
 
 /*
- * Fill buffer (for Unix sound routines), sample volume (for sampled voice)
+ *  Simulate voice 3 oscillator and EG for read-back emulation,
+ *  and sample master volume for sampled voice reproduction
  */
+
+constexpr unsigned SID_CYCLES_PER_LINE = 63;
 
 inline void MOS6581::EmulateLine()
 {
+	// The actual voice 3 is emulated in calc_buffer() which runs
+	// asynchronously from the sound thread. For more consistent results
+	// from the OSC3 and ENV3 read-back registers, we run another "fake"
+	// emulation of the voice 3 oscillator and EG once per line.
+
 	// Simulate voice 3 phase accumulator
 	uint8_t v3_ctrl = regs[0x12];	// Voice 3 control register
 	if (v3_ctrl & 0x08) {			// Test bit
 		fake_v3_count = 0;
 	} else {
 		uint32_t add = (regs[0x0f] << 8) | regs[0x0e];
-		fake_v3_count = (fake_v3_count + add * ThePrefs.NormalCycles) & 0xffffff;
+		fake_v3_count = (fake_v3_count + add * SID_CYCLES_PER_LINE) & 0xffffff;
+	}
+
+	// Simulate voice 3 envelope generator
+	switch (fake_v3_eg_state) {
+		case EG_ATTACK:
+			fake_v3_eg_level +=  (SID_CYCLES_PER_LINE << 16) / EGDivTable[regs[0x13] >> 4];
+			if (fake_v3_eg_level > 0xffffff) {
+				fake_v3_eg_level = 0xffffff;
+				fake_v3_eg_state = EG_DECAY_SUSTAIN;
+			}
+			break;
+		case EG_DECAY_SUSTAIN: {
+			int32_t s_level = (regs[0x14] >> 4) * 0x111111;
+			fake_v3_eg_level -= ((SID_CYCLES_PER_LINE << 16) / EGDivTable[regs[0x13] & 0x0f]) >> EGDRShift[fake_v3_eg_level >> 16];
+			if (fake_v3_eg_level < s_level) {
+				fake_v3_eg_level = s_level;
+			}
+			break;
+		}
+		case EG_RELEASE:
+			if (fake_v3_eg_level != 0) {
+				fake_v3_eg_level -= ((SID_CYCLES_PER_LINE << 16) / EGDivTable[regs[0x14] & 0x0f]) >> EGDRShift[fake_v3_eg_level >> 16];
+				if (fake_v3_eg_level < 0) {
+					fake_v3_eg_level = 0;
+				}
+			}
+			break;
 	}
 
 	if (the_renderer != NULL) {
@@ -156,10 +208,10 @@ inline uint8_t MOS6581::ReadRegister(uint16_t adr)
 		return read_osc3();
 	}
 
-	// TODO: Voice 3 EG read-back is not implemented
+	// Voice 3 EG read-back
 	if (adr == 0x1c) {
 		last_sid_byte = 0;
-		return rand();
+		return read_env3();
 	}
 
 	// Write-only register: Return last value written to SID
@@ -173,6 +225,18 @@ inline uint8_t MOS6581::ReadRegister(uint16_t adr)
 
 inline void MOS6581::WriteRegister(uint16_t adr, uint8_t byte)
 {
+	// Handle fake voice 3 EG state
+	if (adr == 0x12) {	// Voice 3 control register
+		uint8_t gate = byte & 0x01;
+		if ((regs[0x12] & 0x01) != gate) {
+			if (gate) {		// Gate turned on
+				fake_v3_eg_state = EG_ATTACK;
+			} else {		// Gate turned off
+				fake_v3_eg_state = EG_RELEASE;
+			}
+		}
+	}
+
 	// Keep a local copy of the register values
 	last_sid_byte = regs[adr] = byte;
 

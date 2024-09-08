@@ -113,7 +113,10 @@ void MOS6581::Reset()
 		regs[i] = 0;
 	}
 	last_sid_byte = 0;
+
 	fake_v3_count = 0;
+	fake_v3_eg_level = 0;
+	fake_v3_eg_state = EG_RELEASE;
 
 	// Reset the renderer
 	if (the_renderer != nullptr) {
@@ -192,6 +195,16 @@ uint8_t MOS6581::read_osc3() const
 
 
 /*
+ *  Simulate EG 3 read-back
+ */
+
+uint8_t MOS6581::read_env3() const
+{
+	return (uint8_t)(fake_v3_eg_level >> 16);
+}
+
+
+/*
  *  Get SID state
  */
 
@@ -229,9 +242,11 @@ void MOS6581::GetState(MOS6581State *ss) const
 	ss->pot_x = 0xff;
 	ss->pot_y = 0xff;
 	ss->osc_3 = read_osc3();
-	ss->env_3 = 0;
+	ss->env_3 = read_env3();
 
 	ss->v3_count = fake_v3_count;
+	ss->v3_eg_level = fake_v3_eg_level;
+	ss->v3_eg_state = fake_v3_eg_state;
 }
 
 
@@ -271,6 +286,8 @@ void MOS6581::SetState(const MOS6581State *ss)
 	regs[24] = ss->mode_vol;
 
 	fake_v3_count = ss->v3_count;
+	fake_v3_eg_level = ss->v3_eg_level;
+	fake_v3_eg_state = ss->v3_eg_state;
 
 	// Stuff the new register values into the renderer
 	if (the_renderer != nullptr) {
@@ -288,7 +305,7 @@ void MOS6581::SetState(const MOS6581State *ss)
 constexpr uint32_t SAMPLE_FREQ = 44100;		// Sample output frequency in Hz
 constexpr uint32_t SID_FREQ = 985248;		// SID frequency in Hz
 constexpr uint32_t CALC_FREQ = 50;			// Frequency at which calc_buffer is called in Hz (should be 50Hz)
-constexpr uint32_t SID_CYCLES = SID_FREQ/SAMPLE_FREQ;	// # of SID clocks per sample frame
+constexpr uint32_t SID_CYCLES = SID_FREQ / SAMPLE_FREQ;	// # of SID clocks per sample frame
 constexpr size_t SAMPLE_BUF_SIZE = TOTAL_RASTERS * 2;	// Size of buffer for sampled voice (double buffered)
 
 // SID waveforms (some of them :-)
@@ -302,14 +319,6 @@ enum {
 	WAVE_SAWRECT,
 	WAVE_TRISAWRECT,
 	WAVE_NOISE
-};
-
-// EG states
-enum {
-	EG_IDLE,
-	EG_ATTACK,
-	EG_DECAY,
-	EG_RELEASE
 };
 
 // Filter types
@@ -337,11 +346,11 @@ struct DRVoice {
 	uint16_t freq;		// SID frequency value
 	uint16_t pw;		// SID pulse-width value
 
-	uint32_t a_add;		// EG parameters
-	uint32_t d_sub;
-	uint32_t s_level;
-	uint32_t r_sub;
-	uint32_t eg_level;	// Current EG level, 8.16 fixed
+	int32_t a_add;		// EG parameters
+	int32_t d_sub;
+	int32_t s_level;
+	int32_t r_sub;
+	int32_t eg_level;	// Current EG level, 8.16 fixed
 
 	uint32_t noise;		// Last noise generator output value
 
@@ -383,8 +392,7 @@ private:
 	static const uint16_t TriRectTable[0x100];
 	static const uint16_t SawRectTable[0x100];
 	static const uint16_t TriSawRectTable[0x100];
-	static const uint32_t EGTable[16];	// Increment/decrement values for all A/D/R settings
-	static const uint8_t EGDRShift[256]; // For exponential approximation of D/R
+	static const int32_t EGTable[16];	// Increment/decrement values for all A/D/R settings
 	static const int16_t SampleTab[16];	// Table for sampled voice
 
 	DRVoice voice[3];				// Data for 3 voices
@@ -699,7 +707,18 @@ const uint16_t DigitalRenderer::TriSawRectTable[0x100] = {
 };
 #endif
 
-const uint32_t DigitalRenderer::EGTable[16] = {
+const int16_t MOS6581::EGDivTable[16] = {
+	9, 32,
+	63, 95,
+	149, 220,
+	267, 313,
+	392, 977,
+	1954, 3126,
+	3906, 11720,
+	19531, 31251
+};
+
+const int32_t DigitalRenderer::EGTable[16] = {
 	(SID_CYCLES << 16) / 9, (SID_CYCLES << 16) / 32,
 	(SID_CYCLES << 16) / 63, (SID_CYCLES << 16) / 95,
 	(SID_CYCLES << 16) / 149, (SID_CYCLES << 16) / 220,
@@ -710,7 +729,7 @@ const uint32_t DigitalRenderer::EGTable[16] = {
 	(SID_CYCLES << 16) / 19531, (SID_CYCLES << 16) / 31251
 };
 
-const uint8_t DigitalRenderer::EGDRShift[256] = {
+const uint8_t MOS6581::EGDRShift[256] = {
 	5,5,5,5,5,5,5,5,4,4,4,4,4,4,4,4,
 	3,3,3,3,3,3,3,3,3,3,3,3,2,2,2,2,
 	2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,
@@ -773,7 +792,7 @@ void DigitalRenderer::Reset()
 
 	for (unsigned v = 0; v < 3; ++v) {
 		voice[v].wave = WAVE_NONE;
-		voice[v].eg_state = EG_IDLE;
+		voice[v].eg_state = EG_RELEASE;
 		voice[v].count = voice[v].add = 0;
 		voice[v].freq = voice[v].pw = 0;
 		voice[v].eg_level = voice[v].s_level = 0;
@@ -859,9 +878,7 @@ void DigitalRenderer::WriteRegister(uint16_t adr, uint8_t byte)
 				if (byte & 1) {		// Gate turned on
 					voice[v].eg_state = EG_ATTACK;
 				} else {			// Gate turned off
-					if (voice[v].eg_state != EG_IDLE) {
-						voice[v].eg_state = EG_RELEASE;
-					}
+					voice[v].eg_state = EG_RELEASE;
 				}
 			}
 			voice[v].gate = byte & 1;
@@ -1137,30 +1154,23 @@ void DigitalRenderer::calc_buffer(int16_t *buf, long count)
 					v->eg_level += v->a_add;
 					if (v->eg_level > 0xffffff) {
 						v->eg_level = 0xffffff;
-						v->eg_state = EG_DECAY;
+						v->eg_state = EG_DECAY_SUSTAIN;
 					}
 					break;
-				case EG_DECAY:
-					if (v->eg_level <= v->s_level || v->eg_level > 0xffffff) {
+				case EG_DECAY_SUSTAIN:
+					v->eg_level -= v->d_sub >> MOS6581::EGDRShift[v->eg_level >> 16];
+					if (v->eg_level < v->s_level) {
 						v->eg_level = v->s_level;
-					} else {
-						v->eg_level -= v->d_sub >> EGDRShift[v->eg_level >> 16];
-						if (v->eg_level <= v->s_level || v->eg_level > 0xffffff)
-							v->eg_level = v->s_level;
 					}
 					break;
 				case EG_RELEASE:
-					v->eg_level -= v->r_sub >> EGDRShift[v->eg_level >> 16];
-					if (v->eg_level > 0xffffff) {
+					v->eg_level -= v->r_sub >> MOS6581::EGDRShift[v->eg_level >> 16];
+					if (v->eg_level < 0) {
 						v->eg_level = 0;
-						v->eg_state = EG_IDLE;
 					}
 					break;
-				case EG_IDLE:
-					v->eg_level = 0;
-					break;
 			}
-			envelope = (v->eg_level * master_volume) >> 20;
+			envelope = ((v->eg_level >> 16) * master_volume) >> 4;
 
 			// Waveform generator
 			uint16_t output;

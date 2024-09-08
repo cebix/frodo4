@@ -20,7 +20,7 @@ Changes from V4.2 to V4.3:
  - Snapshot files can be loaded and disk image files attached by dragging
    them onto the emulator window
  - Improved sprite display
- - Added simulation of SID register 27 (oscillator 3 read-back)
+ - Added simulation of SID registers 27 and 28 (voice 3 read-back)
  - Fixed some CIA timer bugs
 
 Changes from V4.1b to V4.2:
