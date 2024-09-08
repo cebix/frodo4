@@ -30,9 +30,10 @@ TYPE= APP
 #	if two source files with the same name (source.c or source.cpp)
 #	are included from different directories.  Also note that spaces
 #	in folder names do not work well with this makefile.
-SRCS = main.cpp Prefs.cpp SAM.cpp Display.cpp C64.cpp CPUC64.cpp CPU1541.cpp \
-    VIC.cpp SID.cpp CIA.cpp REU.cpp IEC.cpp 1541fs.cpp 1541d64.cpp 1541t64.cpp 1541job.cpp
-		
+SRCS = main.cpp Prefs.cpp SAM.cpp Display.cpp C64_SC.cpp CPUC64_SC.cpp CPU1541_SC.cpp \
+    CPU_common.cpp VIC_SC.cpp SID.cpp CIA_SC.cpp REU.cpp IEC.cpp 1541fs.cpp 1541d64.cpp \
+    1541t64.cpp 1541job.cpp
+
 #	specify the resource files to use
 #	full path or a relative path to the resource file can be used.
 RSRCS= Frodo.rsrc
@@ -81,7 +82,7 @@ OPTIMIZE= FULL
 #	to use.  For example, setting DEFINES to "DEBUG=1" will cause the
 #	compiler option "-DDEBUG=1" to be used.  Setting DEFINES to "DEBUG"
 #	would pass "-DDEBUG" on the compiler's command line.
-DEFINES= PRECISE_CPU_CYCLES=1 PRECISE_CIA_CYCLES=1 PC_IS_POINTER=0
+DEFINES= FRODO_SC
 
 #	specify special warning levels
 #	if unspecified default warnings will be used

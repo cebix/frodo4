@@ -23,29 +23,29 @@ $ make</KBD><P>
 For optimum performance, Frodo needs the following prerequisites:<P>
 
 <UL>
-<LI><A HREF="http://www.libsdl.org">SDL 2.x</A>
+<LI><A HREF="https://libsdl.org/">SDL 2.x</A>
 <LI>GTK 3
 </UL>
 
 <TT>autogen.sh</TT> and <TT>configure</TT> accept optional arguments (type
 <KBD>./autogen.sh --help</KBD> for a full list).<P>
 
-The Frodo GUI requires the <TT>Frodo.glade</TT> file to be present in the
+The Frodo GUI requires the <TT>Frodo.ui</TT> file to be present in the
 directory <TT>/usr/local/share/Frodo</TT> (you can specify a different
 installation directory with <KBD>./configure --prefix</KBD>). Either copy
-this file manually from <TT>src/glade/Frodo.glade</TT> or become root and
+this file manually from <TT>src/Frodo.ui</TT> or become root and
 type<P>
 
 <KBD># make install</KBD>
 
 <H2>Compiling under BeOS</H2>
 
-There are separate Makefiles for Frodo (<TT>Makefile.BeOS</TT>) and Frodo SC
-(<TT>Makefile.BeOS.SC</TT>). Type<P>
+There are separate Makefiles for Frodo (<TT>Makefile.BeOS</TT>) and Frodo
+Lite (<TT>Makefile.BeOS.Lite</TT>). Type<P>
 
 <KBD>$ cd src<BR>
 $ make -fMakefile.BeOS<BR>
-$ make -fMakefile.BeOS.SC</KBD><P>
+$ make -fMakefile.BeOS.Lite</KBD><P>
 
 to compile both versions.
 

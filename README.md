@@ -4,9 +4,9 @@ Frodo is a free, portable Commodore 64 emulator that runs on a variety
 of platforms, with a focus on the exact reproduction of special graphical
 effects possible on the C64.
 
-Frodo comes in two flavours: “Frodo SC” which is a cycle-exact emulation,
-and the original, line-based Frodo which is less compatible but runs better
-on slower machines.
+Frodo comes in two flavours: The regular "Frodo" which uses a cycle-exact
+emulation, and the simplified "Frodo Lite" which is less compatible but runs
+better on slower machines.
 
 ## Installation on Unix-like Systems
 
@@ -96,10 +96,10 @@ software from the disk drive. Instead it comes with a built-in text adventure
 game in the form of an interpreter for (a simple implementation of) the BASIC
 programming language.
 
-*(If you're feeling adventurous, take a look at the [Commodore C64 User's Guide]
-(https://archive.org/details/commodore-64-user-guide) and work through the
-included BASIC programming exercises. Maybe you'll eventually also become a
-famous software developer and author of a C64 emulator!)*
+*(If you're feeling adventurous, take a look at the
+[Commodore C64 User's Guide](https://archive.org/details/commodore-64-user-guide)
+and work through the included BASIC programming exercises. Maybe you'll
+eventually become a famous software developer and author of a C64 emulator!)*
 
 Getting software to load and run from the simulated disk drive also involves
 typing in some BASIC commands. Unfortunately, there is no general standard for

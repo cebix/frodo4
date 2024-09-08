@@ -27,7 +27,7 @@
 *.out
 *.app
 src/Frodo
-src/FrodoSC
+src/FrodoLite
 
 # Autotools
 .deps/

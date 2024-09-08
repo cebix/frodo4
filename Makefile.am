@@ -4,7 +4,7 @@ SUBDIRS = src docs
 dist_doc_DATA = CHANGES COPYING
 
 desktopdir = $(datadir)/applications
-desktop_DATA = Frodo.desktop FrodoSC.desktop
+desktop_DATA = Frodo.desktop FrodoLite.desktop
 icondir = $(datadir)/icons/hicolor/128x128/apps
 icon_DATA = Frodo.png
 

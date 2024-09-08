@@ -1,6 +1,6 @@
 [Desktop Entry]
 Name=Frodo
-Comment=Simple Commodore 64 emulator
+Comment=Commodore 64 emulator
 Exec=Frodo
 Icon=Frodo
 Type=Application

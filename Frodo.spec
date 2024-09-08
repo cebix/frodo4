@@ -22,9 +22,9 @@ Frodo is a free, portable Commodore 64 emulator that runs on a variety
 of platforms, with a focus on the exact reproduction of special graphical
 effects possible on the C64.
 
-Frodo comes in two flavours: "Frodo SC" which is a cycle-exact emulation,
-and the original, line-based Frodo which is less compatible but runs better
-on slower machines.
+Frodo comes in two flavours: The regular "Frodo" which uses a cycle-exact
+emulation, and the simplified "Frodo Lite" which is less compatible but runs
+better on slower machines.
 
 %prep
 %setup -q
@@ -48,9 +48,9 @@ update-desktop-database &> /dev/null || :
 %doc CHANGES COPYING
 %doc docs/*.html
 %{_bindir}/Frodo
-%{_bindir}/FrodoSC
+%{_bindir}/FrodoLite
 %{_datadir}/Frodo/Frodo.ui
 %{_datadir}/Frodo/Frodo_Logo.png
 %{_datadir}/applications/Frodo.desktop
-%{_datadir}/applications/FrodoSC.desktop
+%{_datadir}/applications/FrodoLite.desktop
 %{_datadir}/icons/hicolor/128x128/apps/Frodo.png

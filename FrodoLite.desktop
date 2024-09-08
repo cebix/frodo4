@@ -1,7 +1,7 @@
 [Desktop Entry]
-Name=Frodo SC
-Comment=Commodore 64 emulator
-Exec=FrodoSC
+Name=Frodo Lite
+Comment=Simple Commodore 64 emulator
+Exec=FrodoLite
 Icon=Frodo
 Type=Application
 Categories=Game;Emulator;

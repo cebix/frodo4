@@ -22,8 +22,13 @@
 #define _VERSION_H
 
 // Version/revision
-const int FRODO_VERSION = 4;
-const int FRODO_REVISION = 2;
+constexpr int FRODO_VERSION = 4;
+constexpr int FRODO_REVISION = 2;
+
+#ifdef FRODO_SC
 const char VERSION_STRING[] = "Frodo V4.2";
+#else
+const char VERSION_STRING[] = "Frodo Lite V4.2";
+#endif
 
 #endif
