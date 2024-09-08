@@ -40,6 +40,9 @@ static bool result = false;
 // Pointer to preferences being edited
 static Prefs *prefs = nullptr;
 
+// Main settings window
+static GtkWindow * prefs_win = nullptr;
+
 // Dialog for selecting snapshot file
 static GtkWidget *snapshot_dialog = nullptr;
 static GtkWidget *snapshot_accept_button = nullptr;
@@ -57,6 +60,124 @@ static void set_values();
 static void get_values();
 static void ghost_widgets();
 static void write_sam_output(std::string s, bool error = false);
+
+// Shortcuts window definition
+static const char * shortcuts_win_ui =
+	"<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+	"<interface domain=\"marker\">"
+	"<object class=\"GtkShortcutsWindow\" id=\"shortcuts_win\">"
+      "<property name=\"modal\">1</property>"
+	  "<child>"
+	    "<object class=\"GtkShortcutsSection\">"
+	      "<property name=\"visible\">1</property>"
+	      "<property name=\"section-name\">Keyboard Shortcuts</property>"
+	      "<child>"
+	        "<object class=\"GtkShortcutsGroup\">"
+	          "<property name=\"visible\">1</property>"
+	          "<property name=\"title\">Emulator Window</property>"
+	          "<child>"
+	            "<object class=\"GtkShortcutsShortcut\">"
+	              "<property name=\"visible\">1</property>"
+	              "<property name=\"accelerator\">F10</property>"
+	              "<property name=\"title\">Open settings window</property>"
+	            "</object>"
+	          "</child>"
+	          "<child>"
+	            "<object class=\"GtkShortcutsShortcut\">"
+	              "<property name=\"visible\">1</property>"
+	              "<property name=\"accelerator\">F12</property>"
+	              "<property name=\"title\">Reset C64</property>"
+	            "</object>"
+	          "</child>"
+	          "<child>"
+	            "<object class=\"GtkShortcutsShortcut\">"
+	              "<property name=\"visible\">1</property>"
+	              "<property name=\"accelerator\">KP_Enter</property>"
+	              "<property name=\"title\">Toggle fullscreen mode</property>"
+	            "</object>"
+	          "</child>"
+	          "<child>"
+	            "<object class=\"GtkShortcutsShortcut\">"
+	              "<property name=\"visible\">1</property>"
+	              "<property name=\"accelerator\">KP_Subtract</property>"
+	              "<property name=\"title\">Rewind</property>"
+	            "</object>"
+	          "</child>"
+	          "<child>"
+	            "<object class=\"GtkShortcutsShortcut\">"
+	              "<property name=\"visible\">1</property>"
+	              "<property name=\"accelerator\">KP_Add</property>"
+	              "<property name=\"title\">Fast-forward</property>"
+	            "</object>"
+	          "</child>"
+	        "</object>"
+	      "</child>"
+	      "<child>"
+	        "<object class=\"GtkShortcutsGroup\">"
+	          "<property name=\"visible\">1</property>"
+	          "<property name=\"title\">C64 Keyboard</property>"
+	          "<child>"
+	            "<object class=\"GtkShortcutsShortcut\">"
+	              "<property name=\"visible\">1</property>"
+	              "<property name=\"accelerator\">Escape</property>"
+	              "<property name=\"title\">RUN/STOP</property>"
+	            "</object>"
+	          "</child>"
+	          "<child>"
+	            "<object class=\"GtkShortcutsShortcut\">"
+	              "<property name=\"visible\">1</property>"
+	              "<property name=\"accelerator\">F11</property>"
+	              "<property name=\"title\">RESTORE</property>"
+	            "</object>"
+	          "</child>"
+	          "<child>"
+	            "<object class=\"GtkShortcutsShortcut\">"
+	              "<property name=\"visible\">1</property>"
+	              "<property name=\"accelerator\">&lt;alt&gt;</property>"
+	              "<property name=\"title\">C=</property>"
+	            "</object>"
+	          "</child>"
+	          "<child>"
+	            "<object class=\"GtkShortcutsShortcut\">"
+	              "<property name=\"visible\">1</property>"
+	              "<property name=\"accelerator\">BackSpace</property>"
+	              "<property name=\"title\">INS/DEL</property>"
+	            "</object>"
+	          "</child>"
+	          "<child>"
+	            "<object class=\"GtkShortcutsShortcut\">"
+	              "<property name=\"visible\">1</property>"
+	              "<property name=\"accelerator\">Home</property>"
+	              "<property name=\"title\">CLR/HOME</property>"
+	            "</object>"
+	          "</child>"
+	          "<child>"
+	            "<object class=\"GtkShortcutsShortcut\">"
+	              "<property name=\"visible\">1</property>"
+	              "<property name=\"accelerator\">End</property>"
+	              "<property name=\"title\">£</property>"
+	            "</object>"
+	          "</child>"
+	          "<child>"
+	            "<object class=\"GtkShortcutsShortcut\">"
+	              "<property name=\"visible\">1</property>"
+	              "<property name=\"accelerator\">Page_Up</property>"
+	              "<property name=\"title\">↑</property>"
+	            "</object>"
+	          "</child>"
+	          "<child>"
+	            "<object class=\"GtkShortcutsShortcut\">"
+	              "<property name=\"visible\">1</property>"
+	              "<property name=\"accelerator\">Page_Down</property>"
+	              "<property name=\"title\">=</property>"
+	            "</object>"
+	          "</child>"
+	        "</object>"
+	      "</child>"
+	    "</object>"
+	  "</child>"
+	"</object>"
+	"</interface>";
 
 
 /*
@@ -87,7 +208,7 @@ bool Prefs::ShowEditor(bool startup, std::string prefs_path, std::string snapsho
 	if (builder == nullptr)
 		return startup;
 
-	GtkWindow * prefs_win = GTK_WINDOW(gtk_builder_get_object(builder, "prefs_win"));
+	prefs_win = GTK_WINDOW(gtk_builder_get_object(builder, "prefs_win"));
 
 	if (startup) {
 		if (IsFrodoSC) {
@@ -443,7 +564,7 @@ extern "C" void on_sam_close_activate(GtkMenuItem *menuitem, gpointer user_data)
 
 extern "C" void on_ok_clicked(GtkButton *button, gpointer user_data)
 {
-	gtk_widget_hide(GTK_WIDGET(gtk_builder_get_object(builder, "prefs_win")));
+	gtk_widget_hide(GTK_WIDGET(prefs_win));
 	gtk_widget_hide(GTK_WIDGET(gtk_builder_get_object(builder, "about_win")));
 	gtk_widget_hide(GTK_WIDGET(gtk_builder_get_object(builder, "sam_win")));
 
@@ -476,7 +597,7 @@ extern "C" void on_load_snapshot(GtkMenuItem *menuitem, gpointer user_data)
 	gtk_widget_hide(snapshot_dialog);
 
 	if (load_ok) {
-		GtkWidget * msg = gtk_message_dialog_new(GTK_WINDOW(gtk_builder_get_object(builder, "prefs_win")),
+		GtkWidget * msg = gtk_message_dialog_new(prefs_win,
 			GTK_DIALOG_MODAL, GTK_MESSAGE_INFO, GTK_BUTTONS_OK,
 			"Snapshot file '%s' loaded.", filename
 		);
@@ -508,7 +629,7 @@ extern "C" void on_save_snapshot(GtkMenuItem *menuitem, gpointer user_data)
 	gtk_widget_hide(snapshot_dialog);
 
 	if (save_ok) {
-		GtkWidget * msg = gtk_message_dialog_new(GTK_WINDOW(gtk_builder_get_object(builder, "prefs_win")),
+		GtkWidget * msg = gtk_message_dialog_new(prefs_win,
 			GTK_DIALOG_MODAL, GTK_MESSAGE_INFO, GTK_BUTTONS_OK,
 			"Snapshot file '%s' saved.", filename
 		);
@@ -536,12 +657,12 @@ extern "C" void on_create_image(GtkMenuItem *menuitem, gpointer user_data)
 
 	GtkWidget * msg = nullptr;
 	if (save_ok) {
-		msg = gtk_message_dialog_new(GTK_WINDOW(gtk_builder_get_object(builder, "prefs_win")),
+		msg = gtk_message_dialog_new(prefs_win,
 			GTK_DIALOG_MODAL, GTK_MESSAGE_INFO, GTK_BUTTONS_OK,
 			"Disk image file '%s' created.", filename
 		);
 	} else if (res == GTK_RESPONSE_ACCEPT) {
-		msg = gtk_message_dialog_new(GTK_WINDOW(gtk_builder_get_object(builder, "prefs_win")),
+		msg = gtk_message_dialog_new(prefs_win,
 			GTK_DIALOG_MODAL, GTK_MESSAGE_ERROR, GTK_BUTTONS_OK,
 			"Can't create disk image file '%s'.", filename
 		);
@@ -554,6 +675,15 @@ extern "C" void on_create_image(GtkMenuItem *menuitem, gpointer user_data)
 	if (filename) {
 		g_free(filename);
 	}
+}
+
+extern "C" void on_shortcuts_activate(GtkMenuItem *menuitem, gpointer user_data)
+{
+	GtkBuilder * shortcuts_builder = gtk_builder_new_from_string(shortcuts_win_ui, -1);
+	GtkWindow * shortcuts_win = GTK_WINDOW(gtk_builder_get_object(shortcuts_builder, "shortcuts_win"));
+	gtk_window_set_transient_for(shortcuts_win, prefs_win);
+	gtk_window_present(shortcuts_win);
+	g_object_unref(shortcuts_builder);
 }
 
 extern "C" void on_about_activate(GtkMenuItem *menuitem, gpointer user_data)
