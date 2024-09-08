@@ -422,33 +422,34 @@ static void translate_key(SDL_Scancode key, bool key_up, uint8_t *key_matrix, ui
 		case SDL_SCANCODE_9: c64_key = MATRIX(4,0); break;
 
 		case SDL_SCANCODE_SPACE: c64_key = MATRIX(7,4); break;
-		case SDL_SCANCODE_GRAVE: c64_key = MATRIX(7,1); break;
-		case SDL_SCANCODE_BACKSLASH: c64_key = MATRIX(6,6); break;
+		case SDL_SCANCODE_GRAVE: c64_key = MATRIX(7,1); break;			// ←
+		case SDL_SCANCODE_BACKSLASH: c64_key = MATRIX(6,6); break;		// ↑
 		case SDL_SCANCODE_COMMA: c64_key = MATRIX(5,7); break;
 		case SDL_SCANCODE_PERIOD: c64_key = MATRIX(5,4); break;
-		case SDL_SCANCODE_MINUS: c64_key = MATRIX(5,0); break;
-		case SDL_SCANCODE_EQUALS: c64_key = MATRIX(5,3); break;
-		case SDL_SCANCODE_LEFTBRACKET: c64_key = MATRIX(5,6); break;
-		case SDL_SCANCODE_RIGHTBRACKET: c64_key = MATRIX(6,1); break;
-		case SDL_SCANCODE_SEMICOLON: c64_key = MATRIX(5,5); break;
-		case SDL_SCANCODE_APOSTROPHE: c64_key = MATRIX(6,2); break;
+		case SDL_SCANCODE_MINUS: c64_key = MATRIX(5,0); break;			// +
+		case SDL_SCANCODE_EQUALS: c64_key = MATRIX(5,3); break;			// -
+		case SDL_SCANCODE_LEFTBRACKET: c64_key = MATRIX(5,6); break;	// @
+		case SDL_SCANCODE_RIGHTBRACKET: c64_key = MATRIX(6,1); break;	// *
+		case SDL_SCANCODE_SEMICOLON: c64_key = MATRIX(5,5); break;		// :
+		case SDL_SCANCODE_APOSTROPHE: c64_key = MATRIX(6,2); break;		// ;
 		case SDL_SCANCODE_SLASH: c64_key = MATRIX(6,7); break;
 
-		case SDL_SCANCODE_ESCAPE: c64_key = MATRIX(7,7); break;
+		case SDL_SCANCODE_ESCAPE: c64_key = MATRIX(7,7); break;			// RUN/STOP
 		case SDL_SCANCODE_RETURN: c64_key = MATRIX(0,1); break;
-		case SDL_SCANCODE_BACKSPACE: case SDL_SCANCODE_DELETE: c64_key = MATRIX(0,0); break;
-		case SDL_SCANCODE_INSERT: c64_key = MATRIX(6,3); break;
-		case SDL_SCANCODE_HOME: c64_key = MATRIX(6,3); break;
-		case SDL_SCANCODE_END: c64_key = MATRIX(6,0); break;
-		case SDL_SCANCODE_PAGEUP: c64_key = MATRIX(6,0); break;
-		case SDL_SCANCODE_PAGEDOWN: c64_key = MATRIX(6,5); break;
+		case SDL_SCANCODE_BACKSPACE:
+		case SDL_SCANCODE_DELETE: c64_key = MATRIX(0,0); break;			// INS/DEL
+		case SDL_SCANCODE_HOME: c64_key = MATRIX(6,3); break;			// CLR/HOME
+		case SDL_SCANCODE_END: c64_key = MATRIX(6,0); break;			// £
+		case SDL_SCANCODE_PAGEUP: c64_key = MATRIX(6,6); break;			// ↑
+		case SDL_SCANCODE_PAGEDOWN: c64_key = MATRIX(6,5); break;		// =
 
-		case SDL_SCANCODE_LCTRL: case SDL_SCANCODE_TAB: c64_key = MATRIX(7,2); break;
-		case SDL_SCANCODE_RCTRL: c64_key = MATRIX(7,5); break;
+		case SDL_SCANCODE_LCTRL:
+		case SDL_SCANCODE_TAB:
+		case SDL_SCANCODE_RCTRL: c64_key = MATRIX(7,2); break;
 		case SDL_SCANCODE_LSHIFT: c64_key = MATRIX(1,7); break;
 		case SDL_SCANCODE_RSHIFT: c64_key = MATRIX(6,4); break;
-		case SDL_SCANCODE_LALT: case SDL_SCANCODE_LGUI: c64_key = MATRIX(7,5); break;
-		case SDL_SCANCODE_RALT: case SDL_SCANCODE_RGUI: c64_key = MATRIX(7,5); break;
+		case SDL_SCANCODE_LALT: c64_key = MATRIX(7,5); break;			// C=
+		case SDL_SCANCODE_RALT: c64_key = MATRIX(7,5); break;			// C=
 
 		case SDL_SCANCODE_UP: c64_key = MATRIX(0,7)| 0x80; break;
 		case SDL_SCANCODE_DOWN: c64_key = MATRIX(0,7); break;
@@ -464,7 +465,8 @@ static void translate_key(SDL_Scancode key, bool key_up, uint8_t *key_matrix, ui
 		case SDL_SCANCODE_F7: c64_key = MATRIX(0,3); break;
 		case SDL_SCANCODE_F8: c64_key = MATRIX(0,3) | 0x80; break;
 
-		case SDL_SCANCODE_KP_0: case SDL_SCANCODE_KP_5: c64_key = 0x10 | 0x40; break;
+		case SDL_SCANCODE_KP_0:
+		case SDL_SCANCODE_KP_5: c64_key = 0x10 | 0x40; break;
 		case SDL_SCANCODE_KP_1: c64_key = 0x06 | 0x40; break;
 		case SDL_SCANCODE_KP_2: c64_key = 0x02 | 0x40; break;
 		case SDL_SCANCODE_KP_3: c64_key = 0x0a | 0x40; break;
