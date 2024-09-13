@@ -325,7 +325,7 @@ void MOS6569::SetState(const MOS6569State *vd)
 	}
 	display_idx = ((ctrl1 & 0x60) | (ctrl2 & 0x10)) >> 4;
 
-	raster_y = 0;
+	raster_y = vd->raster | ((vd->ctrl1 & 0x80) << 1);
 	lpx = vd->lpx; lpy = vd->lpy;
 
 	vbase = vd->vbase;
