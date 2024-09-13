@@ -56,7 +56,7 @@ static bool match(const char *p, const char *n);
  *  Constructor: Prepare emulation
  */
 
-FSDrive::FSDrive(IEC *iec, const char *path) : Drive(iec)
+FSDrive::FSDrive(IEC *iec, const std::string & path) : Drive(iec)
 {
 	if (change_dir(path)) {
 		for (unsigned i = 0; i < 16; ++i) {
@@ -87,7 +87,7 @@ FSDrive::~FSDrive()
  *  Change emulation directory
  */
 
-bool FSDrive::change_dir(const char *path)
+bool FSDrive::change_dir(const std::string & path)
 {
 	if (fs::is_directory(path)) {
 		dir_path = path;

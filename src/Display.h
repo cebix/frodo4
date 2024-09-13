@@ -113,7 +113,7 @@ private:
 
 
 // Exported functions
-extern long ShowRequester(const char *str, const char *button1, const char *button2 = NULL);
+extern long ShowRequester(const char *str, const char *button1, const char *button2 = nullptr);
 
 
 #endif

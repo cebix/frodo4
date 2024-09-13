@@ -86,8 +86,6 @@ constexpr size_t REWIND_LENGTH = SCREEN_FREQ * 30;  // 30 seconds
 
 C64::C64()
 {
-	uint8_t *p;
-
 	// The thread is not yet running
 	thread_running = false;
 	quit_thyself = false;
@@ -122,19 +120,19 @@ C64::C64()
 	TheREU = TheCPU->TheREU = new REU(TheCPU);
 
 	// Initialize RAM with powerup pattern
-	p = RAM;
-	for (unsigned i=0; i<512; i++) {
-		for (unsigned j=0; j<64; j++) {
+	uint8_t *p = RAM;
+	for (unsigned i = 0; i < 512; ++i) {
+		for (unsigned j = 0; j < 64; ++j) {
 			*p++ = 0;
 		}
-		for (unsigned j=0; j<64; j++) {
+		for (unsigned j = 0; j < 64; ++j) {
 			*p++ = 0xff;
 		}
 	}
 
 	// Initialize color RAM with random values
 	p = Color;
-	for (unsigned i=0; i<COLOR_RAM_SIZE; i++) {
+	for (unsigned i = 0; i < COLOR_RAM_SIZE; ++i) {
 		*p++ = rand() & 0x0f;
 	}
 
@@ -250,8 +248,8 @@ void C64::NewPrefs(const Prefs *prefs)
 void C64::SetEmul1541Proc(bool on, const char * path)
 {
 	auto prefs = std::make_unique<Prefs>(ThePrefs);
-	if (path && strlen(path) < sizeof(Prefs::DrivePath[0])) {
-		strcpy(prefs->DrivePath[0], path);
+	if (path != nullptr) {
+		prefs->DrivePath[0] = path;
 	}
 	prefs->Emul1541Proc = on;
 	NewPrefs(prefs.get());
@@ -406,7 +404,9 @@ void C64::MakeSnapshot(Snapshot * s)
 
 	memcpy(s->magic, SNAPSHOT_HEADER, sizeof(s->magic));
 
-	strcpy(s->drive8Path, ThePrefs.DrivePath[0]);
+	if (ThePrefs.DrivePath[0].length() < sizeof(s->drive8Path)) {
+		strcpy(s->drive8Path, ThePrefs.DrivePath[0].c_str());
+	}
 
 #ifdef FRODO_SC
 	while (true) {
@@ -501,9 +501,9 @@ void C64::RestoreSnapshot(const Snapshot * s)
  *  Save snapshot file (emulation must be paused and in VBlank)
  */
 
-bool C64::SaveSnapshot(const char * filename)
+bool C64::SaveSnapshot(const std::string & filename)
 {
-	FILE * f = fopen(filename, "wb");
+	FILE * f = fopen(filename.c_str(), "wb");
 	if (f == nullptr) {
 		ShowRequester("Can't create snapshot file", "OK", nullptr);
 		return false;
@@ -530,9 +530,9 @@ bool C64::SaveSnapshot(const char * filename)
  *  Load snapshot file (emulation must be paused and in VBlank)
  */
 
-bool C64::LoadSnapshot(const char * filename)
+bool C64::LoadSnapshot(const std::string & filename)
 {
-	FILE * f = fopen(filename, "rb");
+	FILE * f = fopen(filename.c_str(), "rb");
 	if (f == nullptr) {
 		ShowRequester("Can't open snapshot file", "OK", nullptr);
 		return false;

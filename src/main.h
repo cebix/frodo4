@@ -21,7 +21,7 @@
 #ifndef _MAIN_H
 #define _MAIN_H
 
-#include <string>
+#include <filesystem>
 
 
 class C64;
@@ -104,8 +104,8 @@ private:
 	void load_rom(const char *which, const char *path, uint8_t *where, size_t size, const uint8_t *builtin);
 	void load_rom_files();
 
-	std::string prefs_path;		// Pathname of current preferences file
-	std::string snapshot_path;	// Directory for saving snapshots
+	std::filesystem::path prefs_path;		// Pathname of current preferences file
+	std::filesystem::path snapshot_path;	// Directory for saving snapshots
 };
 
 extern Frodo *TheApp;  // Pointer to Frodo object

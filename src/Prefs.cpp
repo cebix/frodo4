@@ -25,6 +25,10 @@
 #include "C64.h"
 #include "main.h"
 
+#include <fstream>
+#include <regex>
+namespace fs = std::filesystem;
+
 
 // These are the active preferences
 Prefs ThePrefs;
@@ -44,11 +48,6 @@ Prefs::Prefs()
 	ScalingNumerator = 4;
 	ScalingDenominator = 1;
 
-	strcpy(DrivePath[0], "");
-	strcpy(DrivePath[1], "");
-	strcpy(DrivePath[2], "");
-	strcpy(DrivePath[3], "");
-
 	SIDType = SIDTYPE_DIGITAL;
 	REUSize = REU_NONE;
 	DisplayType = DISPTYPE_WINDOW;
@@ -66,57 +65,7 @@ Prefs::Prefs()
 	Emul1541Proc = true;
 	SIDFilters = true;
 	DoubleScan = true;
-	HideCursor = false;
-	AutoPause = false;
-	PrefsAtStartup = true;
 	ShowLEDs = true;
-}
-
-
-/*
- *  Check if two Prefs structures are equal
- */
-
-bool Prefs::operator==(const Prefs &rhs) const
-{
-	return (1
-		&& NormalCycles == rhs.NormalCycles
-		&& BadLineCycles == rhs.BadLineCycles
-		&& CIACycles == rhs.CIACycles
-		&& FloppyCycles == rhs.FloppyCycles
-		&& SkipFrames == rhs.SkipFrames
-		&& ScalingNumerator == rhs.ScalingNumerator
-		&& ScalingDenominator == rhs.ScalingNumerator
-		&& strcmp(DrivePath[0], rhs.DrivePath[0]) == 0
-		&& strcmp(DrivePath[1], rhs.DrivePath[1]) == 0
-		&& strcmp(DrivePath[2], rhs.DrivePath[2]) == 0
-		&& strcmp(DrivePath[3], rhs.DrivePath[3]) == 0
-		&& SIDType == rhs.SIDType
-		&& REUSize == rhs.REUSize
-		&& DisplayType == rhs.DisplayType
-		&& Palette == rhs.Palette
-		&& SpritesOn == rhs.SpritesOn
-		&& SpriteCollisions == rhs.SpriteCollisions
-		&& Joystick1Port == rhs.Joystick1Port
-		&& Joystick2Port == rhs.Joystick2Port
-		&& JoystickSwap == rhs.JoystickSwap
-		&& LimitSpeed == rhs.LimitSpeed
-		&& FastReset == rhs.FastReset
-		&& CIAIRQHack == rhs.CIAIRQHack
-		&& MapSlash == rhs.MapSlash
-		&& Emul1541Proc == rhs.Emul1541Proc
-		&& SIDFilters == rhs.SIDFilters
-		&& DoubleScan == rhs.DoubleScan
-		&& HideCursor == rhs.HideCursor
-		&& AutoPause == rhs.AutoPause
-		&& PrefsAtStartup == rhs.PrefsAtStartup
-		&& ShowLEDs == rhs.ShowLEDs
-	);
-}
-
-bool Prefs::operator!=(const Prefs &rhs) const
-{
-	return !operator==(rhs);
 }
 
 
@@ -160,95 +109,99 @@ void Prefs::Check()
  *  Load preferences from file
  */
 
-void Prefs::Load(const char *filename)
+void Prefs::Load(fs::path prefs_path)
 {
-	FILE *file;
-	char line[256], keyword[256], value[256];
+	std::ifstream file(prefs_path);
+	if (! file) {
+		return;
+	}
 
-	if ((file = fopen(filename, "r")) != NULL) {
-		while(fgets(line, 255, file)) {
-			if (sscanf(line, "%s = %[^\n]\n", keyword, value) == 2) {
-				if (!strcmp(keyword, "NormalCycles")) {
-					NormalCycles = atoi(value);
-				} else if (!strcmp(keyword, "BadLineCycles")) {
-					BadLineCycles = atoi(value);
-				} else if (!strcmp(keyword, "CIACycles")) {
-					CIACycles = atoi(value);
-				} else if (!strcmp(keyword, "FloppyCycles")) {
-					FloppyCycles = atoi(value);
-				} else if (!strcmp(keyword, "SkipFrames")) {
-					SkipFrames = atoi(value);
-				} else if (!strcmp(keyword, "ScalingNumerator")) {
-					ScalingNumerator = atoi(value);
-				} else if (!strcmp(keyword, "ScalingDenominator")) {
-					ScalingDenominator = atoi(value);
-				} else if (!strcmp(keyword, "DrivePath8")) {
-					strcpy(DrivePath[0], value);
-				} else if (!strcmp(keyword, "DrivePath9")) {
-					strcpy(DrivePath[1], value);
-				} else if (!strcmp(keyword, "DrivePath10")) {
-					strcpy(DrivePath[2], value);
-				} else if (!strcmp(keyword, "DrivePath11")) {
-					strcpy(DrivePath[3], value);
-				} else if (!strcmp(keyword, "SIDType")) {
-					if (!strcmp(value, "DIGITAL")) {
-						SIDType = SIDTYPE_DIGITAL;
-					} else if (!strcmp(value, "SIDCARD")) {
-						SIDType = SIDTYPE_SIDCARD;
-					} else {
-						SIDType = SIDTYPE_NONE;
-					}
-				} else if (!strcmp(keyword, "REUSize")) {
-					if (!strcmp(value, "128K")) {
-						REUSize = REU_128K;
-					} else if (!strcmp(value, "256K")) {
-						REUSize = REU_256K;
-					} else if (!strcmp(value, "512K")) {
-						REUSize = REU_512K;
-					} else {
-						REUSize = REU_NONE;
-					}
-				} else if (!strcmp(keyword, "DisplayType")) {
-					DisplayType = strcmp(value, "SCREEN") ? DISPTYPE_WINDOW : DISPTYPE_SCREEN;
-				} else if (!strcmp(keyword, "Palette")) {
-					Palette = strcmp(value, "COLODORE") ? PALETTE_PEPTO : PALETTE_COLODORE;
-				} else if (!strcmp(keyword, "Joystick1Port")) {
-					Joystick1Port = atoi(value);
-				} else if (!strcmp(keyword, "Joystick2Port")) {
-					Joystick2Port = atoi(value);
-				} else if (!strcmp(keyword, "SpritesOn")) {
-					SpritesOn = !strcmp(value, "TRUE");
-				} else if (!strcmp(keyword, "SpriteCollisions")) {
-					SpriteCollisions = !strcmp(value, "TRUE");
-				} else if (!strcmp(keyword, "JoystickSwap")) {
-					JoystickSwap = !strcmp(value, "TRUE");
-				} else if (!strcmp(keyword, "LimitSpeed")) {
-					LimitSpeed = !strcmp(value, "TRUE");
-				} else if (!strcmp(keyword, "FastReset")) {
-					FastReset = !strcmp(value, "TRUE");
-				} else if (!strcmp(keyword, "CIAIRQHack")) {
-					CIAIRQHack = !strcmp(value, "TRUE");
-				} else if (!strcmp(keyword, "MapSlash")) {
-					MapSlash = !strcmp(value, "TRUE");
-				} else if (!strcmp(keyword, "Emul1541Proc")) {
-					Emul1541Proc = !strcmp(value, "TRUE");
-				} else if (!strcmp(keyword, "SIDFilters")) {
-					SIDFilters = !strcmp(value, "TRUE");
-				} else if (!strcmp(keyword, "DoubleScan")) {
-					DoubleScan = !strcmp(value, "TRUE");
-				} else if (!strcmp(keyword, "HideCursor")) {
-					HideCursor = !strcmp(value, "TRUE");
-				} else if (!strcmp(keyword, "AutoPause")) {
-					AutoPause = !strcmp(value, "TRUE");
-				} else if (!strcmp(keyword, "PrefsAtStartup")) {
-					PrefsAtStartup = !strcmp(value, "TRUE");
-				} else if (!strcmp(keyword, "ShowLEDs")) {
-					ShowLEDs = !strcmp(value, "TRUE");
+	std::string line;
+	while (std::getline(file, line)) {
+		static const std::regex prefsLine(R"((\S*)\s*=\s*(\S*))");
+
+		std::smatch m;
+		if (std::regex_match(line, m, prefsLine)) {
+			const std::string keyword = m[1].str();
+			const std::string value = m[2].str();
+
+			if (keyword == "NormalCycles") {
+				NormalCycles = atoi(value.c_str());
+			} else if (keyword == "BadLineCycles") {
+				BadLineCycles = atoi(value.c_str());
+			} else if (keyword == "CIACycles") {
+				CIACycles = atoi(value.c_str());
+			} else if (keyword == "FloppyCycles") {
+				FloppyCycles = atoi(value.c_str());
+			} else if (keyword == "SkipFrames") {
+				SkipFrames = atoi(value.c_str());
+
+			} else if (keyword == "DrivePath8") {
+				DrivePath[0] = value;
+			} else if (keyword == "DrivePath9") {
+				DrivePath[1] = value;
+			} else if (keyword == "DrivePath10") {
+				DrivePath[2] = value;
+			} else if (keyword == "DrivePath11") {
+				DrivePath[3] = value;
+
+			} else if (keyword == "SIDType") {
+				if (value == "DIGITAL") {
+					SIDType = SIDTYPE_DIGITAL;
+				} else if (value == "SIDCARD") {
+					SIDType = SIDTYPE_SIDCARD;
+				} else {
+					SIDType = SIDTYPE_NONE;
 				}
+			} else if (keyword == "REUSize") {
+				if (value == "128K") {
+					REUSize = REU_128K;
+				} else if (value == "256K") {
+					REUSize = REU_256K;
+				} else if (value == "512K") {
+					REUSize = REU_512K;
+				} else {
+					REUSize = REU_NONE;
+				}
+			} else if (keyword == "DisplayType") {
+				DisplayType = (value == "SCREEN") ? DISPTYPE_SCREEN : DISPTYPE_WINDOW;
+			} else if (keyword == "Palette") {
+				Palette = (value == "COLODORE") ? PALETTE_COLODORE : PALETTE_PEPTO;
+			} else if (keyword == "Joystick1Port") {
+				Joystick1Port = atoi(value.c_str());
+			} else if (keyword == "Joystick2Port") {
+				Joystick2Port = atoi(value.c_str());
+			} else if (keyword == "ScalingNumerator") {
+				ScalingNumerator = atoi(value.c_str());
+			} else if (keyword == "ScalingDenominator") {
+				ScalingDenominator = atoi(value.c_str());
+
+			} else if (keyword == "SpritesOn") {
+				SpritesOn = (value == "true");
+			} else if (keyword == "SpriteCollisions") {
+				SpriteCollisions = (value == "true");
+			} else if (keyword == "JoystickSwap") {
+				JoystickSwap = (value == "true");
+			} else if (keyword == "LimitSpeed") {
+				LimitSpeed = (value == "true");
+			} else if (keyword == "FastReset") {
+				FastReset = (value == "true");
+			} else if (keyword == "CIAIRQHack") {
+				CIAIRQHack = (value == "true");
+			} else if (keyword == "MapSlash") {
+				MapSlash = (value == "true");
+			} else if (keyword == "Emul1541Proc") {
+				Emul1541Proc = (value == "true");
+			} else if (keyword == "SIDFilters") {
+				SIDFilters = (value == "true");
+			} else if (keyword == "DoubleScan") {
+				DoubleScan = (value == "true");
+			} else if (keyword == "ShowLEDs") {
+				ShowLEDs = (value == "true");
 			}
 		}
-		fclose(file);
 	}
+
 	Check();
 }
 
@@ -258,71 +211,60 @@ void Prefs::Load(const char *filename)
  *  true: success, false: error
  */
 
-bool Prefs::Save(const char *filename)
+bool Prefs::Save(fs::path prefs_path)
 {
-	FILE *file;
-
 	Check();
-	if ((file = fopen(filename, "w")) != NULL) {
-		fprintf(file, "NormalCycles = %d\n", NormalCycles);
-		fprintf(file, "BadLineCycles = %d\n", BadLineCycles);
-		fprintf(file, "CIACycles = %d\n", CIACycles);
-		fprintf(file, "FloppyCycles = %d\n", FloppyCycles);
-		fprintf(file, "SkipFrames = %d\n", SkipFrames);
-		fprintf(file, "ScalingNumerator = %d\n", ScalingNumerator);
-		fprintf(file, "ScalingDenominator = %d\n", ScalingDenominator);
-		for (int i=0; i<4; i++) {
-			fprintf(file, "DrivePath%d = %s\n", i+8, DrivePath[i]);
-		}
-		fprintf(file, "SIDType = ");
-		switch (SIDType) {
-			case SIDTYPE_NONE:
-				fprintf(file, "NONE\n");
-				break;
-			case SIDTYPE_DIGITAL:
-				fprintf(file, "DIGITAL\n");
-				break;
-			case SIDTYPE_SIDCARD:
-				fprintf(file, "SIDCARD\n");
-				break;
-		}
-		fprintf(file, "REUSize = ");
-		switch (REUSize) {
-			case REU_NONE:
-				fprintf(file, "NONE\n");
-				break;
-			case REU_128K:
-				fprintf(file, "128K\n");
-				break;
-			case REU_256K:
-				fprintf(file, "256K\n");
-				break;
-			case REU_512K:
-				fprintf(file, "512K\n");
-				break;
-		};
-		fprintf(file, "DisplayType = %s\n", DisplayType == DISPTYPE_WINDOW ? "WINDOW" : "SCREEN");
-		fprintf(file, "Palette = %s\n", Palette == PALETTE_COLODORE ? "COLODORE" : "PEPTO");
-		fprintf(file, "Joystick1Port = %d\n", Joystick1Port);
-		fprintf(file, "Joystick2Port = %d\n", Joystick2Port);
-		fprintf(file, "SpritesOn = %s\n", SpritesOn ? "TRUE" : "FALSE");
-		fprintf(file, "SpriteCollisions = %s\n", SpriteCollisions ? "TRUE" : "FALSE");
-		fprintf(file, "JoystickSwap = %s\n", JoystickSwap ? "TRUE" : "FALSE");
-		fprintf(file, "LimitSpeed = %s\n", LimitSpeed ? "TRUE" : "FALSE");
-		fprintf(file, "FastReset = %s\n", FastReset ? "TRUE" : "FALSE");
-		fprintf(file, "CIAIRQHack = %s\n", CIAIRQHack ? "TRUE" : "FALSE");
-		fprintf(file, "MapSlash = %s\n", MapSlash ? "TRUE" : "FALSE");
-		fprintf(file, "Emul1541Proc = %s\n", Emul1541Proc ? "TRUE" : "FALSE");
-		fprintf(file, "SIDFilters = %s\n", SIDFilters ? "TRUE" : "FALSE");
-		fprintf(file, "DoubleScan = %s\n", DoubleScan ? "TRUE" : "FALSE");
-		fprintf(file, "HideCursor = %s\n", HideCursor ? "TRUE" : "FALSE");
-		fprintf(file, "AutoPause = %s\n", AutoPause ? "TRUE" : "FALSE");
-		fprintf(file, "PrefsAtStartup = %s\n", PrefsAtStartup ? "TRUE" : "FALSE");
-		fprintf(file, "ShowLEDs = %s\n", ShowLEDs ? "TRUE" : "FALSE");
-		fclose(file);
-		return true;
+
+	std::ofstream file(prefs_path, std::ios::trunc);
+	if (! file) {
+		return false;
 	}
-	return false;
+
+	file << std::boolalpha;
+
+	file << "NormalCycles = " << NormalCycles << std::endl;
+	file << "BadLineCycles = " << BadLineCycles << std::endl;
+	file << "CIACycles = " << CIACycles << std::endl;
+	file << "FloppyCycles = " <<  FloppyCycles << std::endl;
+	file << "SkipFrames = " << SkipFrames << std::endl;
+
+	for (unsigned i = 0; i < 4; ++i) {
+		file << "DrivePath" << (i+8) << " = " << DrivePath[i] << std::endl;
+	}
+
+	file << "SIDType = ";
+	switch (SIDType) {
+		case SIDTYPE_NONE:    file << "NONE\n";    break;
+		case SIDTYPE_DIGITAL: file << "DIGITAL\n"; break;
+		case SIDTYPE_SIDCARD: file << "SIDCARD\n"; break;
+	}
+	file << "REUSize = ";
+	switch (REUSize) {
+		case REU_NONE: file << "NONE\n"; break;
+		case REU_128K: file << "128K\n"; break;
+		case REU_256K: file << "256K\n"; break;
+		case REU_512K: file << "512K\n"; break;
+	};
+	file << "DisplayType = " << (DisplayType == DISPTYPE_WINDOW ? "WINDOW\n" : "SCREEN\n");
+	file << "Palette = " << (Palette == PALETTE_COLODORE ? "COLODORE\n" : "PEPTO\n");
+	file << "Joystick1Port = " << Joystick1Port << std::endl;
+	file << "Joystick2Port = " << Joystick2Port << std::endl;
+	file << "ScalingNumerator = " << ScalingNumerator << std::endl;
+	file << "ScalingDenominator = " << ScalingDenominator << std::endl;
+
+	file << "SpritesOn = " << SpritesOn << std::endl;
+	file << "SpriteCollisions = " << SpriteCollisions << std::endl;
+	file << "JoystickSwap = " << JoystickSwap << std::endl;
+	file << "LimitSpeed = " << LimitSpeed << std::endl;
+	file << "FastReset = " << FastReset << std::endl;
+	file << "CIAIRQHack = " << CIAIRQHack << std::endl;
+	file << "MapSlash = " << MapSlash << std::endl;
+	file << "Emul1541Proc = " << Emul1541Proc << std::endl;
+	file << "SIDFilters = " << SIDFilters << std::endl;
+	file << "DoubleScan = " << DoubleScan << std::endl;
+	file << "ShowLEDs = " << ShowLEDs << std::endl;
+
+	return true;
 }
 
 

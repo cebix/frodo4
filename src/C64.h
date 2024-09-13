@@ -30,6 +30,8 @@
 #include <SDL_gamecontroller.h>
 #endif
 
+#include <string>
+
 
 // Sizes of memory areas
 constexpr int C64_RAM_SIZE = 0x10000;
@@ -88,8 +90,8 @@ public:
 
 	void MakeSnapshot(Snapshot * s);
 	void RestoreSnapshot(const Snapshot * s);
-	bool SaveSnapshot(const char * filename);
-	bool LoadSnapshot(const char * filename);
+	bool SaveSnapshot(const std::string & filename);
+	bool LoadSnapshot(const std::string & filename);
 
 	void SetPlayMode(PlayMode mode);
 	PlayMode GetPlayMode() const { return play_mode; }

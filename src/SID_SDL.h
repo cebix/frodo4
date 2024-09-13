@@ -36,7 +36,7 @@ void DigitalRenderer::init_sound()
 	spec.callback = buffer_proc;
 	spec.userdata = this;
 
-	if (SDL_OpenAudio(&spec, NULL) < 0) {
+	if (SDL_OpenAudio(&spec, nullptr) < 0) {
 		fprintf(stderr, "WARNING: Cannot open audio: %s\n", SDL_GetError());
 		return;
 	}

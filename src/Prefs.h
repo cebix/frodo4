@@ -21,6 +21,7 @@
 #ifndef _PREFS_H
 #define _PREFS_H
 
+#include <filesystem>
 #include <string>
 
 
@@ -59,17 +60,11 @@ enum {
 class Prefs {
 public:
 	Prefs();
-#ifdef HAVE_GLADE
-	bool ShowEditor(bool startup, std::string prefs_path, std::string snapshot_path);
-#else
-	bool ShowEditor(bool startup, char *prefs_name);
-#endif
-	void Check();
-	void Load(const char *filename);
-	bool Save(const char *filename);
 
-	bool operator==(const Prefs &rhs) const;
-	bool operator!=(const Prefs &rhs) const;
+	bool ShowEditor(bool startup, std::filesystem::path prefs_path, std::filesystem::path snapshot_path);
+	void Check();
+	void Load(std::filesystem::path prefs_path);
+	bool Save(std::filesystem::path prefs_path);
 
 	int NormalCycles;		// Available CPU cycles in normal raster lines
 	int BadLineCycles;		// Available CPU cycles in Bad Lines
@@ -77,7 +72,7 @@ public:
 	int FloppyCycles;		// Available 1541 CPU cycles per line
 	int SkipFrames;			// Draw every n-th frame
 
-	char DrivePath[4][256];	// Path for drive 8..11
+	std::string DrivePath[4];	// Path for drive 8..11
 
 	int SIDType;			// SID emulation type
 	int REUSize;			// Size of REU
@@ -99,9 +94,6 @@ public:
 	bool SIDFilters;		// Emulate SID filters
 	bool DoubleScan;		// Double scan lines (BeOS, if DisplayType == DISPTYPE_SCREEN)
 	bool JoystickGeekPort;	// Enable GeekPort joystick adapter (BeOS)
-	bool HideCursor;		// Hide mouse cursor when visible (Win32)
-	bool AutoPause;			// Auto pause when not foreground app (Win32)
-	bool PrefsAtStartup;	// Show prefs dialog at startup (Win32)
 	bool ShowLEDs;			// Show status bar
 };
 

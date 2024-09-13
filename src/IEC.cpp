@@ -74,7 +74,7 @@ enum {
  *  Constructor: Initialize variables
  */
 
-Drive *IEC::create_drive(const char *path)
+Drive *IEC::create_drive(const std::string & path)
 {
 	if (fs::is_directory(path)) {
 		// Mount host directory
@@ -100,15 +100,13 @@ Drive *IEC::create_drive(const char *path)
 
 IEC::IEC(C64Display *display) : the_display(display)
 {
-	int i;
-
 	// Create drives 8..11
-	for (i=0; i<4; i++) {
+	for (unsigned i = 0; i < 4; ++i) {
 		drive[i] = nullptr;	// Important because UpdateLEDs is called from the drive constructors (via set_error)
 	}
 
 	if (!ThePrefs.Emul1541Proc) {
-		for (i=0; i<4; i++) {
+		for (unsigned i = 0; i < 4; ++i) {
 			drive[i] = create_drive(ThePrefs.DrivePath[i]);
 		}
 	}
@@ -124,7 +122,7 @@ IEC::IEC(C64Display *display) : the_display(display)
 
 IEC::~IEC()
 {
-	for (int i=0; i<4; i++) {
+	for (unsigned i = 0; i < 4; ++i) {
 		delete drive[i];
 	}
 }
@@ -136,7 +134,7 @@ IEC::~IEC()
 
 void IEC::Reset()
 {
-	for (int i=0; i<4; i++) {
+	for (unsigned i = 0; i < 4; ++i) {
 		if (drive[i] != nullptr && drive[i]->Ready) {
 			drive[i]->Reset();
 		}
@@ -155,8 +153,8 @@ void IEC::Reset()
 void IEC::NewPrefs(const Prefs *prefs)
 {
 	// Delete and recreate all changed drives
-	for (int i=0; i<4; i++) {
-		if (strcmp(ThePrefs.DrivePath[i], prefs->DrivePath[i]) || ThePrefs.Emul1541Proc != prefs->Emul1541Proc) {
+	for (unsigned i = 0; i < 4; ++i) {
+		if (ThePrefs.DrivePath[i] != prefs->DrivePath[i] || ThePrefs.Emul1541Proc != prefs->Emul1541Proc) {
 			delete drive[i];
 			drive[i] = nullptr;	// Important because UpdateLEDs is called from drive constructors (via set_error())
 			if (!prefs->Emul1541Proc) {
@@ -942,10 +940,10 @@ void petscii2ascii(char *dest, const uint8_t *src, int n)
  *  Check whether file is a mountable disk image or archive file, return type
  */
 
-bool IsMountableFile(const char *path, int &type)
+bool IsMountableFile(const std::string & path, int &type)
 {
 	// Read header and determine file size
-	FILE *f = fopen(path, "rb");
+	FILE *f = fopen(path.c_str(), "rb");
 	if (f == nullptr)
 		return false;
 
@@ -976,7 +974,7 @@ bool IsMountableFile(const char *path, int &type)
  *  returns false on error
  */
 
-bool ReadDirectory(const char *path, int type, std::vector<c64_dir_entry> &vec)
+bool ReadDirectory(const std::string & path, int type, std::vector<c64_dir_entry> &vec)
 {
 	vec.clear();
 	switch (type) {

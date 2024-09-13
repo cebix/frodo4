@@ -83,10 +83,8 @@ const int sector_offset[36] = {
  *   emulation is enabled
  */
 
-Job1541::Job1541(uint8_t *ram1541) : ram(ram1541)
+Job1541::Job1541(uint8_t *ram1541) : ram(ram1541), the_file(nullptr)
 {
-	the_file = NULL;
-
 	gcr_data = gcr_ptr = gcr_track_start = new uint8_t[GCR_DISK_SIZE];
 	gcr_track_end = gcr_track_start + GCR_TRACK_SIZE;
 	current_halftrack = 2;
@@ -125,7 +123,7 @@ void Job1541::NewPrefs(const Prefs *prefs)
 		open_d64_file(prefs->DrivePath[0]);
 
 	// .d64 file name changed?
-	} else if (strcmp(ThePrefs.DrivePath[0], prefs->DrivePath[0])) {
+	} else if (ThePrefs.DrivePath[0] != prefs->DrivePath[0]) {
 		close_d64_file();
 		open_d64_file(prefs->DrivePath[0]);
 		disk_changed = true;
@@ -137,7 +135,7 @@ void Job1541::NewPrefs(const Prefs *prefs)
  *  Open .d64 file
  */
 
-void Job1541::open_d64_file(const char *filepath)
+void Job1541::open_d64_file(const std::string & filepath)
 {
 	long size;
 	uint8_t magic[4];
@@ -148,18 +146,18 @@ void Job1541::open_d64_file(const char *filepath)
 
 	// Try opening the file for reading/writing first, then for reading only
 	write_protected = false;
-	the_file = fopen(filepath, "rb+");
-	if (the_file == NULL) {
+	the_file = fopen(filepath.c_str(), "rb+");
+	if (the_file == nullptr) {
 		write_protected = true;
-		the_file = fopen(filepath, "rb");
+		the_file = fopen(filepath.c_str(), "rb");
 	}
-	if (the_file != NULL) {
+	if (the_file != nullptr) {
 
 		// Check length
 		fseek(the_file, 0, SEEK_END);
 		if ((size = ftell(the_file)) < NUM_SECTORS * 256) {
 			fclose(the_file);
-			the_file = NULL;
+			the_file = nullptr;
 			return;
 		}
 
@@ -198,9 +196,9 @@ void Job1541::open_d64_file(const char *filepath)
 
 void Job1541::close_d64_file()
 {
-	if (the_file != NULL) {
+	if (the_file != nullptr) {
 		fclose(the_file);
-		the_file = NULL;
+		the_file = nullptr;
 	}
 }
 
@@ -321,7 +319,7 @@ const uint16_t gcr_table[16] = {
 	0x09, 0x19, 0x1a, 0x1b, 0x0d, 0x1d, 0x1e, 0x15
 };
 
-void Job1541::gcr_conv4(uint8_t *from, uint8_t *to)
+void Job1541::gcr_conv4(const uint8_t *from, uint8_t *to)
 {
 	uint16_t g;
 

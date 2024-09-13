@@ -21,6 +21,7 @@
 #ifndef _IEC_H
 #define _IEC_H
 
+#include <string>
 #include <vector>
 
 
@@ -152,7 +153,7 @@ public:
 	void Release();
 
 private:
-	Drive *create_drive(const char *path);
+	Drive *create_drive(const std::string & path);
 
 	uint8_t listen(int device);
 	uint8_t talk(int device);
@@ -252,9 +253,9 @@ extern char petscii2ascii(uint8_t c);
 extern void petscii2ascii(char *dest, const uint8_t *src, int max);
 
 // Check whether file is a mountable disk image or archive file, return type
-extern bool IsMountableFile(const char *path, int &type);
+extern bool IsMountableFile(const std::string & path, int &type);
 
 // Read directory of mountable disk image or archive file into c64_dir_entry vector
-extern bool ReadDirectory(const char *path, int type, std::vector<c64_dir_entry> &vec);
+extern bool ReadDirectory(const std::string & path, int type, std::vector<c64_dir_entry> &vec);
 
 #endif

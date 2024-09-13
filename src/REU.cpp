@@ -51,7 +51,7 @@ REU::REU(MOS6510 *CPU) : the_cpu(CPU)
 		regs[i] = 0xff;
 	}
 
-	ex_ram = NULL;
+	ex_ram = nullptr;
 	ram_size = ram_mask = 0;
 
 	// Allocate RAM
@@ -92,7 +92,7 @@ void REU::open_close_reu(int old_size, int new_size)
 	// Free old RAM
 	if (old_size != REU_NONE) {
 		delete[] ex_ram;
-		ex_ram = NULL;
+		ex_ram = nullptr;
 	}
 
 	// Allocate new RAM
@@ -150,7 +150,7 @@ void REU::Reset()
 
 uint8_t REU::ReadRegister(uint16_t adr)
 {
-	if (ex_ram == NULL)
+	if (ex_ram == nullptr)
 		return rand();
 
 	switch (adr) {
@@ -177,7 +177,7 @@ uint8_t REU::ReadRegister(uint16_t adr)
 
 void REU::WriteRegister(uint16_t adr, uint8_t byte)
 {
-	if (ex_ram == NULL)
+	if (ex_ram == nullptr)
 		return;
 
 	switch (adr) {
@@ -207,7 +207,7 @@ void REU::WriteRegister(uint16_t adr, uint8_t byte)
 
 void REU::FF00Trigger()
 {
-	if (ex_ram == NULL)
+	if (ex_ram == nullptr)
 		return;
 
 	if ((regs[1] & 0x90) == 0x80) {

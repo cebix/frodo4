@@ -70,7 +70,7 @@ struct image_file_desc {
 // Disk image drive class
 class ImageDrive : public Drive {
 public:
-	ImageDrive(IEC *iec, const char *filepath);
+	ImageDrive(IEC *iec, const std::string & filepath);
 	virtual ~ImageDrive();
 
 	virtual uint8_t Open(int channel, const uint8_t *name, int name_len);
@@ -81,7 +81,7 @@ public:
 
 private:
 	void close_image();
-	bool change_image(const char *path);
+	bool change_image(const std::string & path);
 
 	uint8_t open_file(int channel, const uint8_t *name, int name_len);
 	uint8_t open_file_ts(int channel, int track, int sector);
@@ -144,13 +144,13 @@ private:
 
 // Check whether file with given header (64 bytes) and size looks like one
 // of the file types supported by this module
-extern bool IsImageFile(const char *path, const uint8_t *header, long size);
+extern bool IsImageFile(const std::string & path, const uint8_t *header, long size);
 
 // Read directory of disk image file into (empty) c64_dir_entry vector
-extern bool ReadImageDirectory(const char *path, std::vector<c64_dir_entry> &vec);
+extern bool ReadImageDirectory(const std::string & path, std::vector<c64_dir_entry> &vec);
 
 // Create new blank disk image file
-extern bool CreateImageFile(const char *path);
+extern bool CreateImageFile(const std::string & path);
 
 // Determine the name of the possible "next" disk image file in a series
 extern std::string NextImageFile(const std::string & path);

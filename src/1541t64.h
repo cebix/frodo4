@@ -23,6 +23,7 @@
 
 #include "IEC.h"
 
+#include <string>
 #include <vector>
 
 
@@ -40,7 +41,7 @@ enum {
 // Archive file drive class
 class ArchDrive : public Drive {
 public:
-	ArchDrive(IEC *iec, const char *filepath);
+	ArchDrive(IEC *iec, const std::string & filepath);
 	virtual ~ArchDrive();
 
 	virtual uint8_t Open(int channel, const uint8_t *name, int name_len);
@@ -50,7 +51,7 @@ public:
 	virtual void Reset();
 
 private:
-	bool change_arch(const char *path);
+	bool change_arch(const std::string & path);
 
 	uint8_t open_file(int channel, const uint8_t *name, int name_len);
 	uint8_t open_directory(int channel, const uint8_t *pattern, int pattern_len);
@@ -78,9 +79,9 @@ private:
 
 // Check whether file with given header (64 bytes) and size looks like one
 // of the file types supported by this module
-extern bool IsArchFile(const char *path, const uint8_t *header, long size);
+extern bool IsArchFile(const std::string & path, const uint8_t *header, long size);
 
 // Read directory of archive file into (empty) c64_dir_entry vector
-extern bool ReadArchDirectory(const char *path, std::vector<c64_dir_entry> &vec);
+extern bool ReadArchDirectory(const std::string & path, std::vector<c64_dir_entry> &vec);
 
 #endif

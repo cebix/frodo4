@@ -186,7 +186,7 @@ static const char * shortcuts_win_ui =
  *  snapshot_path is the default directory for snapshots
  */
 
-bool Prefs::ShowEditor(bool startup, std::string prefs_path, std::string snapshot_path)
+bool Prefs::ShowEditor(bool startup, fs::path prefs_path, fs::path snapshot_path)
 {
 	in_startup = startup;
 	prefs = this;
@@ -298,7 +298,7 @@ bool Prefs::ShowEditor(bool startup, std::string prefs_path, std::string snapsho
 	// Save preferences if "Start"/"Continue" clicked
 	if (result) {
 		get_values();
-		prefs->Save(prefs_path.c_str());
+		prefs->Save(prefs_path);
 
 		if (! startup) {
 			SAM_SetState(TheC64);
@@ -330,10 +330,10 @@ static void set_values()
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "emul1541_proc")), prefs->Emul1541Proc);
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "map_slash")), prefs->MapSlash);
 
-	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "drive8_path")), prefs->DrivePath[0]);
-	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "drive9_path")), prefs->DrivePath[1]);
-	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "drive10_path")), prefs->DrivePath[2]);
-	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "drive11_path")), prefs->DrivePath[3]);
+	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "drive8_path")), prefs->DrivePath[0].c_str());
+	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "drive9_path")), prefs->DrivePath[1].c_str());
+	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "drive10_path")), prefs->DrivePath[2].c_str());
+	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "drive11_path")), prefs->DrivePath[3].c_str());
 
 	gtk_combo_box_set_active(GTK_COMBO_BOX(gtk_builder_get_object(builder, "display_type")), prefs->DisplayType);
 	gtk_combo_box_set_active(GTK_COMBO_BOX(gtk_builder_get_object(builder, "scaling_numerator")), prefs->ScalingNumerator - 1);
@@ -377,13 +377,12 @@ static void set_values()
 
 static void get_drive_path(int num, const char *widget_name)
 {
-	prefs->DrivePath[num][0] = 0;
+	prefs->DrivePath[num].clear();
 	gchar *path = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, widget_name)));
 	if (path) {
-		strncpy(prefs->DrivePath[num], path, 255);
+		prefs->DrivePath[num] = path;
 		g_free(path);
 	}
-	prefs->DrivePath[num][255] = 0;
 }
 
 static void get_values()

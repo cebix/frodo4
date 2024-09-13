@@ -58,7 +58,7 @@ static bool parse_p00_file(FILE *f, std::vector<c64_dir_entry> &vec, char *dir_t
  *  Constructor: Prepare emulation
  */
 
-ArchDrive::ArchDrive(IEC *iec, const char *filepath) : Drive(iec), the_file(nullptr)
+ArchDrive::ArchDrive(IEC *iec, const std::string & filepath) : Drive(iec), the_file(nullptr)
 {
 	for (unsigned i = 0; i < 16; ++i) {
 		file[i] = nullptr;
@@ -91,12 +91,12 @@ ArchDrive::~ArchDrive()
  *  Open the archive file
  */
 
-bool ArchDrive::change_arch(const char *path)
+bool ArchDrive::change_arch(const std::string & path)
 {
 	FILE *new_file;
 
 	// Open new archive file
-	if ((new_file = fopen(path, "rb")) != nullptr) {
+	if ((new_file = fopen(path.c_str(), "rb")) != nullptr) {
 
 		file_info.clear();
 
@@ -571,7 +571,7 @@ static bool is_p00_header(const uint8_t *header)
 	return memcmp(header, "C64File", 7) == 0;
 }
 
-bool IsArchFile(const char *path, const uint8_t *header, long size)
+bool IsArchFile(const std::string & path, const uint8_t *header, long size)
 {
 	return is_t64_header(header) || is_lynx_header(header) || is_p00_header(header);
 }
@@ -734,10 +734,10 @@ static bool parse_p00_file(FILE *f, std::vector<c64_dir_entry> &vec, char *dir_t
 	return true;
 }
 
-bool ReadArchDirectory(const char *path, std::vector<c64_dir_entry> &vec)
+bool ReadArchDirectory(const std::string & path, std::vector<c64_dir_entry> &vec)
 {
 	// Open file
-	FILE *f = fopen(path, "rb");
+	FILE *f = fopen(path.c_str(), "rb");
 	if (f) {
 
 		// Read header
@@ -747,12 +747,13 @@ bool ReadArchDirectory(const char *path, std::vector<c64_dir_entry> &vec)
 		// Determine archive type and parse archive
 		bool result = false;
 		char dir_title[16];
-		if (is_t64_header(header))
+		if (is_t64_header(header)) {
 			result = parse_t64_file(f, vec, dir_title);
-		else if (is_lynx_header(header))
+		} else if (is_lynx_header(header)) {
 			result = parse_lynx_file(f, vec, dir_title);
-		else if (is_p00_header(header))
+		} else if (is_p00_header(header)) {
 			result = parse_p00_file(f, vec, dir_title);
+		}
 
 		fclose(f);
 		return result;

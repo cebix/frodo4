@@ -24,11 +24,12 @@
 #include "IEC.h"
 
 #include <filesystem>
+#include <string>
 
 
 class FSDrive : public Drive {
 public:
-	FSDrive(IEC *iec, const char *path);
+	FSDrive(IEC *iec, const std::string & path);
 	virtual ~FSDrive();
 
 	virtual uint8_t Open(int channel, const uint8_t *name, int name_len);
@@ -38,7 +39,7 @@ public:
 	virtual void Reset();
 
 private:
-	bool change_dir(const char *path);
+	bool change_dir(const std::string & path);
 
 	uint8_t open_file(int channel, const uint8_t *name, int name_len);
 	uint8_t open_directory(int channel, const uint8_t *pattern, int pattern_len);

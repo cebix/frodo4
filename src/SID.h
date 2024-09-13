@@ -184,7 +184,7 @@ inline void MOS6581::EmulateLine()
 			break;
 	}
 
-	if (the_renderer != NULL) {
+	if (the_renderer != nullptr) {
 		the_renderer->EmulateLine();
 	}
 }
@@ -240,7 +240,7 @@ inline void MOS6581::WriteRegister(uint16_t adr, uint8_t byte)
 	// Keep a local copy of the register values
 	last_sid_byte = regs[adr] = byte;
 
-	if (the_renderer != NULL) {
+	if (the_renderer != nullptr) {
 		the_renderer->WriteRegister(adr, byte);
 	}
 }

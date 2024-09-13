@@ -115,15 +115,15 @@ void Frodo::ReadyToRun()
 	// Load preferences
 	if (prefs_path.empty()) {
 		auto path = SDL_GetPrefPath("cebix", "Frodo");
-		prefs_path = std::string(path) + "config";
-		snapshot_path = std::string(path) + "snapshots";
+		prefs_path = fs::path(path) / "config";
+		snapshot_path = fs::path(path) / "snapshots";
 
 		// Create snapshot directory if it doesn't exist
 		if (! fs::exists(snapshot_path)) {
 			fs::create_directories(snapshot_path);
 		}
 	}
-	ThePrefs.Load(prefs_path.c_str());
+	ThePrefs.Load(prefs_path);
 
 #ifdef HAVE_GLADE
 	// Show preferences editor

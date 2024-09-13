@@ -594,16 +594,16 @@ void MOS6526::EmulateCycle()
 		case T_STOP:
 			goto ta_idle;
 		case T_LOAD_THEN_STOP:
-			ta_state = T_STOP;
 			ta = latcha;			// Reload timer
+			ta_state = T_STOP;
 			goto ta_idle;
 		case T_LOAD_THEN_COUNT:
-			ta_state = T_COUNT;
 			ta = latcha;			// Reload timer
+			ta_state = T_COUNT;
 			goto ta_idle;
 		case T_LOAD_THEN_WAIT_THEN_COUNT:
 			ta_state = T_WAIT_THEN_COUNT;
-			if (ta == 1) {
+			if (ta == 1 && ta_cnt_phi2) {
 				goto ta_interrupt;	// Interrupt if timer == 1
 			} else {
 				ta = latcha;		// Reload timer
@@ -619,7 +619,10 @@ void MOS6526::EmulateCycle()
 	// Count timer A
 ta_count:
 	if (ta_cnt_phi2) {
-		if (!ta || !--ta) {				// Decrement timer, underflow?
+		if (ta != 0) {	// Decrement timer if != 0
+			--ta;
+		}
+		if (ta == 0) {	// Timer expired?
 			if (ta_state != T_STOP) {
 ta_interrupt:
 				ta = latcha;			// Reload timer
@@ -699,16 +702,16 @@ ta_idle:
 		case T_STOP:
 			goto tb_idle;
 		case T_LOAD_THEN_STOP:
-			tb_state = T_STOP;
 			tb = latchb;			// Reload timer
+			tb_state = T_STOP;
 			goto tb_idle;
 		case T_LOAD_THEN_COUNT:
-			tb_state = T_COUNT;
 			tb = latchb;			// Reload timer
+			tb_state = T_COUNT;
 			goto tb_idle;
 		case T_LOAD_THEN_WAIT_THEN_COUNT:
 			tb_state = T_WAIT_THEN_COUNT;
-			if (tb == 1) {
+			if (tb == 1 && tb_cnt_phi2) {
 				goto tb_interrupt;	// Interrupt if timer == 1
 			} else {
 				tb = latchb;		// Reload timer
@@ -725,7 +728,7 @@ ta_idle:
 tb_count:
 	if (tb_cnt_phi2 || tb_cnt_ta) {
 		if (tb != 0) {	// Decrement timer if != 0
-			if (tb_cnt_phi2 || (tb_cnt_ta && (ta_output & 0x03) == 0x02)) {	// Cascaded mode takes two cycles to count
+			if (tb_cnt_phi2 || (ta_output & 0x03) == 0x02) {	// Cascaded mode takes two cycles to count
 				--tb;
 			}
 		}

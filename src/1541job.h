@@ -21,6 +21,8 @@
 #ifndef _1541JOB_H
 #define _1541JOB_H
 
+#include <string>
+
 
 class MOS6502_1541;
 class Prefs;
@@ -43,14 +45,14 @@ public:
 	void FormatTrack();
 
 private:
-	void open_d64_file(const char *filepath);
+	void open_d64_file(const std::string & filepath);
 	void close_d64_file();
 	bool read_sector(int track, int sector, uint8_t *buffer);
 	bool write_sector(int track, int sector, uint8_t *buffer);
 	void format_disk();
 	int secnum_from_ts(int track, int sector);
 	int offset_from_ts(int track, int sector);
-	void gcr_conv4(uint8_t *from, uint8_t *to);
+	void gcr_conv4(const uint8_t *from, uint8_t *to);
 	void sector2gcr(int track, int sector);
 	void disk2gcr();
 

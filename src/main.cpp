@@ -28,7 +28,7 @@
 
 
 // Global variables
-C64 *TheC64 = NULL;		// Global C64 object
+C64 *TheC64 = nullptr;		// Global C64 object
 
 
 // ROM file names

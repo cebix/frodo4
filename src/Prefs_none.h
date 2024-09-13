@@ -19,7 +19,7 @@
  */
 
 
-bool Prefs::ShowEditor(bool startup, char *prefs_name)
+bool Prefs::ShowEditor(bool startup, std::filesystem::path prefs_path, std::filesystem::path snapshot_path);
 {
     // No prefs editor implemented
 	return startup;

@@ -115,7 +115,7 @@ const int accum_num_sectors[41] = {
 
 // Prototypes
 static bool match(const uint8_t *p, int p_len, const uint8_t *n);
-static FILE *open_image_file(const char *path, bool write_mode);
+static FILE *open_image_file(const std::string & path, bool write_mode);
 static bool parse_image_file(FILE *f, image_file_desc &desc);
 
 
@@ -123,7 +123,7 @@ static bool parse_image_file(FILE *f, image_file_desc &desc);
  *  Constructor: Prepare emulation, open image file
  */
 
-ImageDrive::ImageDrive(IEC *iec, const char *filepath) : Drive(iec), the_file(NULL), bam(ram + 0x700), bam_dirty(false)
+ImageDrive::ImageDrive(IEC *iec, const std::string & filepath) : Drive(iec), the_file(nullptr), bam(ram + 0x700), bam_dirty(false)
 {
 	desc.type = TYPE_D64;
 	desc.header_size = 0;
@@ -133,7 +133,7 @@ ImageDrive::ImageDrive(IEC *iec, const char *filepath) : Drive(iec), the_file(NU
 
 	for (int i=0; i<18; i++) {
 		ch[i].mode = CHMOD_FREE;
-		ch[i].buf = NULL;
+		ch[i].buf = nullptr;
 	}
 	ch[15].mode = CHMOD_COMMAND;
 
@@ -169,7 +169,7 @@ void ImageDrive::close_image()
 			bam_dirty = false;
 		}
 		fclose(the_file);
-		the_file = NULL;
+		the_file = nullptr;
 	}
 }
 
@@ -178,7 +178,7 @@ void ImageDrive::close_image()
  *  Open the image file
  */
 
-bool ImageDrive::change_image(const char *path)
+bool ImageDrive::change_image(const std::string & path)
 {
 	// Close old image file
 	close_image();
@@ -186,7 +186,7 @@ bool ImageDrive::change_image(const char *path)
 	// Open new image file (try write access first, then read-only)
 	write_protected = false;
 	the_file = open_image_file(path, true);
-	if (the_file == NULL) {
+	if (the_file == nullptr) {
 		write_protected = true;
 		the_file = open_image_file(path, false);
 	}
@@ -195,7 +195,7 @@ bool ImageDrive::change_image(const char *path)
 		// Determine file type and fill in image_file_desc structure
 		if (!parse_image_file(the_file, desc)) {
 			fclose(the_file);
-			the_file = NULL;
+			the_file = nullptr;
 			return false;
 		}
 
@@ -691,7 +691,7 @@ uint8_t ImageDrive::Close(int channel)
 
 		case CHMOD_DIRECT:
 			free_buffer(ch[channel].buf_num);
-			ch[channel].buf = NULL;
+			ch[channel].buf = nullptr;
 			ch[channel].mode = CHMOD_FREE;
 			break;
 
@@ -728,13 +728,13 @@ uint8_t ImageDrive::Close(int channel)
 				D(bug(" directory entry updated\n"));
 			}
 free:		free_buffer(ch[channel].buf_num);
-			ch[channel].buf = NULL;
+			ch[channel].buf = nullptr;
 			ch[channel].mode = CHMOD_FREE;
 			break;
 
 		case CHMOD_DIRECTORY:
 			delete[] ch[channel].buf;
-			ch[channel].buf = NULL;
+			ch[channel].buf = nullptr;
 			ch[channel].mode = CHMOD_FREE;
 			break;
 	}
@@ -1007,7 +1007,7 @@ bool ImageDrive::find_file(const uint8_t *pattern, int pattern_len, int &dir_tra
 	int num_dir_blocks = 0;
 
 	// Pointer to current directory entry
-	uint8_t *de = NULL;
+	uint8_t *de = nullptr;
 	if (cont) {
 		de = dir + DIR_ENTRIES + entry * SIZEOF_DE;
 	} else {
@@ -1350,7 +1350,7 @@ static int read_sector(FILE *f, const image_file_desc &desc, int track, int sect
 	if (offset < 0)
 		return ERR_ILLEGALTS;
 
-	if (f == NULL)
+	if (f == nullptr)
 		return ERR_NOTREADY;
 
 	fseek(f, offset, SEEK_SET);
@@ -1370,7 +1370,7 @@ static int write_sector(FILE *f, const image_file_desc &desc, int track, int sec
 	if (offset < 0)
 		return ERR_ILLEGALTS;
 
-	if (f == NULL)
+	if (f == nullptr)
 		return ERR_NOTREADY;
 
 	fseek(f, offset, SEEK_SET);
@@ -1857,7 +1857,7 @@ static bool is_x64_file(const uint8_t *header, long size)
 	return memcmp(header, "C\x15\x41\x64\x01\x02", 6) == 0;
 }
 
-static bool is_zipcode_file(const char *path)
+static bool is_zipcode_file(const std::string & path)
 {
 #if 0
 	string base, part;
@@ -1868,7 +1868,7 @@ static bool is_zipcode_file(const char *path)
 #endif
 }
 
-bool IsImageFile(const char *path, const uint8_t *header, long size)
+bool IsImageFile(const std::string & path, const uint8_t *header, long size)
 {
 	return is_d64_file(header, size) || is_x64_file(header, size) || is_zipcode_file(path);
 }
@@ -1886,11 +1886,11 @@ static FILE *open_zipcode_file(FILE *old, int num, const string &base, string &p
 	}
 	part[0] = num + '1';
 	FILE *f = fopen(AddToPath(base, part).c_str(), "rb");
-	if (f == NULL)
-		return NULL;
+	if (f == nullptr)
+		return nullptr;
 	if (fseek(f, 2, SEEK_SET) < 0) {
 		fclose(f);
-		return NULL;
+		return nullptr;
 	}
 	if (num == 0) {
 		id1 = getc(f);
@@ -1899,9 +1899,9 @@ static FILE *open_zipcode_file(FILE *old, int num, const string &base, string &p
 	return f;
 }
 
-static FILE *convert_zipcode_to_ed64(const string &path)
+static FILE *convert_zipcode_to_ed64(const std::string & path)
 {
-	FILE *in = NULL, *out = NULL;
+	FILE *in = nullptr, *out = nullptr;
 	uint8_t id1, id2;
 
 	// Split input file name
@@ -1910,7 +1910,7 @@ static FILE *convert_zipcode_to_ed64(const string &path)
 
 	// Open output file
 	out = tmpfile();
-	if (out == NULL)
+	if (out == nullptr)
 		goto error;
 
 	// Decode all tracks
@@ -1920,19 +1920,19 @@ static FILE *convert_zipcode_to_ed64(const string &path)
 		// Select appropriate input file
 		switch (track) {
 			case 1:
-				if ((in = open_zipcode_file(NULL, 0, base, part, id1, id2)) == NULL)
+				if ((in = open_zipcode_file(nullptr, 0, base, part, id1, id2)) == nullptr)
 					goto error;
 				break;
 			case 9:
-				if ((in = open_zipcode_file(in, 1, base, part, id1, id2)) == NULL)
+				if ((in = open_zipcode_file(in, 1, base, part, id1, id2)) == nullptr)
 					goto error;
 				break;
 			case 17:
-				if ((in = open_zipcode_file(in, 2, base, part, id1, id2)) == NULL)
+				if ((in = open_zipcode_file(in, 2, base, part, id1, id2)) == nullptr)
 					goto error;
 				break;
 			case 26:
-				if ((in = open_zipcode_file(in, 3, base, part, id1, id2)) == NULL)
+				if ((in = open_zipcode_file(in, 3, base, part, id1, id2)) == nullptr)
 					goto error;
 				break;
 		}
@@ -2011,7 +2011,7 @@ error:
 	if (out) {
 		fclose(out);
 	}
-	return NULL;
+	return nullptr;
 }
 #endif
 
@@ -2020,18 +2020,18 @@ error:
  *  Open disk image file, return file handle
  */
 
-static FILE *open_image_file(const char *path, bool write_mode)
+static FILE *open_image_file(const std::string & path, bool write_mode)
 {
 #if 0
 	if (is_zipcode_file(path)) {
 		if (write_mode) {
-			return NULL;
+			return nullptr;
 		} else {
 			return convert_zipcode_to_ed64(path);
 		}
 	} else
 #endif
-		return fopen(path, write_mode ? "r+b" : "rb");
+		return fopen(path.c_str(), write_mode ? "r+b" : "rb");
 }
 
 
@@ -2135,7 +2135,7 @@ static bool parse_image_file(FILE *f, image_file_desc &desc)
  *  returns false on error
  */
 
-bool ReadImageDirectory(const char *path, std::vector<c64_dir_entry> &vec)
+bool ReadImageDirectory(const std::string & path, std::vector<c64_dir_entry> &vec)
 {
 	bool result = false;
 
@@ -2206,11 +2206,11 @@ done:	fclose(f);
  *  Create new blank disk image file, returns false on error
  */
 
-bool CreateImageFile(const char *path)
+bool CreateImageFile(const std::string & path)
 {
 	// Open file for writing
-	FILE *f = fopen(path, "wb");
-	if (f == NULL)
+	FILE *f = fopen(path.c_str(), "wb");
+	if (f == nullptr)
 		return false;
 
 	// Create descriptor
@@ -2226,7 +2226,7 @@ bool CreateImageFile(const char *path)
 	// Format image file
 	if (!format_image(f, desc, true, 'F', 'R', (uint8_t *)"D64 FILE", 8)) {
 		fclose(f);
-		remove(path);
+		fs::remove(path);
 		return false;
 	}
 
