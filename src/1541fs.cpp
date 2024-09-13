@@ -348,7 +348,15 @@ uint8_t FSDrive::open_directory(int channel, const uint8_t *pattern, int pattern
 			*p++ = '\"';
 			uint8_t *q = p;
 			for (unsigned i = 0; i < 16 && i < file_name.length(); ++i) {
-				*q++ = ascii2petscii(file_name[i]);
+				uint8_t c = ascii2petscii(file_name[i]);
+				if (ThePrefs.MapSlash) {
+					if (c == '/') {
+						c = '\\';
+					} else if (c == '\\') {
+						c = '/';
+					}
+				}
+				*q++ = c;
 			}
 			*q++ = '\"';
 			p += 18;

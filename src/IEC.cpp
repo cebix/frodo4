@@ -531,7 +531,15 @@ void Drive::parse_file_name(const uint8_t *src, int src_len, uint8_t *dest, int 
 	uint8_t *q = dest;
 	while (*p != ',' && src_len-- > 0) {
 		if (convert_charset) {
-			*q++ = petscii2ascii(*p++);
+			char c = petscii2ascii(*p++);
+			if (ThePrefs.MapSlash) {
+				if (c == '/') {
+					c = '\\';
+				} else if (c == '\\') {
+					c = '/';
+				}
+			}
+			*q++ = c;
 		} else {
 			*q++ = *p++;
 		}
