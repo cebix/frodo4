@@ -84,13 +84,8 @@ constexpr size_t REWIND_LENGTH = SCREEN_FREQ * 30;  // 30 seconds
  *  Constructor: Allocate objects and memory
  */
 
-C64::C64()
+C64::C64() : quit_requested(false), prefs_editor_requested(false), load_snapshot_requested(false)
 {
-	// The thread is not yet running
-	thread_running = false;
-	quit_thyself = false;
-	have_a_break = false;
-
 	// System-dependent things
 	c64_ctor1();
 
@@ -186,6 +181,59 @@ C64::~C64()
 
 
 /*
+ *  Start main emulation loop
+ */
+
+void C64::Run()
+{
+	// Reset chips
+	TheCPU->Reset();
+	TheSID->Reset();
+	TheCIA1->Reset();
+	TheCIA2->Reset();
+	TheCPU1541->Reset();
+
+	// Patch kernal IEC routines
+	orig_kernal_1d84 = Kernal[0x1d84];
+	orig_kernal_1d85 = Kernal[0x1d85];
+	PatchKernal(ThePrefs.FastReset, ThePrefs.Emul1541Proc);
+
+	main_loop();
+}
+
+
+/*
+ *  Request emulator to quit
+ */
+
+void C64::RequestQuit()
+{
+	quit_requested = true;
+}
+
+
+/*
+ *  Request emulator to show prefs editor at next VBlank
+ */
+
+void C64::RequestPrefsEditor()
+{
+	prefs_editor_requested = true;
+}
+
+
+/*
+ *  Request emulator to load snapshot at next VBlank
+ */
+
+void C64::RequestLoadSnapshot(const std::string & path)
+{
+	requested_snapshot = path;
+	load_snapshot_requested = true;
+}
+
+
+/*
  *  Reset C64
  */
 
@@ -215,7 +263,6 @@ void C64::NMI()
 /*
  *  The preferences have changed. prefs is a pointer to the new
  *  preferences, ThePrefs still holds the previous ones.
- *  The emulation must be in the paused state!
  */
 
 void C64::NewPrefs(const Prefs *prefs)
@@ -242,7 +289,6 @@ void C64::NewPrefs(const Prefs *prefs)
 
 /*
  *  Turn 1541 processor emulation on or off, and optionally set the drive path.
- *  The emulation must be in the paused state!
  */
 
 void C64::SetEmul1541Proc(bool on, const char * path)
@@ -391,7 +437,7 @@ void C64::poll_input()
 
 
 /*
- *  Save state to snapshot (emulation must be paused and in VBlank)
+ *  Save state to snapshot (emulation must be in VBlank)
  *
  *  To be able to use SC snapshots with SL, the state of the SC C64 and 1541
  *  CPUs are not saved in the middle of an instruction. Instead the state is

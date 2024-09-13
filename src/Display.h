@@ -53,6 +53,9 @@ public:
 	C64Display(C64 *the_c64);
 	~C64Display();
 
+	void Pause();
+	void Resume();
+
 	void Update();
 	void UpdateLEDs(int l0, int l1, int l2, int l3);
 	void Speedometer(int speed);
@@ -63,15 +66,6 @@ public:
 	void NewPrefs(const Prefs *prefs);
 
 	C64 *TheC64;
-
-#ifdef __BEOS__
-	void Pause();
-	void Resume();
-#endif
-
-#ifdef HAVE_SDL
-	bool quit_requested = false;
-#endif
 
 private:
 	void init_colors(int palette_prefs);

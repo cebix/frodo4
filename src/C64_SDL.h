@@ -71,29 +71,6 @@ void C64::c64_dtor()
 
 
 /*
- *  Start main emulation loop
- */
-
-void C64::Run()
-{
-	// Reset chips
-	TheCPU->Reset();
-	TheSID->Reset();
-	TheCIA1->Reset();
-	TheCIA2->Reset();
-	TheCPU1541->Reset();
-
-	// Patch kernal IEC routines
-	orig_kernal_1d84 = Kernal[0x1d84];
-	orig_kernal_1d85 = Kernal[0x1d85];
-	PatchKernal(ThePrefs.FastReset, ThePrefs.Emul1541Proc);
-
-	quit_thyself = false;
-	main_loop();
-}
-
-
-/*
  *  Vertical blank: Poll input devices, update display
  */
 
@@ -102,8 +79,21 @@ void C64::vblank()
 	// Poll keyboard and joysticks
 	poll_input();
 
-	if (TheDisplay->quit_requested) {
-		quit_thyself = true;
+	// Handle request for prefs editor
+	if (prefs_editor_requested) {
+		pause();
+		if (! TheApp->RunPrefsEditor()) {
+			quit_requested = true;
+			return;
+		}
+		resume();
+		prefs_editor_requested = false;
+	}
+
+	// Handle request for snapshot loading
+	if (load_snapshot_requested) {
+		LoadSnapshot(requested_snapshot);
+		load_snapshot_requested = false;
 	}
 
 	// Count TOD clocks
@@ -149,7 +139,7 @@ void C64::main_loop()
 {
 	unsigned prev_raster_y = 0;
 
-	while (!quit_thyself) {
+	while (!quit_requested) {
 		bool new_frame;
 
 #ifdef FRODO_SC
@@ -226,21 +216,23 @@ void C64::main_loop()
 
 
 /*
- *  Pause main emulation thread
+ *  Pause emulator
  */
 
-void C64::Pause()
+void C64::pause()
 {
 	TheSID->PauseSound();
+	TheDisplay->Pause();
 }
 
 
 /*
- *  Resume main emulation thread
+ *  Resume emulator
  */
 
-void C64::Resume()
+void C64::resume()
 {
+	TheDisplay->Resume();
 	TheSID->ResumeSound();
 
 	// Flush event queue

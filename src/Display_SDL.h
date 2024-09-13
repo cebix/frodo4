@@ -163,6 +163,30 @@ void C64Display::error_and_quit(const std::string & msg) const
 
 
 /*
+ *  Pause display: Exit fullscreen mode
+ */
+
+void C64Display::Pause()
+{
+	if (ThePrefs.DisplayType == DISPTYPE_SCREEN) {
+		toggle_fullscreen(false);
+	}
+}
+
+
+/*
+ *  Resume display: Re-enter fullscreen mode
+ */
+
+void C64Display::Resume()
+{
+	if (ThePrefs.DisplayType == DISPTYPE_SCREEN) {
+		toggle_fullscreen(true);
+	}
+}
+
+
+/*
  *  Prefs may have changed, recalculate palette
  */
 
@@ -525,20 +549,7 @@ void C64Display::PollKeyboard(uint8_t *key_matrix, uint8_t *rev_matrix, uint8_t 
 				switch (event.key.keysym.scancode) {
 
 					case SDL_SCANCODE_F10:	// F10: Prefs/Quit
-						TheC64->Pause();
-						if (ThePrefs.DisplayType == DISPTYPE_SCREEN) {  // exit fullscreen mode
-							toggle_fullscreen(false);
-						}
-
-						if (!TheApp->RunPrefsEditor()) {
-							quit_requested = true;
-						} else {
-							if (ThePrefs.DisplayType == DISPTYPE_SCREEN) {  // enter fullscreen mode
-								toggle_fullscreen(true);
-							}
-						}
-
-						TheC64->Resume();
+						TheC64->RequestPrefsEditor();
 						break;
 
 					case SDL_SCANCODE_F11:	// F11: NMI (Restore)
@@ -604,23 +615,17 @@ void C64Display::PollKeyboard(uint8_t *key_matrix, uint8_t *rev_matrix, uint8_t 
 				if (fs::is_directory(filename)) {
 
 					// Turn off 1541 processor emulation and mount directory
-					TheC64->Pause();
 					TheC64->SetEmul1541Proc(false, filename);
-					TheC64->Resume();
 
 				} else if (IsMountableFile(filename, type)) {
 
 					// Mount disk image file
-					TheC64->Pause();
 					TheC64->SetEmul1541Proc(ThePrefs.Emul1541Proc, filename);
-					TheC64->Resume();
 
 				} else if (IsSnapshotFile(filename)) {
 
 					// Load snapshot
-					TheC64->Pause();
-					TheC64->LoadSnapshot(filename);
-					TheC64->Resume();
+					TheC64->RequestLoadSnapshot(filename);
 				}
 
 				SDL_free(filename);
@@ -629,7 +634,7 @@ void C64Display::PollKeyboard(uint8_t *key_matrix, uint8_t *rev_matrix, uint8_t 
 
 			// Quit Frodo
 			case SDL_QUIT:
-				quit_requested = true;
+				TheC64->RequestQuit();
 				break;
 		}
 	}

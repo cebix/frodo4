@@ -74,9 +74,10 @@ public:
 	~C64();
 
 	void Run();
-	void Quit();
-	void Pause();
-	void Resume();
+
+	void RequestQuit();
+	void RequestPrefsEditor();
+	void RequestLoadSnapshot(const std::string & path);
 
 	void Reset();
 	void NMI();
@@ -117,23 +118,30 @@ private:
 	void c64_ctor1();
 	void c64_ctor2();
 	void c64_dtor();
+
+	void pause();
+	void resume();
+
 	void open_close_joysticks(int oldjoy1, int oldjoy2, int newjoy1, int newjoy2);
 	uint8_t poll_joystick(int port);
+
 #ifdef FRODO_SC
 	bool emulate_c64_cycle();
 	void emulate_1541_cycle();
 #endif
+
 	void main_loop();
 	void poll_input();
 	void vblank();
 	void handle_rewind();
 	void reset_play_mode();
 
-	bool thread_running;		// Emulation thread is running
-	bool quit_thyself;			// Emulation thread shall quit
-	bool have_a_break;			// Emulation thread shall pause
+	bool quit_requested;			// Emulator shall quit
+	bool prefs_editor_requested;	// Emulator shall show prefs editor
+	bool load_snapshot_requested;	// Emulator shall load snapshot
+	std::string requested_snapshot;
 
-	uint32_t cycle_counter;		// Cycle counter for Frodo SC
+	uint32_t cycle_counter;			// Cycle counter for Frodo SC
 
 	int joy_minx[2], joy_maxx[2], joy_miny[2], joy_maxy[2]; // For dynamic joystick calibration
 	int joy_maxtrigl[2], joy_maxtrigr[2];
