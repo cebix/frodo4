@@ -131,7 +131,6 @@ private:
 	uint8_t state, op;		// Current state and opcode
 	uint16_t ar, ar2;		// Address registers
 	uint8_t rdbuf;			// Data buffer for RMW instructions
-	uint8_t ddr, pr;		// Processor port
 #else
 	int borrowed_cycles;	// Borrowed cycles from next line
 #endif

@@ -93,14 +93,9 @@ MOS6502_1541::MOS6502_1541(C64 *c64, Job1541 *job, C64Display *disp, uint8_t *Ra
 	v_flag = d_flag = c_flag = false;
 	i_flag = true;
 
-	via1_t1c = via1_t1l = via1_t2c = via1_t2l = 0;
-	via1_sr = 0;
-	via2_t1c = via2_t1l = via2_t2c = via2_t2l = 0;
-	via2_sr = 0;
-
 	first_irq_cycle = first_nmi_cycle = 0;
-	opflags = 0;
-	Idle = false;
+
+	Reset();
 }
 
 
@@ -351,7 +346,7 @@ void MOS6502_1541::write_byte_io(uint16_t adr, uint8_t byte)
 				break;
 			case 2:
 				via1_ddrb = byte;
-				byte &= ~via1_prb;
+				byte = ~via1_prb & via1_ddrb;
 				IECLines = ((byte << 6) & ((~byte ^ TheCIA2->IECLines) << 3) & 0x80)	// DATA
 				         | ((byte << 3) & 0x40);										// CLK
 				break;
@@ -581,12 +576,20 @@ inline void MOS6502_1541::do_sbc(uint8_t byte)
 void MOS6502_1541::Reset()
 {
 	// IEC lines and VIA registers
+	//
+	// Note: 6522 reset doesn't actually touch the timers nor the shift
+	// register, but we want to avoid undefined behavior.
 	IECLines = 0xc0;
 
 	via1_pra = via1_ddra = via1_prb = via1_ddrb = 0;
+	via1_t1c = via1_t1l = via1_t2c = via1_t2l = 0xffff;
+	via1_sr = 0;
 	via1_acr = via1_pcr = 0;
 	via1_ifr = via1_ier = 0;
+
 	via2_pra = via2_ddra = via2_prb = via2_ddrb = 0;
+	via2_t1c = via2_t1l = via2_t2c = via2_t2l = 0xffff;
+	via2_sr = 0;
 	via2_acr = via2_pcr = 0;
 	via2_ifr = via2_ier = 0;
 
