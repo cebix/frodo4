@@ -118,7 +118,7 @@ void Prefs::Load(fs::path prefs_path)
 
 	std::string line;
 	while (std::getline(file, line)) {
-		static const std::regex prefsLine(R"((\S*)\s*=\s*(\S*))");
+		static const std::regex prefsLine(R"((\S*)\s*=\s*([\S ]*))");
 
 		std::smatch m;
 		if (std::regex_match(line, m, prefsLine)) {
