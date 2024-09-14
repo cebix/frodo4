@@ -79,17 +79,17 @@ iconic “READY.” prompt.
 
 Important key combinations inside the emulator window:
 
-* Pressing F10 pauses the emulation and takes you back to the settings window
-  where you can, for example, swap .D64 files.
-* Pressing F12 resets the C64.
-* Hold down the right trigger on the game controller or the “+” (Plus) key on
-  the numeric keypad to fast-forward at 4x speed (useful for example, while
-  software is loading from the disk drive).
-* Hold down the left trigger on the game controller or the “−” (Minus) key on
-  the numeric keypad to rewind by up to 30 seconds (useful when you messed up in
-  one of those “Commodore-hard” retro games...).
-* Pressing the Enter key on the numeric keypad switches between fullscreen and
-  windowed display.
+* Pressing **F10** pauses the emulation and takes you back to the settings
+  window where you can, for example, swap .D64 files.
+* Pressing **F12** resets the C64.
+* Hold down the **right trigger** on the game controller or the “+” (**Plus**)
+  key on the numeric keypad to fast-forward at 4x speed (useful for example,
+  while software is loading from the disk drive).
+* Hold down the **left trigger** on the game controller or the “−” (**Minus**)
+  key on the numeric keypad to rewind by up to 30 seconds (useful when you
+  messed up in one of those “Commodore-hard” retro games...).
+* Pressing the **Enter** key on the numeric keypad switches between fullscreen
+  and windowed display.
 
 The C64 is a Personal Computer, not a games console, and it doesn't autostart
 software from the disk drive. Instead it comes with a built-in text adventure
@@ -97,7 +97,7 @@ game in the form of an interpreter for (a simple implementation of) the BASIC
 programming language.
 
 *(If you're feeling adventurous, take a look at the
-[Commodore C64 User's Guide](https://archive.org/details/commodore-64-user-guide)
+[Commodore 64 User's Guide](https://archive.org/details/commodore-64-user-guide)
 and work through the included BASIC programming exercises. Maybe you'll
 eventually become a famous software developer and author of a C64 emulator!)*
 
@@ -135,8 +135,8 @@ file with a “PRG” designation next to it and try entering:
 
 where *“\<filename\>”* refers to the file name you noted down.
 
-If successfully got a “LOADING” message, there's basically two things that can
-happen next:
+If you successfully got a “LOADING” message, there's basically two things that
+can happen next:
 
 1. The game takes over control and starts. This should occur within a few
    seconds and is usually indicated by a loading screen, a simple title screen,
@@ -144,7 +144,7 @@ happen next:
    and wait for things to unfold. If you are being asked to swap disks, press
    F10 to bring up the settings window again and mount the appropriate .D64
    file (the “Next Disk” button also usually produces the desired result).
-2. If the "LOADING" message stays on the screen for more than 10 seconds, you'll
+2. If the “LOADING” message stays on the screen for more than 10 seconds, you'll
    probably have to start the game manually after the loading process has
    finished. Because the Commodore 1541 is one of the slowest storage devices
    known to mankind, this may take up to two minutes. If you're too impatient
@@ -168,6 +168,9 @@ button. If a game asks you to press “RUN/STOP”, hit the Escape key. The
 “Commodore” or “C=” key is mapped to the Alt keys.
 
 Now have fun!
+
+To quit Frodo, either close the emulation window, press **Alt-F4**, or press
+**F10** to bring up the settings window and click on “Quit”.
 
 For more detailed information, see the included
 [HTML documentation](docs/index.html).

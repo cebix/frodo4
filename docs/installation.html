@@ -8,46 +8,25 @@
 
 <HR>
 
-There are two kinds of Frodo distributions. The source distributions
-(<TT>FrodoV?_?.Src.*</TT>) contain source code that has to be compiled on
-your system. The binary distributions (<TT>FrodoV?_?.&lt;system
-name&gt;.*</TT>) contain an executable that can be started directly.
+<P>There are two kinds of Frodo distributions. Source distributions contain
+source code that has to be compiled on your system. Binary distributions (or
+packages) contain an executable that can be started directly.
 
-<H2>Compiling under Unix</H2>
+<H2>Compiling on Unix-like systems</H2>
 
-To build Frodo from an unpacked source distribution:<P>
-
-<KBD>$ ./autogen.sh<BR>
-$ make</KBD><P>
-
-For optimum performance, Frodo needs the following prerequisites:<P>
+<P>Prerequisites:
 
 <UL>
+<LI>A C++20 compiler
 <LI><A HREF="https://libsdl.org/">SDL 2.x</A>
 <LI>GTK 3
 </UL>
 
-<TT>autogen.sh</TT> and <TT>configure</TT> accept optional arguments (type
-<KBD>./autogen.sh --help</KBD> for a full list).<P>
+<P>Frodo can be compiled and installed in the usual way:
 
-The Frodo GUI requires the <TT>Frodo.ui</TT> file to be present in the
-directory <TT>/usr/local/share/Frodo</TT> (you can specify a different
-installation directory with <KBD>./configure --prefix</KBD>). Either copy
-this file manually from <TT>src/Frodo.ui</TT> or become root and
-type<P>
-
-<KBD># make install</KBD>
-
-<H2>Compiling under BeOS</H2>
-
-There are separate Makefiles for Frodo (<TT>Makefile.BeOS</TT>) and Frodo
-Lite (<TT>Makefile.BeOS.Lite</TT>). Type<P>
-
-<KBD>$ cd src<BR>
-$ make -fMakefile.BeOS<BR>
-$ make -fMakefile.BeOS.Lite</KBD><P>
-
-to compile both versions.
+<P><KBD>$ ./autogen.sh<BR>
+$ make<BR>
+$ sudo make install</KBD>
 
 </BODY>
 </HTML>

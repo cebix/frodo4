@@ -1,97 +1,75 @@
 <HTML>
 <HEAD>
-<TITLE>Keyboard layout</TITLE>
+<TITLE>Keyboard Layout</TITLE>
 </HEAD>
 <BODY>
 
-<H1>Keyboard layout</H1>
+<H1>Keyboard Layout</H1>
 
 <HR>
 
-The keyboard layout in Frodo closely resembles that of a real C64. The
+<P>The keyboard layout in Frodo closely resembles that of a real C64. The
 individual rows of the keyboard are mapped as follows:
 
 <PRE>
-&lt;- 1 2 3 4 5 6 7 8 9 0 + -
-    Q W E R T Y U I O P @ *
+← 1 2 3 4 5 6 7 8 9 0 + -
+   Q W E R T Y U I O P @ * ↑
     A S D F G H J K L : ;
      Z X C V B N M , . /
-</PRE><P>
+</PRE>
 
-In addition, the following keys are used:
-
-<PRE>
- Esc        - RUN/STOP
- Backspace  - INS/DEL
- Return     - RETURN
- Enter      - RETURN
- Shift keys - SHIFT
- Caps lock  - SHIFT LOCK
- F1-F8      - F1-F8
-</PRE><P>
-
-Special keys on SDL platforms:
+<P>In addition, Frodo uses the following keys to represent special keys on
+the C64 keyboard, or to control functions of the emulator:
 
 <PRE>
- \            - ^
- Insert       - Shift-INS/DEL
+ Esc          - RUN/STOP
+ Tab          - CTRL
+ Backspace    - INS/DEL
  Delete       - INS/DEL
+ Insert       - SHIFT + INS/DEL
+ Return/Enter - RETURN
+ Shift keys   - SHIFT
+ Alt Keys     - C=
+ Ctrl Keys    - CTRL
+ Caps lock    - SHIFT LOCK
+ Arrow keys   - CRSR ↑/↓ and CRSR ←/→
+ F1-F8        - F1-F8
+ F10          - Open <A HREF="settings.html">settings window</A>
+ F11          - RESTORE
+ F12          - Reset C64 and 1541
  Home         - CLR/HOME
  End          - &pound;
  Page Up      - ↑
  Page Down    - =
- Alt Keys     - C=
- Ctrl Left    - CTRL
- Ctrl Right   - C=
- F10          - Open <A HREF="settings.html">settings window</A> / Quit Frodo
- F11          - RESTORE
- F12          - C64 Reset
  Keypad Enter - Toggle fullscreen mode
  Keypad Plus  - Fast-forward
  Keypad Minus - Rewind
-</PRE><P>
+</PRE>
 
-Special keys under BeOS:
+<P>This means that the famous key combination RUN/STOP-RESTORE must be typed
+as Esc-F11. But you don't have to beat the F11 key as violently as the
+RESTORE key on the original C64. <TT>:-)</TT><P>
 
-<PRE>
- \          - ^
- Insert     - Shift-INS/DEL
- Delete     - INS/DEL
- Home       - CLR/HOME
- End        - &pound;
- Page Up    - &pound;
- Page Down  - =
- Menu Keys  - C=
- Ctrl Left  - CTRL
- Ctrl Right - C=
- F11        - RESTORE
- F12        - C64 Reset
-</PRE><P>
+<P>The arrow (cursor) keys work as expected. That is, the '↑' key
+corresponds to “SHIFT + CRSR ↑/↓” on the C64. The same applies to the
+function keys F2, F4, F6 and F8.
 
-So the famous key combination RUN/STOP-RESTORE must be typed as Esc-F11.
-But you don't have to thrash the F11 key the same way as the RESTORE key on
-the original C64. <TT>:-)</TT><P>
-
-The cursor (arrow) keys work as expected. I.e. "cursor up" corresponds to
-"Shift-cursor down" on the C64. The same applies to the function keys F2,
-F4, F6 and F8.
-
-The numerical keypad emulates a joystick in port 1 or 2, depending on the
-state of the Num Lock (Num Lock off: port 2, Num Lock on: port 1):<P>
+<P>The numerical keypad emulates a joystick in port 1 or 2, depending on the
+state of the Num Lock (Num Lock off: port 2, Num Lock on: port 1):
 
 <PRE>
    7    8    9
-        ^
-        |
+    ↖   ↑   ↗
+
    4    5    6
-  &lt;-- Fire  --&gt;
-        |
-        v
+    ←  Fire →
+
+    ↙   ↓   ↘
    1    2    3
 
    0
- Fire
-</PRE><P>
+  Fire
+</PRE>
 
 </BODY>
 </HTML>

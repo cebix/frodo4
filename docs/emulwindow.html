@@ -1,31 +1,25 @@
 <HTML>
 <HEAD>
-<TITLE>Emulation window</TITLE>
+<TITLE>Emulation Window</TITLE>
 </HEAD>
 <BODY>
 
-<H1>Emulation window</H1>
+<H1>Emulation Window</H1>
 
 <HR>
 
-The emulation window displays the C64 graphics and receives the keyboard
-input. Under BeOS, this window has a menu offerring six commands
-(apart from About/Quit):<P>
+<P>The emulation window displays the C64 graphics and receives the keyboard
+input.
 
-<UL>
-<LI><B>"Reset C64"</B> resets the C64 and the 1541 emulation (same as pressing F12)
-<LI><B>"Preferences..."</B> re-opens the <A HREF="settings.html">settings window</A>
-<LI><B>"SAM..."</B> halts the emulation and activates <A HREF="sam.html">SAM</A> (you can exit from SAM with the "x" command)
-<LI><B>"Insert next disk"</B> changes the disk image of drive 8 if in "D64" mode and inserts the "next" disk. Frodo tries to be smart about what the "next" disk is. Your disk images should be named "Foo1.d64", "Foo2.d64"... or "BarA.d64", "BarB.d64"... for this feature to work.
-<LI><B>"Load snapshot..."</B> restores the emulator state from a snapshot file saved with "Save snapshot...".
-<LI><B>"Save snapshot..."</B> saves the current emulator state to disk.
-</UL>
+<P>If the “Show Speed and Drive LED Status” <A
+HREF="settings.html">setting</A> is enabled, Frodo uses the lower border of
+the C64 display to overlay some information about the emulation speed
+(unless it is running at 100%) and a representation of the activity/error
+LEDs of the emulated disk drives.
 
-In the bottom left corner of the window, Frodo displays how much percent of
-the speed of a real C64 the emulation achieves.<P>
-
-The four items labeled "Drive 8" to "Drive 11" are the disk activity
-indicators of the 1541 emulation.<P>
+<P>You can drag and drop .d64 disk image files or Frodo snapshot files into
+the emulation window to mount the disk image in drive 8 or restore the
+snapshot state, respectively.
 
 </BODY>
 </HTML>

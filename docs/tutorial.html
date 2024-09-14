@@ -1,45 +1,168 @@
 <HTML>
 <HEAD>
-<TITLE>Starting and quitting</TITLE>
+<TITLE>Beginner's Guide</TITLE>
 </HEAD>
 <BODY>
 
-<H1>Starting and quitting</H1>
+<H1>Beginner's Guide</H1>
 
 <HR>
 
-<H2>SDL platforms</H2>
+<H2>Configuring Important Settings</H2>
 
-Frodo accepts a single argument when started from the shell: The name of a
-preferences file to load instead of the default "~/.local/share/cebix/Frodo/config".<P>
+<P>When you start Frodo you are presented with a settings window. Most
+settings have reasonable defaults, so there should be very little you have
+to configure:
 
-At first, a window for the emulation <A HREF="settings.html">settings</A>
-appears. The actual emulation is started by a click on "Start". Then the
-<A HREF="emulwindow.html">emulation</A> window appears in which the C64
-startup message is displayed.<P>
+<UL>
+<LI>Under “Input” you can assign game controllers to the two C64 joystick
+ports (these have to be plugged in before starting Frodo).
+</UL>
 
-To quit Frodo, either close the emulation window, or press F10 to bring up
-the settings window and select "Quit".
+<P>C64 joysticks are typically digital devices with eight directions and
+just one button. Frodo lets you use the D-pad and left stick of the
+controller for the direction, and the “A” and “B” (or Cross and Circle) face
+buttons as the joystick button.
 
-<H2>BeOS</H2>
+<P>Note that most C64 games use a joystick in Port 2 by default, even if
+they are single-player. If you don't get a reaction from controller input,
+try the “Swap Joysticks” option to exchange the port assignments.
 
-Frodo may be started from the shell or from the Tracker. When started from
-the shell, Frodo accepts a single argument: The name of a preferences file
-to load instead of the default "Frodo Prefs".<P>
+<P>If you don't have (or want to use) a game controller, Frodo also offers a
+joystick simulation on the numeric keypad. The “5” and “0” keys act as the
+joystick button while the other number keys control the direction. Press the
+Num Lock key to switch between joystick Port 1 and 2.
 
-At first, the window for the emulation <A HREF="settings.html">settings</A>
-appears. The actual emulation is started by a click on "Start". Then the <A
-HREF="emulwindow.html">emulation</A> window appears in which the C64
-startup message is displayed.<P>
+<UL>
+<LI>Under “Video/Sound” you can choose between windowed and fullscreen
+display, and set the initial window size.
+</UL>
 
-You can quit from the running emulation by selecting the "Quit" menu
-item.<P>
+<P>You can also use the Enter key on the numeric keypad to change the
+display mode on the fly while the emulator is running.
 
-Frodo should be run in a 256-color workspace for maximum speed.<P>
+<UL>
+<LI>The “Drives” tab is where you make software available for the emulator
+to load and run.
+</UL>
 
-Sampled sounds are only played correctly if "Limit Speed" is on and "Draw
-every n-th frame" is set to "1" and if the emulation can sustain 100%
-speed.<P>
+<P>Frodo only supports software written for the Commodore 1541 disk drive.
+This typically comes in the form of .D64 disk image files <EM>(no, they are
+not called “ROMs”!)</EM>. Press the file selection button next to the “Drive
+8” label to choose a .D64 file to mount in the simulated drive with drive
+number 8.
+
+<P><EM>(For advanced users: If you deselect the “Enable Full 1541
+Emulation”, Frodo will let you use up to four simulated disk drives and
+switch to a faster and more flexible “virtual” 1541 drive emulation which
+also lets you access entire directories of the host computer from the C64.
+This works well with simple, single-file games, but for most uses the “full”
+1541 emulation is recommended.)</EM>
+
+<H2>Starting the Emulator and Running Software</H2>
+
+<P>Click on the “Start” button to close the settings window and start the
+emulator. You will now see the beautiful, blue startup screen of the
+Commodore 64 with the iconic “READY.” prompt.
+
+<P>Important key combinations inside the emulator window:
+
+<UL>
+<LI>Pressing <B>F10</B> pauses the emulation and takes you back to the
+settings window where you can, for example, swap .D64 files.
+<LI>Pressing <B>F12</B> resets the C64.
+<LI>Hold down the <B>right trigger</B> on the game controller or the
+“+” (<B>Plus</B>) key on the numeric keypad to fast-forward at 4x speed
+(useful for example, while software is loading from the disk drive).
+<LI>Hold down the <B>left trigger</B> on the game controller or the
+“−” (<B>Minus</B>) key on the numeric keypad to rewind by up to 30 seconds
+(useful when you messed up in one of those “Commodore-hard” retro games...).
+<LI>Pressing the <B>Enter</B> key on the numeric keypad switches between
+fullscreen and windowed display.
+</UL>
+
+<P>The C64 is a Personal Computer, not a games console, and it doesn't
+autostart software from the disk drive. Instead it comes with a built-in
+text adventure game in the form of an interpreter for (a simple
+implementation of) the BASIC programming language.
+
+<P><EM>(If you're feeling adventurous, take a look at the <A
+HREF="https://archive.org/details/commodore-64-user-guide">Commodore 64
+User's Guide</A> and work through the included BASIC programming exercises.
+Maybe you'll eventually become a famous software developer and author of a
+C64 emulator!)</EM>
+
+<P>Getting software to load and run from the simulated disk drive also
+involves typing in some BASIC commands. Unfortunately, there is no general
+standard for which commands to use here, but 90% of the time entering this
+will do the trick:
+
+<P><KBD>LOAD"*",8,1</KBD>
+
+<P>Frodo simulates the original layout of the Commodore 64 keyboard, so the
+" (quote) character is on Shift-2, and the * (star) is most likely to be on
+the “]” (right bracket) key, or the equivalent key in the same position on
+national keyboards. Don't worry, you'll get used to that.
+
+<P>If you get a “LOADING” message from entering the above command, things
+are looking good. If you instead get an error message (most likely “FILE NOT
+FOUND”, unless you mistyped the command or forgot to mount a .D64 file),
+then check any documentation that came with the software for the command
+that is used to run it (this was often printed on the disk label). It may be
+something different like LOAD"BOOT",8,1. If this still doesn't give you
+results, then try:
+
+<P><KBD>LOAD"$",8</KBD>
+
+<P>Wait for that to finish and get back to the “READY.” prompt, then type:
+
+<P><KBD>LIST</KBD>
+
+<P>This will give you a listing of the directory contents of the .D64 file
+(if it scrolls off the screen too quickly you can hold down the Tab or Ctrl
+key to slow it down). Sometimes there are instructions for how to load the
+software embedded in the directory listing. Otherwise, note down the name of
+the first file with a “PRG” designation next to it and try entering:
+
+<P><KBD>LOAD"&lt;filename&gt;",8,1</KBD>
+
+<P>where “&lt;filename&gt;” refers to the file name you noted down.
+
+<P>If you successfully got a “LOADING” message, there's basically two things that can happen next:
+
+<OL>
+<LI>The game takes over control and starts. This should occur within a few
+seconds and is usually indicated by a loading screen, a simple title screen,
+color bars, or at least a screen color change. In this case, just sit back
+and wait for things to unfold. If you are being asked to swap disks, press
+F10 to bring up the settings window again and mount the appropriate .D64
+file (the “Next Disk” button also usually produces the desired result).
+<LI>If the “LOADING” message stays on the screen for more than 10 seconds,
+you'll probably have to start the game manually after the loading process
+has finished. Because the Commodore 1541 is one of the slowest storage
+devices known to mankind, this may take up to two minutes. If you're too
+impatient to enjoy the full, authentic C64 loading experience, hold down the
+right trigger on your game controller or the “+” (Plus) key on the numeric
+keypad to speed things up a bit. <EM>(For advanced users: Frodo does support
+software-based “fast loaders”, so if you know what you are doing you can try
+running one of those before loading your game.)</EM>
+</OL>
+
+<P>If the game did not autostart and you're back at the “READY.” prompt
+after loading, enter this to start the game:
+
+<P><KBD>RUN</KBD>
+
+<P>You should now be good to go. Some games (especially those which had
+their original copy protection removed by some friendly people caring about
+game preservation) may show weird characters or flickering color bars for a
+few seconds before things start. This is normal. Some games also present an
+intro or title screen that needs to be skipped by pressing the Space bar or
+a joystick button. If a game asks you to press “RUN/STOP”, hit the Escape
+key. The “Commodore” or “C=” key is mapped to the Alt keys.
+
+<P>To quit Frodo, either close the emulation window, press <B>Alt-F4</B>, or
+press <B>F10</B> to bring up the settings window and click on “Quit”.
 
 </BODY>
 </HTML>
