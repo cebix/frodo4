@@ -8,6 +8,7 @@ Changes from V4.2 to V4.3:
    - Enter key toggles fullscreen mode
    - Minus key (or left game controller trigger) for instant rewind
    - Plus key (or right game controller trigger) to fast-forward
+ - Game controllers are automatically detected and used
  - D-pad on game controllers now works
  - Replaced status bar with overlay
  - Added setting for status overlay display (ShowLEDs)

@@ -278,6 +278,47 @@ void C64::open_close_joysticks(int oldjoy1, int oldjoy2, int newjoy1, int newjoy
 
 
 /*
+ *  Game controller added
+ */
+
+void C64::JoystickAdded(int32_t index)
+{
+	// Assign to port 2 first, then to port 1
+	if (joy[1] == nullptr && ThePrefs.Joystick1Port != index + 1) {
+
+		ThePrefs.Joystick2Port = index + 1;
+		open_close_joystick(1, 0, ThePrefs.Joystick2Port);
+
+	} else if (joy[0] == nullptr && ThePrefs.Joystick2Port != index + 1) {
+
+		ThePrefs.Joystick1Port = index + 1;
+		open_close_joystick(0, 0, ThePrefs.Joystick1Port);
+	}
+}
+
+
+/*
+ *  Game controller removed
+ */
+
+void C64::JoystickRemoved(int32_t instance_id)
+{
+	if (joy[0] && SDL_JoystickInstanceID(joy[0]) == instance_id) {
+
+		// Unassign joystick port 1
+		open_close_joystick(0, ThePrefs.Joystick1Port, 0);
+		ThePrefs.Joystick1Port = 0;
+
+	} else if (joy[1] && SDL_JoystickInstanceID(joy[1]) == instance_id) {
+
+		// Unassign joystick port 2
+		open_close_joystick(1, ThePrefs.Joystick2Port, 0);
+		ThePrefs.Joystick2Port = 0;
+	}
+}
+
+
+/*
  *  Poll joystick port, return CIA mask
  */
 

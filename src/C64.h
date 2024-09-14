@@ -173,6 +173,11 @@ private:
 #endif
 
 #ifdef HAVE_SDL
+public:
+	void JoystickAdded(int32_t index);
+	void JoystickRemoved(int32_t instance_id);
+
+private:
 	void open_close_joystick(int port, int oldjoy, int newjoy);
 
 	SDL_Joystick * joy[2] = { nullptr, nullptr };

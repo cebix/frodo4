@@ -632,6 +632,15 @@ void C64Display::PollKeyboard(uint8_t *key_matrix, uint8_t *rev_matrix, uint8_t 
 				break;
 			}
 
+			// Controller attached/removed
+			case SDL_CONTROLLERDEVICEADDED:
+				TheC64->JoystickAdded(event.cdevice.which);
+				break;
+
+			case SDL_CONTROLLERDEVICEREMOVED:
+				TheC64->JoystickRemoved(event.cdevice.which);
+				break;
+
 			// Quit Frodo
 			case SDL_QUIT:
 				TheC64->RequestQuit();

@@ -34,8 +34,9 @@ preferences GUI.
 When you start Frodo you are presented with a settings window. Most settings
 have reasonable defaults, so there should be very little you have to configure:
 
-* Under “Input” you can assign game controllers to the two C64 joystick ports
-  (these have to be plugged in before starting Frodo).
+* Under “Input” you can assign game controllers to the two C64 joystick
+  ports. If you do not assign them manually, Frodo will auto-detect any
+  connected game controllers when starting the emulation.
 
 C64 joysticks are typically digital devices with eight directions and just one
 button. Frodo lets you use the D-pad and left stick of the controller for the
