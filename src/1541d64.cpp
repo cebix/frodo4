@@ -1027,13 +1027,14 @@ bool ImageDrive::find_file(const uint8_t *pattern, int pattern_len, int &dir_tra
 				return false;
 			if (!read_sector(dir_track = dir[DIR_NEXT_TRACK], dir_sector = dir[DIR_NEXT_SECTOR], dir))
 				return false;
+
 			num_dir_blocks++;
 			entry = 0;
 			de = dir + DIR_ENTRIES;
 		}
 
 		// Does entry match pattern?
-		if (de[DE_TYPE] && match(pattern, pattern_len, de + DE_NAME))
+		if ((de[DE_TYPE] & 0x3f) != FTYPE_DEL && match(pattern, pattern_len, de + DE_NAME))
 			return true;
 	}
 	return false;
