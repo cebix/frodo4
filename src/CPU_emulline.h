@@ -26,11 +26,7 @@
  */
 
 // Read immediate operand
-#if PC_IS_POINTER
-#define read_byte_imm() (*pc++)
-#else
 #define read_byte_imm() read_byte(pc++)
-#endif
 
 // Read zeropage operand address
 #define read_adr_zero() ((uint16_t)read_byte_imm())
@@ -42,15 +38,7 @@
 #define read_adr_zero_y() ((read_byte_imm() + y) & 0xff)
 
 // Read absolute operand address (uses adr!)
-#if PC_IS_POINTER
-#if LITTLE_ENDIAN_UNALIGNED
-#define	read_adr_abs() (adr = *(UWORD *)pc, pc+=2, adr)
-#else
-#define	read_adr_abs() (adr = ((*(pc+1)) << 8) | *pc, pc+=2, adr)
-#endif
-#else
 #define read_adr_abs() (adr = read_word(pc), pc+=2, adr)
-#endif
 
 // Read absolute x-indexed operand address
 #define read_adr_abs_x() (read_adr_abs() + x)
@@ -769,11 +757,8 @@
 			ENDOP(5);
 
 		case 0x20:	// JSR abs
-#if PC_IS_POINTER
-			push_byte((pc - pc_base + 1) >> 8); push_byte(pc - pc_base + 1);
-#else
-			push_byte((pc + 1) >> 8); push_byte(pc + 1);
-#endif
+			push_byte((pc + 1) >> 8);
+			push_byte(pc + 1);
 			adr = read_adr_abs();
 			jump(adr);
 			ENDOP(6);
@@ -794,42 +779,14 @@
 			ENDOP(6);
 
 		case 0x00:	// BRK
-#if PC_IS_POINTER
-			push_byte((pc - pc_base + 1) >> 8); push_byte(pc - pc_base + 1);
-#else
-			push_byte((pc + 1) >> 8); push_byte(pc + 1);
-#endif
+			push_byte((pc + 1) >> 8);
+			push_byte(pc + 1);
 			push_flags(true);
 			i_flag = true;
 			adr = read_word(0xfffe);
 			jump(adr);
 			ENDOP(7);
 
-#if PC_IS_POINTER
-#if PRECISE_CPU_CYCLES
-#define Branch(flag) \
-	if (flag) { \
-		pc += (int8_t)*pc + 1; \
-		if (((pc-pc_base) ^ (old_pc - pc_base)) & 0xff00) { \
-			ENDOP(4); \
-		} else { \
-			ENDOP(3); \
-		} \
-	} else { \
-		pc++; \
-		ENDOP(2); \
-	}
-#else
-#define Branch(flag) \
-	if (flag) { \
-		pc += (int8_t)*pc + 1; \
-		ENDOP(3); \
-	} else { \
-		pc++; \
-		ENDOP(2); \
-	}
-#endif
-#else
 #define Branch(flag) \
 	if (flag) { \
 		uint16_t old_pc = pc; \
@@ -843,7 +800,6 @@
 		pc++; \
 		ENDOP(2); \
 	}
-#endif
 
 		case 0xb0:	// BCS rel
 			Branch(c_flag);
@@ -1341,48 +1297,28 @@
 			ENDOP(2);
 
 		case 0x93:	// SHA (ind),Y
-#if PC_IS_POINTER
-			tmp2 = read_zp(pc[0] + 1);
-#else
 			tmp2 = read_zp(read_byte(pc) + 1);
-#endif
 			write_byte(read_adr_ind_y(), a & x & (tmp2+1));
 			ENDOP(6);
 
 		case 0x9b:	// SHS abs,Y
-#if PC_IS_POINTER
-			tmp2 = pc[1];
-#else
-			tmp2 = read_byte(pc+1);
-#endif
+			tmp2 = read_byte(pc + 1);
 			write_byte(read_adr_abs_y(), a & x & (tmp2+1));
 			sp = a & x;
 			ENDOP(5);
 
 		case 0x9c:	// SHY abs,X
-#if PC_IS_POINTER
-			tmp2 = pc[1];
-#else
-			tmp2 = read_byte(pc+1);
-#endif
+			tmp2 = read_byte(pc + 1);
 			write_byte(read_adr_abs_x(), y & (tmp2+1));
 			ENDOP(5);
 
 		case 0x9e:	// SHX abs,Y
-#if PC_IS_POINTER
-			tmp2 = pc[1];
-#else
-			tmp2 = read_byte(pc+1);
-#endif
+			tmp2 = read_byte(pc + 1);
 			write_byte(read_adr_abs_y(), x & (tmp2+1));
 			ENDOP(5);
 
 		case 0x9f:	// SHA abs,Y
-#if PC_IS_POINTER
-			tmp2 = pc[1];
-#else
-			tmp2 = read_byte(pc+1);
-#endif
+			tmp2 = read_byte(pc + 1);
 			write_byte(read_adr_abs_y(), a & x & (tmp2+1));
 			ENDOP(5);
 
@@ -1412,9 +1348,5 @@
 		case 0x92:
 		case 0xb2:
 		case 0xd2:
-#if PC_IS_POINTER
-			illegal_op(*(pc-1), pc-pc_base-1);
-#else
-			illegal_op(read_byte(pc-1), pc-1);
-#endif
+			illegal_op(read_byte(pc - 1), pc - 1);
 			break;

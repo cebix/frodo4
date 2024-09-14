@@ -39,11 +39,6 @@
  *    decoding. The read_zp() and write_zp() functions allow
  *    faster access to the zero page, the pop_byte() and
  *    push_byte() macros for the stack.
- *  - The PC is either emulated with a 16 bit address or a
- *    direct memory pointer (for faster access), depending on
- *    the PC_IS_POINTER #define. In the latter case, a second
- *    pointer, pc_base, is kept to allow recalculating the
- *    16 bit 6502 PC if it has to be pushed on the stack.
  *  - The possible interrupt sources are:
  *      INT_VIA1IRQ: I flag is checked, jump to ($fffe) (unused)
  *      INT_VIA2IRQ: I flag is checked, jump to ($fffe) (unused)
@@ -67,8 +62,6 @@
  * Incompatibilities:
  * ------------------
  *
- *  - If PC_IS_POINTER is set, neither branches accross memory
- *    areas nor jumps to I/O space are possible
  *  - Extra cycles for crossing page boundaries are not
  *    accounted for
  */
@@ -446,25 +439,10 @@ void MOS6502_1541::ExtWriteByte(uint16_t adr, uint8_t byte)
  *  Jump to address
  */
 
-#if PC_IS_POINTER
-void MOS6502_1541::jump(uint16_t adr)
-{
-	if (adr >= 0xc000) {
-		pc = rom + (adr & 0x3fff);
-		pc_base = rom - 0xc000;
-	} else if (adr < 0x800) {
-		pc = ram + adr;
-		pc_base = ram;
-	} else {
-		illegal_jump(pc-pc_base, adr);
-	}
-}
-#else
 inline void MOS6502_1541::jump(uint16_t adr)
 {
 	pc = adr;
 }
-#endif
 
 
 /*
@@ -556,11 +534,7 @@ void MOS6502_1541::GetState(MOS6502State *s) const
 	if (!z_flag) s->p |= 0x02;
 	if (c_flag) s->p |= 0x01;
 	
-#if PC_IS_POINTER
-	s->pc = pc - pc_base;
-#else
 	s->pc = pc;
-#endif
 	s->sp = sp | 0x0100;
 
 	s->intr[INT_VIA1IRQ] = interrupt.intr[INT_VIA1IRQ];
@@ -684,22 +658,6 @@ void MOS6502_1541::illegal_op(uint8_t op, uint16_t at)
 
 
 /*
- *  Jump to illegal address space (PC_IS_POINTER only)
- */
-
-void MOS6502_1541::illegal_jump(uint16_t at, uint16_t to)
-{
-	char illop_msg[80];
-
-	sprintf(illop_msg, "1541: Jump to I/O space at %04x to %04x.", at, to);
-	if (ShowRequester(illop_msg, "Reset 1541", "Reset C64")) {
-		the_c64->Reset();
-	}
-	Reset();
-}
-
-
-/*
  *  Stack macros
  */
 
@@ -749,11 +707,8 @@ handle_int:
 		}
 
 		else if ((interrupt.intr[INT_VIA1IRQ] || interrupt.intr[INT_VIA2IRQ] || interrupt.intr[INT_IECIRQ]) && !i_flag) {
-#if PC_IS_POINTER
-			push_byte((pc-pc_base) >> 8); push_byte(pc-pc_base);
-#else
-			push_byte(pc >> 8); push_byte(pc);
-#endif
+			push_byte(pc >> 8);
+			push_byte(pc);
 			push_flags(false);
 			i_flag = true;
 			jump(read_word(0xfffe));
@@ -766,13 +721,8 @@ handle_int:
 
 		// Extension opcode
 		case 0xf2:
-#if PC_IS_POINTER
-			if ((pc-pc_base) < 0xc000) {
-				illegal_op(0xf2, pc-pc_base-1);
-#else
 			if (pc < 0xc000) {
-				illegal_op(0xf2, pc-1);
-#endif
+				illegal_op(0xf2, pc - 1);
 				break;
 			}
 			switch (read_byte_imm()) {
@@ -789,11 +739,7 @@ handle_int:
 					jump(0xfd8b);
 					break;
 				default:
-#if PC_IS_POINTER
-					illegal_op(0xf2, pc-pc_base-1);
-#else
-					illegal_op(0xf2, pc-1);
-#endif
+					illegal_op(0xf2, pc - 1);
 					break;
 			}
 			break;

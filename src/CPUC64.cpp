@@ -45,11 +45,6 @@
  *  - If a write occurs to addresses 0 or 1, new_config is
  *    called to check whether the memory configuration has
  *    changed
- *  - The PC is either emulated with a 16 bit address or a
- *    direct memory pointer (for faster access), depending on
- *    the PC_IS_POINTER #define. In the latter case, a second
- *    pointer, pc_base, is kept to allow recalculating the
- *    16 bit 6510 PC if it has to be pushed on the stack.
  *  - The possible interrupt sources are:
  *      INT_VICIRQ: I flag is checked, jump to ($fffe)
  *      INT_CIAIRQ: I flag is checked, jump to ($fffe)
@@ -71,8 +66,6 @@
  * Incompatibilities:
  * ------------------
  *
- *  - If PC_IS_POINTER is set, neither branches accross memory
- *    areas nor jumps to I/O space are possible
  *  - Extra cycles for crossing page boundaries are not
  *    accounted for
  *  - The cassette sense line is always closed
@@ -488,53 +481,7 @@ void MOS6510::REUWriteByte(uint16_t adr, uint8_t byte)
  *  Jump to address
  */
 
-#if PC_IS_POINTER
-#define jump(adr) \
-	if ((adr) < 0xa000) { \
-		pc = ram + (adr); \
-		pc_base = ram; \
-	} else { \
-		switch ((adr) >> 12) { \
-			case 0xa: \
-			case 0xb: \
-				if (basic_in) { \
-					pc = basic_rom + ((adr) & 0x1fff); \
-					pc_base = basic_rom - 0xa000; \
-				} else { \
-					pc = ram + (adr); \
-					pc_base = ram; \
-				} \
-				break; \
-			case 0xc: \
-				pc = ram + (adr); \
-				pc_base = ram; \
-				break; \
-			case 0xd: \
-				if (io_in) { \
-					illegal_jump(pc-pc_base, (adr)); \
-				} else if (char_in) { \
-					pc = char_rom + ((adr) & 0x0fff); \
-					pc_base = char_rom - 0xd000; \
-				} else { \
-					pc = ram + (adr); \
-					pc_base = ram; \
-				} \
-				break; \
-			case 0xe: \
-			case 0xf: \
-				if (kernal_in) { \
-					pc = kernal_rom + ((adr) & 0x1fff); \
-					pc_base = kernal_rom - 0xe000; \
-				} else { \
-					pc = ram + (adr); \
-					pc_base = ram; \
-				} \
-				break; \
-		} \
-	}
-#else
 #define jump(adr) pc = (adr)
-#endif
 
 
 /*
@@ -609,11 +556,7 @@ void MOS6510::GetState(MOS6510State *s) const
 	if (!z_flag) s->p |= 0x02;
 	if (c_flag) s->p |= 0x01;
 
-#if PC_IS_POINTER
-	s->pc = pc - pc_base;
-#else
 	s->pc = pc;
-#endif
 	s->sp = sp | 0x0100;
 
 	s->ddr = ram[0];
@@ -708,21 +651,6 @@ void MOS6510::illegal_op(uint8_t op, uint16_t at)
 
 
 /*
- *  Jump to illegal address space (PC_IS_POINTER only)
- */
-
-void MOS6510::illegal_jump(uint16_t at, uint16_t to)
-{
-	char illop_msg[80];
-
-	sprintf(illop_msg, "Jump to I/O space at %04x to %04x.", at, to);
-	ShowRequester(illop_msg, "Reset");
-	the_c64->Reset();
-	Reset();
-}
-
-
-/*
  *  Stack macros
  */
 
@@ -762,6 +690,7 @@ int MOS6510::EmulateLine(int cycles_left)
 {
 	uint8_t tmp, tmp2;
 	uint16_t adr;		// Used by read_adr_abs()!
+
 	int last_cycles = 0;
 
 	// Any pending interrupts?
@@ -772,11 +701,8 @@ handle_int:
 
 		} else if (interrupt.intr[INT_NMI]) {
 			interrupt.intr[INT_NMI] = false;	// Simulate an edge-triggered input
-#if PC_IS_POINTER
-			push_byte((pc-pc_base) >> 8); push_byte(pc-pc_base);
-#else
-			push_byte(pc >> 8); push_byte(pc);
-#endif
+			push_byte(pc >> 8);
+			push_byte(pc);
 			push_flags(false);
 			i_flag = true;
 			adr = read_word(0xfffa);
@@ -784,11 +710,8 @@ handle_int:
 			last_cycles = 7;
 
 		} else if ((interrupt.intr[INT_VICIRQ] || interrupt.intr[INT_CIAIRQ]) && !i_flag) {
-#if PC_IS_POINTER
-			push_byte((pc-pc_base) >> 8); push_byte(pc-pc_base);
-#else
-			push_byte(pc >> 8); push_byte(pc);
-#endif
+			push_byte(pc >> 8);
+			push_byte(pc);
 			push_flags(false);
 			i_flag = true;
 			adr = read_word(0xfffe);
@@ -801,13 +724,8 @@ handle_int:
 
 		// Extension opcode
 		case 0xf2:
-#if PC_IS_POINTER
-			if ((pc-pc_base) < 0xe000) {
-				illegal_op(0xf2, pc-pc_base-1);
-#else
 			if (pc < 0xe000) {
-				illegal_op(0xf2, pc-1);
-#endif
+				illegal_op(0xf2, pc - 1);
 				break;
 			}
 			switch (read_byte_imm()) {
@@ -849,15 +767,12 @@ handle_int:
 					jump(0xedac);
 					break;
 				default:
-#if PC_IS_POINTER
-					illegal_op(0xf2, pc-pc_base-1);
-#else
-					illegal_op(0xf2, pc-1);
-#endif
+					illegal_op(0xf2, pc - 1);
 					break;
 			}
 			break;
 		}
 	}
+
 	return last_cycles;
 }

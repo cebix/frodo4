@@ -17,6 +17,6 @@ EXTRA_Frodo_SOURCES = sysdeps.h debug.h \
 common_CPPFLAGS = -DDATADIR=\"$(pkgdatadir)/\"
 
 Frodo_CPPFLAGS = -DFRODO_SC $(common_CPPFLAGS)
-FrodoLite_CPPFLAGS = -DPRECISE_CPU_CYCLES=1 -DPRECISE_CIA_CYCLES=1 -DPC_IS_POINTER=0 $(common_CPPFLAGS)
+FrodoLite_CPPFLAGS = -DPRECISE_CPU_CYCLES=1 -DPRECISE_CIA_CYCLES=1 $(common_CPPFLAGS)
 
 dist_pkgdata_DATA = Frodo.ui Frodo_Logo.png

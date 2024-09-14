@@ -25,13 +25,6 @@
 #include "C64.h"
 
 
-// Set this to 1 if the 6502 PC should be represented by a real pointer
-#ifndef FRODO_SC
-#ifndef PC_IS_POINTER
-#define PC_IS_POINTER 1
-#endif
-#endif
-
 // Set this to 1 for more precise CPU cycle calculation
 #ifndef PRECISE_CPU_CYCLES
 #define PRECISE_CPU_CYCLES 0
@@ -93,7 +86,6 @@ private:
 
 	void jump(uint16_t adr);
 	void illegal_op(uint8_t op, uint16_t at);
-	void illegal_jump(uint16_t at, uint16_t to);
 
 	void do_adc(uint8_t byte);
 	void do_sbc(uint8_t byte);
@@ -112,11 +104,7 @@ private:
 	uint8_t n_flag, z_flag;
 	bool v_flag, d_flag, i_flag, c_flag;
 	uint8_t a, x, y, sp;
-#if PC_IS_POINTER
-	uint8_t *pc, *pc_base;
-#else
 	uint16_t pc;
-#endif
 
 #ifdef FRODO_SC
 	uint32_t first_irq_cycle;
