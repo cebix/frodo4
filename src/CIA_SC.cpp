@@ -466,32 +466,37 @@ void MOS6526_1::WriteRegister(uint16_t adr, uint8_t byte)
  *  Write to register (CIA 2)
  */
 
+// Write to port A, check for VIC bank change and IEC lines
+inline void MOS6526_2::write_pa(uint8_t byte)
+{
+	the_vic->ChangedVA(byte & 3);
+
+	uint8_t old_lines = IECLines;
+	IECLines = ((byte << 2) & 0x80)			// DATA
+			 | ((byte << 2) & 0x40)			// CLK
+			 | ((byte << 1) & 0x10);		// ATN
+
+	if ((IECLines ^ old_lines) & 0x10) {	// ATN changed
+		the_cpu_1541->NewATNState();
+		if (old_lines & 0x10) {				// ATN 1->0
+			the_cpu_1541->IECInterrupt();
+		}
+	}
+}
+
 void MOS6526_2::WriteRegister(uint16_t adr, uint8_t byte)
 {
 	switch (adr) {
-		case 0x0:{
+		case 0x0:
 			pra = byte;
-			byte = ~pra & ddra;
-			the_vic->ChangedVA(byte & 3);
-			uint8_t old_lines = IECLines;
-			IECLines = ((byte << 2) & 0x80)		// DATA
-			         | ((byte << 2) & 0x40)		// CLK
-			         | ((byte << 1) & 0x10);		// ATN
-			if ((IECLines ^ old_lines) & 0x10) {	// ATN changed
-				the_cpu_1541->NewATNState();
-				if (old_lines & 0x10) {				// ATN 1->0
-					the_cpu_1541->IECInterrupt();
-				}
-			}
+			write_pa(~pra & ddra);
 			break;
-		}
 		case 0x1:
 			prb = byte;
 			break;
-
 		case 0x2:
 			ddra = byte;
-			the_vic->ChangedVA(~(pra | ~ddra) & 3);
+			write_pa(~pra & ddra);
 			break;
 		case 0x3:
 			ddrb = byte;
