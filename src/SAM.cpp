@@ -1549,6 +1549,8 @@ static void view_cia_state()
 			return;
 	}
 
+	output += format("Port A: {:02x}  DDR: {:02x}\n", cs.pra, cs.ddra);
+	output += format("Port B: {:02x}  DDR: {:02x}\n\n", cs.prb, cs.ddrb);
 	output += format("Timer A  : {}\n", cs.cra & 1 ? "On" : "Off");
 	output += format(" Counter : {:04x}  Latch: {:04x}\n", (cs.ta_hi << 8) | cs.ta_lo, cs.latcha);
 	output += format(" Run mode: {}\n", cs.cra & 8 ? "One-shot" : "Continuous");
@@ -1829,6 +1831,8 @@ static void dump_via_ints(uint8_t i)
 static void view_1541_state()
 {
 	output += "VIA 1:\n";
+	output += format(" Port A: {:02x}  DDR: {:02x}\n", R1541.via1_pra, R1541.via1_ddra);
+	output += format(" Port B: {:02x}  DDR: {:02x}\n", R1541.via1_prb, R1541.via1_ddrb);
 	output += format(" Timer 1 Counter: {:04x}  Latch: {:04x}\n", R1541.via1_t1c, R1541.via1_t1l);
 	output += format(" Timer 2 Counter: {:04x}  Latch: {:04x}\n", R1541.via1_t2c, R1541.via1_t2l);
 	output += format(" ACR: {:02x}\n", R1541.via1_acr);
@@ -1839,6 +1843,8 @@ static void view_1541_state()
 	dump_via_ints(R1541.via1_ier);
 
 	output += "\nVIA 2:\n";
+	output += format(" Port A: {:02x}  DDR: {:02x}\n", R1541.via2_pra, R1541.via2_ddra);
+	output += format(" Port B: {:02x}  DDR: {:02x}\n", R1541.via2_prb, R1541.via2_ddrb);
 	output += format(" Timer 1 Counter: {:04x}  Latch: {:04x}\n", R1541.via2_t1c, R1541.via2_t1l);
 	output += format(" Timer 2 Counter: {:04x}  Latch: {:04x}\n", R1541.via2_t2c, R1541.via2_t2l);
 	output += format(" ACR: {:02x}\n", R1541.via2_acr);
