@@ -4,18 +4,39 @@
 </HEAD>
 <BODY>
 
-<H1>What's New in V4.2?</H1>
+<H1>What's New in V4.3?</H1>
 
 <HR>
 
-The most important changes from V4.1 are:
+The most important changes from V4.2 are:
 
 <UL>
-<LI>Changed license to GPL
-<LI>Replaced the Tcl/Tk GUI with one based on GTK+
-<LI>Use SDL for display, sound, and joystick input under Unix
-<LI>Use OpenGL for resizable window display under Unix
-<LI>C64 ROMs are built into the Frodo executable
+<LI>“Frodo SC” renamed to “Frodo”, original “Frodo” renamed to “Frodo Lite”
+<LI>Removed most platform-specific support, main target is now SDL2/GTK 3
+<LI>New functions on numeric keypad:
+ <UL>
+ <LI>Enter key toggles fullscreen mode
+ <LI>Minus key (or left game controller trigger) for instant rewind
+ <LI>Plus key (or right game controller trigger) to fast-forward
+ </UL>
+<LI>Holding down Shift while pressing F12 clears all RAM memory
+<LI>Game controllers are automatically detected and used
+<LI>D-pad on game controllers now works
+<LI>Replaced status bar with overlay
+<LI>Settings window changes:
+ <UL>
+ <LI>Added setting for status overlay display
+ <LI>Added setting for initial window size
+ <LI>Added setting for color palette
+ <LI>Added menu items for loading/saving snapshot files
+ <LI>Added menu item for creating a blank D64 image
+ <LI>Added “Next Disk” buttons to the drive paths
+ </UL>
+<LI>SAM is now started from the “Tools” menu in the settings window instead
+of by pressing F9
+<LI>Snapshot files can be loaded and disk image files attached by dragging
+them onto the emulator window
+<LI>Improved sprite display
 </UL>
 
 For the tons of other small changes and bug fixes, please look <A HREF="history.html">here</A>.<P>

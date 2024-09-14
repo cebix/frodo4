@@ -12,12 +12,13 @@ Changes from V4.2 to V4.3:
  - Game controllers are automatically detected and used
  - D-pad on game controllers now works
  - Replaced status bar with overlay
- - Added setting for status overlay display (ShowLEDs)
- - Added setting for initial window size (ScalingNumerator)
- - Added setting for color palette (Palette)
- - Added menu items for loading/saving snapshot files to the settings window
- - Added menu item for creating a blank D64 image to the settings window
- - Added "Next Disk" buttons to the drive paths in the settings window
+ - Settings window changes:
+   - Added setting for status overlay display (ShowLEDs)
+   - Added setting for initial window size (ScalingNumerator)
+   - Added setting for color palette (Palette)
+   - Added menu items for loading/saving snapshot files
+   - Added menu item for creating a blank D64 image
+   - Added "Next Disk" buttons to the drive paths
  - SAM is now started from the "Tools" menu in the settings window instead
    of by pressing F9
  - Snapshot files can be loaded and disk image files attached by dragging
@@ -25,6 +26,7 @@ Changes from V4.2 to V4.3:
  - Improved sprite display
  - Improved CIA timer emulation
  - Added simulation of SID registers 27 and 28 (voice 3 read-back)
+ - Made the MapSlash setting functional again
 
 Changes from V4.1b to V4.2:
  - Changed license to GPL

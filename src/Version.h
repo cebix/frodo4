@@ -23,12 +23,12 @@
 
 // Version/revision
 constexpr int FRODO_VERSION = 4;
-constexpr int FRODO_REVISION = 2;
+constexpr int FRODO_REVISION = 3;
 
 #ifdef FRODO_SC
-const char VERSION_STRING[] = "Frodo V4.2";
+const char VERSION_STRING[] = "Frodo V4.3";
 #else
-const char VERSION_STRING[] = "Frodo Lite V4.2";
+const char VERSION_STRING[] = "Frodo Lite V4.3";
 #endif
 
 #endif

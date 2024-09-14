@@ -256,5 +256,41 @@ emulation and built-in SID emulation
 <LI>BeOS: updated to new Media Kit API
 </UL>
 
+<H3>V4.3</H3>
+<UL>
+<LI>“Frodo SC” renamed to “Frodo”, original “Frodo” renamed to “Frodo Lite”
+<LI>Ported to SDL2 and GTK 3
+<LI>Removed most platform-specific support, main target is now SDL
+<LI>Unix: settings are now stored in ~/.local/share/cebix/Frodo/config
+instead of ~/.frodorc
+<LI>New functions on numeric keypad:
+ <UL>
+ <LI>Enter key toggles fullscreen mode
+ <LI>Minus key (or left game controller trigger) for instant rewind
+ <LI>Plus key (or right game controller trigger) to fast-forward
+ </UL>
+<LI>Holding down Shift while pressing F12 clears all RAM memory
+<LI>Game controllers are automatically detected and used
+<LI>D-pad on game controllers now works
+<LI>Replaced status bar with overlay
+<LI>Settings window changes:
+ <UL>
+ <LI>Added setting for status overlay display (ShowLEDs)
+ <LI>Added setting for initial window size (ScalingNumerator)
+ <LI>Added setting for color palette (Palette)
+ <LI>Added menu items for loading/saving snapshot files
+ <LI>Added menu item for creating a blank D64 image
+ <LI>Added “Next Disk” buttons to the drive paths
+ </UL>
+<LI>SAM is now started from the “Tools” menu in the settings window instead
+of by pressing F9
+<LI>Snapshot files can be loaded and disk image files attached by dragging
+them onto the emulator window
+<LI>Improved sprite display
+<LI>Improved CIA timer emulation
+<LI>Added simulation of SID registers 27 and 28 (voice 3 read-back)
+<LI>Made the MapSlash setting functional again
+</UL>
+
 </BODY>
 </HTML>
