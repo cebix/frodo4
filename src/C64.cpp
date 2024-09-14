@@ -101,6 +101,9 @@ C64::C64() : quit_requested(false), prefs_editor_requested(false), load_snapshot
 	RAM1541 = new uint8_t[DRIVE_RAM_SIZE];
 	ROM1541 = new uint8_t[DRIVE_ROM_SIZE];
 
+	// Initialize memory
+	init_memory();
+
 	// Create the chips
 	TheCPU = new MOS6510(this, RAM, Basic, Kernal, Char, Color);
 
@@ -114,33 +117,14 @@ C64::C64() : quit_requested(false), prefs_editor_requested(false), load_snapshot
 	TheIEC = TheCPU->TheIEC = new IEC(TheDisplay);
 	TheREU = TheCPU->TheREU = new REU(TheCPU);
 
-	// Initialize RAM with powerup pattern
-	uint8_t *p = RAM;
-	for (unsigned i = 0; i < 512; ++i) {
-		for (unsigned j = 0; j < 64; ++j) {
-			*p++ = 0;
-		}
-		for (unsigned j = 0; j < 64; ++j) {
-			*p++ = 0xff;
-		}
-	}
-
-	// Initialize color RAM with random values
-	p = Color;
-	for (unsigned i = 0; i < COLOR_RAM_SIZE; ++i) {
-		*p++ = rand() & 0x0f;
-	}
-
-	// Clear 1541 RAM
-	memset(RAM1541, 0, DRIVE_RAM_SIZE);
-
 	// Open joystick drivers if required
 	open_close_joysticks(0, 0, ThePrefs.Joystick1Port, ThePrefs.Joystick2Port);
 	joykey = 0xff;
 
-	cycle_counter = 0;
-
+	// Allocate buffer for rewinding
 	rewind_buffer = new Snapshot[REWIND_LENGTH];
+
+	cycle_counter = 0;
 
 	// System-dependent things
 	c64_ctor2();
@@ -177,6 +161,34 @@ C64::~C64()
 	delete[] rewind_buffer;
 
 	c64_dtor();
+}
+
+
+/*
+ *  Initialize emulation memory
+ */
+
+void C64::init_memory()
+{
+	// Initialize RAM with powerup pattern
+	uint8_t *p = RAM;
+	for (unsigned i = 0; i < 512; ++i) {
+		for (unsigned j = 0; j < 64; ++j) {
+			*p++ = 0;
+		}
+		for (unsigned j = 0; j < 64; ++j) {
+			*p++ = 0xff;
+		}
+	}
+
+	// Initialize color RAM with random values
+	p = Color;
+	for (unsigned i = 0; i < COLOR_RAM_SIZE; ++i) {
+		*p++ = rand() & 0x0f;
+	}
+
+	// Clear 1541 RAM
+	memset(RAM1541, 0, DRIVE_RAM_SIZE);
 }
 
 
@@ -237,7 +249,7 @@ void C64::RequestLoadSnapshot(const std::string & path)
  *  Reset C64
  */
 
-void C64::Reset()
+void C64::Reset(bool clear_memory)
 {
 	TheCPU->AsyncReset();
 	TheCPU1541->AsyncReset();
@@ -245,6 +257,10 @@ void C64::Reset()
 	TheCIA1->Reset();
 	TheCIA2->Reset();
 	TheIEC->Reset();
+
+	if (clear_memory) {
+		init_memory();
+	}
 
 	reset_play_mode();
 }

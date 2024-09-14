@@ -556,8 +556,8 @@ void C64Display::PollKeyboard(uint8_t *key_matrix, uint8_t *rev_matrix, uint8_t 
 						TheC64->NMI();
 						break;
 
-					case SDL_SCANCODE_F12:	// F12: Reset
-						TheC64->Reset();
+					case SDL_SCANCODE_F12:	// F12: Reset (hold Shift to clear memory)
+						TheC64->Reset(SDL_GetModState() & KMOD_SHIFT);
 						break;
 
 					case SDL_SCANCODE_NUMLOCKCLEAR:

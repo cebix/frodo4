@@ -254,7 +254,7 @@ void MOS6502_1541::write_byte_io(uint16_t adr, uint8_t byte)
 				break;
 			case 2:
 				via1_ddrb = byte;
-				byte &= ~via1_prb;
+				byte = ~via1_prb & via1_ddrb;
 				IECLines = ((byte << 6) & ((~byte ^ TheCIA2->IECLines) << 3) & 0x80)	// DATA
 				         | ((byte << 3) & 0x40);										// CLK
 				break;

@@ -568,12 +568,6 @@ inline void MOS6510::do_sbc(uint8_t byte)
 
 void MOS6510::Reset()
 {
-	// Delete 'CBM80' if present
-	if (ram[0x8004] == 0xc3 && ram[0x8005] == 0xc2 && ram[0x8006] == 0xcd
-	 && ram[0x8007] == 0x38 && ram[0x8008] == 0x30) {
-		ram[0x8004] = 0;
-	}
-
 	// Initialize extra 6510 registers and memory configuration
 	ddr = pr = pr_out = 0;
 	new_config();

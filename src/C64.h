@@ -79,7 +79,7 @@ public:
 	void RequestPrefsEditor();
 	void RequestLoadSnapshot(const std::string & path);
 
-	void Reset();
+	void Reset(bool clear_memory = false);
 	void NMI();
 
 	uint32_t CycleCounter() const { return cycle_counter; }
@@ -118,6 +118,8 @@ private:
 	void c64_ctor1();
 	void c64_ctor2();
 	void c64_dtor();
+
+	void init_memory();
 
 	void pause();
 	void resume();

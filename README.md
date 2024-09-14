@@ -82,7 +82,9 @@ Important key combinations inside the emulator window:
 
 * Pressing **F10** pauses the emulation and takes you back to the settings
   window where you can, for example, swap .D64 files.
-* Pressing **F12** resets the C64.
+* Pressing **F12** resets the C64. Hold down the Shift key while pressing
+  F12 to also clear the memory of the C64. This is necessary for some
+  programs which use reset protection to prevent them from being exited.
 * Hold down the **right trigger** on the game controller or the “+” (**Plus**)
   key on the numeric keypad to fast-forward at 4x speed (useful for example,
   while software is loading from the disk drive).
