@@ -666,7 +666,7 @@ Lutz Vieweg</property>
                         <property name="left-padding">12</property>
                         <child>
                           <object class="GtkCheckButton" id="map_slash">
-                            <property name="label" translatable="yes">Map ‘/’ to ‘\’ in File Names</property>
+                            <property name="label" translatable="yes">Map / ↔ \ in File Names</property>
                             <property name="visible">True</property>
                             <property name="can-focus">True</property>
                             <property name="receives-default">False</property>
@@ -857,7 +857,7 @@ Lutz Vieweg</property>
                             </child>
                             <child>
                               <object class="GtkCheckButton" id="show_leds">
-                                <property name="label" translatable="yes">Show speed and drive LED status</property>
+                                <property name="label" translatable="yes">Show Speed and Drive LED Status</property>
                                 <property name="visible">True</property>
                                 <property name="can-focus">True</property>
                                 <property name="receives-default">False</property>
