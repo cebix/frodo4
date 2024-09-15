@@ -179,7 +179,8 @@ MOS6569::MOS6569(C64 *c64, C64Display *disp, MOS6510 *CPU, uint8_t *RAM, uint8_t
 	cycle = 1;
 	display_idx = 0;
 	display_state = false;
-	border_on = ud_border_on = vblanking = hold_off_raster_irq = false;
+	border_on = ud_border_on = ud_border_set = true;
+	vblanking = hold_off_raster_irq = false;
 	bad_lines_enabled = false;
 	lp_triggered = draw_this_line = false;
 	is_bad_line = false;
@@ -1578,21 +1579,11 @@ unsigned MOS6569::EmulateCycle()
 		case 17:
 			if (ctrl2 & 8) {
 				if (raster_y == dy_stop) {
-					ud_border_on = true;
-				} else {
-					if (ctrl1 & 0x10) {
-						if (raster_y == dy_start) {
-							border_on = ud_border_on = false;
-						} else {
-							if (!ud_border_on) {
-								border_on = false;
-							}
-						}
-					} else {
-						if (!ud_border_on) {
-							border_on = false;
-						}
-					}
+					ud_border_set = true;
+				}
+				ud_border_on = ud_border_set;
+				if (!ud_border_on) {
+					border_on = false;
 				}
 			}
 
@@ -1611,21 +1602,11 @@ unsigned MOS6569::EmulateCycle()
 		case 18:
 			if (!(ctrl2 & 8)) {
 				if (raster_y == dy_stop) {
-					ud_border_on = true;
-				} else {
-					if (ctrl1 & 0x10) {
-						if (raster_y == dy_start) {
-							border_on = ud_border_on = false;
-						} else {
-							if (!ud_border_on) {
-								border_on = false;
-							}
-						}
-					} else {
-						if (!ud_border_on) {
-							border_on = false;
-						}
-					}
+					ud_border_set = true;
+				}
+				ud_border_on = ud_border_set;
+				if (!ud_border_on) {
+					border_on = false;
 				}
 			}
 
@@ -1847,18 +1828,19 @@ unsigned MOS6569::EmulateCycle()
 				SetBALow;
 			}
 
-			if (raster_y == dy_stop) {
-				ud_border_on = true;
-			} else {
-				if (ctrl1 & 0x10 && raster_y == dy_start) {
-					ud_border_on = false;
-				}
-			}
+			ud_border_on = ud_border_set;
 
 			// Last cycle
 			raster_x += 8;
 			cycle = 1;
 			return VIC_HBLANK;
+	}
+
+	// Handle vertical border for next line
+	if (raster_y == dy_stop) {
+		ud_border_set = true;
+	} else if (raster_y == dy_start && (ctrl1 & 0x10)) {
+		ud_border_on = ud_border_set = false;
 	}
 
 	// Next cycle

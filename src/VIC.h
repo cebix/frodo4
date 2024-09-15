@@ -162,6 +162,7 @@ private:
 	bool is_bad_line;				// Flag: Current line is bad line
 	bool draw_this_line;			// Flag: This line is drawn on the screen
 	bool ud_border_on;				// Flag: Upper/lower border on
+	bool ud_border_set;				// Flag: Set ud_border_on when checking for left/right border
 	bool vblanking;					// Flag: VBlank in next cycle
 	bool hold_off_raster_irq;		// Flag: No raster IRQ in next line
 
