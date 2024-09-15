@@ -102,7 +102,6 @@ C64Display::C64Display(C64 *the_c64) : TheC64(the_c64)
 	// Clear screen to black
 	SDL_SetRenderDrawColor(the_renderer, 0, 0, 0, 255);
 	SDL_RenderClear(the_renderer);
-	SDL_RenderPresent(the_renderer);
 
 	// Create 32-bit display texture
 	the_texture = SDL_CreateTexture(the_renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, DISPLAY_X, DISPLAY_Y);
@@ -112,6 +111,7 @@ C64Display::C64Display(C64 *the_c64) : TheC64(the_c64)
 
 	// Create 8-bit indexed pixel buffer for VIC to draw into
 	pixel_buffer = new uint8_t[DISPLAY_X * DISPLAY_Y];
+	memset(pixel_buffer, 0, DISPLAY_X * DISPLAY_Y);
 
 	// Init color palette for pixel buffer
 	init_colors(ThePrefs.Palette);
