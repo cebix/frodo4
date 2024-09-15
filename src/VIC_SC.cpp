@@ -184,7 +184,8 @@ MOS6569::MOS6569(C64 *c64, C64Display *disp, MOS6510 *CPU, uint8_t *RAM, uint8_t
 	lp_triggered = draw_this_line = false;
 	is_bad_line = false;
 
-    spr_exp_y = spr_dma_on = spr_disp_on = 0;
+    spr_exp_y = 0xff;
+    spr_dma_on = spr_disp_on = 0;
 	for (unsigned i = 0; i < 8; ++i) {
 		mc[i] = 63;
 		mc_base[i] = 0;
@@ -572,7 +573,17 @@ void MOS6569::WriteRegister(uint16_t adr, uint8_t byte)
 
 		case 0x17:	// Sprite Y expansion
 			mye = byte;
-			spr_exp_y |= ~byte;
+			for (unsigned i = 0; i < 8; ++i) {
+				uint8_t mask = 1 << i;
+				if (!(mye & mask) && !(spr_exp_y & mask)) {
+					spr_exp_y |= mask;
+
+					// Handle sprite crunch
+					if (cycle == 16) {
+						mc[i] = (mc_base[i] & mc[i] & 0x2a) | ((mc_base[i] | mc[i]) & 0x15);
+					}
+				}
+			}
 			break;
 
 		case 0x18:	// Memory pointers
@@ -1299,12 +1310,10 @@ inline void MOS6569::draw_sprites()
 #define CheckSpriteDMA \
 	for (unsigned i = 0; i < 8; ++i) { \
 		uint8_t mask = 1 << i; \
-		if ((me & mask) && (raster_y & 0xff) == my[i]) { \
+		if ((me & mask) && (raster_y & 0xff) == my[i] && !(spr_dma_on & mask)) { \
 			spr_dma_on |= mask; \
 			mc_base[i] = 0; \
-			if (mye & mask) { \
-				spr_exp_y &= ~mask; \
-			} \
+			spr_exp_y |= mask; \
 		} \
 	}
 
@@ -1416,7 +1425,7 @@ unsigned MOS6569::EmulateCycle()
 			}
 			break;
 
-		// Fetch sprite pointer 4, reset BA is sprites 4 and 5 off
+		// Fetch sprite pointer 4, reset BA if sprites 4 and 5 off
 		case 3:
 			if (raster_y == 0) {
 
@@ -1534,25 +1543,18 @@ unsigned MOS6569::EmulateCycle()
 			vc = vc_base;
 			break;
 
-		// Refresh and matrix access, increment mc_base by 2 if y expansion flipflop is set
+		// Refresh and matrix access
 		case 15:
 			draw_background();
 			SampleBorder;
 			RefreshAccess;
 			FetchIfBadLine;
-
-			for (unsigned i = 0; i < 8; ++i) {
-				if (spr_exp_y & (1 << i)) {
-					mc_base[i] += 2;
-				}
-			}
-
 			ml_index = 0;
 			matrix_access();
 			break;
 
-		// Graphics and matrix access, increment mc_base by 1 if y expansion flipflop is set
-		// and check if sprite DMA can be turned off
+		// Graphics and matrix access, handle sprite Y expansion and check if sprite DMA can be
+		// turned off
 		case 16:
 			draw_background();
 			SampleBorder;
@@ -1562,10 +1564,10 @@ unsigned MOS6569::EmulateCycle()
 			for (unsigned i = 0; i < 8; ++i) {
 				uint8_t mask = 1 << i;
 				if (spr_exp_y & mask) {
-					mc_base[i]++;
-				}
-				if ((mc_base[i] & 0x3f) == 0x3f) {
-					spr_dma_on &= ~mask;
+					mc_base[i] = mc[i] & 0x3f;
+					if (mc_base[i] == 0x3f) {
+						spr_dma_on &= ~mask;
+					}
 				}
 			}
 
@@ -1648,20 +1650,12 @@ unsigned MOS6569::EmulateCycle()
 			break;
 
 		// Last graphics access, turn off matrix access, turn on sprite DMA if Y coordinate is
-		// right and sprite is enabled, handle sprite y expansion, set BA for sprite 0
+		// right and sprite is enabled, set BA for sprite 0
 		case 55:
 			draw_graphics();
 			SampleBorder;
 			graphics_access();
 			DisplayIfBadLine;
-
-			// Invert y expansion flipflop if bit in MYE is set
-			for (unsigned i = 0; i < 8; ++i) {
-				uint8_t mask = 1 << i;
-				if (mye & mask) {
-					spr_exp_y ^= mask;
-				}
-			}
 			CheckSpriteDMA;
 
 			if (spr_dma_on & 0x01) {
@@ -1672,7 +1666,8 @@ unsigned MOS6569::EmulateCycle()
 			break;
 
 		// Turn on border in 38 column mode, turn on sprite DMA if Y coordinate is right and
-		// sprite is enabled, set BA for sprite 0, display window ends here
+		// sprite is enabled, handle sprite Y expansion, set BA for sprite 0, display window
+		// ends here
 		case 56:
 			if (!(ctrl2 & 8)) {
 				border_on = true;
@@ -1686,6 +1681,14 @@ unsigned MOS6569::EmulateCycle()
 			IdleAccess;
 			DisplayIfBadLine;
 			CheckSpriteDMA;
+
+			// Invert y expansion flipflop if bit in MYE is set
+			for (unsigned i = 0; i < 8; ++i) {
+				uint8_t mask = 1 << i;
+				if ((spr_dma_on & mask) && (mye & mask)) {
+					spr_exp_y ^= mask;
+				}
+			}
 
 			if (spr_dma_on & 0x01) {
 				SetBALow;
@@ -1701,19 +1704,6 @@ unsigned MOS6569::EmulateCycle()
 			// Fifth sample of border state
 			border_on_sample[4] = border_on;
 
-			// Sample spr_disp_on and spr_data for sprite drawing
-			if ((spr_draw = spr_disp_on) != 0) {
-				memcpy(spr_draw_data, spr_data, 8*4);
-			}
-
-			// Turn off sprite display if DMA is off
-			for (unsigned i = 0; i < 8; ++i) {
-				uint8_t mask = 1 << i;
-				if ((spr_disp_on & mask) && !(spr_dma_on & mask)) {
-					spr_disp_on &= ~mask;
-				}
-			}
-
 			draw_background();
 			SampleBorder;
 			IdleAccess;
@@ -1723,17 +1713,26 @@ unsigned MOS6569::EmulateCycle()
 			}
 			break;
 
-		// Fetch sprite pointer 0, mc_base->mc, turn on sprite display if necessary,
-		// reset BA if sprites 0 and 1 off, turn off display if RC=7
+		// Fetch sprite pointer 0, MCBASE->MC, turn sprite display on/off,
+		// reset BA if sprites 0 and 1 off, turn off display and load VCCOUNT->VCBASE if RC=7
 		case 58:
 			draw_background();
 			SampleBorder;
 
+			// Sample spr_disp_on and spr_data for sprite drawing
+			if ((spr_draw = spr_disp_on) != 0) {
+				memcpy(spr_draw_data, spr_data, 8*4);
+			}
+
 			for (unsigned i = 0; i < 8; ++i) {
 				uint8_t mask = 1 << i;
 				mc[i] = mc_base[i];
-				if ((spr_dma_on & mask) && (raster_y & 0xff) == my[i]) {
-					spr_disp_on |= mask;
+				if (spr_dma_on & mask) {
+					if ((me & mask) && (raster_y & 0xff) == my[i]) {
+						spr_disp_on |= mask;
+					}
+				} else {
+					spr_disp_on &= ~mask;
 				}
 			}
 
