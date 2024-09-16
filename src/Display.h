@@ -44,7 +44,7 @@ class Prefs;
 // Class for C64 graphics display
 class C64Display {
 public:
-	C64Display(C64 *the_c64);
+	C64Display(C64 * c64);
 	~C64Display();
 
 	void Pause();
@@ -52,17 +52,27 @@ public:
 
 	void Update();
 	void UpdateLEDs(int l0, int l1, int l2, int l3);
-	void Speedometer(int speed);
+	void UpdateSpeedometer(int speed);
 	uint8_t *BitmapBase();
 	int BitmapXMod();
 	void PollKeyboard(uint8_t *key_matrix, uint8_t *rev_matrix, uint8_t *joystick);
 	bool NumLock();
 	void NewPrefs(const Prefs *prefs);
 
-	C64 *TheC64;
-
 private:
 	void init_colors(int palette_prefs);
+
+	void error_and_quit(const std::string & msg) const;
+
+	void fill_rect(const SDL_Rect & r, uint8_t color) const;
+	void draw_string(unsigned x, unsigned y, const char *str, uint8_t front_color) const;
+
+	static uint32_t pulse_handler_static(uint32_t interval, void * arg);
+	void pulse_handler();
+
+	void toggle_fullscreen(bool full);
+
+	C64 * the_c64;						// Pointer to C64 object
 
 	int led_state[4];
 	int old_led_state[4];
@@ -77,17 +87,7 @@ private:
 	char speedometer_string[16];		// Speedometer text
 	SDL_TimerID pulse_timer = 0;		// Timer for LED error blinking
 
-	bool num_locked = false;
-
-	void error_and_quit(const std::string & msg) const;
-
-	void fill_rect(const SDL_Rect & r, uint8_t color) const;
-	void draw_string(unsigned x, unsigned y, const char *str, uint8_t front_color) const;
-
-	static uint32_t pulse_handler_static(uint32_t interval, void * arg);
-	void pulse_handler();
-
-	void toggle_fullscreen(bool full);
+	bool num_locked = false;			// For keyboard joystick swap
 };
 
 

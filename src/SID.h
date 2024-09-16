@@ -37,7 +37,7 @@ struct MOS6581State;
 // Class for administrative functions
 class MOS6581 {
 public:
-	MOS6581(C64 *c64);
+	MOS6581();
 	~MOS6581();
 
 	void Reset();
@@ -59,7 +59,6 @@ private:
 	uint8_t read_osc3() const;
 	uint8_t read_env3() const;
 
-	C64 *the_c64;				// Pointer to C64 object
 	SIDRenderer *the_renderer;	// Pointer to current renderer
 
 	uint8_t regs[32];			// Copies of the 25 write-only SID registers

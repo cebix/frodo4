@@ -21,19 +21,25 @@
 #include "sysdeps.h"
 
 #include "C64.h"
+#include "1541job.h"
+#include "CIA.h"
 #include "CPUC64.h"
 #include "CPU1541.h"
-#include "VIC.h"
-#include "SID.h"
-#include "CIA.h"
-#include "REU.h"
-#include "IEC.h"
-#include "1541job.h"
 #include "Display.h"
+#include "IEC.h"
+#include "main.h"
 #include "Prefs.h"
+#include "REU.h"
+#include "SID.h"
+#include "VIC.h"
 
+#include <SDL.h>
+
+#include <chrono>
 #include <memory>
+#include <thread>
 #include <utility>
+namespace chrono = std::chrono;
 
 
 #ifdef FRODO_SC
@@ -80,18 +86,22 @@ struct Snapshot {
 constexpr size_t REWIND_LENGTH = SCREEN_FREQ * 30;  // 30 seconds
 
 
+// For speed limiting to 50 fps
+constexpr int FRAME_TIME_us = 20000;	// 20 ms for 50 fps
+constexpr int FORWARD_SCALE = 4;		// Fast-forward is four times faster
+
+
+// Joystick dead zone around center (+/-), and hysteresis to prevent jitter
+constexpr int JOYSTICK_DEAD_ZONE = 12000;
+constexpr int JOYSTICK_HYSTERESIS = 1000;
+
+
 /*
  *  Constructor: Allocate objects and memory
  */
 
 C64::C64() : quit_requested(false), prefs_editor_requested(false), load_snapshot_requested(false)
 {
-	// System-dependent things
-	c64_ctor1();
-
-	// Open display
-	TheDisplay = new C64Display(this);
-
 	// Allocate RAM/ROM memory
 	RAM = new uint8_t[C64_RAM_SIZE];
 	Basic = new uint8_t[BASIC_ROM_SIZE];
@@ -104,6 +114,9 @@ C64::C64() : quit_requested(false), prefs_editor_requested(false), load_snapshot
 	// Initialize memory
 	init_memory();
 
+	// Open display
+	TheDisplay = new C64Display(this);
+
 	// Create the chips
 	TheCPU = new MOS6510(this, RAM, Basic, Kernal, Char, Color);
 
@@ -111,11 +124,22 @@ C64::C64() : quit_requested(false), prefs_editor_requested(false), load_snapshot
 	TheCPU1541 = new MOS6502_1541(this, TheJob1541, TheDisplay, RAM1541, ROM1541);
 
 	TheVIC = TheCPU->TheVIC = new MOS6569(this, TheDisplay, TheCPU, RAM, Char, Color);
-	TheSID = TheCPU->TheSID = new MOS6581(this);
+	TheSID = TheCPU->TheSID = new MOS6581;
 	TheCIA1 = TheCPU->TheCIA1 = new MOS6526_1(TheCPU, TheVIC);
 	TheCIA2 = TheCPU->TheCIA2 = TheCPU1541->TheCIA2 = new MOS6526_2(TheCPU, TheVIC, TheCPU1541);
 	TheIEC = TheCPU->TheIEC = new IEC(TheDisplay);
 	TheREU = TheCPU->TheREU = new REU(TheCPU);
+
+	// Initialize joystick variables
+	joy_minx[0] = joy_miny[0] = -JOYSTICK_DEAD_ZONE;
+	joy_maxx[0] = joy_maxy[0] = +JOYSTICK_DEAD_ZONE;
+	joy_maxtrigl[0] = joy_maxtrigr[0] = +JOYSTICK_DEAD_ZONE;
+	joy_trigl_on[0] = joy_trigr_on[0] = false;
+
+	joy_minx[1] = joy_miny[1] = -JOYSTICK_DEAD_ZONE;
+	joy_maxx[1] = joy_maxy[1] = +JOYSTICK_DEAD_ZONE;
+	joy_maxtrigl[1] = joy_maxtrigr[1] = +JOYSTICK_DEAD_ZONE;
+	joy_trigl_on[1] = joy_trigr_on[1] = false;
 
 	// Open joystick drivers if required
 	open_close_joysticks(0, 0, ThePrefs.Joystick1Port, ThePrefs.Joystick2Port);
@@ -123,11 +147,6 @@ C64::C64() : quit_requested(false), prefs_editor_requested(false), load_snapshot
 
 	// Allocate buffer for rewinding
 	rewind_buffer = new Snapshot[REWIND_LENGTH];
-
-	cycle_counter = 0;
-
-	// System-dependent things
-	c64_ctor2();
 }
 
 
@@ -159,8 +178,6 @@ C64::~C64()
 	delete[] ROM1541;
 
 	delete[] rewind_buffer;
-
-	c64_dtor();
 }
 
 
@@ -208,8 +225,13 @@ void C64::Run()
 	// Patch kernal IEC routines
 	orig_kernal_1d84 = Kernal[0x1d84];
 	orig_kernal_1d85 = Kernal[0x1d85];
-	PatchKernal(ThePrefs.FastReset, ThePrefs.Emul1541Proc);
+	patch_kernal(ThePrefs.FastReset, ThePrefs.Emul1541Proc);
 
+	// Remember start time of first frame
+	frame_start = chrono::steady_clock::now();
+	cycle_counter = 0;
+
+	// Enter main loop
 	main_loop();
 }
 
@@ -284,7 +306,7 @@ void C64::NMI()
 void C64::NewPrefs(const Prefs *prefs)
 {
 	open_close_joysticks(ThePrefs.Joystick1Port, ThePrefs.Joystick2Port, prefs->Joystick1Port, prefs->Joystick2Port);
-	PatchKernal(prefs->FastReset, prefs->Emul1541Proc);
+	patch_kernal(prefs->FastReset, prefs->Emul1541Proc);
 
 	TheDisplay->NewPrefs(prefs);
 
@@ -320,10 +342,10 @@ void C64::SetEmul1541Proc(bool on, const char * path)
 
 
 /*
- *  Patch kernal IEC routines
+ *  Patch kernal reset and IEC routines
  */
 
-void C64::PatchKernal(bool fast_reset, bool emul_1541_proc)
+void C64::patch_kernal(bool fast_reset, bool emul_1541_proc)
 {
 	if (fast_reset) {
 		Kernal[0x1d84] = 0xa0;
@@ -427,6 +449,177 @@ void C64::emulate_1541_cycle()
 
 
 /*
+ *  Pause emulator
+ */
+
+void C64::pause()
+{
+	TheSID->PauseSound();
+	TheDisplay->Pause();
+}
+
+
+/*
+ *  Resume emulator
+ */
+
+void C64::resume()
+{
+	TheDisplay->Resume();
+	TheSID->ResumeSound();
+
+	// Flush event queue
+	SDL_PumpEvents();
+	SDL_FlushEvents(SDL_FIRSTEVENT, SDL_LASTEVENT);
+}
+
+
+/*
+ *  Vertical blank: Poll input devices, update display
+ */
+
+void C64::vblank()
+{
+	// Poll keyboard and joysticks
+	poll_input();
+
+	// Handle request for prefs editor
+	if (prefs_editor_requested) {
+		pause();
+		if (! TheApp->RunPrefsEditor()) {
+			quit_requested = true;
+			return;
+		}
+		resume();
+		prefs_editor_requested = false;
+	}
+
+	// Handle request for snapshot loading
+	if (load_snapshot_requested) {
+		LoadSnapshot(requested_snapshot);
+		load_snapshot_requested = false;
+	}
+
+	// Count TOD clocks
+	TheCIA1->CountTOD();
+	TheCIA2->CountTOD();
+
+	// Update window if needed
+	if (! TheVIC->FrameSkipped()) {
+    	TheDisplay->Update();
+	}
+
+	// Handle rewind feature
+	handle_rewind();
+
+	// Calculate time between frames, display speedometer
+	chrono::time_point<chrono::steady_clock> now = chrono::steady_clock::now();
+
+	int elapsed_us = chrono::duration_cast<chrono::microseconds>(now - frame_start).count();
+	int speed_index = FRAME_TIME_us / double(elapsed_us + 1) * 100;
+
+	// Limit speed to 100% if desired
+	if ((elapsed_us < FRAME_TIME_us) && ThePrefs.LimitSpeed) {
+		std::this_thread::sleep_until(frame_start);
+		if (play_mode == PLAY_MODE_FORWARD) {
+			frame_start += chrono::microseconds(FRAME_TIME_us / FORWARD_SCALE);
+		} else {
+			frame_start += chrono::microseconds(FRAME_TIME_us);
+		}
+		speed_index = 100;	// Hide speed display even in fast-forwarding mode
+	} else {
+		frame_start = now;
+	}
+
+	TheDisplay->UpdateSpeedometer(speed_index);
+}
+
+
+/*
+ *  The emulation's main loop
+ */
+
+void C64::main_loop()
+{
+	unsigned prev_raster_y = 0;
+
+	while (!quit_requested) {
+		bool new_frame;
+
+#ifdef FRODO_SC
+
+		new_frame = emulate_c64_cycle();
+		if (ThePrefs.Emul1541Proc) {
+			emulate_1541_cycle();
+		}
+
+#else
+
+		// The order of calls is important here
+		int cycles = 0;
+		unsigned flags = TheVIC->EmulateLine(cycles);
+		new_frame = (flags & VIC_VBLANK);
+
+		TheSID->EmulateLine();
+#if !PRECISE_CIA_CYCLES
+		TheCIA1->EmulateLine(ThePrefs.CIACycles);
+		TheCIA2->EmulateLine(ThePrefs.CIACycles);
+#endif
+
+		if (ThePrefs.Emul1541Proc) {
+			int cycles_1541 = ThePrefs.FloppyCycles;
+			TheCPU1541->CountVIATimers(cycles_1541);
+
+			if (!TheCPU1541->Idle) {
+				// 1541 processor active, alternately execute
+				//  6502 and 6510 instructions until both have
+				//  used up their cycles
+				while (cycles >= 0 || cycles_1541 >= 0)
+					if (cycles > cycles_1541) {
+						cycles -= TheCPU->EmulateLine(1);
+					} else {
+						cycles_1541 -= TheCPU1541->EmulateLine(1);
+					}
+			} else {
+				TheCPU->EmulateLine(cycles);
+			}
+		} else {
+			// 1541 processor disabled, only emulate 6510
+			TheCPU->EmulateLine(cycles);
+		}
+
+#endif  // def FRODO_SC
+
+		// Poll keyboard and mouse, and delay execution at three points
+		// within the frame to reduce input lag. This also helps with the
+		// asynchronously running SID emulation.
+		if (ThePrefs.LimitSpeed && play_mode == PLAY_MODE_PLAY) {
+			unsigned raster_y = TheVIC->RasterY();
+			if (raster_y != prev_raster_y) {
+				if (raster_y == TOTAL_RASTERS * 1 / 4) {
+					std::this_thread::sleep_until(frame_start - chrono::microseconds(FRAME_TIME_us * 3 / 4));
+					poll_input();
+				} else if (raster_y == TOTAL_RASTERS * 2 / 4) {
+					std::this_thread::sleep_until(frame_start - chrono::microseconds(FRAME_TIME_us * 2 / 4));
+					poll_input();
+				} else if (raster_y == TOTAL_RASTERS * 3 / 4) {
+					std::this_thread::sleep_until(frame_start - chrono::microseconds(FRAME_TIME_us * 1 / 4));
+					poll_input();
+				}
+
+				prev_raster_y = raster_y;
+			}
+		}
+
+		// Update display etc. if new frame has started
+		if (new_frame) {
+			vblank();
+		}
+	}
+}
+
+
+/*
  *  Poll keyboard and joysticks
  */
 
@@ -449,6 +642,201 @@ void C64::poll_input()
 	} else {
 		TheCIA1->Joystick2 &= joykey;
 	}
+}
+
+
+/*
+ *  Open/close joystick drivers given old and new state of
+ *  joystick preferences
+ */
+
+void C64::open_close_joystick(int port, int oldjoy, int newjoy)
+{
+	if (oldjoy != newjoy) {
+		if (newjoy > 0) {
+			int index = newjoy - 1;
+			joy[port] = SDL_JoystickOpen(index);
+			if (joy[port] == nullptr) {
+				fprintf(stderr, "Couldn't open joystick %d: %s\n", port + 1, SDL_GetError());
+			} else if (SDL_IsGameController(index)) {
+				controller[port] = SDL_GameControllerOpen(index);
+			}
+		} else {
+			if (controller[port]) {
+				SDL_GameControllerClose(controller[port]);
+				controller[port] = nullptr;
+			}
+			if (joy[port]) {
+				SDL_JoystickClose(joy[port]);
+				joy[port] = nullptr;
+			}
+		}
+	}
+}
+
+void C64::open_close_joysticks(int oldjoy1, int oldjoy2, int newjoy1, int newjoy2)
+{
+	open_close_joystick(0, oldjoy1, newjoy1);
+	open_close_joystick(1, oldjoy2, newjoy2);
+}
+
+
+/*
+ *  Game controller added
+ */
+
+void C64::JoystickAdded(int32_t index)
+{
+	// Assign to port 2 first, then to port 1
+	if (joy[1] == nullptr && ThePrefs.Joystick1Port != index + 1) {
+
+		ThePrefs.Joystick2Port = index + 1;
+		open_close_joystick(1, 0, ThePrefs.Joystick2Port);
+
+	} else if (joy[0] == nullptr && ThePrefs.Joystick2Port != index + 1) {
+
+		ThePrefs.Joystick1Port = index + 1;
+		open_close_joystick(0, 0, ThePrefs.Joystick1Port);
+	}
+}
+
+
+/*
+ *  Game controller removed
+ */
+
+void C64::JoystickRemoved(int32_t instance_id)
+{
+	if (joy[0] && SDL_JoystickInstanceID(joy[0]) == instance_id) {
+
+		// Unassign joystick port 1
+		open_close_joystick(0, ThePrefs.Joystick1Port, 0);
+		ThePrefs.Joystick1Port = 0;
+
+	} else if (joy[1] && SDL_JoystickInstanceID(joy[1]) == instance_id) {
+
+		// Unassign joystick port 2
+		open_close_joystick(1, ThePrefs.Joystick2Port, 0);
+		ThePrefs.Joystick2Port = 0;
+	}
+}
+
+
+/*
+ *  Poll joystick port, return CIA mask
+ */
+
+uint8_t C64::poll_joystick(int port)
+{
+	uint8_t j = 0xff;
+
+	int x = 0;
+	int y = 0;
+
+	if (controller[port]) {
+
+		// Use Game Controller API
+		if (SDL_GameControllerGetButton(controller[port], SDL_CONTROLLER_BUTTON_DPAD_LEFT)) {
+			j &= 0xfb;							// Left
+		}
+		if (SDL_GameControllerGetButton(controller[port], SDL_CONTROLLER_BUTTON_DPAD_RIGHT)) {
+			j &= 0xf7;							// Right
+		}
+		if (SDL_GameControllerGetButton(controller[port], SDL_CONTROLLER_BUTTON_DPAD_UP)) {
+			j &= 0xfe;							// Up
+		}
+		if (SDL_GameControllerGetButton(controller[port], SDL_CONTROLLER_BUTTON_DPAD_DOWN)) {
+			j &= 0xfd;							// Down
+		}
+		if (SDL_GameControllerGetButton(controller[port], SDL_CONTROLLER_BUTTON_A) ||
+		    SDL_GameControllerGetButton(controller[port], SDL_CONTROLLER_BUTTON_B)) {
+			j &= 0xef;							// Button
+		}
+
+		// Left trigger controls rewind
+		int trigger = SDL_GameControllerGetAxis(controller[port], SDL_CONTROLLER_AXIS_TRIGGERLEFT);
+		if (trigger > joy_maxtrigl[port]) {
+			if (! joy_trigl_on[port]) {
+				if (GetPlayMode() == PLAY_MODE_PLAY) {
+					SetPlayMode(PLAY_MODE_REWIND);
+				}
+				joy_trigl_on[port] = true;
+			}
+			joy_maxtrigl[port] = +(JOYSTICK_DEAD_ZONE - JOYSTICK_HYSTERESIS);
+		} else {
+			if (joy_trigl_on[port]) {
+				if (GetPlayMode() == PLAY_MODE_REWIND) {
+					SetPlayMode(PLAY_MODE_PLAY);
+				}
+				joy_trigl_on[port] = false;
+			}
+			joy_maxtrigl[port] = +JOYSTICK_DEAD_ZONE;
+		}
+
+		// Right trigger controls fast-forward
+		trigger = SDL_GameControllerGetAxis(controller[port], SDL_CONTROLLER_AXIS_TRIGGERRIGHT);
+		if (trigger > joy_maxtrigr[port]) {
+			if (! joy_trigr_on[port]) {
+				if (GetPlayMode() == PLAY_MODE_PLAY) {
+					SetPlayMode(PLAY_MODE_FORWARD);
+				}
+				joy_trigr_on[port] = true;
+			}
+			joy_maxtrigr[port] = +(JOYSTICK_DEAD_ZONE - JOYSTICK_HYSTERESIS);
+		} else {
+			if (joy_trigr_on[port]) {
+				if (GetPlayMode() == PLAY_MODE_FORWARD) {
+					SetPlayMode(PLAY_MODE_PLAY);
+				}
+				joy_trigr_on[port] = false;
+			}
+			joy_maxtrigr[port] = +JOYSTICK_DEAD_ZONE;
+		}
+
+		// Left stick is an alternative to D-pad
+		x = SDL_GameControllerGetAxis(controller[port], SDL_CONTROLLER_AXIS_LEFTX);
+		y = SDL_GameControllerGetAxis(controller[port], SDL_CONTROLLER_AXIS_LEFTY);
+
+	} else if (joy[port]) {
+
+		// Not a Game Controller, use joystick API
+		if (SDL_JoystickGetButton(joy[port], 0)) {
+			j &= 0xef;							// Button
+		}
+
+		x = SDL_JoystickGetAxis(joy[port], 0);
+		y = SDL_JoystickGetAxis(joy[port], 1);
+	}
+
+	if (x < joy_minx[port]) {
+		j &= 0xfb;							// Left
+		joy_minx[port] = -(JOYSTICK_DEAD_ZONE - JOYSTICK_HYSTERESIS);
+	} else {
+		joy_minx[port] = -JOYSTICK_DEAD_ZONE;
+	}
+
+	if (x > joy_maxx[port]) {
+		j &= 0xf7;							// Right
+		joy_maxx[port] = +(JOYSTICK_DEAD_ZONE - JOYSTICK_HYSTERESIS);
+	} else {
+		joy_maxx[port] = +JOYSTICK_DEAD_ZONE;
+	}
+
+	if (y < joy_miny[port]) {
+		j &= 0xfe;							// Up
+		joy_miny[port] = -(JOYSTICK_DEAD_ZONE - JOYSTICK_HYSTERESIS);
+	} else {
+		joy_miny[port] = -JOYSTICK_DEAD_ZONE;
+	}
+
+	if (y > joy_maxy[port]) {
+		j &= 0xfd;							// Down
+		joy_maxy[port] = +(JOYSTICK_DEAD_ZONE - JOYSTICK_HYSTERESIS);
+	} else {
+		joy_maxy[port] = +JOYSTICK_DEAD_ZONE;
+	}
+
+	return j;
 }
 
 
@@ -705,6 +1093,3 @@ bool IsSnapshotFile(const char * filename)
 
 	return memcmp(magic, SNAPSHOT_HEADER, sizeof(magic)) == 0;
 }
-
-
-#include "C64_SDL.h"

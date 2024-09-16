@@ -78,7 +78,7 @@ static uint8_t sid_random()
  *  Constructor
  */
 
-MOS6581::MOS6581(C64 *c64) : the_c64(c64)
+MOS6581::MOS6581()
 {
 	the_renderer = nullptr;
 	for (unsigned i = 0; i < 32; ++i) {
@@ -300,6 +300,7 @@ void MOS6581::SetState(const MOS6581State *ss)
  **  Renderer for digital SID emulation (SIDTYPE_DIGITAL)
  **/
 
+constexpr int SAMPLE_FREQ = 48000;			// Desired default sample frequency (note: obtained freq may be different!)
 constexpr uint32_t SID_FREQ = 985248;		// SID frequency in Hz
 constexpr uint32_t CALC_FREQ = 50;			// Frequency at which calc_buffer is called in Hz (should be 50Hz)
 constexpr size_t SAMPLE_BUF_SIZE = TOTAL_RASTERS * 2;	// Size of buffer for sampled voice (double buffered)
@@ -364,7 +365,7 @@ struct DRVoice {
 // Renderer class
 class DigitalRenderer : public SIDRenderer {
 public:
-	DigitalRenderer(C64 *c64);
+	DigitalRenderer();
 	virtual ~DigitalRenderer();
 
 	virtual void Reset();
@@ -375,11 +376,8 @@ public:
 	virtual void Resume();
 
 private:
-	void init_sound();
 	void calc_filter();
 	void calc_buffer(int16_t *buf, long count);
-
-	C64 *the_c64;					// Pointer to C64 object
 
 	bool ready;						// Flag: Renderer has initialized and is ready
 	uint8_t volume;					// Master volume
@@ -738,7 +736,7 @@ const int16_t DigitalRenderer::SampleTab[16] = {
  *  Constructor
  */
 
-DigitalRenderer::DigitalRenderer(C64 *c64) : the_c64(c64)
+DigitalRenderer::DigitalRenderer()
 {
 	// Link voices together
 	voice[0].mod_by = &voice[2];
@@ -755,10 +753,48 @@ DigitalRenderer::DigitalRenderer(C64 *c64) : the_c64(c64)
 	}
 #endif
 
+	// Reset SID
 	Reset();
 
-	// System specific initialization
-	init_sound();
+	SDL_AudioSpec desired;
+	SDL_zero(desired);
+	SDL_zero(obtained);
+
+	// Set up desired output format
+	desired.freq = SAMPLE_FREQ;
+	desired.format = AUDIO_S16SYS;
+	desired.channels = 1;
+	desired.samples = 256;
+	desired.callback = buffer_proc;
+	desired.userdata = this;
+
+	// Open output device
+	device_id = SDL_OpenAudioDevice(NULL, false, &desired, &obtained, SDL_AUDIO_ALLOW_FREQUENCY_CHANGE | SDL_AUDIO_ALLOW_SAMPLES_CHANGE);
+	if (device_id == 0) {
+		fprintf(stderr, "WARNING: Cannot open audio: %s\n", SDL_GetError());
+		return;
+	}
+
+	// Calculate number of SID cycles per sample frame
+	sid_cycles_frac = uint32_t(float(SID_FREQ) / obtained.freq * 65536.0);
+
+	// Start sound output
+	Resume();
+
+	// Ready for action
+	ready = true;
+}
+
+
+/*
+ *  Destructor
+ */
+
+DigitalRenderer::~DigitalRenderer()
+{
+	if (device_id) {
+		SDL_CloseAudioDevice(device_id);
+	}
 }
 
 
@@ -789,6 +825,30 @@ void DigitalRenderer::Reset()
 
 	sample_in_ptr = 0;
 	memset(sample_buf, 0, SAMPLE_BUF_SIZE);
+}
+
+
+/*
+ *  Pause sound output
+ */
+
+void DigitalRenderer::Pause()
+{
+	if (device_id) {
+		SDL_PauseAudioDevice(device_id, true);
+	}
+}
+
+
+/*
+ *  Resume sound output
+ */
+
+void DigitalRenderer::Resume()
+{
+	if (device_id) {
+		SDL_PauseAudioDevice(device_id, false);
+	}
 }
 
 
@@ -1252,7 +1312,16 @@ void DigitalRenderer::calc_buffer(int16_t *buf, long count)
 }
 
 
-#include "SID_SDL.h"
+/*
+ *  Audio callback function 
+ */
+
+void DigitalRenderer::buffer_proc(void * userdata, uint8_t * buffer, int size)
+{
+	DigitalRenderer * renderer = (DigitalRenderer *) userdata;
+	renderer->calc_buffer((int16_t *) buffer, size);
+}
+
 
 #ifdef __linux__
 #include "SID_catweasel.h"
@@ -1273,7 +1342,7 @@ void MOS6581::open_close_renderer(int old_type, int new_type)
 
 	// Create new renderer
 	if (new_type == SIDTYPE_DIGITAL) {
-		the_renderer = new DigitalRenderer(the_c64);
+		the_renderer = new DigitalRenderer;
 #ifdef __linux__
 	} else if (new_type == SIDTYPE_SIDCARD) {
 		the_renderer = new CatweaselRenderer;

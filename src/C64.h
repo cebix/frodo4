@@ -24,6 +24,7 @@
 #include <SDL_joystick.h>
 #include <SDL_gamecontroller.h>
 
+#include <chrono>
 #include <string>
 
 
@@ -81,8 +82,6 @@ public:
 	void NewPrefs(const Prefs *prefs);
 	void SetEmul1541Proc(bool on, const char * path = nullptr);
 
-	void PatchKernal(bool fast_reset, bool emul_1541_proc);
-
 	void MakeSnapshot(Snapshot * s);
 	void RestoreSnapshot(const Snapshot * s);
 	bool SaveSnapshot(const std::string & filename);
@@ -90,6 +89,9 @@ public:
 
 	void SetPlayMode(PlayMode mode);
 	PlayMode GetPlayMode() const { return play_mode; }
+
+	void JoystickAdded(int32_t index);
+	void JoystickRemoved(int32_t instance_id);
 
 	uint8_t *RAM, *Basic, *Kernal,
 	        *Char, *Color;		// C64
@@ -109,22 +111,21 @@ public:
 	Job1541 *TheJob1541;
 
 private:
-	void c64_ctor1();
-	void c64_ctor2();
-	void c64_dtor();
-
 	void init_memory();
 
 	void pause();
 	void resume();
 
-	void open_close_joysticks(int oldjoy1, int oldjoy2, int newjoy1, int newjoy2);
-	uint8_t poll_joystick(int port);
+	void patch_kernal(bool fast_reset, bool emul_1541_proc);
 
 #ifdef FRODO_SC
 	bool emulate_c64_cycle();
 	void emulate_1541_cycle();
 #endif
+
+	void open_close_joystick(int port, int oldjoy, int newjoy);
+	void open_close_joysticks(int oldjoy1, int oldjoy2, int newjoy1, int newjoy2);
+	uint8_t poll_joystick(int port);
 
 	void main_loop();
 	void poll_input();
@@ -139,7 +140,10 @@ private:
 
 	uint32_t cycle_counter;			// Cycle counter for Frodo SC
 
-	int joy_minx[2], joy_maxx[2], joy_miny[2], joy_maxy[2]; // For dynamic joystick calibration
+	SDL_Joystick * joy[2] = { nullptr, nullptr };				// SDL joystick devices
+	SDL_GameController * controller[2] = { nullptr, nullptr };	// SDL game controller devices
+
+	int joy_minx[2], joy_maxx[2], joy_miny[2], joy_maxy[2]; 	// For joystick debouncing
 	int joy_maxtrigl[2], joy_maxtrigr[2];
 	bool joy_trigl_on[2], joy_trigr_on[2];
 	uint8_t joykey;				// Joystick keyboard emulation mask value
@@ -147,20 +151,12 @@ private:
 	uint8_t orig_kernal_1d84,	// Original contents of kernal locations $1d84 and $1d85
 	        orig_kernal_1d85;	// (for undoing the Fast Reset patch)
 
+	std::chrono::time_point<std::chrono::steady_clock> frame_start;	// Start time of last frame (for speed control)
+
 	PlayMode play_mode = PLAY_MODE_PLAY;	// Current play mode
 	Snapshot * rewind_buffer = nullptr;		// Snapshot buffer for rewinding
 	size_t rewind_start = 0;				// Index of first recorded snapshot
 	size_t rewind_fill = 0;					// Number of recorded snapshots
-
-public:
-	void JoystickAdded(int32_t index);
-	void JoystickRemoved(int32_t instance_id);
-
-private:
-	void open_close_joystick(int port, int oldjoy, int newjoy);
-
-	SDL_Joystick * joy[2] = { nullptr, nullptr };
-	SDL_GameController * controller[2] = { nullptr, nullptr };
 };
 
 

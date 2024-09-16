@@ -31,28 +31,28 @@ class C64;
  *  Main application object
  */
 
-class Prefs;
-
 class Frodo {
 public:
-	Frodo();
-	void ArgvReceived(int argc, char **argv);
+	Frodo() { }
+
+	void ProcessArgs(int argc, char ** argv);
 	void ReadyToRun();
+
 	bool RunPrefsEditor();
 
 private:
-	void load_rom(const char *which, const char *path, uint8_t *where, size_t size, const uint8_t *builtin);
 	void load_rom_files();
 
 	std::filesystem::path prefs_path;		// Pathname of current preferences file
 	std::filesystem::path snapshot_path;	// Directory for saving snapshots
 };
 
-extern Frodo *TheApp;  // Pointer to Frodo object
 
+// Global application object
+extern Frodo * TheApp;
 
 // Global C64 object
-extern C64 *TheC64;
+extern C64 * TheC64;
 
 
 #endif
