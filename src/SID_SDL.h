@@ -27,21 +27,28 @@
 
 void DigitalRenderer::init_sound()
 {
-	SDL_AudioSpec spec;
-	SDL_zero(spec);
-	spec.freq = SAMPLE_FREQ;
-	spec.format = AUDIO_S16SYS;
-	spec.channels = 1;
-	spec.samples = 512;
-	spec.callback = buffer_proc;
-	spec.userdata = this;
+	SDL_AudioSpec desired;
+	SDL_zero(desired);
+	SDL_zero(obtained);
 
-	if (SDL_OpenAudio(&spec, nullptr) < 0) {
+	// Set up desired output format
+	desired.freq = SAMPLE_FREQ;
+	desired.format = AUDIO_S16SYS;
+	desired.channels = 1;
+	desired.samples = 512;
+	desired.callback = buffer_proc;
+	desired.userdata = this;
+
+	// Open output device
+	device_id = SDL_OpenAudioDevice(NULL, false, &desired, &obtained, SDL_AUDIO_ALLOW_SAMPLES_CHANGE);
+	if (device_id == 0) {
 		fprintf(stderr, "WARNING: Cannot open audio: %s\n", SDL_GetError());
 		return;
 	}
 
-	SDL_PauseAudio(0);
+	// Start sound output
+	Resume();
+
 	ready = true;
 }
 
@@ -52,7 +59,9 @@ void DigitalRenderer::init_sound()
 
 DigitalRenderer::~DigitalRenderer()
 {
-	SDL_CloseAudio();
+	if (device_id) {
+		SDL_CloseAudioDevice(device_id);
+	}
 }
 
 
@@ -62,7 +71,9 @@ DigitalRenderer::~DigitalRenderer()
 
 void DigitalRenderer::Pause()
 {
-	SDL_PauseAudio(1);
+	if (device_id) {
+		SDL_PauseAudioDevice(device_id, true);
+	}
 }
 
 
@@ -72,7 +83,9 @@ void DigitalRenderer::Pause()
 
 void DigitalRenderer::Resume()
 {
-	SDL_PauseAudio(0);
+	if (device_id) {
+		SDL_PauseAudioDevice(device_id, false);
+	}
 }
 
 
@@ -80,8 +93,8 @@ void DigitalRenderer::Resume()
  *  Callback function 
  */
 
-void DigitalRenderer::buffer_proc(void *cookie, uint8_t *buffer, int size)
+void DigitalRenderer::buffer_proc(void * userdata, uint8_t * buffer, int size)
 {
-	DigitalRenderer * renderer = (DigitalRenderer *) cookie;
+	DigitalRenderer * renderer = (DigitalRenderer *) userdata;
 	renderer->calc_buffer((int16_t *) buffer, size);
 }

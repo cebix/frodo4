@@ -36,6 +36,10 @@
 #include <media/SoundPlayer.h>
 #endif
 
+#ifdef HAVE_SDL
+#include <SDL_audio.h>
+#endif
+
 
 #undef USE_FIXPOINT_MATHS
 
@@ -341,7 +345,7 @@ struct DRVoice {
 	DRVoice *mod_to;	// Voice that is modulated by this one
 
 	uint32_t count;		// Phase accumulator for waveform generator, 8.16 fixed
-	uint32_t add;		// Added to accumulator in every frame
+	uint32_t add;		// Added to accumulator in every sample frame
 
 	uint16_t freq;		// SID frequency value
 	uint16_t pw;		// SID pulse-width value
@@ -418,7 +422,9 @@ private:
 #endif
 
 #ifdef HAVE_SDL
-	static void buffer_proc(void *cookie, uint8_t *buffer, int size);
+	static void buffer_proc(void * userdata, uint8_t * buffer, int size);
+	SDL_AudioDeviceID device_id;	// SDL audio device ID
+	SDL_AudioSpec obtained;			// Obtained output format
 #endif
 };
 
