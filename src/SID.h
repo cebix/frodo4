@@ -160,7 +160,7 @@ inline void MOS6581::EmulateLine()
 	// Simulate voice 3 envelope generator
 	switch (fake_v3_eg_state) {
 		case EG_ATTACK:
-			fake_v3_eg_level +=  (SID_CYCLES_PER_LINE << 16) / EGDivTable[regs[0x13] >> 4];
+			fake_v3_eg_level += (SID_CYCLES_PER_LINE << 16) / EGDivTable[regs[0x13] >> 4];
 			if (fake_v3_eg_level > 0xffffff) {
 				fake_v3_eg_level = 0xffffff;
 				fake_v3_eg_state = EG_DECAY_SUSTAIN;

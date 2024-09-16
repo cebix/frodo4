@@ -306,10 +306,8 @@ void MOS6581::SetState(const MOS6581State *ss)
  **  Renderer for digital SID emulation (SIDTYPE_DIGITAL)
  **/
 
-constexpr uint32_t SAMPLE_FREQ = 44100;		// Sample output frequency in Hz
 constexpr uint32_t SID_FREQ = 985248;		// SID frequency in Hz
 constexpr uint32_t CALC_FREQ = 50;			// Frequency at which calc_buffer is called in Hz (should be 50Hz)
-constexpr uint32_t SID_CYCLES = SID_FREQ / SAMPLE_FREQ;	// # of SID clocks per sample frame
 constexpr size_t SAMPLE_BUF_SIZE = TOTAL_RASTERS * 2;	// Size of buffer for sampled voice (double buffered)
 
 // SID waveforms (some of them :-)
@@ -392,11 +390,12 @@ private:
 	bool ready;						// Flag: Renderer has initialized and is ready
 	uint8_t volume;					// Master volume
 
+	uint32_t sid_cycles_frac;		// Number of SID cycles per output sample frame (16.16)
+
 	static const uint16_t TriSawTable[0x100];
 	static const uint16_t TriRectTable[0x100];
 	static const uint16_t SawRectTable[0x100];
 	static const uint16_t TriSawRectTable[0x100];
-	static const int32_t EGTable[16];	// Increment/decrement values for all A/D/R settings
 	static const int16_t SampleTab[16];	// Table for sampled voice
 
 	DRVoice voice[3];				// Data for 3 voices
@@ -724,17 +723,6 @@ const int16_t MOS6581::EGDivTable[16] = {
 	19531, 31251
 };
 
-const int32_t DigitalRenderer::EGTable[16] = {
-	(SID_CYCLES << 16) / 9, (SID_CYCLES << 16) / 32,
-	(SID_CYCLES << 16) / 63, (SID_CYCLES << 16) / 95,
-	(SID_CYCLES << 16) / 149, (SID_CYCLES << 16) / 220,
-	(SID_CYCLES << 16) / 267, (SID_CYCLES << 16) / 313,
-	(SID_CYCLES << 16) / 392, (SID_CYCLES << 16) / 977,
-	(SID_CYCLES << 16) / 1954, (SID_CYCLES << 16) / 3126,
-	(SID_CYCLES << 16) / 3906, (SID_CYCLES << 16) / 11720,
-	(SID_CYCLES << 16) / 19531, (SID_CYCLES << 16) / 31251
-};
-
 const uint8_t MOS6581::EGDRShift[256] = {
 	5,5,5,5,5,5,5,5,4,4,4,4,4,4,4,4,
 	3,3,3,3,3,3,3,3,3,3,3,3,2,2,2,2,
@@ -802,7 +790,7 @@ void DigitalRenderer::Reset()
 		voice[v].count = voice[v].add = 0;
 		voice[v].freq = voice[v].pw = 0;
 		voice[v].eg_level = voice[v].s_level = 0;
-		voice[v].a_add = voice[v].d_sub = voice[v].r_sub = EGTable[0];
+		voice[v].a_add = voice[v].d_sub = voice[v].r_sub = sid_cycles_frac / MOS6581::EGDivTable[0];
 		voice[v].gate = voice[v].ring = voice[v].test = false;
 		voice[v].filter = voice[v].sync = voice[v].mute = false;
 	}
@@ -849,7 +837,7 @@ void DigitalRenderer::WriteRegister(uint16_t adr, uint8_t byte)
 #ifdef USE_FIXPOINT_MATHS
 			voice[v].add = sidquot.imul((int)voice[v].freq);
 #else
-			voice[v].add = (uint32_t)((float)voice[v].freq * SID_FREQ / SAMPLE_FREQ);
+			voice[v].add = (uint32_t)(float(voice[v].freq) / obtained.freq * SID_FREQ);
 #endif
 			break;
 
@@ -860,7 +848,7 @@ void DigitalRenderer::WriteRegister(uint16_t adr, uint8_t byte)
 #ifdef USE_FIXPOINT_MATHS
 			voice[v].add = sidquot.imul((int)voice[v].freq);
 #else
-			voice[v].add = (uint32_t)((float)voice[v].freq * SID_FREQ / SAMPLE_FREQ);
+			voice[v].add = (uint32_t)(float(voice[v].freq) / obtained.freq * SID_FREQ);
 #endif
 			break;
 
@@ -898,15 +886,15 @@ void DigitalRenderer::WriteRegister(uint16_t adr, uint8_t byte)
 		case 5:
 		case 12:
 		case 19:
-			voice[v].a_add = EGTable[byte >> 4];
-			voice[v].d_sub = EGTable[byte & 0xf];
+			voice[v].a_add = sid_cycles_frac / MOS6581::EGDivTable[byte >> 4];
+			voice[v].d_sub = sid_cycles_frac / MOS6581::EGDivTable[byte & 0xf];
 			break;
 
 		case 6:
 		case 13:
 		case 20:
 			voice[v].s_level = (byte >> 4) * 0x111111;
-			voice[v].r_sub = EGTable[byte & 0xf];
+			voice[v].r_sub = sid_cycles_frac / MOS6581::EGDivTable[byte & 0xf];
 			break;
 
 		case 22:
@@ -1013,7 +1001,7 @@ void DigitalRenderer::calc_filter()
 
 #ifdef USE_FIXPOINT_MATHS
 	// explanations see below.
-	arg = fr / (SAMPLE_FREQ >> 1);
+	arg = fr / (obtained.freq >> 1);
 	if (arg > FixNo(0.99)) {arg = FixNo(0.99);}
 	if (arg < FixNo(0.01)) {arg = FixNo(0.01);}
 
@@ -1062,7 +1050,7 @@ void DigitalRenderer::calc_filter()
 #else
 
 	// Limit to <1/2 sample frequency, avoid div by 0 in case FILT_BP below
-	arg = fr / (float)(SAMPLE_FREQ >> 1);
+	arg = fr / (float(obtained.freq) * 0.5);
 	if (arg > 0.99) {
 		arg = 0.99;
 	}
@@ -1144,7 +1132,7 @@ void DigitalRenderer::calc_buffer(int16_t *buf, long count)
 		// Get current master volume from sample buffer,
 		// calculate sampled voice
 		uint8_t master_volume = sample_buf[(sample_count >> 16) % SAMPLE_BUF_SIZE];
-		sample_count += ((TOTAL_RASTERS * SCREEN_FREQ) << 16) / SAMPLE_FREQ;
+		sample_count += ((TOTAL_RASTERS * SCREEN_FREQ) << 16) / obtained.freq;
 		int32_t sum_output = SampleTab[master_volume] << 8;
 		int32_t sum_output_filter = 0;
 

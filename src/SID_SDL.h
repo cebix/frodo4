@@ -21,6 +21,10 @@
 #include <SDL_audio.h>
 
 
+// Desired sample frequency
+constexpr int SAMPLE_FREQ = 48000;
+
+
 /*
  *  Initialization
  */
@@ -35,16 +39,19 @@ void DigitalRenderer::init_sound()
 	desired.freq = SAMPLE_FREQ;
 	desired.format = AUDIO_S16SYS;
 	desired.channels = 1;
-	desired.samples = 512;
+	desired.samples = 256;
 	desired.callback = buffer_proc;
 	desired.userdata = this;
 
 	// Open output device
-	device_id = SDL_OpenAudioDevice(NULL, false, &desired, &obtained, SDL_AUDIO_ALLOW_SAMPLES_CHANGE);
+	device_id = SDL_OpenAudioDevice(NULL, false, &desired, &obtained, SDL_AUDIO_ALLOW_FREQUENCY_CHANGE | SDL_AUDIO_ALLOW_SAMPLES_CHANGE);
 	if (device_id == 0) {
 		fprintf(stderr, "WARNING: Cannot open audio: %s\n", SDL_GetError());
 		return;
 	}
+
+	// Calculate number of SID cycles per sample frame
+	sid_cycles_frac = uint32_t(float(SID_FREQ) / obtained.freq * 65536.0);
 
 	// Start sound output
 	Resume();
