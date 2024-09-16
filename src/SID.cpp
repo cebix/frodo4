@@ -32,13 +32,7 @@
 #include "VIC.h"
 #include "Prefs.h"
 
-#ifdef __BEOS__
-#include <media/SoundPlayer.h>
-#endif
-
-#ifdef HAVE_SDL
 #include <SDL_audio.h>
-#endif
 
 
 #undef USE_FIXPOINT_MATHS
@@ -414,17 +408,9 @@ private:
 	uint8_t sample_buf[SAMPLE_BUF_SIZE]; // Buffer for sampled voice
 	unsigned sample_in_ptr;			// Index in sample_buf for writing
 
-#ifdef __BEOS__
-	static void buffer_proc(void *cookie, void *buffer, size_t size, const media_raw_audio_format &format);
-	BSoundPlayer *the_player;		// Pointer to sound player
-	bool player_stopped;			// Flag: player stopped
-#endif
-
-#ifdef HAVE_SDL
 	static void buffer_proc(void * userdata, uint8_t * buffer, int size);
 	SDL_AudioDeviceID device_id;	// SDL audio device ID
 	SDL_AudioSpec obtained;			// Obtained output format
-#endif
 };
 
 // Static data members
@@ -1266,21 +1252,10 @@ void DigitalRenderer::calc_buffer(int16_t *buf, long count)
 }
 
 
-#if defined(__BEOS__)
-#include "SID_Be.h"
-
-#elif defined(HAVE_SDL)
 #include "SID_SDL.h"
-# if defined(__linux__)
-# include "SID_catweasel.h"
-# endif
 
-#else	// No sound
-void DigitalRenderer::init_sound() {ready = false;}
-DigitalRenderer::~DigitalRenderer() {}
-void DigitalRenderer::EmulateLine() {}
-void DigitalRenderer::Pause() {}
-void DigitalRenderer::Resume() {}
+#ifdef __linux__
+#include "SID_catweasel.h"
 #endif
 
 

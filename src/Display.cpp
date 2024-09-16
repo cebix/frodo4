@@ -77,9 +77,4 @@ void C64Display::UpdateLEDs(int l0, int l1, int l2, int l3)
 }
 
 
-#if defined(__BEOS__)
-#include "Display_Be.h"
-
-#elif defined(HAVE_SDL)
 #include "Display_SDL.h"
-#endif

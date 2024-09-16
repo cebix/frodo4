@@ -77,9 +77,4 @@ void Frodo::load_rom_files()
 }
 
 
-#if defined(__BEOS__)
-#include "main_Be.h"
-
-#elif defined(HAVE_SDL)
 #include "main_SDL.h"
-#endif

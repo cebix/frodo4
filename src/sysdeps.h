@@ -27,7 +27,3 @@
 #include <time.h>
 
 #include <cstdint>
-
-#ifdef __BEOS__
-#include <support/SupportDefs.h>
-#endif

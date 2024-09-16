@@ -92,8 +92,6 @@ public:
 	bool MapSlash;			// Map '/' in C64 filenames
 	bool Emul1541Proc;		// Enable processor-level 1541 emulation
 	bool SIDFilters;		// Emulate SID filters
-	bool DoubleScan;		// Double scan lines (BeOS, if DisplayType == DISPTYPE_SCREEN)
-	bool JoystickGeekPort;	// Enable GeekPort joystick adapter (BeOS)
 	bool ShowLEDs;			// Show status bar
 };
 

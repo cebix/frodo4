@@ -707,9 +707,4 @@ bool IsSnapshotFile(const char * filename)
 }
 
 
-#if defined(__BEOS__)
-#include "C64_Be.h"
-
-#elif defined(HAVE_SDL)
 #include "C64_SDL.h"
-#endif

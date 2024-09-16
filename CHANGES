@@ -1,7 +1,7 @@
 Changes from V4.2 to V4.3:
  - "Frodo SC" renamed to "Frodo", original "Frodo" renamed to "Frodo Lite"
  - Ported to SDL2 and GTK 3
- - Removed most platform-specific support, main target is now SDL
+ - Removed all platform-specific code, main target is now SDL
  - Unix: settings are now stored in ~/.local/share/cebix/Frodo/config
    instead of ~/.frodorc
  - New functions on numeric keypad:

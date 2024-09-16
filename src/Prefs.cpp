@@ -64,7 +64,6 @@ Prefs::Prefs()
 	MapSlash = true;
 	Emul1541Proc = true;
 	SIDFilters = true;
-	DoubleScan = true;
 	ShowLEDs = true;
 }
 
@@ -194,8 +193,6 @@ void Prefs::Load(fs::path prefs_path)
 				Emul1541Proc = (value == "true");
 			} else if (keyword == "SIDFilters") {
 				SIDFilters = (value == "true");
-			} else if (keyword == "DoubleScan") {
-				DoubleScan = (value == "true");
 			} else if (keyword == "ShowLEDs") {
 				ShowLEDs = (value == "true");
 			}
@@ -261,17 +258,13 @@ bool Prefs::Save(fs::path prefs_path)
 	file << "MapSlash = " << MapSlash << std::endl;
 	file << "Emul1541Proc = " << Emul1541Proc << std::endl;
 	file << "SIDFilters = " << SIDFilters << std::endl;
-	file << "DoubleScan = " << DoubleScan << std::endl;
 	file << "ShowLEDs = " << ShowLEDs << std::endl;
 
 	return true;
 }
 
 
-#if defined(__BEOS__)
-#include "Prefs_Be.h"
-
-#elif defined(HAVE_GLADE)
+#if defined(HAVE_GLADE)
 #include "Prefs_glade.h"
 
 #else

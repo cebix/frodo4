@@ -21,13 +21,7 @@
 #ifndef _DISPLAY_H
 #define _DISPLAY_H
 
-#ifdef __BEOS__
-#include <InterfaceKit.h>
-#endif
-
-#ifdef HAVE_SDL
 #include <SDL.h>
-#endif
 
 #include <string>
 
@@ -73,18 +67,10 @@ private:
 	int led_state[4];
 	int old_led_state[4];
 
-#ifdef __BEOS__
-	C64Window *the_window;	// One of these is NULL
-	C64Screen *the_screen;
-	bool using_screen;		// Flag: Using the_screen
-	key_info old_key_info;
-	int draw_bitmap;		// Number of bitmap for the VIC to draw into
-#endif
+	SDL_Window * the_window = nullptr;
+	SDL_Renderer * the_renderer = nullptr;
+	SDL_Texture * the_texture = nullptr;
 
-#ifdef HAVE_SDL
-	SDL_Window *the_window = nullptr;
-	SDL_Renderer *the_renderer = nullptr;
-	SDL_Texture *the_texture = nullptr;
 	uint8_t * pixel_buffer = nullptr;	// Buffer for VIC to draw into
 	uint32_t palette[256];				// Mapping of VIC color values to native ARGB
 
@@ -102,7 +88,6 @@ private:
 	void pulse_handler();
 
 	void toggle_fullscreen(bool full);
-#endif
 };
 
 

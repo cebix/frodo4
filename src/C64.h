@@ -21,14 +21,8 @@
 #ifndef _C64_H
 #define _C64_H
 
-#ifdef __BEOS__
-#include <KernelKit.h>
-#endif
-
-#ifdef HAVE_SDL
 #include <SDL_joystick.h>
 #include <SDL_gamecontroller.h>
-#endif
 
 #include <string>
 
@@ -158,23 +152,6 @@ private:
 	size_t rewind_start = 0;				// Index of first recorded snapshot
 	size_t rewind_fill = 0;					// Number of recorded snapshots
 
-#ifdef __BEOS__
-public:
-	void SoundSync();
-
-private:
-	static long thread_invoc(void *obj);
-	void open_close_joystick(int port, int oldjoy, int newjoy);
-
-	void *joy[2];				// Joystick objects (BJoystick or BDigitalPort)
-	bool joy_geek_port[2];		// Flag: joystick on GeekPort?
-	thread_id the_thread;
-	sem_id pause_sem;
-	sem_id sound_sync_sem;
-	bigtime_t start_time;
-#endif
-
-#ifdef HAVE_SDL
 public:
 	void JoystickAdded(int32_t index);
 	void JoystickRemoved(int32_t instance_id);
@@ -184,7 +161,6 @@ private:
 
 	SDL_Joystick * joy[2] = { nullptr, nullptr };
 	SDL_GameController * controller[2] = { nullptr, nullptr };
-#endif
 };
 
 
