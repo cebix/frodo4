@@ -35,14 +35,6 @@ namespace fs = std::filesystem;
 #include <stdlib.h>
 
 
-// LED states
-enum {
-	LED_OFF,		// LED off
-	LED_ON,			// LED on (green)
-	LED_ERROR_ON,	// LED blinking (red), currently on
-	LED_ERROR_OFF	// LED blinking, currently off
-};
-
 // Period of LED error blinking
 constexpr uint32_t PULSE_ms = 400;
 

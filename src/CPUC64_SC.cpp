@@ -545,7 +545,7 @@ inline void MOS6510::do_sbc(uint8_t byte)
 		uint16_t al, ah;
 
 		// Decimal mode
-		al = (a & 0x0f) - (byte & 0x0f) - (c_flag ? 0 : 1);	// Calculate lower nybble
+		al = (a & 0x0f) - (byte & 0x0f) - (c_flag ? 0 : 1);		// Calculate lower nybble
 		ah = (a >> 4) - (byte >> 4);							// Calculate upper nybble
 		if (al & 0x10) {
 			al -= 6;											// BCD fixup for lower nybble
@@ -619,7 +619,7 @@ void MOS6510::EmulateCycle()
 	uint8_t data, tmp;
 
 	// Any pending interrupts in state 0 (opcode fetch)?
-	if (!state && interrupt.intr_any) {
+	if (state == 0 && interrupt.intr_any) {
 		if (interrupt.intr[INT_RESET]) {
 			Reset();
 		} else if (interrupt.intr[INT_NMI]) {
@@ -642,7 +642,7 @@ void MOS6510::EmulateCycle()
 		// Extension opcode
 		case O_EXT:
 			if (pc < 0xe000) {
-				illegal_op(0xf2, pc-1);
+				illegal_op(0xf2, pc - 1);
 				break;
 			}
 			switch (read_byte(pc++)) {
@@ -684,13 +684,13 @@ void MOS6510::EmulateCycle()
 					pc = 0xedac;
 					Last;
 				default:
-					illegal_op(0xf2, pc-1);
+					illegal_op(0xf2, pc - 1);
 					break;
 			}
 			break;
 
 		default:
-			illegal_op(op, pc-1);
+			illegal_op(op, pc - 1);
 			break;
 	}
 }

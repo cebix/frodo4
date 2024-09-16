@@ -36,6 +36,18 @@
 	c_flag = data & 0x01;
 
 // Push processor flags onto the stack
+#ifdef IS_CPU_1541
+#define push_flags(b_flag) \
+	data = 0x20 | (n_flag & 0x80); \
+	if ((via2_pcr & 0x0e) == 0x0e && the_job->ByteReady()) v_flag = true; \
+	if (v_flag) data |= 0x40; \
+	if (b_flag) data |= 0x10; \
+	if (d_flag) data |= 0x08; \
+	if (i_flag) data |= 0x04; \
+	if (!z_flag) data |= 0x02; \
+	if (c_flag) data |= 0x01; \
+	write_byte(sp-- | 0x100, data);
+#else
 #define push_flags(b_flag) \
 	data = 0x20 | (n_flag & 0x80); \
 	if (v_flag) data |= 0x40; \
@@ -45,6 +57,7 @@
 	if (!z_flag) data |= 0x02; \
 	if (c_flag) data |= 0x01; \
 	write_byte(sp-- | 0x100, data);
+#endif
 
 
 /*
@@ -891,18 +904,20 @@
 			Branch(z_flag);
 
 		case O_BVS:
-#ifndef IS_CPU_1541
-			Branch(v_flag);
-#else
-			Branch((via2_pcr & 0x0e) == 0x0e ? 1 : v_flag);	// GCR byte ready flag
+#ifdef IS_CPU_1541
+			if ((via2_pcr & 0x0e) == 0x0e && the_job->ByteReady()) {	// CA2 high output and byte ready
+				v_flag = true;
+			}
 #endif
+			Branch(v_flag);
 
 		case O_BVC:
-#ifndef IS_CPU_1541
-			Branch(!v_flag);
-#else
-			Branch(!((via2_pcr & 0x0e) == 0x0e) ? 0 : v_flag);	// GCR byte ready flag
+#ifdef IS_CPU_1541
+			if ((via2_pcr & 0x0e) == 0x0e && the_job->ByteReady()) {	// CA2 high output and byte ready
+				v_flag = true;
+			}
 #endif
+			Branch(!v_flag);
 
 		case O_BMI:
 			Branch(n_flag & 0x80);

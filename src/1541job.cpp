@@ -89,6 +89,8 @@ Job1541::Job1541(uint8_t *ram1541) : ram(ram1541), the_file(nullptr)
 	gcr_track_end = gcr_track_start + GCR_TRACK_SIZE;
 	current_halftrack = 2;
 
+	motor_on = false;
+	write_protected = true;
 	disk_changed = true;
 
 	if (ThePrefs.Emul1541Proc) {
@@ -445,6 +447,7 @@ void Job1541::GetState(Job1541State *state) const
 {
 	state->gcr_ptr = gcr_ptr - gcr_data;
 	state->current_halftrack = current_halftrack;
+	state->motor_on = motor_on;
 	state->write_protected = write_protected;
 	state->disk_changed = disk_changed;
 }
@@ -460,6 +463,7 @@ void Job1541::SetState(const Job1541State *state)
 	current_halftrack = state->current_halftrack;
 	gcr_track_start = gcr_data + ((current_halftrack >> 1) - 1) * GCR_TRACK_SIZE;
 	gcr_track_end = gcr_track_start + num_sectors[current_halftrack >> 1] * GCR_SECTOR_SIZE;
+	motor_on = state->motor_on;
 	write_protected = state->write_protected;
 	disk_changed = state->disk_changed;
 }

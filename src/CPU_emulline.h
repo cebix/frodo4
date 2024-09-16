@@ -814,18 +814,20 @@
 			Branch(z_flag);
 
 		case 0x70:	// BVS rel
-#ifndef IS_CPU_1541
-			Branch(v_flag);
-#else
-			Branch((via2_pcr & 0x0e) == 0x0e ? 1 : v_flag);	// GCR byte ready flag
+#ifdef IS_CPU_1541
+			if ((via2_pcr & 0x0e) == 0x0e && the_job->ByteReady()) {	// CA2 high output and byte ready
+				v_flag = true;
+			}
 #endif
+			Branch(v_flag);
 
 		case 0x50:	// BVC rel
-#ifndef IS_CPU_1541
-			Branch(!v_flag);
-#else
-			Branch(!((via2_pcr & 0x0e) == 0x0e) ? 0 : v_flag);	// GCR byte ready flag
+#ifdef IS_CPU_1541
+			if ((via2_pcr & 0x0e) == 0x0e && the_job->ByteReady()) {	// CA2 high output and byte ready
+				v_flag = true;
+			}
 #endif
+			Branch(!v_flag);
 
 		case 0x30:	// BMI rel
 			Branch(n_flag & 0x80);

@@ -36,9 +36,11 @@ public:
 	void GetState(Job1541State *state) const;
 	void SetState(const Job1541State *state);
 	void NewPrefs(const Prefs *prefs);
+	void SetMotor(bool on);
 	void MoveHeadOut();
 	void MoveHeadIn();
 	bool SyncFound();
+	bool ByteReady();
 	uint8_t ReadGCRByte();
 	uint8_t WPState();
 	void WriteSector();
@@ -67,8 +69,10 @@ private:
 	uint8_t *gcr_ptr;			// Pointer to GCR data under R/W head
 	uint8_t *gcr_track_start;	// Pointer to start of GCR data of current track
 	uint8_t *gcr_track_end;		// Pointer to end of GCR data of current track
+
 	unsigned current_halftrack;	// Current halftrack number (2..70)
 
+	bool motor_on;				// Flag: Spindle motor on
 	bool write_protected;		// Flag: Disk write-protected
 	bool disk_changed;			// Flag: Disk changed (WP sensor strobe control)
 };
@@ -77,9 +81,20 @@ private:
 struct Job1541State {
 	uint32_t gcr_ptr;
 	uint16_t current_halftrack;
+	bool motor_on;
 	bool write_protected;
 	bool disk_changed;
 };
+
+
+/*
+ *  Control spindle motor
+ */
+
+inline void Job1541::SetMotor(bool on)
+{
+	motor_on = on;
+}
 
 
 /*
@@ -88,7 +103,7 @@ struct Job1541State {
 
 inline bool Job1541::SyncFound()
 {
-	if (*gcr_ptr == 0xff) {
+	if (*gcr_ptr == 0xff) {	// TODO: check more bits
 		return true;
 	} else {
 		gcr_ptr++;		// Rotate disk
@@ -97,6 +112,18 @@ inline bool Job1541::SyncFound()
 		}
 		return false;
 	}
+}
+
+
+/*
+ *  Check if GCR byte is available for reading
+ */
+
+inline bool Job1541::ByteReady()
+{
+	// Always ready if spindle motor is on
+	// TODO: this is not exact
+	return motor_on;
 }
 
 

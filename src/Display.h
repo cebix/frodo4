@@ -36,8 +36,15 @@ constexpr int DISPLAY_Y = 0x110;
 #endif
 
 
-class C64Window;
-class C64Screen;
+// LED states
+enum {
+	LED_OFF,		// LED off
+	LED_ON,			// LED on (green)
+	LED_ERROR_ON,	// LED blinking (red), currently on
+	LED_ERROR_OFF	// LED blinking, currently off
+};
+
+
 class C64;
 class Prefs;
 
