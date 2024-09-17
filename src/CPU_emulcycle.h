@@ -39,7 +39,7 @@
 #ifdef IS_CPU_1541
 #define push_flags(b_flag) \
 	data = 0x20 | (n_flag & 0x80); \
-	if ((via2_pcr & 0x0e) == 0x0e && the_job->ByteReady()) v_flag = true; \
+	if ((via2_pcr & 0x0e) == 0x0e && the_job->ByteReady(cycle_counter)) v_flag = true; \
 	if (v_flag) data |= 0x40; \
 	if (b_flag) data |= 0x10; \
 	if (d_flag) data |= 0x08; \
@@ -905,7 +905,7 @@
 
 		case O_BVS:
 #ifdef IS_CPU_1541
-			if ((via2_pcr & 0x0e) == 0x0e && the_job->ByteReady()) {	// CA2 high output and byte ready
+			if ((via2_pcr & 0x0e) == 0x0e && the_job->ByteReady(cycle_counter)) {	// CA2 high output and byte ready
 				v_flag = true;
 			}
 #endif
@@ -913,7 +913,7 @@
 
 		case O_BVC:
 #ifdef IS_CPU_1541
-			if ((via2_pcr & 0x0e) == 0x0e && the_job->ByteReady()) {	// CA2 high output and byte ready
+			if ((via2_pcr & 0x0e) == 0x0e && the_job->ByteReady(cycle_counter)) {	// CA2 high output and byte ready
 				v_flag = true;
 			}
 #endif

@@ -32,8 +32,7 @@
  * ------------------
  *
  *  - No GCR writing possible (WriteSector is a ROM patch)
- *  - Programs depending on the exact timing of head movement/disk
- *    rotation don't work
+ *  - Programs depending on the exact timing of head movement don't work
  *  - The .d64 error info is unused
  */
 
@@ -45,18 +44,17 @@
 
 
 // Number of tracks/sectors
-const int NUM_TRACKS = 35;
-const int NUM_SECTORS = 683;
+constexpr unsigned NUM_TRACKS = 35;
+constexpr unsigned NUM_SECTORS = 683;
 
 // Size of GCR encoded data
-const int GCR_SECTOR_SIZE = 1+10+9+1+325+8;			// SYNC Header Gap SYNC Data Gap (should be 5 SYNC bytes each)
-const int GCR_TRACK_SIZE = GCR_SECTOR_SIZE * 21;	// Each track in gcr_data has 21 sectors
-const int GCR_DISK_SIZE = GCR_TRACK_SIZE * NUM_TRACKS;
+constexpr unsigned GCR_SECTOR_SIZE = 5 + 10 + 9 + 5 + 325 + 12;	// SYNC + Header + Gap + SYNC + Data + Gap
+constexpr unsigned GCR_TRACK_SIZE = GCR_SECTOR_SIZE * 21;		// Each track in gcr_data has room for 21 sectors
+constexpr unsigned GCR_DISK_SIZE = GCR_TRACK_SIZE * NUM_TRACKS;
 
-// Job return codes
-const int RET_OK = 1;				// No error
-const int RET_NOT_FOUND = 2;		// Block not found
-const int RET_NOT_READY = 15;		// Drive not ready
+// Clock cycles per GCR byte
+// TODO: handle speed selection
+constexpr unsigned CYCLES_PER_BYTE = 30;
 
 
 // Number of sectors of each track
@@ -85,13 +83,19 @@ const int sector_offset[36] = {
 
 Job1541::Job1541(uint8_t *ram1541) : ram(ram1541), the_file(nullptr)
 {
-	gcr_data = gcr_ptr = gcr_track_start = new uint8_t[GCR_DISK_SIZE];
-	gcr_track_end = gcr_track_start + GCR_TRACK_SIZE;
-	current_halftrack = 2;
+	current_halftrack = 2;	// Track 1
+
+	gcr_data = new uint8_t[GCR_DISK_SIZE];
+
+	set_gcr_ptr();
+	gcr_offset = 1;
+
+	last_byte_cycle = 0;
 
 	motor_on = false;
 	write_protected = true;
 	disk_changed = true;
+	byte_ready = false;
 
 	if (ThePrefs.Emul1541Proc) {
 		open_d64_file(ThePrefs.DrivePath[0]);
@@ -106,6 +110,7 @@ Job1541::Job1541(uint8_t *ram1541) : ram(ram1541), the_file(nullptr)
 Job1541::~Job1541()
 {
 	close_d64_file();
+
 	delete[] gcr_data;
 }
 
@@ -260,7 +265,7 @@ void Job1541::FormatTrack()
  *  true: success, false: error
  */
 
-bool Job1541::read_sector(int track, int sector, uint8_t *buffer)
+bool Job1541::read_sector(unsigned track, unsigned sector, uint8_t *buffer)
 {
 	int offset;
 
@@ -279,7 +284,7 @@ bool Job1541::read_sector(int track, int sector, uint8_t *buffer)
  *  true: success, false: error
  */
 
-bool Job1541::write_sector(int track, int sector, uint8_t *buffer)
+bool Job1541::write_sector(unsigned track, unsigned sector, uint8_t *buffer)
 {
 	int offset;
 
@@ -297,12 +302,12 @@ bool Job1541::write_sector(int track, int sector, uint8_t *buffer)
  *  Convert track/sector to offset
  */
 
-int Job1541::secnum_from_ts(int track, int sector)
+unsigned Job1541::secnum_from_ts(unsigned track, unsigned sector)
 {
 	return sector_offset[track] + sector;
 }
 
-int Job1541::offset_from_ts(int track, int sector)
+int Job1541::offset_from_ts(unsigned track, unsigned sector)
 {
 	if ((track < 1) || (track > NUM_TRACKS) ||
 		(sector < 0) || (sector >= num_sectors[track]))
@@ -350,7 +355,7 @@ void Job1541::gcr_conv4(const uint8_t *from, uint8_t *to)
  *  Create GCR encoded disk data from image
  */
 
-void Job1541::sector2gcr(int track, int sector)
+void Job1541::sector2gcr(unsigned track, unsigned sector)
 {
 	uint8_t block[256];
 	uint8_t buf[4];
@@ -359,31 +364,35 @@ void Job1541::sector2gcr(int track, int sector)
 	read_sector(track, sector, block);
 
 	// Create GCR header
-	*p++ = 0xff;							// SYNC
+	memset(p, 0xff, 5);						// SYNC
+	p += 5;
 	buf[0] = 0x08;							// Header mark
 	buf[1] = sector ^ track ^ id2 ^ id1;	// Checksum
 	buf[2] = sector;
 	buf[3] = track;
 	gcr_conv4(buf, p);
+	p += 5;
 	buf[0] = id2;
 	buf[1] = id1;
 	buf[2] = 0x0f;
 	buf[3] = 0x0f;
-	gcr_conv4(buf, p+5);
-	p += 10;
+	gcr_conv4(buf, p);
+	p += 5;
+
 	memset(p, 0x55, 9);						// Gap
 	p += 9;
 
 	// Create GCR data
+	memset(p, 0xff, 5);						// SYNC
+	p += 5;
 	uint8_t sum;
-	*p++ = 0xff;							// SYNC
 	buf[0] = 0x07;							// Data mark
-	sum = buf[1] = block[0];
+	sum =  buf[1] = block[0];
 	sum ^= buf[2] = block[1];
 	sum ^= buf[3] = block[2];
 	gcr_conv4(buf, p);
 	p += 5;
-	for (int i=3; i<255; i+=4) {
+	for (unsigned i = 3; i < 255; i += 4) {
 		sum ^= buf[0] = block[i];
 		sum ^= buf[1] = block[i+1];
 		sum ^= buf[2] = block[i+2];
@@ -397,14 +406,15 @@ void Job1541::sector2gcr(int track, int sector)
 	buf[3] = 0;
 	gcr_conv4(buf, p);
 	p += 5;
-	memset(p, 0x55, 8);						// Gap
+
+	memset(p, 0x55, 12);					// Gap
 }
 
 void Job1541::disk2gcr()
 {
 	// Convert all tracks and sectors
-	for (int track=1; track<=NUM_TRACKS; track++) {
-		for(int sector=0; sector<num_sectors[track]; sector++) {
+	for (unsigned track = 1; track <= NUM_TRACKS; ++track) {
+		for(unsigned sector = 0; sector < num_sectors[track]; ++sector) {
 			sector2gcr(track, sector);
 		}
 	}
@@ -412,16 +422,33 @@ void Job1541::disk2gcr()
 
 
 /*
+ *  Reset GCR pointers for current halftrack
+ */
+
+void Job1541::set_gcr_ptr()
+{
+	gcr_track_start = gcr_data + ((current_halftrack >> 1) - 1) * GCR_TRACK_SIZE;
+	gcr_track_end = gcr_track_start + num_sectors[current_halftrack >> 1] * GCR_SECTOR_SIZE;
+	gcr_track_length = gcr_track_end - gcr_track_start;
+}
+
+
+/*
  *  Move R/W head out (lower track numbers)
  */
 
-void Job1541::MoveHeadOut()
+void Job1541::MoveHeadOut(uint32_t cycle_counter)
 {
 	if (current_halftrack == 2)
 		return;
+
 	current_halftrack--;
-	gcr_ptr = gcr_track_start = gcr_data + ((current_halftrack >> 1) - 1) * GCR_TRACK_SIZE;
-	gcr_track_end = gcr_track_start + num_sectors[current_halftrack >> 1] * GCR_SECTOR_SIZE;
+
+	last_byte_cycle = cycle_counter;
+	byte_ready = false;
+
+	set_gcr_ptr();
+	gcr_offset = 1;	// TODO: handle track-to-track skew
 }
 
 
@@ -429,13 +456,18 @@ void Job1541::MoveHeadOut()
  *  Move R/W head in (higher track numbers)
  */
 
-void Job1541::MoveHeadIn()
+void Job1541::MoveHeadIn(uint32_t cycle_counter)
 {
 	if (current_halftrack == NUM_TRACKS*2)
 		return;
+
 	current_halftrack++;
-	gcr_ptr = gcr_track_start = gcr_data + ((current_halftrack >> 1) - 1) * GCR_TRACK_SIZE;
-	gcr_track_end = gcr_track_start + num_sectors[current_halftrack >> 1] * GCR_SECTOR_SIZE;
+
+	last_byte_cycle = cycle_counter;
+	byte_ready = false;
+
+	set_gcr_ptr();
+	gcr_offset = 1;	// TODO: handle track-to-track skew
 }
 
 
@@ -445,11 +477,14 @@ void Job1541::MoveHeadIn()
 
 void Job1541::GetState(Job1541State *state) const
 {
-	state->gcr_ptr = gcr_ptr - gcr_data;
 	state->current_halftrack = current_halftrack;
+	state->gcr_offset = gcr_offset;
+	state->last_byte_cycle = last_byte_cycle;
+
 	state->motor_on = motor_on;
 	state->write_protected = write_protected;
 	state->disk_changed = disk_changed;
+	state->byte_ready = byte_ready;
 }
 
 
@@ -459,11 +494,87 @@ void Job1541::GetState(Job1541State *state) const
 
 void Job1541::SetState(const Job1541State *state)
 {
-	gcr_ptr = gcr_data + state->gcr_ptr;
 	current_halftrack = state->current_halftrack;
-	gcr_track_start = gcr_data + ((current_halftrack >> 1) - 1) * GCR_TRACK_SIZE;
-	gcr_track_end = gcr_track_start + num_sectors[current_halftrack >> 1] * GCR_SECTOR_SIZE;
+	set_gcr_ptr();
+	gcr_offset = state->gcr_offset;
+	last_byte_cycle = state->last_byte_cycle;
+
 	motor_on = state->motor_on;
 	write_protected = state->write_protected;
 	disk_changed = state->disk_changed;
+	byte_ready = state->byte_ready;
+}
+
+
+/*
+ *  Rotate disk (virtually)
+ */
+
+void Job1541::rotate_disk(uint32_t cycle_counter)
+{
+	if (motor_on) {
+
+		uint32_t elapsed = cycle_counter - last_byte_cycle;
+		uint32_t advance = elapsed / CYCLES_PER_BYTE;
+
+		if (advance > 0) {
+			gcr_offset += advance;
+			while (gcr_offset >= gcr_track_length) {
+				gcr_offset -= gcr_track_length;
+			}
+			if (gcr_offset == 0) {	// Always keep >0 so we can access gcr_track_start[gcr_offset - 1]
+				++gcr_offset;
+			}
+
+			// Byte is ready if not on sync
+			byte_ready = !(((gcr_track_start[gcr_offset - 1] & 0x03) == 0x03)
+			             && (gcr_track_start[gcr_offset] == 0xff));
+
+			last_byte_cycle += advance * CYCLES_PER_BYTE;
+		}
+
+	} else {
+
+		last_byte_cycle = cycle_counter;
+		byte_ready = false;
+	}
+}
+
+
+/*
+ *  Check if R/W head is over SYNC
+ */
+
+bool Job1541::SyncFound(uint32_t cycle_counter)
+{
+	rotate_disk(cycle_counter);
+
+	// Sync = ten "1" bits
+	return motor_on && ((gcr_track_start[gcr_offset - 1] & 0x03) == 0x03)
+	                 && (gcr_track_start[gcr_offset] == 0xff);
+}
+
+
+/*
+ *  Check if GCR byte is available for reading
+ */
+
+bool Job1541::ByteReady(uint32_t cycle_counter)
+{
+	rotate_disk(cycle_counter);
+
+	return byte_ready;
+}
+
+
+/*
+ *  Read one GCR byte from disk
+ */
+
+uint8_t Job1541::ReadGCRByte(uint32_t cycle_counter)
+{
+	rotate_disk(cycle_counter);
+
+	byte_ready = false;
+	return gcr_track_start[gcr_offset];
 }

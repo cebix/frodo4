@@ -815,7 +815,7 @@
 
 		case 0x70:	// BVS rel
 #ifdef IS_CPU_1541
-			if ((via2_pcr & 0x0e) == 0x0e && the_job->ByteReady()) {	// CA2 high output and byte ready
+			if ((via2_pcr & 0x0e) == 0x0e && the_job->ByteReady(cycle_counter)) {	// CA2 high output and byte ready
 				v_flag = true;
 			}
 #endif
@@ -823,7 +823,7 @@
 
 		case 0x50:	// BVC rel
 #ifdef IS_CPU_1541
-			if ((via2_pcr & 0x0e) == 0x0e && the_job->ByteReady()) {	// CA2 high output and byte ready
+			if ((via2_pcr & 0x0e) == 0x0e && the_job->ByteReady(cycle_counter)) {	// CA2 high output and byte ready
 				v_flag = true;
 			}
 #endif

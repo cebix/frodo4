@@ -58,6 +58,8 @@ public:
 	void Reset();
 	void AsyncReset();					// Reset the CPU asynchronously
 
+	uint32_t CycleCounter() const { return cycle_counter; }
+
 	void GetState(MOS6502State *s) const;
 	void SetState(const MOS6502State *s);
 
@@ -105,6 +107,8 @@ private:
 	C64 *the_c64;			// Pointer to C64 object
 	C64Display *the_display; // Pointer to C64 display object
 	Job1541 *the_job;		// Pointer to 1541 job object
+
+	uint32_t cycle_counter;
 
 	union {					// Pending interrupts
 		uint8_t intr[4];	// Index: See definitions above
@@ -166,6 +170,8 @@ private:
 
 // 6502 and VIA state
 struct MOS6502State {
+	uint32_t cycle_counter;
+
 	uint8_t a, x, y;
 	uint8_t p;				// Processor flags
 	uint16_t pc, sp;

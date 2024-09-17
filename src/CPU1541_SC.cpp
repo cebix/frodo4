@@ -87,6 +87,7 @@ MOS6502_1541::MOS6502_1541(C64 *c64, Job1541 *job, C64Display *disp, uint8_t *Ra
 	v_flag = d_flag = c_flag = false;
 	i_flag = true;
 
+	cycle_counter = 0;
 	first_irq_cycle = first_nmi_cycle = 0;
 
 	Reset();
@@ -148,6 +149,8 @@ void MOS6502_1541::Reset()
 
 void MOS6502_1541::GetState(MOS6502State *s) const
 {
+	s->cycle_counter = cycle_counter;
+
 	s->a = a;
 	s->x = x;
 	s->y = y;
@@ -192,6 +195,8 @@ void MOS6502_1541::GetState(MOS6502State *s) const
 
 void MOS6502_1541::SetState(const MOS6502State *s)
 {
+	cycle_counter = s->cycle_counter;
+
 	a = s->a;
 	x = s->x;
 	y = s->y;
@@ -310,14 +315,14 @@ inline uint8_t MOS6502_1541::read_byte_via2(uint16_t adr)
 	switch (adr & 0xf) {
 		case 0: {
 			uint8_t byte = the_job->WPState();
-			if (!the_job->SyncFound()) {
+			if (!the_job->SyncFound(cycle_counter)) {
 				byte |= 0x80;
 			}
 			return (byte & ~via2_ddrb) | (via2_prb & via2_ddrb);
 		}
 		case 1:
 		case 15:
-			return the_job->ReadGCRByte();
+			return the_job->ReadGCRByte(cycle_counter);
 		case 2:
 			return via2_ddrb;
 		case 3:
@@ -468,9 +473,9 @@ void MOS6502_1541::write_byte_via2(uint16_t adr, uint8_t byte)
 		case 0:
 			if ((via2_prb ^ byte) & 0x03) {	// Bits 0/1: Stepper motor
 				if ((via2_prb & 3) == ((byte+1) & 3)) {
-					the_job->MoveHeadOut();
+					the_job->MoveHeadOut(cycle_counter);
 				} else if ((via2_prb & 3) == ((byte-1) & 3)) {
-					the_job->MoveHeadIn();
+					the_job->MoveHeadIn(cycle_counter);
 				}
 			}
 			if ((via2_prb ^ byte) & 0x04) {	// Bit 2: Spindle motor
@@ -682,7 +687,7 @@ void MOS6502_1541::EmulateCycle()
 			Reset();
 		} else if ((interrupt.intr[INT_VIA1IRQ] || interrupt.intr[INT_VIA2IRQ]) &&
 				   (!i_flag || (opflags & OPFLAG_IRQ_DISABLED)) && !(opflags & OPFLAG_IRQ_ENABLED)) {
-			if (the_c64->CycleCounter() - first_irq_cycle >= 2) {
+			if (cycle_counter - first_irq_cycle >= 2) {
 				state = 0x0008;
 				opflags = 0;
 			}
@@ -721,4 +726,6 @@ void MOS6502_1541::EmulateCycle()
 			illegal_op(op, pc - 1);
 			break;
 	}
+
+	++cycle_counter;
 }

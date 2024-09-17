@@ -36,54 +36,66 @@ public:
 	void GetState(Job1541State *state) const;
 	void SetState(const Job1541State *state);
 	void NewPrefs(const Prefs *prefs);
+
 	void SetMotor(bool on);
-	void MoveHeadOut();
-	void MoveHeadIn();
-	bool SyncFound();
-	bool ByteReady();
-	uint8_t ReadGCRByte();
+	void MoveHeadOut(uint32_t cycle_counter);
+	void MoveHeadIn(uint32_t cycle_counter);
+
+	bool SyncFound(uint32_t cycle_counter);
+	bool ByteReady(uint32_t cycle_counter);
+	uint8_t ReadGCRByte(uint32_t cycle_counter);
 	uint8_t WPState();
+
 	void WriteSector();
 	void FormatTrack();
 
 private:
 	void open_d64_file(const std::string & filepath);
 	void close_d64_file();
-	bool read_sector(int track, int sector, uint8_t *buffer);
-	bool write_sector(int track, int sector, uint8_t *buffer);
+	bool read_sector(unsigned track, unsigned sector, uint8_t *buffer);
+	bool write_sector(unsigned track, unsigned sector, uint8_t *buffer);
 	void format_disk();
-	int secnum_from_ts(int track, int sector);
-	int offset_from_ts(int track, int sector);
+	unsigned secnum_from_ts(unsigned track, unsigned sector);
+	int offset_from_ts(unsigned track, unsigned sector);
 	void gcr_conv4(const uint8_t *from, uint8_t *to);
-	void sector2gcr(int track, int sector);
+	void sector2gcr(unsigned track, unsigned sector);
 	void disk2gcr();
+	void set_gcr_ptr();
+	void rotate_disk(uint32_t cycle_counter);
 
 	uint8_t *ram;				// Pointer to 1541 RAM
 	FILE *the_file;				// File pointer for .d64 file
-	int image_header;			// Length of .d64/.x64 file header
+	unsigned image_header;		// Length of .d64/.x64 file header
 
 	uint8_t id1, id2;			// ID of disk
 	uint8_t error_info[683];	// Sector error information (1 byte/sector)
 
+	unsigned current_halftrack;	// Current halftrack number (2..70)
+
 	uint8_t *gcr_data;			// Pointer to GCR encoded disk data
-	uint8_t *gcr_ptr;			// Pointer to GCR data under R/W head
 	uint8_t *gcr_track_start;	// Pointer to start of GCR data of current track
 	uint8_t *gcr_track_end;		// Pointer to end of GCR data of current track
+	size_t gcr_track_length;	// Number of GCR bytes in current track
+	size_t gcr_offset;			// Offset of GCR data byte under R/W head, relative to gcr_track_start
+								// Note: This is never 0, so we can access the previous GCR byte for sync detection
 
-	unsigned current_halftrack;	// Current halftrack number (2..70)
+	uint32_t last_byte_cycle;	// Cycle when last byte was available
 
 	bool motor_on;				// Flag: Spindle motor on
 	bool write_protected;		// Flag: Disk write-protected
 	bool disk_changed;			// Flag: Disk changed (WP sensor strobe control)
+	bool byte_ready;			// Flag: GCR byte ready for reading
 };
 
 // 1541 GCR state
 struct Job1541State {
-	uint32_t gcr_ptr;
-	uint16_t current_halftrack;
+	uint32_t current_halftrack;
+	uint32_t gcr_offset;
+	uint32_t last_byte_cycle;
 	bool motor_on;
 	bool write_protected;
 	bool disk_changed;
+	bool byte_ready;
 };
 
 
@@ -98,51 +110,7 @@ inline void Job1541::SetMotor(bool on)
 
 
 /*
- *  Check if R/W head is over SYNC
- */
-
-inline bool Job1541::SyncFound()
-{
-	if (*gcr_ptr == 0xff) {	// TODO: check more bits
-		return true;
-	} else {
-		gcr_ptr++;		// Rotate disk
-		if (gcr_ptr == gcr_track_end) {
-			gcr_ptr = gcr_track_start;
-		}
-		return false;
-	}
-}
-
-
-/*
- *  Check if GCR byte is available for reading
- */
-
-inline bool Job1541::ByteReady()
-{
-	// Always ready if spindle motor is on
-	// TODO: this is not exact
-	return motor_on;
-}
-
-
-/*
- *  Read one GCR byte from disk
- */
-
-inline uint8_t Job1541::ReadGCRByte()
-{
-	uint8_t byte = *gcr_ptr++;	// Rotate disk
-	if (gcr_ptr == gcr_track_end) {
-		gcr_ptr = gcr_track_start;
-	}
-	return byte;
-}
-
-
-/*
- *  Return state of write protect sensor
+ *  Return state of write protect sensor as VIA port value (PB4)
  */
 
 inline uint8_t Job1541::WPState()

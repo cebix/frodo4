@@ -578,7 +578,9 @@ void C64::main_loop()
 					if (cycles > cycles_1541) {
 						cycles -= TheCPU->EmulateLine(1);
 					} else {
-						cycles_1541 -= TheCPU1541->EmulateLine(1);
+						int used = TheCPU1541->EmulateLine(1);
+						cycles_1541 -= used;
+						cycle_counter += used;	// Needed for GCR timing
 					}
 			} else {
 				TheCPU->EmulateLine(cycles);
