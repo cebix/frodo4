@@ -35,8 +35,7 @@
 enum {
 	INT_VIA1IRQ,
 	INT_VIA2IRQ,
-	INT_IECIRQ
-	// INT_RESET (private)
+	INT_RESET,
 };
 
 
@@ -79,7 +78,8 @@ public:
 	bool Idle;				// true: 1541 is idle
 
 private:
-	void trigger_job_irq();
+	void trigger_via1_irq();
+	void trigger_via2_irq();
 
 	uint8_t read_byte(uint16_t adr);
 	uint8_t read_byte_via1(uint16_t adr);
@@ -205,25 +205,35 @@ struct MOS6502State {
 
 
 /*
- *  Trigger job loop IRQ
+ *  Trigger VIA 1 IRQ
  */
 
-#ifdef FRODO_SC
-inline void MOS6502_1541::trigger_job_irq()
+inline void MOS6502_1541::trigger_via1_irq()
 {
+#ifdef FRODO_SC
+	if (!(interrupt.intr[INT_VIA1IRQ])) {
+		first_irq_cycle = the_c64->CycleCounter();
+	}
+#endif
+	interrupt.intr[INT_VIA1IRQ] = true;
+	Idle = false;
+}
+
+
+/*
+ *  Trigger VIA 2 IRQ
+ */
+
+inline void MOS6502_1541::trigger_via2_irq()
+{
+#ifdef FRODO_SC
 	if (!(interrupt.intr[INT_VIA2IRQ])) {
 		first_irq_cycle = the_c64->CycleCounter();
 	}
-	interrupt.intr[INT_VIA2IRQ] = true;
-	Idle = false;
-}
-#else
-inline void MOS6502_1541::trigger_job_irq()
-{
-	interrupt.intr[INT_VIA2IRQ] = true;
-	Idle = false;
-}
 #endif
+	interrupt.intr[INT_VIA2IRQ] = true;
+	Idle = false;
+}
 
 
 /*
@@ -256,7 +266,7 @@ inline void MOS6502_1541::CountVIATimers(int cycles)
 		}
 		via2_ifr |= 0x40;
 		if (via2_ier & 0x40) {
-			trigger_job_irq();
+			trigger_via2_irq();
 		}
 	}
 
@@ -275,11 +285,12 @@ inline void MOS6502_1541::CountVIATimers(int cycles)
 
 inline void MOS6502_1541::TriggerIECInterrupt()
 {
-	// TODO: this is a hack
-	ram[0x7c] = 1;
-
-	// Wake up 1541
-	Idle = false;
+	if (via1_pcr & 0x01) {	// CA1 positive edge (1541 gets inverted bus signals)
+		via1_ifr |= 0x02;
+		if (via1_ier & 0x02) {	// CA1 interrupt enabled?
+			trigger_via1_irq();
+		}
+	}
 }
 
 #endif

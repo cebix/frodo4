@@ -40,9 +40,8 @@
  *    faster access to the zero page, the pop_byte() and
  *    push_byte() macros for the stack.
  *  - The possible interrupt sources are:
- *      INT_VIA1IRQ: I flag is checked, jump to ($fffe) (unused)
- *      INT_VIA2IRQ: I flag is checked, jump to ($fffe) (unused)
- *      INT_IECIRQ: I flag is checked, jump to ($fffe) (unused)
+ *      INT_VIA1IRQ: I flag is checked, jump to ($fffe)
+ *      INT_VIA2IRQ: I flag is checked, jump to ($fffe)
  *      INT_RESET: Jump to ($fffc)
  *  - Interrupts are not checked before every opcode but only
  *    at certain times:
@@ -73,11 +72,6 @@
 #include "C64.h"
 #include "CIA.h"
 #include "Display.h"
-
-
-enum {
-	INT_RESET = 3
-};
 
 
 /*
@@ -168,7 +162,6 @@ void MOS6502_1541::GetState(MOS6502State *s) const
 
 	s->intr[INT_VIA1IRQ] = interrupt.intr[INT_VIA1IRQ];
 	s->intr[INT_VIA2IRQ] = interrupt.intr[INT_VIA2IRQ];
-	s->intr[INT_IECIRQ] = interrupt.intr[INT_IECIRQ];
 	s->intr[INT_RESET] = interrupt.intr[INT_RESET];
 	s->instruction_complete = true;
 	s->idle = Idle;
@@ -213,7 +206,6 @@ void MOS6502_1541::SetState(const MOS6502State *s)
 
 	interrupt.intr[INT_VIA1IRQ] = s->intr[INT_VIA1IRQ];
 	interrupt.intr[INT_VIA2IRQ] = s->intr[INT_VIA2IRQ];
-	interrupt.intr[INT_IECIRQ] = s->intr[INT_IECIRQ];
 	interrupt.intr[INT_RESET] = s->intr[INT_RESET];
 	Idle = s->idle;
 
@@ -265,8 +257,11 @@ inline uint8_t MOS6502_1541::read_byte_via1(uint16_t adr)
 			return (via1_prb & via1_ddrb) | (in & ~via1_ddrb);
 		}
 		case 1:
+			via1_ifr &= 0xfd;	// Clear CA1 interrupt
+			interrupt.intr[INT_VIA1IRQ] = false;
+			return 0xff;		// Keep 1541C ROMs happy (track 0 sensor)
 		case 15:
-			return 0xff;	// Keep 1541C ROMs happy (track 0 sensor)
+			return 0xff;		// Keep 1541C ROMs happy (track 0 sensor)
 		case 2:
 			return via1_ddrb;
 		case 3:
@@ -324,7 +319,7 @@ inline uint8_t MOS6502_1541::read_byte_via2(uint16_t adr)
 			return via2_ddra;
 		case 4:
 			via2_ifr &= 0xbf;
-			interrupt.intr[INT_VIA2IRQ] = false;	// Clear job IRQ
+			interrupt.intr[INT_VIA2IRQ] = false;	// Clear IRQ
 			return via2_t1c;
 		case 5:
 			return via2_t1c >> 8;
@@ -750,7 +745,7 @@ handle_int:
 			Reset();
 		}
 
-		else if ((interrupt.intr[INT_VIA1IRQ] || interrupt.intr[INT_VIA2IRQ] || interrupt.intr[INT_IECIRQ]) && !i_flag) {
+		else if ((interrupt.intr[INT_VIA1IRQ] || interrupt.intr[INT_VIA2IRQ]) && !i_flag) {
 			push_byte(pc >> 8);
 			push_byte(pc);
 			push_flags(false);
