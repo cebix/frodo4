@@ -1,5 +1,5 @@
 dnl Information on the package.
-AC_PREREQ([2.71])
+AC_PREREQ([2.69])
 AC_INIT([Frodo],[4.3], [], [Frodo])
 AC_CONFIG_SRCDIR([src/main.cpp])
 AM_INIT_AUTOMAKE([1.12 foreign])
