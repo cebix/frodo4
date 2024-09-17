@@ -36,8 +36,10 @@ public:
 	virtual ~MOS6526() { }
 
 	void Reset();
+
 	void GetState(MOS6526State *cs) const;
-	void SetState(const MOS6526State *cs);
+	virtual void SetState(const MOS6526State *cs);
+
 #ifdef FRODO_SC
 	void CheckIRQs();
 	void EmulateCycle();
@@ -45,7 +47,8 @@ public:
 	void EmulateLine(int cycles);
 #endif
 	void CountTOD();
-	virtual void TriggerInterrupt(int bit)=0;
+
+	virtual void TriggerInterrupt(int bit) = 0;
 
 protected:
 	MOS6510 *the_cpu;	// Pointer to 6510
@@ -88,9 +91,11 @@ public:
 	MOS6526_1(MOS6510 *CPU, MOS6569 *VIC);
 
 	void Reset();
+
 	uint8_t ReadRegister(uint16_t adr);
 	void WriteRegister(uint16_t adr, uint8_t byte);
-	virtual void TriggerInterrupt(int bit);
+
+	void TriggerInterrupt(int bit) override;
 
 	uint8_t KeyMatrix[8];	// C64 keyboard matrix, 1 bit/key (0: key down, 1: key up)
 	uint8_t RevMatrix[8];	// Reversed keyboard matrix
@@ -112,14 +117,20 @@ public:
 	MOS6526_2(MOS6510 *CPU, MOS6569 *VIC, MOS6502_1541 *CPU1541);
 
 	void Reset();
+
+	void SetState(const MOS6526State *cs) override;
+
 	uint8_t ReadRegister(uint16_t adr);
 	void WriteRegister(uint16_t adr, uint8_t byte);
-	virtual void TriggerInterrupt(int bit);
 
-	uint8_t IECLines;		// State of IEC lines (bit 7 - DATA, bit 6 - CLK, bit 4 - ATN)
+	void TriggerInterrupt(int bit) override;
+
+	uint8_t IECLines;		// State of IEC lines from C64 side
+							// (bit 5 - DATA, bit 4 - CLK, bit 3 - ATN)
+							// Wire-AND with 1541 state to obtain physical line state
 
 private:
-	void write_pa(uint8_t byte);
+	void write_pa(uint8_t inv_out);
 
 	MOS6569 *the_vic;
 	MOS6502_1541 *the_cpu_1541;

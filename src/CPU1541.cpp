@@ -111,17 +111,159 @@ void MOS6502_1541::AsyncReset()
 
 
 /*
+ *  Reset CPU
+ */
+
+void MOS6502_1541::Reset()
+{
+	// IEC lines and VIA registers
+	//
+	// Note: 6522 reset doesn't actually touch the timers nor the shift
+	// register, but we want to avoid undefined behavior.
+	IECLines = 0x38;
+	atn_ack = 0x08;
+
+	via1_pra = via1_ddra = via1_prb = via1_ddrb = 0;
+	via1_t1c = via1_t1l = via1_t2c = via1_t2l = 0xffff;
+	via1_sr = 0;
+	via1_acr = via1_pcr = 0;
+	via1_ifr = via1_ier = 0;
+
+	via2_pra = via2_ddra = via2_prb = via2_ddrb = 0;
+	via2_t1c = via2_t1l = via2_t2c = via2_t2l = 0xffff;
+	via2_sr = 0;
+	via2_acr = via2_pcr = 0;
+	via2_ifr = via2_ier = 0;
+
+	// Clear all interrupt lines
+	interrupt.intr_any = 0;
+
+	// Read reset vector
+	jump(read_word(0xfffc));
+
+	// Wake up 1541
+	Idle = false;
+}
+
+
+/*
+ *  Get 6502 register state
+ */
+
+void MOS6502_1541::GetState(MOS6502State *s) const
+{
+	s->a = a;
+	s->x = x;
+	s->y = y;
+
+	s->p = 0x20 | (n_flag & 0x80);
+	if (v_flag) s->p |= 0x40;
+	if (d_flag) s->p |= 0x08;
+	if (i_flag) s->p |= 0x04;
+	if (!z_flag) s->p |= 0x02;
+	if (c_flag) s->p |= 0x01;
+	
+	s->pc = pc;
+	s->sp = sp | 0x0100;
+
+	s->intr[INT_VIA1IRQ] = interrupt.intr[INT_VIA1IRQ];
+	s->intr[INT_VIA2IRQ] = interrupt.intr[INT_VIA2IRQ];
+	s->intr[INT_IECIRQ] = interrupt.intr[INT_IECIRQ];
+	s->intr[INT_RESET] = interrupt.intr[INT_RESET];
+	s->instruction_complete = true;
+	s->idle = Idle;
+
+	s->via1_pra = via1_pra; s->via1_ddra = via1_ddra;
+	s->via1_prb = via1_prb; s->via1_ddrb = via1_ddrb;
+	s->via1_t1c = via1_t1c; s->via1_t1l = via1_t1l;
+	s->via1_t2c = via1_t2c; s->via1_t2l = via1_t2l;
+	s->via1_sr = via1_sr;
+	s->via1_acr = via1_acr; s->via1_pcr = via1_pcr;
+	s->via1_ifr = via1_ifr; s->via1_ier = via1_ier;
+
+	s->via2_pra = via2_pra; s->via2_ddra = via2_ddra;
+	s->via2_prb = via2_prb; s->via2_ddrb = via2_ddrb;
+	s->via2_t1c = via2_t1c; s->via2_t1l = via2_t1l;
+	s->via2_t2c = via2_t2c; s->via2_t2l = via2_t2l;
+	s->via2_sr = via2_sr;
+	s->via2_acr = via2_acr; s->via2_pcr = via2_pcr;
+	s->via2_ifr = via2_ifr; s->via2_ier = via2_ier;
+}
+
+
+/*
+ *  Restore 6502 state
+ */
+
+void MOS6502_1541::SetState(const MOS6502State *s)
+{
+	a = s->a;
+	x = s->x;
+	y = s->y;
+
+	n_flag = s->p;
+	v_flag = s->p & 0x40;
+	d_flag = s->p & 0x08;
+	i_flag = s->p & 0x04;
+	z_flag = !(s->p & 0x02);
+	c_flag = s->p & 0x01;
+
+	jump(s->pc);
+	sp = s->sp & 0xff;
+
+	interrupt.intr[INT_VIA1IRQ] = s->intr[INT_VIA1IRQ];
+	interrupt.intr[INT_VIA2IRQ] = s->intr[INT_VIA2IRQ];
+	interrupt.intr[INT_IECIRQ] = s->intr[INT_IECIRQ];
+	interrupt.intr[INT_RESET] = s->intr[INT_RESET];
+	Idle = s->idle;
+
+	via1_pra = s->via1_pra; via1_ddra = s->via1_ddra;
+	via1_prb = s->via1_prb; via1_ddrb = s->via1_ddrb;
+	via1_t1c = s->via1_t1c; via1_t1l = s->via1_t1l;
+	via1_t2c = s->via1_t2c; via1_t2l = s->via1_t2l;
+	via1_sr = s->via1_sr;
+	via1_acr = s->via1_acr; via1_pcr = s->via1_pcr;
+	via1_ifr = s->via1_ifr; via1_ier = s->via1_ier;
+
+	via2_pra = s->via2_pra; via2_ddra = s->via2_ddra;
+	via2_prb = s->via2_prb; via2_ddrb = s->via2_ddrb;
+	via2_t1c = s->via2_t1c; via2_t1l = s->via2_t1l;
+	via2_t2c = s->via2_t2c; via2_t2l = s->via2_t2l;
+	via2_sr = s->via2_sr;
+	via2_acr = s->via2_acr; via2_pcr = s->via2_pcr;
+	via2_ifr = s->via2_ifr; via2_ier = s->via2_ier;
+
+	set_iec_lines(~via1_prb & via1_ddrb);
+}
+
+
+/*
+ *  Return physical state of IEC lines
+ */
+
+uint8_t MOS6502_1541::CalcIECLines() const
+{
+	uint8_t iec = IECLines & TheCIA2->IECLines;
+	iec &= ((iec ^ atn_ack) << 2) | 0xdf;	// ATN acknowledge pulls DATA low
+	return iec;
+}
+
+
+/*
  *  Read a byte from VIA 1
  */
 
 inline uint8_t MOS6502_1541::read_byte_via1(uint16_t adr)
 {
 	switch (adr & 0xf) {
-		case 0:
-			return ((via1_prb & 0x1a)
-					| ((IECLines & TheCIA2->IECLines) >> 7)				// DATA
-					| (((IECLines & TheCIA2->IECLines) >> 4) & 0x04)	// CLK
-					| ((TheCIA2->IECLines << 3) & 0x80)) ^ 0x85;		// ATN
+		case 0: {
+			uint8_t iec = ~CalcIECLines();		// 1541 reads inverted bus lines
+			uint8_t in = ((iec & 0x20) >> 5)	// DATA from bus on PB0
+			           | ((iec & 0x10) >> 2)	// CLK from bus on PB2
+			           | ((iec & 0x08) << 4)	// ATN from bus on PB7
+			           | 0x1a;					// Output lines high
+			return (via1_prb & via1_ddrb) | (in & ~via1_ddrb);
+		}
 		case 1:
 		case 15:
 			return 0xff;	// Keep 1541C ROMs happy (track 0 sensor)
@@ -246,14 +388,21 @@ inline uint16_t MOS6502_1541::read_word(uint16_t adr)
  *  Write a byte to VIA 1
  */
 
+void MOS6502_1541::set_iec_lines(uint8_t inv_out)
+{
+	IECLines = ((inv_out & 0x02) << 4)	// DATA on PB1
+	         | ((inv_out & 0x08) << 1)	// CLK on PB3
+	         | 0x08;					// No output on ATN
+
+	atn_ack = (~inv_out & 0x10) >> 1;	// PB4
+}
+
 void MOS6502_1541::write_byte_via1(uint16_t adr, uint8_t byte)
 {
 	switch (adr & 0xf) {
 		case 0:
 			via1_prb = byte;
-			byte = ~via1_prb & via1_ddrb;
-			IECLines = ((byte << 6) & ((~byte ^ TheCIA2->IECLines) << 3) & 0x80)	// DATA
-					 | ((byte << 3) & 0x40);										// CLK
+			set_iec_lines(~via1_prb & via1_ddrb);
 			break;
 		case 1:
 		case 15:
@@ -261,9 +410,7 @@ void MOS6502_1541::write_byte_via1(uint16_t adr, uint8_t byte)
 			break;
 		case 2:
 			via1_ddrb = byte;
-			byte = ~via1_prb & via1_ddrb;
-			IECLines = ((byte << 6) & ((~byte ^ TheCIA2->IECLines) << 3) & 0x80)	// DATA
-					 | ((byte << 3) & 0x40);										// CLK
+			set_iec_lines(~via1_prb & via1_ddrb);
 			break;
 		case 3:
 			via1_ddra = byte;
@@ -534,130 +681,6 @@ void MOS6502_1541::do_sbc(uint8_t byte)
 
 		a = (ah << 4) | (al & 0x0f);							// Compose result
 	}
-}
-
-
-/*
- *  Get 6502 register state
- */
-
-void MOS6502_1541::GetState(MOS6502State *s) const
-{
-	s->a = a;
-	s->x = x;
-	s->y = y;
-
-	s->p = 0x20 | (n_flag & 0x80);
-	if (v_flag) s->p |= 0x40;
-	if (d_flag) s->p |= 0x08;
-	if (i_flag) s->p |= 0x04;
-	if (!z_flag) s->p |= 0x02;
-	if (c_flag) s->p |= 0x01;
-	
-	s->pc = pc;
-	s->sp = sp | 0x0100;
-
-	s->intr[INT_VIA1IRQ] = interrupt.intr[INT_VIA1IRQ];
-	s->intr[INT_VIA2IRQ] = interrupt.intr[INT_VIA2IRQ];
-	s->intr[INT_IECIRQ] = interrupt.intr[INT_IECIRQ];
-	s->intr[INT_RESET] = interrupt.intr[INT_RESET];
-	s->instruction_complete = true;
-	s->idle = Idle;
-
-	s->via1_pra = via1_pra; s->via1_ddra = via1_ddra;
-	s->via1_prb = via1_prb; s->via1_ddrb = via1_ddrb;
-	s->via1_t1c = via1_t1c; s->via1_t1l = via1_t1l;
-	s->via1_t2c = via1_t2c; s->via1_t2l = via1_t2l;
-	s->via1_sr = via1_sr;
-	s->via1_acr = via1_acr; s->via1_pcr = via1_pcr;
-	s->via1_ifr = via1_ifr; s->via1_ier = via1_ier;
-
-	s->via2_pra = via2_pra; s->via2_ddra = via2_ddra;
-	s->via2_prb = via2_prb; s->via2_ddrb = via2_ddrb;
-	s->via2_t1c = via2_t1c; s->via2_t1l = via2_t1l;
-	s->via2_t2c = via2_t2c; s->via2_t2l = via2_t2l;
-	s->via2_sr = via2_sr;
-	s->via2_acr = via2_acr; s->via2_pcr = via2_pcr;
-	s->via2_ifr = via2_ifr; s->via2_ier = via2_ier;
-}
-
-
-/*
- *  Restore 6502 state
- */
-
-void MOS6502_1541::SetState(const MOS6502State *s)
-{
-	a = s->a;
-	x = s->x;
-	y = s->y;
-
-	n_flag = s->p;
-	v_flag = s->p & 0x40;
-	d_flag = s->p & 0x08;
-	i_flag = s->p & 0x04;
-	z_flag = !(s->p & 0x02);
-	c_flag = s->p & 0x01;
-
-	jump(s->pc);
-	sp = s->sp & 0xff;
-
-	interrupt.intr[INT_VIA1IRQ] = s->intr[INT_VIA1IRQ];
-	interrupt.intr[INT_VIA2IRQ] = s->intr[INT_VIA2IRQ];
-	interrupt.intr[INT_IECIRQ] = s->intr[INT_IECIRQ];
-	interrupt.intr[INT_RESET] = s->intr[INT_RESET];
-	Idle = s->idle;
-
-	via1_pra = s->via1_pra; via1_ddra = s->via1_ddra;
-	via1_prb = s->via1_prb; via1_ddrb = s->via1_ddrb;
-	via1_t1c = s->via1_t1c; via1_t1l = s->via1_t1l;
-	via1_t2c = s->via1_t2c; via1_t2l = s->via1_t2l;
-	via1_sr = s->via1_sr;
-	via1_acr = s->via1_acr; via1_pcr = s->via1_pcr;
-	via1_ifr = s->via1_ifr; via1_ier = s->via1_ier;
-
-	via2_pra = s->via2_pra; via2_ddra = s->via2_ddra;
-	via2_prb = s->via2_prb; via2_ddrb = s->via2_ddrb;
-	via2_t1c = s->via2_t1c; via2_t1l = s->via2_t1l;
-	via2_t2c = s->via2_t2c; via2_t2l = s->via2_t2l;
-	via2_sr = s->via2_sr;
-	via2_acr = s->via2_acr; via2_pcr = s->via2_pcr;
-	via2_ifr = s->via2_ifr; via2_ier = s->via2_ier;
-}
-
-
-/*
- *  Reset CPU
- */
-
-void MOS6502_1541::Reset()
-{
-	// IEC lines and VIA registers
-	//
-	// Note: 6522 reset doesn't actually touch the timers nor the shift
-	// register, but we want to avoid undefined behavior.
-	IECLines = 0xc0;
-
-	via1_pra = via1_ddra = via1_prb = via1_ddrb = 0;
-	via1_t1c = via1_t1l = via1_t2c = via1_t2l = 0xffff;
-	via1_sr = 0;
-	via1_acr = via1_pcr = 0;
-	via1_ifr = via1_ier = 0;
-
-	via2_pra = via2_ddra = via2_prb = via2_ddrb = 0;
-	via2_t1c = via2_t1l = via2_t2c = via2_t2l = 0xffff;
-	via2_sr = 0;
-	via2_acr = via2_pcr = 0;
-	via2_ifr = via2_ier = 0;
-
-	// Clear all interrupt lines
-	interrupt.intr_any = 0;
-
-	// Read reset vector
-	jump(read_word(0xfffc));
-
-	// Wake up 1541
-	Idle = false;
 }
 
 

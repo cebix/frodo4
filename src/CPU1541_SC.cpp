@@ -111,6 +111,44 @@ void MOS6502_1541::AsyncReset()
 
 
 /*
+ *  Reset CPU
+ */
+
+void MOS6502_1541::Reset()
+{
+	// IEC lines and VIA registers
+	//
+	// Note: 6522 reset doesn't actually touch the timers nor the shift
+	// register, but we want to avoid undefined behavior.
+	IECLines = 0x38;
+	atn_ack = 0x08;
+
+	via1_pra = via1_ddra = via1_prb = via1_ddrb = 0;
+	via1_t1c = via1_t1l = via1_t2c = via1_t2l = 0xffff;
+	via1_sr = 0;
+	via1_acr = via1_pcr = 0;
+	via1_ifr = via1_ier = 0;
+
+	via2_pra = via2_ddra = via2_prb = via2_ddrb = 0;
+	via2_t1c = via2_t1l = via2_t2c = via2_t2l = 0xffff;
+	via2_sr = 0;
+	via2_acr = via2_pcr = 0;
+	via2_ifr = via2_ier = 0;
+
+	// Clear all interrupt lines
+	interrupt.intr_any = 0;
+	opflags = 0;
+
+	// Read reset vector
+	pc = read_word(0xfffc);
+	state = 0;
+
+	// Wake up 1541
+	Idle = false;
+}
+
+
+/*
  *  Get 6502 register state
  */
 
@@ -199,6 +237,20 @@ void MOS6502_1541::SetState(const MOS6502State *s)
 	via2_sr = s->via2_sr;
 	via2_acr = s->via2_acr; via2_pcr = s->via2_pcr;
 	via2_ifr = s->via2_ifr; via2_ier = s->via2_ier;
+
+	set_iec_lines(~via1_prb & via1_ddrb);
+}
+
+
+/*
+ *  Return physical state of IEC lines
+ */
+
+uint8_t MOS6502_1541::CalcIECLines() const
+{
+	uint8_t iec = IECLines & TheCIA2->IECLines;
+	iec &= ((iec ^ atn_ack) << 2) | 0xdf;	// ATN acknowledge pulls DATA low
+	return iec;
 }
 
 
@@ -209,11 +261,14 @@ void MOS6502_1541::SetState(const MOS6502State *s)
 inline uint8_t MOS6502_1541::read_byte_via1(uint16_t adr)
 {
 	switch (adr & 0xf) {
-		case 0:
-			return ((via1_prb & 0x1a)
-					| ((IECLines & TheCIA2->IECLines) >> 7)				// DATA
-					| (((IECLines & TheCIA2->IECLines) >> 4) & 0x04)	// CLK
-					| ((TheCIA2->IECLines << 3) & 0x80)) ^ 0x85;		// ATN
+		case 0: {
+			uint8_t iec = ~CalcIECLines();		// 1541 reads inverted bus lines
+			uint8_t in = ((iec & 0x20) >> 5)	// DATA from bus on PB0
+			           | ((iec & 0x10) >> 2)	// CLK from bus on PB2
+			           | ((iec & 0x08) << 4)	// ATN from bus on PB7
+			           | 0x1a;					// Output lines high
+			return (via1_prb & via1_ddrb) | (in & ~via1_ddrb);
+		}
 		case 1:
 		case 15:
 			return 0xff;	// Keep 1541C ROMs happy (track 0 sensor)
@@ -338,14 +393,21 @@ inline uint16_t MOS6502_1541::read_word(uint16_t adr)
  *  Write a byte to VIA 1
  */
 
+void MOS6502_1541::set_iec_lines(uint8_t inv_out)
+{
+	IECLines = ((inv_out & 0x02) << 4)	// DATA on PB1
+	         | ((inv_out & 0x08) << 1)	// CLK on PB3
+	         | 0x08;					// No output on ATN
+
+	atn_ack = (~inv_out & 0x10) >> 1;	// PB4
+}
+
 void MOS6502_1541::write_byte_via1(uint16_t adr, uint8_t byte)
 {
 	switch (adr & 0xf) {
 		case 0:
 			via1_prb = byte;
-			byte = ~via1_prb & via1_ddrb;
-			IECLines = ((byte << 6) & ((~byte ^ TheCIA2->IECLines) << 3) & 0x80)	// DATA
-					 | ((byte << 3) & 0x40);										// CLK
+			set_iec_lines(~via1_prb & via1_ddrb);
 			break;
 		case 1:
 		case 15:
@@ -353,9 +415,7 @@ void MOS6502_1541::write_byte_via1(uint16_t adr, uint8_t byte)
 			break;
 		case 2:
 			via1_ddrb = byte;
-			byte = ~via1_prb & via1_ddrb;
-			IECLines = ((byte << 6) & ((~byte ^ TheCIA2->IECLines) << 3) & 0x80)	// DATA
-					 | ((byte << 3) & 0x40);										// CLK
+			set_iec_lines(~via1_prb & via1_ddrb);
 			break;
 		case 3:
 			via1_ddra = byte;
@@ -586,43 +646,6 @@ inline void MOS6502_1541::do_sbc(uint8_t byte)
 
 		a = (ah << 4) | (al & 0x0f);							// Compose result
 	}
-}
-
-
-/*
- *  Reset CPU
- */
-
-void MOS6502_1541::Reset()
-{
-	// IEC lines and VIA registers
-	//
-	// Note: 6522 reset doesn't actually touch the timers nor the shift
-	// register, but we want to avoid undefined behavior.
-	IECLines = 0xc0;
-
-	via1_pra = via1_ddra = via1_prb = via1_ddrb = 0;
-	via1_t1c = via1_t1l = via1_t2c = via1_t2l = 0xffff;
-	via1_sr = 0;
-	via1_acr = via1_pcr = 0;
-	via1_ifr = via1_ier = 0;
-
-	via2_pra = via2_ddra = via2_prb = via2_ddrb = 0;
-	via2_t1c = via2_t1l = via2_t2c = via2_t2l = 0xffff;
-	via2_sr = 0;
-	via2_acr = via2_pcr = 0;
-	via2_ifr = via2_ier = 0;
-
-	// Clear all interrupt lines
-	interrupt.intr_any = 0;
-	opflags = 0;
-
-	// Read reset vector
-	pc = read_word(0xfffc);
-	state = 0;
-
-	// Wake up 1541
-	Idle = false;
 }
 
 

@@ -58,22 +58,29 @@ public:
 #endif
 	void Reset();
 	void AsyncReset();					// Reset the CPU asynchronously
+
 	void GetState(MOS6502State *s) const;
 	void SetState(const MOS6502State *s);
+
 	uint8_t ExtReadByte(uint16_t adr);
 	void ExtWriteByte(uint16_t adr, uint8_t byte);
+
 	void CountVIATimers(int cycles);
-	void NewATNState();
-	void IECInterrupt();
-	void TriggerJobIRQ();
-	bool InterruptEnabled();
+
+	void TriggerIECInterrupt();
+	uint8_t CalcIECLines() const;
 
 	MOS6526_2 *TheCIA2;		// Pointer to C64 CIA 2
 
-	uint8_t IECLines;		// State of IEC lines (bit 7 - DATA, bit 6 - CLK)
+	uint8_t IECLines;		// State of IEC lines from 1541 side
+							// (bit 5 - DATA, bit 4 - CLK, bit 3 - ATN)
+							// Wire-AND with C64 state to obtain physical line state
+
 	bool Idle;				// true: 1541 is idle
 
 private:
+	void trigger_job_irq();
+
 	uint8_t read_byte(uint16_t adr);
 	uint8_t read_byte_via1(uint16_t adr);
 	uint8_t read_byte_via2(uint16_t adr);
@@ -81,6 +88,7 @@ private:
 	void write_byte(uint16_t adr, uint8_t byte);
 	void write_byte_via1(uint16_t adr, uint8_t byte);
 	void write_byte_via2(uint16_t adr, uint8_t byte);
+	void set_iec_lines(uint8_t inv_out);
 
 	uint8_t read_zp(uint16_t adr);
 	uint16_t read_zp_word(uint16_t adr);
@@ -124,6 +132,8 @@ private:
 #else
 	int borrowed_cycles;	// Borrowed cycles from next line
 #endif
+
+	uint8_t atn_ack;		// ATN acknowledge: 0x00 or 0x08 (XOR value for IECLines ATN)
 
 	uint8_t via1_pra;		// PRA of VIA 1
 	uint8_t via1_ddra;		// DDRA of VIA 1
@@ -199,7 +209,7 @@ struct MOS6502State {
  */
 
 #ifdef FRODO_SC
-inline void MOS6502_1541::TriggerJobIRQ()
+inline void MOS6502_1541::trigger_job_irq()
 {
 	if (!(interrupt.intr[INT_VIA2IRQ])) {
 		first_irq_cycle = the_c64->CycleCounter();
@@ -208,7 +218,7 @@ inline void MOS6502_1541::TriggerJobIRQ()
 	Idle = false;
 }
 #else
-inline void MOS6502_1541::TriggerJobIRQ()
+inline void MOS6502_1541::trigger_job_irq()
 {
 	interrupt.intr[INT_VIA2IRQ] = true;
 	Idle = false;
@@ -246,7 +256,7 @@ inline void MOS6502_1541::CountVIATimers(int cycles)
 		}
 		via2_ifr |= 0x40;
 		if (via2_ier & 0x40) {
-			TriggerJobIRQ();
+			trigger_job_irq();
 		}
 	}
 
@@ -260,37 +270,16 @@ inline void MOS6502_1541::CountVIATimers(int cycles)
 
 
 /*
- *  ATN line probably changed state, recalc IECLines
- */
-
-inline void MOS6502_1541::NewATNState()
-{
-	uint8_t byte = ~via1_prb & via1_ddrb;
-	IECLines = ((byte << 6) & ((~byte ^ TheCIA2->IECLines) << 3) & 0x80)	// DATA (incl. ATN acknowledge)
-	         | ((byte << 3) & 0x40);										// CLK
-}
-
-
-/*
  *  Interrupt by negative edge of ATN on IEC bus
  */
 
-inline void MOS6502_1541::IECInterrupt()
+inline void MOS6502_1541::TriggerIECInterrupt()
 {
+	// TODO: this is a hack
 	ram[0x7c] = 1;
 
 	// Wake up 1541
 	Idle = false;
-}
-
-
-/*
- *  Test if interrupts are enabled (for job loop)
- */
-
-inline bool MOS6502_1541::InterruptEnabled()
-{
-	return !i_flag;
 }
 
 #endif

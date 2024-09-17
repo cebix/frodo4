@@ -316,8 +316,8 @@ void C64::NewPrefs(const Prefs *prefs)
 	TheREU->NewPrefs(prefs);
 	TheSID->NewPrefs(prefs);
 
-	// Reset 1541 processor if turned on
-	if (!ThePrefs.Emul1541Proc && prefs->Emul1541Proc) {
+	// Reset 1541 processor if turned on or off (to bring IEC lines back to sane state)
+	if (ThePrefs.Emul1541Proc != prefs->Emul1541Proc) {
 		TheCPU1541->AsyncReset();
 	}
 

@@ -108,7 +108,7 @@ void MOS6526_2::Reset()
 	the_vic->ChangedVA(0);
 
 	// IEC
-	IECLines = 0xd0;
+	IECLines = 0x38;	// DATA, CLK, ATN high
 }
 
 
@@ -210,20 +210,28 @@ void MOS6526::SetState(const MOS6526State *cs)
 	ta_output = cs->ta_output;
 }
 
+void MOS6526_2::SetState(const MOS6526State *cs)
+{
+	MOS6526::SetState(cs);
+
+	uint8_t inv_out = ~pra & ddra;
+	IECLines = inv_out & 0x38;
+}
+
 
 /*
  *  Output TA/TB to PB6/7
  */
 
-inline uint8_t MOS6526::timer_on_pb(uint8_t prb)
+inline uint8_t MOS6526::timer_on_pb(uint8_t byte)
 {
 	if (cra & 0x02) {
 
 		// TA output to PB6
 		if ((cra & 0x04) ? ta_toggle : ta_int_next_cycle) {
-			prb |= 0x40;
+			byte |= 0x40;
 		} else {
-			prb &= 0xbf;
+			byte &= 0xbf;
 		}
 	}
 
@@ -231,13 +239,13 @@ inline uint8_t MOS6526::timer_on_pb(uint8_t prb)
 
 		// TB output to PB7
 		if ((crb & 0x04) ? tb_toggle : tb_int_next_cycle) {
-			prb |= 0x80;
+			byte |= 0x80;
 		} else {
-			prb &= 0x7f;
+			byte &= 0x7f;
 		}
 	}
 
-	return prb;
+	return byte;
 }
 
 
@@ -312,11 +320,13 @@ uint8_t MOS6526_1::ReadRegister(uint16_t adr)
 uint8_t MOS6526_2::ReadRegister(uint16_t adr)
 {
 	switch (adr) {
-		case 0x00:
-			return ((pra | ~ddra) & 0x3f)
-			     | (IECLines & the_cpu_1541->IECLines);
+		case 0x00: {
+			uint8_t in = ((the_cpu_1541->CalcIECLines() & 0x30) << 2)	// DATA and CLK from bus
+			           | 0x3f;											// Other lines high
+			return (pra & ddra) | (in & ~ddra);
+		}
 		case 0x01: {
-			uint8_t ret = prb | ~ddrb;
+			uint8_t ret = prb | ~ddrb;				// Input lines read as high
 
 			// TA/TB output to PB enabled?
 			if ((cra | crb) & 0x02) {
@@ -467,19 +477,16 @@ void MOS6526_1::WriteRegister(uint16_t adr, uint8_t byte)
  */
 
 // Write to port A, check for VIC bank change and IEC lines
-inline void MOS6526_2::write_pa(uint8_t byte)
+inline void MOS6526_2::write_pa(uint8_t inv_out)
 {
-	the_vic->ChangedVA(byte & 3);
+	the_vic->ChangedVA(inv_out & 3);
 
 	uint8_t old_lines = IECLines;
-	IECLines = ((byte << 2) & 0x80)			// DATA
-			 | ((byte << 2) & 0x40)			// CLK
-			 | ((byte << 1) & 0x10);		// ATN
+	IECLines = inv_out & 0x38;
 
-	if ((IECLines ^ old_lines) & 0x10) {	// ATN changed
-		the_cpu_1541->NewATNState();
-		if (old_lines & 0x10) {				// ATN 1->0
-			the_cpu_1541->IECInterrupt();
+	if ((IECLines ^ old_lines) & 0x08) {	// ATN changed
+		if (old_lines & 0x08) {				// ATN 1->0
+			the_cpu_1541->TriggerIECInterrupt();
 		}
 	}
 }
