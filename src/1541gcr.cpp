@@ -1,5 +1,5 @@
 /*
- *  1541job.cpp - Emulation of 1541 GCR disk reading/writing
+ *  1541gcr.cpp - Emulation of 1541 GCR disk reading/writing
  *
  *  Frodo Copyright (C) Christian Bauer
  *
@@ -39,7 +39,7 @@
 
 #include "sysdeps.h"
 
-#include "1541job.h"
+#include "1541gcr.h"
 #include "CPU1541.h"
 #include "Prefs.h"
 

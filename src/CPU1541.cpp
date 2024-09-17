@@ -69,7 +69,7 @@
 #include "sysdeps.h"
 
 #include "CPU1541.h"
-#include "1541job.h"
+#include "1541gcr.h"
 #include "C64.h"
 #include "CIA.h"
 #include "Display.h"

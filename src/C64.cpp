@@ -21,7 +21,7 @@
 #include "sysdeps.h"
 
 #include "C64.h"
-#include "1541job.h"
+#include "1541gcr.h"
 #include "CIA.h"
 #include "CPUC64.h"
 #include "CPU1541.h"
@@ -867,6 +867,9 @@ void C64::MakeSnapshot(Snapshot * s)
 
 		// Advance C64 state by one cycle
 		emulate_c64_cycle();
+		if (ThePrefs.Emul1541Proc) {
+			emulate_1541_cycle();
+		}
 	}
 #else
 	TheCPU->GetState(&(s->cpu));

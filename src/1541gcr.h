@@ -1,5 +1,5 @@
 /*
- *  1541job.h - Emulation of 1541 GCR disk reading/writing
+ *  1541gcr.h - Emulation of 1541 GCR disk reading/writing
  *
  *  Frodo Copyright (C) Christian Bauer
  *
@@ -18,8 +18,8 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef _1541JOB_H
-#define _1541JOB_H
+#ifndef _1541GCR_H
+#define _1541GCR_H
 
 #include <string>
 
