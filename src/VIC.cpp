@@ -804,12 +804,6 @@ inline void MOS6569::el_mc_bitmap(uint8_t *p, uint8_t *q, uint8_t *r)
 	uint8_t *cp = color_line;
 	uint8_t *mp = matrix_line;
 
-#ifdef __GNU_C__
-	&lookup; /* Statement with no effect other than preventing GCC from
-			  * putting the array in a register, which generates
-			  * spectacularly bad code. */
-#endif
-
 	lookup[0] = (b0c_color << 8) | b0c_color;
 
 	// Loop for 40 characters
