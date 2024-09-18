@@ -359,7 +359,6 @@ static void set_values()
 	gtk_combo_box_set_active(GTK_COMBO_BOX(gtk_builder_get_object(builder, "joystick2_port")), prefs->Joystick2Port);
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "joystick_swap")), prefs->JoystickSwap);
 
-	gtk_spin_button_set_value(GTK_SPIN_BUTTON(gtk_builder_get_object(builder, "skip_frames")), prefs->SkipFrames);
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "limit_speed")), prefs->LimitSpeed);
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "fast_reset")), prefs->FastReset);
 
@@ -417,7 +416,6 @@ static void get_values()
 	prefs->Joystick2Port = gtk_combo_box_get_active(GTK_COMBO_BOX(gtk_builder_get_object(builder, "joystick2_port")));
 	prefs->JoystickSwap = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "joystick_swap")));
 
-	prefs->SkipFrames = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(gtk_builder_get_object(builder, "skip_frames")));
 	prefs->LimitSpeed = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "limit_speed")));
 	prefs->FastReset = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "fast_reset")));
 

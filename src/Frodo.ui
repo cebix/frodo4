@@ -113,136 +113,6 @@ Lutz Vieweg</property>
     <property name="can-focus">False</property>
     <property name="icon-name">media-playback-start</property>
   </object>
-  <object class="GtkApplicationWindow" id="sam_win">
-    <property name="can-focus">False</property>
-    <property name="title" translatable="yes">SAM Monitor</property>
-    <property name="window-position">mouse</property>
-    <property name="default-width">1000</property>
-    <property name="default-height">800</property>
-    <signal name="delete-event" handler="on_sam_win_delete_event" swapped="no"/>
-    <child>
-      <object class="GtkBox">
-        <property name="visible">True</property>
-        <property name="can-focus">False</property>
-        <property name="orientation">vertical</property>
-        <child>
-          <object class="GtkMenuBar">
-            <property name="visible">True</property>
-            <property name="can-focus">False</property>
-            <child>
-              <object class="GtkMenuItem">
-                <property name="visible">True</property>
-                <property name="can-focus">False</property>
-                <property name="label" translatable="yes">_File</property>
-                <property name="use-underline">True</property>
-                <child type="submenu">
-                  <object class="GtkMenu">
-                    <property name="visible">True</property>
-                    <property name="can-focus">False</property>
-                    <child>
-                      <object class="GtkImageMenuItem">
-                        <property name="label">gtk-close</property>
-                        <property name="visible">True</property>
-                        <property name="can-focus">False</property>
-                        <property name="use-underline">True</property>
-                        <property name="use-stock">True</property>
-                        <signal name="activate" handler="on_sam_close_activate" swapped="no"/>
-                        <accelerator key="w" signal="activate" modifiers="GDK_CONTROL_MASK"/>
-                      </object>
-                    </child>
-                  </object>
-                </child>
-              </object>
-            </child>
-            <child>
-              <object class="GtkMenuItem">
-                <property name="visible">True</property>
-                <property name="can-focus">False</property>
-                <property name="label" translatable="yes">_Edit</property>
-                <property name="use-underline">True</property>
-                <child type="submenu">
-                  <object class="GtkMenu">
-                    <property name="visible">True</property>
-                    <property name="can-focus">False</property>
-                    <child>
-                      <object class="GtkImageMenuItem">
-                        <property name="label">gtk-copy</property>
-                        <property name="visible">True</property>
-                        <property name="can-focus">False</property>
-                        <property name="use-underline">True</property>
-                        <property name="use-stock">True</property>
-                        <signal name="activate" handler="on_sam_copy_activate" swapped="no"/>
-                        <accelerator key="c" signal="activate" modifiers="GDK_CONTROL_MASK"/>
-                      </object>
-                    </child>
-                    <child>
-                      <object class="GtkSeparatorMenuItem">
-                        <property name="visible">True</property>
-                        <property name="can-focus">False</property>
-                      </object>
-                    </child>
-                    <child>
-                      <object class="GtkImageMenuItem">
-                        <property name="label">gtk-select-all</property>
-                        <property name="visible">True</property>
-                        <property name="can-focus">False</property>
-                        <property name="use-underline">True</property>
-                        <property name="use-stock">True</property>
-                        <signal name="activate" handler="on_sam_select_all_activate" swapped="no"/>
-                        <accelerator key="a" signal="activate" modifiers="GDK_CONTROL_MASK"/>
-                      </object>
-                    </child>
-                    <child>
-                      <object class="GtkImageMenuItem">
-                        <property name="label">gtk-clear</property>
-                        <property name="visible">True</property>
-                        <property name="can-focus">False</property>
-                        <property name="use-underline">True</property>
-                        <property name="use-stock">True</property>
-                        <signal name="activate" handler="on_sam_clear_activate" swapped="no"/>
-                      </object>
-                    </child>
-                  </object>
-                </child>
-              </object>
-            </child>
-          </object>
-          <packing>
-            <property name="expand">False</property>
-            <property name="fill">True</property>
-            <property name="position">0</property>
-          </packing>
-        </child>
-        <child>
-          <object class="GtkScrolledWindow">
-            <property name="visible">True</property>
-            <property name="can-focus">True</property>
-            <property name="shadow-type">in</property>
-            <child>
-              <object class="GtkTextView" id="sam_view">
-                <property name="visible">True</property>
-                <property name="can-focus">True</property>
-                <property name="monospace">True</property>
-                <signal name="key-press-event" handler="on_sam_view_key_press_event" swapped="no"/>
-              </object>
-            </child>
-          </object>
-          <packing>
-            <property name="expand">True</property>
-            <property name="fill">True</property>
-            <property name="position">1</property>
-          </packing>
-        </child>
-      </object>
-    </child>
-  </object>
-  <object class="GtkAdjustment" id="skip_frames_adj">
-    <property name="lower">1</property>
-    <property name="upper">100</property>
-    <property name="value">1</property>
-    <property name="step-increment">1</property>
-    <property name="page-increment">10</property>
-  </object>
   <object class="GtkApplicationWindow" id="prefs_win">
     <property name="can-focus">False</property>
     <property name="title" translatable="yes">Frodo Settings</property>
@@ -1164,45 +1034,6 @@ Lutz Vieweg</property>
                             <property name="orientation">vertical</property>
                             <property name="spacing">4</property>
                             <child>
-                              <object class="GtkBox">
-                                <property name="visible">True</property>
-                                <property name="can-focus">False</property>
-                                <property name="spacing">4</property>
-                                <child>
-                                  <object class="GtkLabel">
-                                    <property name="visible">True</property>
-                                    <property name="can-focus">False</property>
-                                    <property name="label" translatable="yes">Draw Every n-th Frame:</property>
-                                  </object>
-                                  <packing>
-                                    <property name="expand">False</property>
-                                    <property name="fill">True</property>
-                                    <property name="position">0</property>
-                                  </packing>
-                                </child>
-                                <child>
-                                  <object class="GtkSpinButton" id="skip_frames">
-                                    <property name="visible">True</property>
-                                    <property name="can-focus">True</property>
-                                    <property name="adjustment">skip_frames_adj</property>
-                                    <property name="climb-rate">1</property>
-                                    <property name="snap-to-ticks">True</property>
-                                    <property name="value">1</property>
-                                  </object>
-                                  <packing>
-                                    <property name="expand">False</property>
-                                    <property name="fill">True</property>
-                                    <property name="position">1</property>
-                                  </packing>
-                                </child>
-                              </object>
-                              <packing>
-                                <property name="expand">False</property>
-                                <property name="fill">True</property>
-                                <property name="position">0</property>
-                              </packing>
-                            </child>
-                            <child>
                               <object class="GtkCheckButton" id="limit_speed">
                                 <property name="label" translatable="yes">Limit Speed to 100%</property>
                                 <property name="visible">True</property>
@@ -1589,5 +1420,135 @@ Lutz Vieweg</property>
         </child>
       </object>
     </child>
+  </object>
+  <object class="GtkApplicationWindow" id="sam_win">
+    <property name="can-focus">False</property>
+    <property name="title" translatable="yes">SAM Monitor</property>
+    <property name="window-position">mouse</property>
+    <property name="default-width">1000</property>
+    <property name="default-height">800</property>
+    <signal name="delete-event" handler="on_sam_win_delete_event" swapped="no"/>
+    <child>
+      <object class="GtkBox">
+        <property name="visible">True</property>
+        <property name="can-focus">False</property>
+        <property name="orientation">vertical</property>
+        <child>
+          <object class="GtkMenuBar">
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <child>
+              <object class="GtkMenuItem">
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+                <property name="label" translatable="yes">_File</property>
+                <property name="use-underline">True</property>
+                <child type="submenu">
+                  <object class="GtkMenu">
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                    <child>
+                      <object class="GtkImageMenuItem">
+                        <property name="label">gtk-close</property>
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="use-underline">True</property>
+                        <property name="use-stock">True</property>
+                        <signal name="activate" handler="on_sam_close_activate" swapped="no"/>
+                        <accelerator key="w" signal="activate" modifiers="GDK_CONTROL_MASK"/>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkMenuItem">
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+                <property name="label" translatable="yes">_Edit</property>
+                <property name="use-underline">True</property>
+                <child type="submenu">
+                  <object class="GtkMenu">
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                    <child>
+                      <object class="GtkImageMenuItem">
+                        <property name="label">gtk-copy</property>
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="use-underline">True</property>
+                        <property name="use-stock">True</property>
+                        <signal name="activate" handler="on_sam_copy_activate" swapped="no"/>
+                        <accelerator key="c" signal="activate" modifiers="GDK_CONTROL_MASK"/>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkSeparatorMenuItem">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkImageMenuItem">
+                        <property name="label">gtk-select-all</property>
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="use-underline">True</property>
+                        <property name="use-stock">True</property>
+                        <signal name="activate" handler="on_sam_select_all_activate" swapped="no"/>
+                        <accelerator key="a" signal="activate" modifiers="GDK_CONTROL_MASK"/>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkImageMenuItem">
+                        <property name="label">gtk-clear</property>
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="use-underline">True</property>
+                        <property name="use-stock">True</property>
+                        <signal name="activate" handler="on_sam_clear_activate" swapped="no"/>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="position">0</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkScrolledWindow">
+            <property name="visible">True</property>
+            <property name="can-focus">True</property>
+            <property name="shadow-type">in</property>
+            <child>
+              <object class="GtkTextView" id="sam_view">
+                <property name="visible">True</property>
+                <property name="can-focus">True</property>
+                <property name="monospace">True</property>
+                <signal name="key-press-event" handler="on_sam_view_key_press_event" swapped="no"/>
+              </object>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">True</property>
+            <property name="fill">True</property>
+            <property name="position">1</property>
+          </packing>
+        </child>
+      </object>
+    </child>
+  </object>
+  <object class="GtkAdjustment" id="skip_frames_adj">
+    <property name="lower">1</property>
+    <property name="upper">100</property>
+    <property name="value">1</property>
+    <property name="step-increment">1</property>
+    <property name="page-increment">10</property>
   </object>
 </interface>

@@ -193,9 +193,6 @@ MOS6569::MOS6569(C64 *c64, C64Display *disp, MOS6510 *CPU, uint8_t *RAM, uint8_t
 		spr_ptr[i] = 0;
 	}
 
-	frame_skipped = false;
-	skip_counter = 1;
-
 	memset(spr_coll_buf, 0, sizeof(spr_coll_buf));
 	memset(fore_mask_buf, 0, sizeof(fore_mask_buf));
 
@@ -1376,7 +1373,7 @@ unsigned MOS6569::EmulateCycle()
 				is_bad_line = (raster_y >= FIRST_DMA_LINE && raster_y <= LAST_DMA_LINE && ((raster_y & 7) == y_scroll) && bad_lines_enabled);
 
 				// Don't draw all lines, hide some at the top and bottom
-				draw_this_line = (raster_y >= FIRST_DISP_LINE && raster_y <= LAST_DISP_LINE && !frame_skipped);
+				draw_this_line = (raster_y >= FIRST_DISP_LINE && raster_y <= LAST_DISP_LINE);
 			}
 
 			// First sample of border state
@@ -1428,19 +1425,6 @@ unsigned MOS6569::EmulateCycle()
 
 		// Fetch sprite pointer 4, reset BA if sprites 4 and 5 off
 		case 3:
-			if (raster_y == 0) {
-
-				// Update frameskip after C64 has redrawn the display when
-				// we returned VIC_VBLANK in the previous cycle
-				--skip_counter;
-				if (skip_counter == 0) {
-					frame_skipped = false;
-					skip_counter = ThePrefs.SkipFrames;
-				} else {
-					frame_skipped = true;
-				}
-			}
-
 			SprPtrAccess(4);
 			SprDataAccess(4, 0);
 			DisplayIfBadLine;

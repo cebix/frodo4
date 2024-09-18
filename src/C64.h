@@ -152,6 +152,8 @@ private:
 	        orig_kernal_1d85;	// (for undoing the Fast Reset patch)
 
 	std::chrono::time_point<std::chrono::steady_clock> frame_start;	// Start time of last frame (for speed control)
+	unsigned frame_skip_factor;				// For display update limiting
+	unsigned frame_skip_counter;			// For display update limiting
 
 	PlayMode play_mode = PLAY_MODE_PLAY;	// Current play mode
 	Snapshot * rewind_buffer = nullptr;		// Snapshot buffer for rewinding

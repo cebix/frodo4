@@ -239,9 +239,6 @@ MOS6569::MOS6569(C64 *c64, C64Display *disp, MOS6510 *CPU, uint8_t *RAM, uint8_t
 		mc[i] = 63;
 	}
 
-	frame_skipped = false;
-	skip_counter = 1;
-
 	// Clear foreground mask
 	memset(fore_mask_buf, 0, DISPLAY_X/8);
 
@@ -1206,16 +1203,6 @@ unsigned MOS6569::EmulateLine(int & retCyclesLeft)
 
 	} else if (raster == 1) {
 
-		// Update frameskip in line 1 (after C64 has redrawn the display in
-		// line 0)
-		--skip_counter;
-		if (skip_counter == 0) {
-			frame_skipped = false;
-			skip_counter = ThePrefs.SkipFrames;
-		} else {
-			frame_skipped = true;
-		}
-
 		// Get bitmap pointer for next frame. This must be done
 		// after the C64 VBlank activities because the preferences
 		// and screen configuration may have been changed there
@@ -1233,15 +1220,6 @@ unsigned MOS6569::EmulateLine(int & retCyclesLeft)
 	// In line $30, the DEN bit controls if Bad Lines can occur
 	if (raster == 0x30) {
 		bad_lines_enabled = ctrl1 & 0x10;
-	}
-
-	// Skip frame? Only calculate Bad Lines then
-	if (frame_skipped) {
-		if (raster >= FIRST_DMA_LINE && raster <= LAST_DMA_LINE && ((raster & 7) == y_scroll) && bad_lines_enabled) {
-			is_bad_line = true;
-			cycles_left = ThePrefs.BadLineCycles;
-		}
-		goto VIC_nop;
 	}
 
 	// Within the visible range?
@@ -1546,7 +1524,6 @@ unsigned MOS6569::EmulateLine(int & retCyclesLeft)
 		}
 	}
 
-VIC_nop:
 	// Skip this if all sprites are off
 	if (me | sprite_on) {
 		cycles_left -= el_update_mc(raster);

@@ -60,8 +60,6 @@ public:
 	unsigned EmulateLine(int & retCyclesLeft);
 #endif
 
-	bool FrameSkipped() const { return frame_skipped; }
-
 	void ChangedVA(uint16_t new_va);	// CIA VA14/15 has changed
 	void TriggerLightpen();				// Trigger lightpen interrupt
 
@@ -125,7 +123,6 @@ private:
 	uint16_t mc[8];					// Sprite data counters
 
 	unsigned display_idx;			// Index of current display mode
-	int skip_counter;				// Counter for frame-skipping
 
 	long pad0;	// Keep buffers long-aligned
 	uint8_t spr_coll_buf[0x1f8];				// Buffer for sprite-sprite collisions and priorities
@@ -138,7 +135,6 @@ private:
 
 	bool display_state;			// true: Display state, false: Idle state
 	bool border_on;				// Flag: Upper/lower border on (Frodo SC: Main border flipflop)
-	bool frame_skipped;			// Flag: Frame is being skipped
 	bool bad_lines_enabled;		// Flag: Bad Lines enabled for this frame
 	bool lp_triggered;			// Flag: Lightpen was triggered in this frame
 
@@ -160,7 +156,7 @@ private:
 	uint16_t bitmap_base;			// Bitmap base
 
 	bool is_bad_line;				// Flag: Current line is bad line
-	bool draw_this_line;			// Flag: This line is drawn on the screen
+	bool draw_this_line;			// Flag: Current line is drawn on the screen
 	bool ud_border_on;				// Flag: Upper/lower border on
 	bool ud_border_set;				// Flag: Set ud_border_on when checking for left/right border
 	bool vblanking;					// Flag: VBlank in next cycle

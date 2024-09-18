@@ -229,6 +229,9 @@ void C64::Run()
 
 	// Remember start time of first frame
 	frame_start = chrono::steady_clock::now();
+	frame_skip_factor = 1;
+	frame_skip_counter = 1;
+
 	cycle_counter = 0;
 
 	// Enter main loop
@@ -505,7 +508,11 @@ void C64::vblank()
 	TheCIA2->CountTOD();
 
 	// Update window if needed
-	if (! TheVIC->FrameSkipped()) {
+	--frame_skip_counter;
+	if (frame_skip_counter == 0) {
+		frame_skip_counter = frame_skip_factor;
+	}
+	if (frame_skip_counter == 1) {
     	TheDisplay->Update();
 	}
 
@@ -518,17 +525,24 @@ void C64::vblank()
 	int elapsed_us = chrono::duration_cast<chrono::microseconds>(now - frame_start).count();
 	int speed_index = FRAME_TIME_us / double(elapsed_us + 1) * 100;
 
-	// Limit speed to 100% if desired
+	// Limit speed to 100% (and FPS to 50 Hz) if desired
 	if ((elapsed_us < FRAME_TIME_us) && ThePrefs.LimitSpeed) {
 		std::this_thread::sleep_until(frame_start);
 		if (play_mode == PLAY_MODE_FORWARD) {
 			frame_start += chrono::microseconds(FRAME_TIME_us / FORWARD_SCALE);
+			frame_skip_factor = FORWARD_SCALE;
 		} else {
 			frame_start += chrono::microseconds(FRAME_TIME_us);
+			frame_skip_factor = frame_skip_counter = 1;
 		}
 		speed_index = 100;	// Hide speed display even in fast-forwarding mode
 	} else {
 		frame_start = now;
+		if (speed_index > 100) {
+			frame_skip_factor = speed_index / 100;
+		} else {
+			frame_skip_factor = frame_skip_counter = 1;
+		}
 	}
 
 	TheDisplay->UpdateSpeedometer(speed_index);

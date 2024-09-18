@@ -16,6 +16,7 @@ Changes from V4.2 to V4.3:
    - Added setting for status overlay display (ShowLEDs)
    - Added setting for initial window size (ScalingNumerator)
    - Added setting for color palette (Palette)
+   - Removed "Draw every n-th frame" setting
    - Added menu items for loading/saving snapshot files
    - Added menu item for creating a blank D64 image
    - Added "Next Disk" buttons to the drive paths
@@ -25,6 +26,7 @@ Changes from V4.2 to V4.3:
    them onto the emulator window
  - Improved sprite display
  - Improved CIA timer emulation
+ - Improved 1541 emulation
  - Added simulation of SID registers 27 and 28 (voice 3 read-back)
  - Made the MapSlash setting functional again
 

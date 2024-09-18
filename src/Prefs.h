@@ -70,7 +70,6 @@ public:
 	int BadLineCycles;		// Available CPU cycles in Bad Lines
 	int CIACycles;			// CIA timer ticks per raster line
 	int FloppyCycles;		// Available 1541 CPU cycles per line
-	int SkipFrames;			// Draw every n-th frame
 
 	std::string DrivePath[4];	// Path for drive 8..11
 

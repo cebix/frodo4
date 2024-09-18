@@ -44,7 +44,6 @@ Prefs::Prefs()
 	BadLineCycles = 23;
 	CIACycles = 63;
 	FloppyCycles = 64;
-	SkipFrames = 1;
 	ScalingNumerator = 4;
 	ScalingDenominator = 1;
 
@@ -74,10 +73,6 @@ Prefs::Prefs()
 
 void Prefs::Check()
 {
-	if (SkipFrames <= 0) {
-		SkipFrames = 1;
-	}
-
 	if (ScalingNumerator <= 0) {
 		ScalingNumerator = 1;
 	}
@@ -132,8 +127,6 @@ void Prefs::Load(fs::path prefs_path)
 				CIACycles = atoi(value.c_str());
 			} else if (keyword == "FloppyCycles") {
 				FloppyCycles = atoi(value.c_str());
-			} else if (keyword == "SkipFrames") {
-				SkipFrames = atoi(value.c_str());
 
 			} else if (keyword == "DrivePath8") {
 				DrivePath[0] = value;
@@ -223,7 +216,6 @@ bool Prefs::Save(fs::path prefs_path)
 	file << "BadLineCycles = " << BadLineCycles << std::endl;
 	file << "CIACycles = " << CIACycles << std::endl;
 	file << "FloppyCycles = " <<  FloppyCycles << std::endl;
-	file << "SkipFrames = " << SkipFrames << std::endl;
 
 	for (unsigned i = 0; i < 4; ++i) {
 		file << "DrivePath" << (i+8) << " = " << DrivePath[i] << std::endl;
