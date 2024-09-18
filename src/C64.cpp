@@ -474,6 +474,9 @@ void C64::resume()
 	// Flush event queue
 	SDL_PumpEvents();
 	SDL_FlushEvents(SDL_FIRSTEVENT, SDL_LASTEVENT);
+
+	// Restart frame timing
+	frame_start = chrono::steady_clock::now();
 }
 
 
