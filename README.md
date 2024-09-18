@@ -116,10 +116,10 @@ Frodo simulates the original layout of the Commodore 64 keyboard, so the "
 keyboards. Don't worry, you'll get used to that.
 
 If you get a “LOADING” message from entering the above command, things are
-looking good. If you instead get an error message (most likely “FILE NOT FOUND”,
-unless you mistyped the command or forgot to mount a .D64 file), then check any
-documentation that came with the software for the command that is used to run it
-(this was often printed on the disk label). It may be something different like
+looking good. If you instead get an error message you most likely mistyped
+the command or forgot to mount a .D64 file. Also check any documentation
+that came with the software for the command that is used to run it (this was
+often printed on the disk label). It may be something different like
 LOAD"BOOT",8,1. If this still doesn't give you results, then try:
 
     LOAD"$",8

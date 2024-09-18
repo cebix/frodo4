@@ -31,4 +31,6 @@ const char VERSION_STRING[] = "Frodo V4.3";
 const char VERSION_STRING[] = "Frodo Lite V4.3";
 #endif
 
+#define DRIVE_ID_STRING "FRODO V4.3"
+
 #endif

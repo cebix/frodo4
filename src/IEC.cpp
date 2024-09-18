@@ -49,6 +49,7 @@
 #include "1541t64.h"
 #include "Prefs.h"
 #include "Display.h"
+#include "Version.h"
 
 #include <filesystem>
 namespace fs = std::filesystem;
@@ -485,7 +486,7 @@ static const char *Errors_1541[] = {
 	"70,NO CHANNEL,%02d,%02d\x0d",
 	"71,DIR ERROR,%02d,%02d\x0d",
 	"72,DISK FULL,%02d,%02d\x0d",
-	"73,CBM DOS V2.6 1541,%02d,%02d\x0d",
+	"73," DRIVE_ID_STRING " VIRTUAL 1541,%02d,%02d\x0d",
 	"74,DRIVE NOT READY,%02d,%02d\x0d"
 };
 
