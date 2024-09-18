@@ -58,7 +58,7 @@ constexpr unsigned CYCLES_PER_BYTE = 30;
 
 
 // Number of sectors of each track
-const int num_sectors[36] = {
+const unsigned num_sectors[36] = {
 	0,
 	21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,
 	19,19,19,19,19,19,19,
@@ -67,7 +67,7 @@ const int num_sectors[36] = {
 };
 
 // Sector offset of start of track in .d64 file
-const int sector_offset[36] = {
+const unsigned sector_offset[36] = {
 	0,
 	0,21,42,63,84,105,126,147,168,189,210,231,252,273,294,315,336,
 	357,376,395,414,433,452,471,
@@ -86,6 +86,7 @@ Job1541::Job1541(uint8_t *ram1541) : ram(ram1541), the_file(nullptr)
 	current_halftrack = 2;	// Track 1
 
 	gcr_data = new uint8_t[GCR_DISK_SIZE];
+	memset(gcr_data, 0x55, GCR_DISK_SIZE);
 
 	set_gcr_ptr();
 	gcr_offset = 1;
@@ -158,42 +159,43 @@ void Job1541::open_d64_file(const std::string & filepath)
 		write_protected = true;
 		the_file = fopen(filepath.c_str(), "rb");
 	}
-	if (the_file != nullptr) {
 
-		// Check length
-		fseek(the_file, 0, SEEK_END);
-		if ((size = ftell(the_file)) < NUM_SECTORS * 256) {
-			fclose(the_file);
-			the_file = nullptr;
-			return;
-		}
+	if (the_file == nullptr)
+		return;
 
-		// x64 image?
-		fseek(the_file, 0, SEEK_SET);
-		fread(&magic, 4, 1, the_file);
-		if (magic[0] == 0x43 && magic[1] == 0x15 && magic[2] == 0x41 && magic[3] == 0x64) {
-			image_header = 64;
-		} else {
-			image_header = 0;
-		}
-
-		// Preset error info (all sectors no error)
-		memset(error_info, 1, NUM_SECTORS);
-
-		// Load sector error info from .d64 file, if present
-		if (!image_header && size == NUM_SECTORS * 257) {
-			fseek(the_file, NUM_SECTORS * 256, SEEK_SET);
-			fread(&error_info, NUM_SECTORS, 1, the_file);
-		};
-
-		// Read BAM and get ID
-		read_sector(18, 0, bam);
-		id1 = bam[162];
-		id2 = bam[163];
-
-		// Create GCR encoded disk data from image
-		disk2gcr();
+	// Check length
+	fseek(the_file, 0, SEEK_END);
+	if ((size = ftell(the_file)) < NUM_SECTORS * 256) {
+		fclose(the_file);
+		the_file = nullptr;
+		return;
 	}
+
+	// x64 image?
+	fseek(the_file, 0, SEEK_SET);
+	fread(&magic, 4, 1, the_file);
+	if (magic[0] == 0x43 && magic[1] == 0x15 && magic[2] == 0x41 && magic[3] == 0x64) {
+		image_header = 64;
+	} else {
+		image_header = 0;
+	}
+
+	// Preset error info (all sectors no error)
+	memset(error_info, 1, NUM_SECTORS);
+
+	// Load sector error info from .d64 file, if present
+	if (!image_header && size == NUM_SECTORS * 257) {
+		fseek(the_file, NUM_SECTORS * 256, SEEK_SET);
+		fread(&error_info, NUM_SECTORS, 1, the_file);
+	};
+
+	// Read BAM and get ID
+	read_sector(18, 0, bam);
+	id1 = bam[162];
+	id2 = bam[163];
+
+	// Create GCR encoded disk data from image
+	disk2gcr();
 }
 
 
@@ -203,6 +205,10 @@ void Job1541::open_d64_file(const std::string & filepath)
 
 void Job1541::close_d64_file()
 {
+	// Blank out GCR data
+	memset(gcr_data, 0x55, GCR_DISK_SIZE);
+
+	// Close file
 	if (the_file != nullptr) {
 		fclose(the_file);
 		the_file = nullptr;
@@ -216,8 +222,8 @@ void Job1541::close_d64_file()
 
 void Job1541::WriteSector()
 {
-	int track = ram[0x18];
-	int sector = ram[0x19];
+	unsigned track = ram[0x18];
+	unsigned sector = ram[0x19];
 	uint16_t buf = ram[0x30] | (ram[0x31] << 8);
 
 	if (buf <= 0x0700) {
@@ -234,7 +240,7 @@ void Job1541::WriteSector()
 
 void Job1541::FormatTrack()
 {
-	int track = ram[0x51];
+	unsigned track = ram[0x51];
 
 	// Get new ID
 	uint8_t bufnum = ram[0x3d];
@@ -247,7 +253,7 @@ void Job1541::FormatTrack()
 	buf[0] = 0x4b;
 
 	// Write block to all sectors on track
-	for (int sector=0; sector<num_sectors[track]; sector++) {
+	for (unsigned sector = 0; sector < num_sectors[track]; ++sector) {
 		write_sector(track, sector, buf);
 		sector2gcr(track, sector);
 	}
@@ -261,16 +267,18 @@ void Job1541::FormatTrack()
 
 
 /*
- *  Read sector (256 bytes)
+ *  Read sector (256 bytes) from image file
  *  true: success, false: error
  */
 
 bool Job1541::read_sector(unsigned track, unsigned sector, uint8_t *buffer)
 {
-	int offset;
+	if (the_file == nullptr)
+		return false;
 
 	// Convert track/sector to byte offset in file
-	if ((offset = offset_from_ts(track, sector)) < 0)
+	int offset = offset_from_ts(track, sector);
+	if (offset < 0)
 		return false;
 
 	fseek(the_file, offset + image_header, SEEK_SET);
@@ -280,16 +288,18 @@ bool Job1541::read_sector(unsigned track, unsigned sector, uint8_t *buffer)
 
 
 /*
- *  Write sector (256 bytes) !! -> GCR
+ *  Write sector (256 bytes) to image file
  *  true: success, false: error
  */
 
-bool Job1541::write_sector(unsigned track, unsigned sector, uint8_t *buffer)
+bool Job1541::write_sector(unsigned track, unsigned sector, const uint8_t *buffer)
 {
-	int offset;
+	if (the_file == nullptr)
+		return false;
 
 	// Convert track/sector to byte offset in file
-	if ((offset = offset_from_ts(track, sector)) < 0)
+	int offset = offset_from_ts(track, sector);
+	if (offset < 0)
 		return false;
 
 	fseek(the_file, offset + image_header, SEEK_SET);
@@ -563,7 +573,7 @@ bool Job1541::ByteReady(uint32_t cycle_counter)
 {
 	rotate_disk(cycle_counter);
 
-	return byte_ready;
+	return byte_ready && the_file != nullptr;
 }
 
 

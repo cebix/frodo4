@@ -53,7 +53,7 @@ private:
 	void open_d64_file(const std::string & filepath);
 	void close_d64_file();
 	bool read_sector(unsigned track, unsigned sector, uint8_t *buffer);
-	bool write_sector(unsigned track, unsigned sector, uint8_t *buffer);
+	bool write_sector(unsigned track, unsigned sector, const uint8_t *buffer);
 	void format_disk();
 	unsigned secnum_from_ts(unsigned track, unsigned sector);
 	int offset_from_ts(unsigned track, unsigned sector);
