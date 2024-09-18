@@ -92,6 +92,7 @@ Job1541::Job1541(uint8_t *ram1541) : ram(ram1541), the_file(nullptr)
 	gcr_offset = 1;
 
 	last_byte_cycle = 0;
+	byte_latch = 0;
 
 	motor_on = false;
 	write_protected = true;
@@ -490,6 +491,7 @@ void Job1541::GetState(Job1541State *state) const
 	state->current_halftrack = current_halftrack;
 	state->gcr_offset = gcr_offset;
 	state->last_byte_cycle = last_byte_cycle;
+	state->byte_latch = byte_latch;
 
 	state->motor_on = motor_on;
 	state->write_protected = write_protected;
@@ -508,6 +510,7 @@ void Job1541::SetState(const Job1541State *state)
 	set_gcr_ptr();
 	gcr_offset = state->gcr_offset;
 	last_byte_cycle = state->last_byte_cycle;
+	byte_latch = state->byte_latch;
 
 	motor_on = state->motor_on;
 	write_protected = state->write_protected;
@@ -539,6 +542,10 @@ void Job1541::rotate_disk(uint32_t cycle_counter)
 			// Byte is ready if not on sync
 			byte_ready = !(((gcr_track_start[gcr_offset - 1] & 0x03) == 0x03)
 			             && (gcr_track_start[gcr_offset] == 0xff));
+
+			if (byte_ready) {
+				byte_latch = gcr_track_start[gcr_offset];
+			}
 
 			last_byte_cycle += advance * CYCLES_PER_BYTE;
 		}
@@ -586,5 +593,5 @@ uint8_t Job1541::ReadGCRByte(uint32_t cycle_counter)
 	rotate_disk(cycle_counter);
 
 	byte_ready = false;
-	return gcr_track_start[gcr_offset];
+	return byte_latch;
 }

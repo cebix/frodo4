@@ -81,6 +81,8 @@ private:
 
 	uint32_t last_byte_cycle;	// Cycle when last byte was available
 
+	uint8_t byte_latch;			// Latch for read GCR byte
+
 	bool motor_on;				// Flag: Spindle motor on
 	bool write_protected;		// Flag: Disk write-protected
 	bool disk_changed;			// Flag: Disk changed (WP sensor strobe control)
@@ -92,6 +94,9 @@ struct Job1541State {
 	uint32_t current_halftrack;
 	uint32_t gcr_offset;
 	uint32_t last_byte_cycle;
+
+	uint8_t byte_latch;
+
 	bool motor_on;
 	bool write_protected;
 	bool disk_changed;
