@@ -80,6 +80,8 @@ public:
 	void TriggerNMI();
 	void ClearNMI();
 
+	uint16_t GetPC() const { return pc; }
+
 	int ExtConfig;		// Memory configuration for ExtRead/WriteByte (0..7)
 
 	MOS6569 *TheVIC;	// Pointer to VIC

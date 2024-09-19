@@ -704,7 +704,8 @@ void MOS6569::matrix_access()
 {
 	if (the_cpu->BALow) {
 		if (the_c64->CycleCounter() - first_ba_cycle < 3) {
-			matrix_line[ml_index] = color_line[ml_index] = 0xff;
+			matrix_line[ml_index] = 0xff;
+			color_line[ml_index] = ram[the_cpu->GetPC()];	// TODO: This may not be entirely correct for cartridges
 		} else {
 			uint16_t adr = (vc & 0x03ff) | matrix_base;
 			matrix_line[ml_index] = read_byte(adr);
