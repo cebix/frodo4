@@ -951,6 +951,10 @@ void petscii2ascii(char *dest, const uint8_t *src, int n)
 
 bool IsMountableFile(const std::string & path, int &type)
 {
+	// Reject directories
+	if (fs::is_directory(path))
+		return false;
+
 	// Read header and determine file size
 	FILE *f = fopen(path.c_str(), "rb");
 	if (f == nullptr)

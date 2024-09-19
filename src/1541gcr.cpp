@@ -40,6 +40,7 @@
 
 #include "1541gcr.h"
 #include "CPU1541.h"
+#include "IEC.h"
 #include "Prefs.h"
 
 
@@ -100,7 +101,7 @@ Job1541::Job1541(uint8_t *ram1541) : ram(ram1541), the_file(nullptr)
 	byte_latch = 0;
 
 	motor_on = false;
-	write_protected = true;
+	write_protected = false;
 	disk_changed = true;
 	byte_ready = false;
 
@@ -161,11 +162,19 @@ void Job1541::open_d64_file(const std::string & filepath)
 	// Clear GCR buffer
 	memset(gcr_data, 0x55, GCR_DISK_SIZE);
 
-	// Try opening the file for reading/writing first, then for reading only
+	// WP sensor open
 	write_protected = false;
+
+	// Check file type
+	int type;
+	if (!IsMountableFile(filepath, type) || type != FILE_IMAGE)
+		return;
+
+	// Try opening the file for reading/writing first, then for reading only
+	bool read_only = false;
 	the_file = fopen(filepath.c_str(), "rb+");
 	if (the_file == nullptr) {
-		write_protected = true;
+		read_only = true;
 		the_file = fopen(filepath.c_str(), "rb");
 	}
 
@@ -205,6 +214,9 @@ void Job1541::open_d64_file(const std::string & filepath)
 
 	// Create GCR encoded disk data from image
 	disk2gcr();
+
+	// Set write protect status
+	write_protected = read_only;
 }
 
 
@@ -222,6 +234,9 @@ void Job1541::close_d64_file()
 		fclose(the_file);
 		the_file = nullptr;
 	}
+
+	// WP sensor open
+	write_protected = false;
 }
 
 
