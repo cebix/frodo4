@@ -21,6 +21,7 @@
 #include "Version.h"
 
 #include "1541d64.h"
+#include "main.h"
 #include "SAM.h"
 
 #include <gtk/gtk.h>
@@ -595,8 +596,9 @@ extern "C" void on_load_snapshot(GtkMenuItem *menuitem, gpointer user_data)
 	gint res = gtk_dialog_run(GTK_DIALOG(snapshot_dialog));
 	if (res == GTK_RESPONSE_ACCEPT) {
 		filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(snapshot_dialog));
-		load_ok = TheC64->LoadSnapshot(filename);
+		load_ok = TheC64->LoadSnapshot(filename, prefs);
 		SAM_GetState(TheC64);	// Get new state from snapshot
+		set_values();			// Drive settings may have changed
 	}
 
 	gtk_widget_hide(snapshot_dialog);

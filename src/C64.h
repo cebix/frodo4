@@ -29,13 +29,16 @@
 
 
 // Sizes of memory areas
-constexpr int C64_RAM_SIZE = 0x10000;
-constexpr int COLOR_RAM_SIZE = 0x400;
-constexpr int BASIC_ROM_SIZE = 0x2000;
-constexpr int KERNAL_ROM_SIZE = 0x2000;
-constexpr int CHAR_ROM_SIZE = 0x1000;
-constexpr int DRIVE_RAM_SIZE = 0x800;
-constexpr int DRIVE_ROM_SIZE = 0x4000;
+constexpr unsigned C64_RAM_SIZE = 0x10000;
+constexpr unsigned COLOR_RAM_SIZE = 0x400;
+constexpr unsigned BASIC_ROM_SIZE = 0x2000;
+constexpr unsigned KERNAL_ROM_SIZE = 0x2000;
+constexpr unsigned CHAR_ROM_SIZE = 0x1000;
+constexpr unsigned DRIVE_RAM_SIZE = 0x800;
+constexpr unsigned DRIVE_ROM_SIZE = 0x4000;
+
+// Clock cycles per raster line
+constexpr unsigned CYCLES_PER_LINE = 63;
 
 
 // false: Frodo, true: FrodoSC
@@ -85,7 +88,7 @@ public:
 	void MakeSnapshot(Snapshot * s);
 	void RestoreSnapshot(const Snapshot * s);
 	bool SaveSnapshot(const std::string & filename);
-	bool LoadSnapshot(const std::string & filename);
+	bool LoadSnapshot(const std::string & filename, Prefs * prefs);
 
 	void SetPlayMode(PlayMode mode);
 	PlayMode GetPlayMode() const { return play_mode; }
@@ -138,7 +141,7 @@ private:
 	bool load_snapshot_requested;	// Emulator shall load snapshot
 	std::string requested_snapshot;
 
-	uint32_t cycle_counter;			// Cycle counter for Frodo SC
+	uint32_t cycle_counter;			// Cycle counter
 
 	SDL_Joystick * joy[2] = { nullptr, nullptr };				// SDL joystick devices
 	SDL_GameController * controller[2] = { nullptr, nullptr };	// SDL game controller devices

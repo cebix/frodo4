@@ -21,9 +21,7 @@
 #include "sysdeps.h"
 
 #include "Prefs.h"
-#include "Display.h"
 #include "C64.h"
-#include "main.h"
 
 #include <fstream>
 #include <regex>
@@ -40,9 +38,9 @@ Prefs ThePrefs;
 
 Prefs::Prefs()
 {
-	NormalCycles = 63;
-	BadLineCycles = 23;
-	CIACycles = 63;
+	NormalCycles = CYCLES_PER_LINE;
+	BadLineCycles = CYCLES_PER_LINE - 40;
+	CIACycles = CYCLES_PER_LINE;
 	FloppyCycles = 64;
 	ScalingNumerator = 4;
 	ScalingDenominator = 1;

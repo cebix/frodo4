@@ -431,6 +431,7 @@ bool C64::emulate_c64_cycle()
 	TheCIA1->EmulateCycle();
 	TheCIA2->EmulateCycle();
 	TheCPU->EmulateCycle();
+
 	++cycle_counter;
 
 	return flags & VIC_VBLANK;
@@ -503,7 +504,7 @@ void C64::vblank()
 
 	// Handle request for snapshot loading
 	if (load_snapshot_requested) {
-		LoadSnapshot(requested_snapshot);
+		LoadSnapshot(requested_snapshot, &ThePrefs);
 		load_snapshot_requested = false;
 	}
 
@@ -592,7 +593,7 @@ void C64::main_loop()
 				// 1541 processor active, alternately execute
 				//  6502 and 6510 instructions until both have
 				//  used up their cycles
-				while (cycles >= 0 || cycles_1541 >= 0)
+				while (cycles >= 0 || cycles_1541 >= 0) {
 					if (cycles > cycles_1541) {
 						cycles -= TheCPU->EmulateLine(1);
 					} else {
@@ -600,12 +601,15 @@ void C64::main_loop()
 						cycles_1541 -= used;
 						cycle_counter += used;	// Needed for GCR timing
 					}
+				}
 			} else {
 				TheCPU->EmulateLine(cycles);
+				cycle_counter += CYCLES_PER_LINE;
 			}
 		} else {
 			// 1541 processor disabled, only emulate 6510
 			TheCPU->EmulateLine(cycles);
+			cycle_counter += CYCLES_PER_LINE;
 		}
 
 #endif  // def FRODO_SC
@@ -942,6 +946,7 @@ void C64::RestoreSnapshot(const Snapshot * s)
 	memcpy(Color, s->color, COLOR_RAM_SIZE);
 
 	cycle_counter = s->cycleCounter;
+
 	TheCPU->SetState(&(s->cpu));
 	TheVIC->SetState(&(s->vic));
 	TheSID->SetState(&(s->sid));
@@ -952,20 +957,8 @@ void C64::RestoreSnapshot(const Snapshot * s)
 
 		memcpy(RAM1541, s->driveRam, DRIVE_RAM_SIZE);
 
-		// Switch on 1541 processor emulation if it is off
-		if (! ThePrefs.Emul1541Proc) {
-			SetEmul1541Proc(true, s->drive8Path);
-		}
-
 		TheCPU1541->SetState(&(s->driveCpu));
 		TheJob1541->SetState(&(s->driveJob));
-
-	} else {
-
-		// Switch off 1541 processor emulation if it is on
-		if (ThePrefs.Emul1541Proc) {
-			SetEmul1541Proc(false);
-		}
 	}
 }
 
@@ -1003,7 +996,7 @@ bool C64::SaveSnapshot(const std::string & filename)
  *  Load snapshot file (emulation must be paused and in VBlank)
  */
 
-bool C64::LoadSnapshot(const std::string & filename)
+bool C64::LoadSnapshot(const std::string & filename, Prefs * prefs)
 {
 	FILE * f = fopen(filename.c_str(), "rb");
 	if (f == nullptr) {
@@ -1019,16 +1012,28 @@ bool C64::LoadSnapshot(const std::string & filename)
 		return false;
 	}
 
+	fclose(f);
+
 	if (memcmp(s->magic, SNAPSHOT_HEADER, sizeof(s->magic)) != 0) {
 		ShowRequester("Not a Frodo snapshot file", "OK", nullptr);
-		fclose(f);
 		return false;
 	}
 
-	RestoreSnapshot(s.get());
-	reset_play_mode();
+	// Restore prefs from snapshot (before restoring state, to avoid
+	// spurious 1541 resets after restoring)
+	auto new_prefs = std::make_unique<Prefs>(*prefs);
+	new_prefs->Emul1541Proc = s->flags & SNAPSHOT_FLAG_1541_PROC;
+	new_prefs->DrivePath[0] = s->drive8Path;
+	NewPrefs(new_prefs.get());
+	ThePrefs = *new_prefs;
+	if (prefs != &ThePrefs) {
+		prefs->Emul1541Proc = new_prefs->Emul1541Proc;
+		prefs->DrivePath[0] = new_prefs->DrivePath[0];
+	}
 
-	fclose(f);
+	RestoreSnapshot(s.get());
+
+	reset_play_mode();
 	return true;
 }
 
