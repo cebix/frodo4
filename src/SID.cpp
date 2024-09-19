@@ -26,13 +26,16 @@
  */
 
 #include "sysdeps.h"
-#include <math.h>
 
 #include "SID.h"
+#include "C64.h"
+#include "main.h"
 #include "VIC.h"
 #include "Prefs.h"
 
 #include <SDL_audio.h>
+
+#include <math.h>
 
 
 #undef USE_FIXPOINT_MATHS
@@ -112,6 +115,7 @@ void MOS6581::Reset()
 	}
 	last_sid_byte = 0;
 
+	fake_v3_update_cycle = 0;
 	fake_v3_count = 0;
 	fake_v3_eg_level = 0;
 	fake_v3_eg_state = EG_RELEASE;
@@ -161,11 +165,34 @@ void MOS6581::ResumeSound()
 
 
 /*
- *  Simulate oscillator 3 read-back
+ *  Simulate oscillator 3 for read-back
  */
 
-uint8_t MOS6581::read_osc3() const
+void MOS6581::update_osc3()
 {
+	uint32_t now = TheC64->CycleCounter();
+
+	uint8_t v3_ctrl = regs[0x12];	// Voice 3 control register
+	if (v3_ctrl & 0x08) {			// Test bit
+		fake_v3_count = 0;
+	} else {
+		uint32_t elapsed = now - fake_v3_update_cycle;
+		uint32_t add = (regs[0x0f] << 8) | regs[0x0e];
+		fake_v3_count = (fake_v3_count + add * elapsed) & 0xffffff;
+	}
+
+	fake_v3_update_cycle = now;
+}
+
+
+/*
+ *  Oscillator 3 read-back
+ */
+
+uint8_t MOS6581::read_osc3()
+{
+	update_osc3();
+
 	uint8_t v3_ctrl = regs[0x12];   // Voice 3 control register
 	if (v3_ctrl & 0x10) {			// Triangle wave
 		// TODO: ring modulation from voice 2
@@ -193,7 +220,7 @@ uint8_t MOS6581::read_osc3() const
 
 
 /*
- *  Simulate EG 3 read-back
+ *  EG 3 read-back
  */
 
 uint8_t MOS6581::read_env3() const
@@ -239,9 +266,8 @@ void MOS6581::GetState(MOS6581State *ss) const
 
 	ss->pot_x = 0xff;
 	ss->pot_y = 0xff;
-	ss->osc_3 = read_osc3();
-	ss->env_3 = read_env3();
 
+	ss->v3_update_cycle = fake_v3_update_cycle;
 	ss->v3_count = fake_v3_count;
 	ss->v3_eg_level = fake_v3_eg_level;
 	ss->v3_eg_state = fake_v3_eg_state;
@@ -283,6 +309,7 @@ void MOS6581::SetState(const MOS6581State *ss)
 	regs[23] = ss->res_filt;
 	regs[24] = ss->mode_vol;
 
+	fake_v3_update_cycle = ss->v3_update_cycle;
 	fake_v3_count = ss->v3_count;
 	fake_v3_eg_level = ss->v3_eg_level;
 	fake_v3_eg_state = ss->v3_eg_state;

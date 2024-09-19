@@ -56,7 +56,8 @@ public:
 private:
 	void open_close_renderer(int old_type, int new_type);
 
-	uint8_t read_osc3() const;
+	void update_osc3();
+	uint8_t read_osc3();
 	uint8_t read_env3() const;
 
 	SIDRenderer *the_renderer;	// Pointer to current renderer
@@ -64,9 +65,10 @@ private:
 	uint8_t regs[32];			// Copies of the 25 write-only SID registers
 	uint8_t last_sid_byte;		// Last value written to SID
 
-	uint32_t fake_v3_count;		// Fake voice 3 phase accumulator for oscillator read-back
-	int32_t fake_v3_eg_level;	// Fake voice 3 EG level (8.16 fixed) for EG read-back
-	int fake_v3_eg_state;		// Fake voice 3 EG state
+	uint32_t fake_v3_update_cycle;	// Cycle of last fake voice 3 oscillator update
+	uint32_t fake_v3_count;			// Fake voice 3 phase accumulator for oscillator read-back
+	int32_t fake_v3_eg_level;		// Fake voice 3 EG level (8.16 fixed) for EG read-back
+	int fake_v3_eg_state;			// Fake voice 3 EG state
 };
 
 
@@ -116,9 +118,8 @@ struct MOS6581State {
 
 	uint8_t pot_x;
 	uint8_t pot_y;
-	uint8_t osc_3;
-	uint8_t env_3;
 
+	uint32_t v3_update_cycle;
 	uint32_t v3_count;
 	int32_t v3_eg_level;
 	uint32_t v3_eg_state;
@@ -146,15 +147,6 @@ inline void MOS6581::EmulateLine()
 	// asynchronously from the sound thread. For more consistent results
 	// from the OSC3 and ENV3 read-back registers, we run another "fake"
 	// emulation of the voice 3 oscillator and EG once per line.
-
-	// Simulate voice 3 phase accumulator
-	uint8_t v3_ctrl = regs[0x12];	// Voice 3 control register
-	if (v3_ctrl & 0x08) {			// Test bit
-		fake_v3_count = 0;
-	} else {
-		uint32_t add = (regs[0x0f] << 8) | regs[0x0e];
-		fake_v3_count = (fake_v3_count + add * SID_CYCLES_PER_LINE) & 0xffffff;
-	}
 
 	// Simulate voice 3 envelope generator
 	switch (fake_v3_eg_state) {
@@ -224,6 +216,11 @@ inline uint8_t MOS6581::ReadRegister(uint16_t adr)
 
 inline void MOS6581::WriteRegister(uint16_t adr, uint8_t byte)
 {
+	// Handle fake voice 3 oscillator
+	if (adr == 0x0e || adr == 0x0f || adr == 0x12) {	// Voice 3 frequency or control register
+		update_osc3();
+	}
+
 	// Handle fake voice 3 EG state
 	if (adr == 0x12) {	// Voice 3 control register
 		uint8_t gate = byte & 0x01;
