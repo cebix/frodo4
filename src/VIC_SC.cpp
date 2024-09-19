@@ -538,7 +538,7 @@ void MOS6569::WriteRegister(uint16_t adr, uint8_t byte)
 			}
 
 			// In line $30, the DEN bit controls if Bad Lines can occur
-			if (raster_y == 0x30 && byte & 0x10) {
+			if (raster_y == 0x30 && (byte & 0x10)) {
 				bad_lines_enabled = true;
 			}
 
@@ -1275,6 +1275,10 @@ inline void MOS6569::draw_sprites()
 		the_cpu->BALow = true; \
 	}
 
+// Set BA high
+#define SetBAHigh \
+	the_cpu->BALow = false;
+
 // Turn on display if Bad Line
 #define DisplayIfBadLine \
 	if (is_bad_line) { \
@@ -1286,6 +1290,8 @@ inline void MOS6569::draw_sprites()
 	if (is_bad_line) { \
 		display_state = true; \
 		SetBALow; \
+	} else { \
+		SetBAHigh; \
 	}
 
 // Turn on display and matrix access and reset RC if Bad Line
@@ -1383,7 +1389,7 @@ unsigned MOS6569::EmulateCycle()
 			SprDataAccess(3, 0);
 			DisplayIfBadLine;
 			if (!(spr_dma_on & 0x18)) {
-				the_cpu->BALow = false;
+				SetBAHigh;
 			}
 			break;
 
@@ -1429,7 +1435,7 @@ unsigned MOS6569::EmulateCycle()
 			SprDataAccess(4, 0);
 			DisplayIfBadLine;
 			if (!(spr_dma_on & 0x30)) {
-				the_cpu->BALow = false;
+				SetBAHigh;
 			}
 			break;
 
@@ -1449,7 +1455,7 @@ unsigned MOS6569::EmulateCycle()
 			SprDataAccess(5, 0);
 			DisplayIfBadLine;
 			if (!(spr_dma_on & 0x60)) {
-				the_cpu->BALow = false;
+				SetBAHigh;
 			}
 			break;
 
@@ -1469,7 +1475,7 @@ unsigned MOS6569::EmulateCycle()
 			SprDataAccess(6, 0);
 			DisplayIfBadLine;
 			if (!(spr_dma_on & 0xc0)) {
-				the_cpu->BALow = false;
+				SetBAHigh;
 			}
 			break;
 
@@ -1486,7 +1492,7 @@ unsigned MOS6569::EmulateCycle()
 			SprDataAccess(7, 0);
 			DisplayIfBadLine;
 			if (!(spr_dma_on & 0x80)) {
-				the_cpu->BALow = false;
+				SetBAHigh;
 			}
 			break;
 
@@ -1501,7 +1507,7 @@ unsigned MOS6569::EmulateCycle()
 		case 11:
 			RefreshAccess;
 			DisplayIfBadLine;
-			the_cpu->BALow = false;
+			SetBAHigh;
 			break;
 
 		// Refresh, turn on matrix access if Bad Line
@@ -1626,7 +1632,7 @@ unsigned MOS6569::EmulateCycle()
 			if (spr_dma_on & 0x01) {
 				SetBALow;
 			} else {
-				the_cpu->BALow = false;
+				SetBAHigh;
 			}
 			break;
 
@@ -1704,7 +1710,7 @@ unsigned MOS6569::EmulateCycle()
 			SprPtrAccess(0);
 			SprDataAccess(0, 0);
 			if (!(spr_dma_on & 0x03)) {
-				the_cpu->BALow = false;
+				SetBAHigh;
 			}
 
 			if (rc == 7) {
@@ -1779,7 +1785,7 @@ unsigned MOS6569::EmulateCycle()
 			SprDataAccess(1, 0);
 			DisplayIfBadLine;
 			if (!(spr_dma_on & 0x06)) {
-				the_cpu->BALow = false;
+				SetBAHigh;
 			}
 			break;
 
@@ -1799,7 +1805,7 @@ unsigned MOS6569::EmulateCycle()
 			SprDataAccess(2, 0);
 			DisplayIfBadLine;
 			if (!(spr_dma_on & 0x0c)) {
-				the_cpu->BALow = false;
+				SetBAHigh;
 			}
 			break;
 
