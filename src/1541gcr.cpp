@@ -56,6 +56,9 @@ constexpr unsigned GCR_DISK_SIZE = GCR_TRACK_SIZE * NUM_TRACKS;
 // TODO: handle speed selection
 constexpr unsigned CYCLES_PER_BYTE = 30;
 
+// Length of disk change WP strobe in cycles
+constexpr unsigned DISK_CHANGE_STROBE = 100000;	// 100 ms
+
 
 // Number of sectors of each track
 const unsigned num_sectors[36] = {
@@ -90,6 +93,8 @@ Job1541::Job1541(uint8_t *ram1541) : ram(ram1541), the_file(nullptr)
 
 	set_gcr_ptr();
 	gcr_offset = 1;
+
+	disk_change_cycle = 0;
 
 	last_byte_cycle = 0;
 	byte_latch = 0;
@@ -135,7 +140,10 @@ void Job1541::NewPrefs(const Prefs *prefs)
 	} else if (ThePrefs.DrivePath[0] != prefs->DrivePath[0]) {
 		close_d64_file();
 		open_d64_file(prefs->DrivePath[0]);
+
 		disk_changed = true;
+		disk_change_cycle = the_cpu_1541->CycleCounter();
+		the_cpu_1541->Idle = false;	// Wake up CPU
 	}
 }
 
@@ -490,6 +498,7 @@ void Job1541::GetState(Job1541State *state) const
 {
 	state->current_halftrack = current_halftrack;
 	state->gcr_offset = gcr_offset;
+	state->disk_change_cycle = disk_change_cycle;
 	state->last_byte_cycle = last_byte_cycle;
 	state->byte_latch = byte_latch;
 
@@ -509,6 +518,7 @@ void Job1541::SetState(const Job1541State *state)
 	current_halftrack = state->current_halftrack;
 	set_gcr_ptr();
 	gcr_offset = state->gcr_offset;
+	disk_change_cycle = state->disk_change_cycle;
 	last_byte_cycle = state->last_byte_cycle;
 	byte_latch = state->byte_latch;
 
@@ -594,4 +604,24 @@ uint8_t Job1541::ReadGCRByte(uint32_t cycle_counter)
 
 	byte_ready = false;
 	return byte_latch;
+}
+
+
+/*
+ *  Return state of write protect sensor as VIA port value (PB4)
+ */
+
+uint8_t Job1541::WPState()
+{
+	// Disk change -> WP sensor strobe
+	if (disk_changed) {
+		uint32_t elapsed = the_cpu_1541->CycleCounter() - disk_change_cycle;
+		if (elapsed < DISK_CHANGE_STROBE) {
+			return write_protected ? 0x10 : 0;
+		}
+		disk_changed = false;
+	}
+
+	// Default behavior
+	return write_protected ? 0 : 0x10;
 }

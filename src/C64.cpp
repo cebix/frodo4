@@ -122,6 +122,7 @@ C64::C64() : quit_requested(false), prefs_editor_requested(false), load_snapshot
 
 	TheJob1541 = new Job1541(RAM1541);
 	TheCPU1541 = new MOS6502_1541(this, TheJob1541, TheDisplay, RAM1541, ROM1541);
+	TheJob1541->SetCPU(TheCPU1541);
 
 	TheVIC = TheCPU->TheVIC = new MOS6569(this, TheDisplay, TheCPU, RAM, Char, Color);
 	TheSID = TheCPU->TheSID = new MOS6581;

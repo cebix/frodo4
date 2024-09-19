@@ -33,6 +33,8 @@ public:
 	Job1541(uint8_t *ram1541);
 	~Job1541();
 
+	void SetCPU(MOS6502_1541 * cpu) { the_cpu_1541 = cpu; }
+
 	void GetState(Job1541State *state) const;
 	void SetState(const Job1541State *state);
 	void NewPrefs(const Prefs *prefs);
@@ -64,6 +66,7 @@ private:
 	void rotate_disk(uint32_t cycle_counter);
 
 	uint8_t *ram;				// Pointer to 1541 RAM
+	MOS6502_1541 *the_cpu_1541;	// Pointer to 1541 CPU object
 	FILE *the_file;				// File pointer for .d64 file
 	unsigned image_header;		// Length of .d64/.x64 file header
 
@@ -79,8 +82,9 @@ private:
 	size_t gcr_offset;			// Offset of GCR data byte under R/W head, relative to gcr_track_start
 								// Note: This is never 0, so we can access the previous GCR byte for sync detection
 
-	uint32_t last_byte_cycle;	// Cycle when last byte was available
+	uint32_t disk_change_cycle;	// Cycle of last disk change
 
+	uint32_t last_byte_cycle;	// Cycle when last byte was available
 	uint8_t byte_latch;			// Latch for read GCR byte
 
 	bool motor_on;				// Flag: Spindle motor on
@@ -94,6 +98,7 @@ struct Job1541State {
 	uint32_t current_halftrack;
 	uint32_t gcr_offset;
 	uint32_t last_byte_cycle;
+	uint32_t disk_change_cycle;
 
 	uint8_t byte_latch;
 
@@ -111,21 +116,6 @@ struct Job1541State {
 inline void Job1541::SetMotor(bool on)
 {
 	motor_on = on;
-}
-
-
-/*
- *  Return state of write protect sensor as VIA port value (PB4)
- */
-
-inline uint8_t Job1541::WPState()
-{
-	if (disk_changed) {	// Disk change -> WP sensor strobe
-		disk_changed = false;
-		return write_protected ? 0x10 : 0;
-	} else {
-		return write_protected ? 0 : 0x10;
-	}
 }
 
 #endif
