@@ -170,6 +170,7 @@ void MOS6502_1541::GetState(MOS6502State *s) const
 	s->intr[INT_RESET] = interrupt.intr[INT_RESET];
 	s->instruction_complete = (state == 0);
 	s->idle = Idle;
+	s->opflags = opflags;
 
 	s->via1_pra = via1_pra; s->via1_ddra = via1_ddra;
 	s->via1_prb = via1_prb; s->via1_ddrb = via1_ddrb;
@@ -218,6 +219,7 @@ void MOS6502_1541::SetState(const MOS6502State *s)
 		state = 0;
 	}
 	Idle = s->idle;
+	opflags = s->opflags;
 
 	via1_pra = s->via1_pra; via1_ddra = s->via1_ddra;
 	via1_prb = s->via1_prb; via1_ddrb = s->via1_ddrb;

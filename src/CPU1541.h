@@ -177,8 +177,10 @@ struct MOS6502State {
 	uint16_t pc, sp;
 
 	uint8_t intr[4];		// Interrupt state
+
 	bool instruction_complete;
 	bool idle;
+	uint8_t opflags;
 
 	uint8_t via1_pra;		// VIA 1
 	uint8_t via1_ddra;
