@@ -24,11 +24,6 @@
 #include <stdlib.h>
 
 
-// Define this if you want an emulation of an 8580
-// (affects combined waveforms)
-#undef EMUL_MOS8580
-
-
 class C64;
 class SIDRenderer;
 class Prefs;

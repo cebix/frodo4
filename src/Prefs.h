@@ -27,9 +27,10 @@
 
 // SID types
 enum {
-	SIDTYPE_NONE,		// SID emulation off
-	SIDTYPE_DIGITAL,	// Digital SID emulation
-	SIDTYPE_SIDCARD		// SID card
+	SIDTYPE_NONE,			// SID emulation off
+	SIDTYPE_DIGITAL_6581,	// Digital SID emulation (6581)
+	SIDTYPE_DIGITAL_8580,	// Digital SID emulation (8580)
+	SIDTYPE_SIDCARD			// SID card
 };
 
 

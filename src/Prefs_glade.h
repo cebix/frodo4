@@ -454,8 +454,9 @@ static void ghost_widgets()
 
 	ghost_widget("scaling_numerator", prefs->DisplayType == DISPTYPE_SCREEN);
 
-	ghost_widget("sid_filters", prefs->SIDType != SIDTYPE_DIGITAL);
-	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "sid_filters")), prefs->SIDType == SIDTYPE_DIGITAL ? prefs->SIDFilters : (prefs->SIDType == SIDTYPE_SIDCARD ? true : false));
+	ghost_widget("sid_filters", prefs->SIDType != SIDTYPE_DIGITAL_6581 && prefs->SIDType != SIDTYPE_DIGITAL_8580);
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "sid_filters")),
+	                             (prefs->SIDType == SIDTYPE_DIGITAL_6581 || prefs->SIDType == SIDTYPE_DIGITAL_8580) ? prefs->SIDFilters : (prefs->SIDType == SIDTYPE_SIDCARD ? true : false));
 }
 
 

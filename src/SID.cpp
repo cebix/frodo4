@@ -324,7 +324,7 @@ void MOS6581::SetState(const MOS6581State *ss)
 
 
 /**
- **  Renderer for digital SID emulation (SIDTYPE_DIGITAL)
+ **  Renderer for digital SID emulation (SIDTYPE_DIGITAL_*)
  **/
 
 constexpr int SAMPLE_FREQ = 48000;			// Desired default sample frequency (note: obtained freq may be different!)
@@ -411,10 +411,21 @@ private:
 
 	uint32_t sid_cycles_frac;		// Number of SID cycles per output sample frame (16.16)
 
-	static const uint16_t TriSawTable[0x100];
-	static const uint16_t TriRectTable[0x100];
-	static const uint16_t SawRectTable[0x100];
-	static const uint16_t TriSawRectTable[0x100];
+	const uint16_t * TriSawTable = nullptr;
+	const uint16_t * TriRectTable = nullptr;
+	const uint16_t * SawRectTable = nullptr;
+	const uint16_t * TriSawRectTable = nullptr;
+
+	static const uint16_t TriSawTable_6581[0x100];
+	static const uint16_t TriRectTable_6581[0x100];
+	static const uint16_t SawRectTable_6581[0x100];
+	static const uint16_t TriSawRectTable_6581[0x100];
+
+	static const uint16_t TriSawTable_8580[0x100];
+	static const uint16_t TriRectTable_8580[0x100];
+	static const uint16_t SawRectTable_8580[0x100];
+	static const uint16_t TriSawRectTable_8580[0x100];
+
 	static const int16_t SampleTab[16];	// Table for sampled voice
 
 	DRVoice voice[3];				// Data for 3 voices
@@ -438,10 +449,9 @@ private:
 	SDL_AudioSpec obtained;			// Obtained output format
 };
 
-// Static data members
-#ifndef EMUL_MOS8580
-// Sampled from a 6581R4
-const uint16_t DigitalRenderer::TriSawTable[0x100] = {
+
+// Combined waveforms sampled from a 6581R4
+const uint16_t DigitalRenderer::TriSawTable_6581[0x100] = {
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
@@ -476,7 +486,7 @@ const uint16_t DigitalRenderer::TriSawTable[0x100] = {
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x1010, 0x3C3C
 };
 
-const uint16_t DigitalRenderer::TriRectTable[0x100] = {
+const uint16_t DigitalRenderer::TriRectTable_6581[0x100] = {
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
@@ -511,7 +521,7 @@ const uint16_t DigitalRenderer::TriRectTable[0x100] = {
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000
 };
 
-const uint16_t DigitalRenderer::SawRectTable[0x100] = {
+const uint16_t DigitalRenderer::SawRectTable_6581[0x100] = {
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
@@ -546,7 +556,7 @@ const uint16_t DigitalRenderer::SawRectTable[0x100] = {
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x7878
 };
 
-const uint16_t DigitalRenderer::TriSawRectTable[0x100] = {
+const uint16_t DigitalRenderer::TriSawRectTable_6581[0x100] = {
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
@@ -580,9 +590,10 @@ const uint16_t DigitalRenderer::TriSawRectTable[0x100] = {
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000
 };
-#else
-// Sampled from an 8580R5
-const uint16_t DigitalRenderer::TriSawTable[0x100] = {
+
+
+// Combined waveforms sampled from an 8580R5
+const uint16_t DigitalRenderer::TriSawTable_8580[0x100] = {
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
@@ -617,7 +628,7 @@ const uint16_t DigitalRenderer::TriSawTable[0x100] = {
 	0xF0F0, 0xF0F0, 0xF0F0, 0xF0F0, 0xF8F8, 0xF8F8, 0xFCFC, 0xFEFE
 };
 
-const uint16_t DigitalRenderer::TriRectTable[0x100] = {
+const uint16_t DigitalRenderer::TriRectTable_8580[0x100] = {
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
@@ -652,7 +663,7 @@ const uint16_t DigitalRenderer::TriRectTable[0x100] = {
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000
 };
 
-const uint16_t DigitalRenderer::SawRectTable[0x100] = {
+const uint16_t DigitalRenderer::SawRectTable_8580[0x100] = {
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
@@ -687,7 +698,7 @@ const uint16_t DigitalRenderer::SawRectTable[0x100] = {
 	0xF0F0, 0xF0F0, 0xF8F8, 0xF8F8, 0xF8F8, 0xFCFC, 0xFEFE, 0xFFFF
 };
 
-const uint16_t DigitalRenderer::TriSawRectTable[0x100] = {
+const uint16_t DigitalRenderer::TriSawRectTable_8580[0x100] = {
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
 	0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
@@ -721,7 +732,7 @@ const uint16_t DigitalRenderer::TriSawRectTable[0x100] = {
 	0x8080, 0x8080, 0x8080, 0x8080, 0x8080, 0x8080, 0xC0C0, 0xC0C0,
 	0xC0C0, 0xC0C0, 0xE0E0, 0xE0E0, 0xE0E0, 0xF0F0, 0xF8F8, 0xFCFC
 };
-#endif
+
 
 const int16_t MOS6581::EGDivTable[16] = {
 	9, 32,
@@ -752,6 +763,7 @@ const uint8_t MOS6581::EGDRShift[256] = {
 	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 };
+
 
 const int16_t DigitalRenderer::SampleTab[16] = {
 	-0x7fff, -0x6eee, -0x5ddd, -0x4ccc, -0x3bbb, -0x2aaa, -0x1999, -0x0888,
@@ -1016,6 +1028,18 @@ void DigitalRenderer::WriteRegister(uint16_t adr, uint8_t byte)
 
 void DigitalRenderer::NewPrefs(const Prefs *prefs)
 {
+	if (prefs->SIDType == SIDTYPE_DIGITAL_6581) {
+		TriSawTable     = TriSawTable_6581;
+		TriRectTable    = TriRectTable_6581;
+		SawRectTable    = SawRectTable_6581;
+		TriSawRectTable = TriSawRectTable_6581;
+	} else {
+		TriSawTable     = TriSawTable_8580;
+		TriRectTable    = TriRectTable_8580;
+		SawRectTable    = SawRectTable_8580;
+		TriSawRectTable = TriSawRectTable_8580;
+	}
+
 	calc_filter();
 }
 
@@ -1359,16 +1383,21 @@ void DigitalRenderer::buffer_proc(void * userdata, uint8_t * buffer, int size)
  *  Open/close the renderer, according to old and new prefs
  */
 
+static bool is_digital(int sid_type)
+{
+	return sid_type == SIDTYPE_DIGITAL_6581 || sid_type == SIDTYPE_DIGITAL_8580;
+}
+
 void MOS6581::open_close_renderer(int old_type, int new_type)
 {
-	if (old_type == new_type)
+	if (old_type == new_type || is_digital(old_type) == is_digital(new_type))
 		return;
 
 	// Delete the old renderer
 	delete the_renderer;
 
 	// Create new renderer
-	if (new_type == SIDTYPE_DIGITAL) {
+	if (new_type == SIDTYPE_DIGITAL_6581 || new_type == SIDTYPE_DIGITAL_8580) {
 		the_renderer = new DigitalRenderer;
 #ifdef __linux__
 	} else if (new_type == SIDTYPE_SIDCARD) {

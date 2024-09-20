@@ -802,8 +802,9 @@ Lutz Vieweg</property>
                                     <property name="active">0</property>
                                     <items>
                                       <item id="0" translatable="yes">None</item>
-                                      <item id="1" translatable="yes">Software</item>
-                                      <item translatable="yes">Catweasel</item>
+                                      <item id="1" translatable="yes">Software (6581)</item>
+                                      <item id="2" translatable="yes">Software (8580)</item>
+                                      <item id="3" translatable="yes">Catweasel</item>
                                     </items>
                                     <signal name="changed" handler="on_sid_type_changed" swapped="no"/>
                                   </object>

@@ -45,7 +45,7 @@ Prefs::Prefs()
 	ScalingNumerator = 4;
 	ScalingDenominator = 1;
 
-	SIDType = SIDTYPE_DIGITAL;
+	SIDType = SIDTYPE_DIGITAL_6581;
 	REUSize = REU_NONE;
 	DisplayType = DISPTYPE_WINDOW;
 	Palette = PALETTE_PEPTO;
@@ -137,7 +137,11 @@ void Prefs::Load(fs::path prefs_path)
 
 			} else if (keyword == "SIDType") {
 				if (value == "DIGITAL") {
-					SIDType = SIDTYPE_DIGITAL;
+					SIDType = SIDTYPE_DIGITAL_6581;
+				} else if (value == "6581") {
+					SIDType = SIDTYPE_DIGITAL_6581;
+				} else if (value == "8580") {
+					SIDType = SIDTYPE_DIGITAL_8580;
 				} else if (value == "SIDCARD") {
 					SIDType = SIDTYPE_SIDCARD;
 				} else {
@@ -221,9 +225,10 @@ bool Prefs::Save(fs::path prefs_path)
 
 	file << "SIDType = ";
 	switch (SIDType) {
-		case SIDTYPE_NONE:    file << "NONE\n";    break;
-		case SIDTYPE_DIGITAL: file << "DIGITAL\n"; break;
-		case SIDTYPE_SIDCARD: file << "SIDCARD\n"; break;
+		case SIDTYPE_NONE:         file << "NONE\n";    break;
+		case SIDTYPE_DIGITAL_6581: file << "6581\n"; break;
+		case SIDTYPE_DIGITAL_8580: file << "8580\n"; break;
+		case SIDTYPE_SIDCARD:      file << "SIDCARD\n"; break;
 	}
 	file << "REUSize = ";
 	switch (REUSize) {
