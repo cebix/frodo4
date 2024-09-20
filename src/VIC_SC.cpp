@@ -281,6 +281,7 @@ void MOS6569::GetState(MOS6569State *vd) const
 	vd->ref_cnt = ref_cnt;
 	vd->last_vic_byte = LastVICByte;
 	vd->ud_border_on = ud_border_on;
+	vd->ud_border_set = ud_border_set;
 	vd->hold_off_raster_irq = hold_off_raster_irq;
 }
 
@@ -382,6 +383,7 @@ void MOS6569::SetState(const MOS6569State *vd)
 	ref_cnt = vd->ref_cnt;
 	LastVICByte = vd->last_vic_byte;
 	ud_border_on = vd->ud_border_on;
+	ud_border_set = vd->ud_border_set;
 	hold_off_raster_irq = vd->hold_off_raster_irq;
 }
 
@@ -834,7 +836,7 @@ void MOS6569::draw_graphics()
 			goto draw_std;
 
 		case 3:		// Multicolor bitmap
-			c[0]= b0c_color;
+			c[0] = b0c_color;
 			c[1] = colors[char_data >> 4];
 			c[2] = colors[char_data];
 			c[3] = colors[color_data];

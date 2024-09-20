@@ -134,7 +134,7 @@ private:
 #endif
 
 	bool display_state;			// true: Display state, false: Idle state
-	bool border_on;				// Flag: Upper/lower border on (Frodo SC: Main border flipflop)
+	bool border_on;				// Flag: Upper/lower border on (Frodo SC: Main border flip-flop)
 	bool bad_lines_enabled;		// Flag: Bad Lines enabled for this frame
 	bool lp_triggered;			// Flag: Lightpen was triggered in this frame
 
@@ -273,7 +273,7 @@ struct MOS6569State {
 	bool bad_line;				// Flag: Bad Line state
 	bool bad_line_enable;		// Flag: Bad Lines enabled for this frame
 	bool lp_triggered;			// Flag: Lightpen was triggered in this frame
-	bool border_on;				// Flag: Upper/lower border on (Frodo SC: Main border flipflop)
+	bool border_on;				// Flag: Upper/lower border on (Frodo SC: Main border flip-flop)
 
 	uint16_t bank_base;			// VIC bank base address
 	uint16_t matrix_base;		// Video matrix base
@@ -288,6 +288,7 @@ struct MOS6569State {
 	uint8_t ref_cnt;			// Refresh counter
 	uint8_t last_vic_byte;		// Last byte read by VIC
 	bool ud_border_on;			// Flag: Upper/lower border on
+	bool ud_border_set;			// Flag: Set ud_border_on when checking for left/right border
 	bool hold_off_raster_irq;	// Flag: No raster IRQ in next line
 };
 

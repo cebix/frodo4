@@ -349,7 +349,7 @@ void MOS6569::GetState(MOS6569State *vd) const
 	vd->ml_index = 0;
 	vd->ref_cnt = 0xff;
 	vd->last_vic_byte = 0;
-	vd->ud_border_on = border_on;
+	vd->ud_border_on = vd->ud_border_set = border_on;
 	vd->hold_off_raster_irq = false;
 }
 
