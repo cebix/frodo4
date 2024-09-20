@@ -22,12 +22,12 @@
  * Incompatibilities:
  * ------------------
  *
- *  - Color of $ff bytes read when BA is low and AEC is high is not correct
  *  - Sprite data access doesn't respect BA
- *  - Changes to border/background color are visible 7 pixels too late
+ *  - Changes to background color are visible 7 pixels too late
  *  - Sprites are effectively drawn in a line-based fashion in cycle 60,
  *    so changes to sprite registers (except for Y position) within the
- *    line are not displayed properly
+ *    line are not displayed properly, and sprite collisions are detected
+ *    too late
  */
 
 #include "sysdeps.h"
@@ -1338,9 +1338,7 @@ inline void MOS6569::draw_sprites()
 // Sample border color and increment chunky_ptr and fore_mask_ptr
 #define SampleBorder \
 	if (draw_this_line) { \
-		if (border_on) { \
-			border_color_sample[cycle-13] = ec_color; \
-		} \
+		border_color_sample[cycle-13] = ec_color; \
 		chunky_ptr += 8; \
 		fore_mask_ptr++; \
 	}
@@ -1741,6 +1739,18 @@ unsigned MOS6569::EmulateCycle()
 			draw_background();
 			SampleBorder;
 
+			SprPtrAccess(1);
+			SprDataAccess(1, 0);
+			DisplayIfBadLine;
+			if (!(spr_dma_on & 0x06)) {
+				SetBAHigh;
+			}
+			break;
+
+		// Set BA for sprite 3, read data of sprite 1
+		case 61:
+			border_color_sample[cycle-13] = ec_color;
+
 			if (draw_this_line) {
 
 				// Copy foreground mask from left side to higher X
@@ -1758,23 +1768,33 @@ unsigned MOS6569::EmulateCycle()
 				// Draw border
 				if (border_on_sample[0]) {
 					for (unsigned i = 0; i < 4; ++i) {
-						memset8(chunky_line_start+i*8, border_color_sample[i]);
+						memset8(chunky_line_start+i*8, border_color_sample[i+1]);
 					}
 				}
-				if (border_on_sample[1]) {
-					memset8(chunky_line_start+4*8, border_color_sample[4]);
+				if (border_on_sample[1]) {	// 38 columns: 7 pixels on left side
+					uint8_t c = border_color_sample[5];
+					chunky_line_start[4*8+0] = c;
+					chunky_line_start[4*8+1] = c;
+					chunky_line_start[4*8+2] = c;
+					chunky_line_start[4*8+3] = c;
+					chunky_line_start[4*8+4] = c;
+					chunky_line_start[4*8+5] = c;
+					chunky_line_start[4*8+6] = c;
 				}
 				if (border_on_sample[2]) {
+					chunky_line_start[4*8+7] = border_color_sample[5];
 					for (unsigned i = 5; i < 43; ++i) {
-						memset8(chunky_line_start+i*8, border_color_sample[i]);
+						memset8(chunky_line_start+i*8, border_color_sample[i+1]);
 					}
 				}
-				if (border_on_sample[3]) {
-					memset8(chunky_line_start+43*8, border_color_sample[43]);
+				if (border_on_sample[3]) {	// 38 columns: 9 pixels on right side
+					uint8_t c = border_color_sample[44];
+					chunky_line_start[42*8+7] = c;
+					memset8(chunky_line_start+43*8, c);
 				}
 				if (border_on_sample[4]) {
 					for (unsigned i = 44; i < DISPLAY_X/8; ++i) {
-						memset8(chunky_line_start+i*8, border_color_sample[i]);
+						memset8(chunky_line_start+i*8, border_color_sample[i+1]);
 					}
 				}
 
@@ -1782,16 +1802,6 @@ unsigned MOS6569::EmulateCycle()
 				chunky_line_start += xmod;
 			}
 
-			SprPtrAccess(1);
-			SprDataAccess(1, 0);
-			DisplayIfBadLine;
-			if (!(spr_dma_on & 0x06)) {
-				SetBAHigh;
-			}
-			break;
-
-		// Set BA for sprite 3, read data of sprite 1
-		case 61:
 			SprDataAccess(1, 1);
 			SprDataAccess(1, 2);
 			DisplayIfBadLine;

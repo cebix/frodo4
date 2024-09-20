@@ -163,7 +163,8 @@ private:
 	bool hold_off_raster_irq;		// Flag: No raster IRQ in next line
 
 	bool border_on_sample[5];		// Samples of border state at different cycles (1, 17, 18, 56, 57)
-	uint8_t border_color_sample[0x180/8]; // Samples of border color at each "displayed" cycle
+	uint8_t border_color_sample[0x180/8+4]; // Samples of border color at each "displayed" cycle
+											// (plus one extra)
 
 	uint8_t ref_cnt;				// Refresh counter
 	uint8_t spr_exp_y;				// 8 sprite y expansion flipflops
