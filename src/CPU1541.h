@@ -246,6 +246,9 @@ inline void MOS6502_1541::trigger_via2_irq()
 
 /*
  *  Count VIA timers
+ *
+ *  Note: This is not cycle-exact, especially with respect to
+ *  interrupt timing, but close enough for standard use...
  */
 
 inline void MOS6502_1541::CountVIATimers(int cycles)
@@ -254,9 +257,7 @@ inline void MOS6502_1541::CountVIATimers(int cycles)
 
 	via1_t1c = tmp = via1_t1c - cycles;
 	if (tmp > 0xffff) {
-		if (via1_acr & 0x40) {	// Reload from latch in free-run mode
-			via1_t1c = via1_t1l;
-		}
+		via1_t1c = via1_t1l;	// Reload from latch
 		via1_ifr |= 0x40;
 	}
 
@@ -269,9 +270,7 @@ inline void MOS6502_1541::CountVIATimers(int cycles)
 
 	via2_t1c = tmp = via2_t1c - cycles;
 	if (tmp > 0xffff) {
-		if (via2_acr & 0x40) {	// Reload from latch in free-run mode
-			via2_t1c = via2_t1l;
-		}
+		via2_t1c = via2_t1l;	// Reload from latch
 		via2_ifr |= 0x40;
 		if (via2_ier & 0x40) {
 			trigger_via2_irq();
