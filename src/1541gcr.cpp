@@ -623,20 +623,22 @@ uint8_t Job1541::ReadGCRByte(uint32_t cycle_counter)
 
 
 /*
- *  Return state of write protect sensor as VIA port value (PB4)
+ *  Return state of write protect sensor
  */
 
-uint8_t Job1541::WPState()
+bool Job1541::WPSensorClosed()
 {
-	// Disk change -> WP sensor strobe
 	if (disk_changed) {
+
+		// WP sensor strobe on disk change
 		uint32_t elapsed = the_cpu_1541->CycleCounter() - disk_change_cycle;
 		if (elapsed < DISK_CHANGE_STROBE) {
-			return write_protected ? 0x10 : 0;
+			return !write_protected;
+		} else {
+			disk_changed = false;
 		}
-		disk_changed = false;
 	}
 
 	// Default behavior
-	return write_protected ? 0 : 0x10;
+	return write_protected;
 }

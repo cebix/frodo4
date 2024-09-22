@@ -1831,28 +1831,28 @@ static void dump_via_ints(uint8_t i)
 static void view_1541_state()
 {
 	output += "VIA 1:\n";
-	output += format(" Port A: {:02x}  DDR: {:02x}\n", R1541.via1_pra, R1541.via1_ddra);
-	output += format(" Port B: {:02x}  DDR: {:02x}\n", R1541.via1_prb, R1541.via1_ddrb);
-	output += format(" Timer 1 Counter: {:04x}  Latch: {:04x}\n", R1541.via1_t1c, R1541.via1_t1l);
-	output += format(" Timer 2 Counter: {:04x}  Latch: {:04x}\n", R1541.via1_t2c, R1541.via1_t2l);
-	output += format(" ACR: {:02x}\n", R1541.via1_acr);
-	output += format(" PCR: {:02x}\n", R1541.via1_pcr);
+	output += format(" Port A: {:02x}  DDR: {:02x}\n", R1541.via1.pra, R1541.via1.ddra);
+	output += format(" Port B: {:02x}  DDR: {:02x}\n", R1541.via1.prb, R1541.via1.ddrb);
+	output += format(" Timer 1 Counter: {:04x}  Latch: {:04x}\n", R1541.via1.t1c, R1541.via1.t1l);
+	output += format(" Timer 2 Counter: {:04x}  Latch: {:04x}\n", R1541.via1.t2c, R1541.via1.t2l);
+	output += format(" ACR: {:02x}\n", R1541.via1.acr);
+	output += format(" PCR: {:02x}\n", R1541.via1.pcr);
 	output += " Pending interrupts: ";
-	dump_via_ints(R1541.via1_ifr);
+	dump_via_ints(R1541.via1.ifr);
 	output += " Enabled interrupts: ";
-	dump_via_ints(R1541.via1_ier);
+	dump_via_ints(R1541.via1.ier);
 
 	output += "\nVIA 2:\n";
-	output += format(" Port A: {:02x}  DDR: {:02x}\n", R1541.via2_pra, R1541.via2_ddra);
-	output += format(" Port B: {:02x}  DDR: {:02x}\n", R1541.via2_prb, R1541.via2_ddrb);
-	output += format(" Timer 1 Counter: {:04x}  Latch: {:04x}\n", R1541.via2_t1c, R1541.via2_t1l);
-	output += format(" Timer 2 Counter: {:04x}  Latch: {:04x}\n", R1541.via2_t2c, R1541.via2_t2l);
-	output += format(" ACR: {:02x}\n", R1541.via2_acr);
-	output += format(" PCR: {:02x}\n", R1541.via2_pcr);
+	output += format(" Port A: {:02x}  DDR: {:02x}\n", R1541.via2.pra, R1541.via2.ddra);
+	output += format(" Port B: {:02x}  DDR: {:02x}\n", R1541.via2.prb, R1541.via2.ddrb);
+	output += format(" Timer 1 Counter: {:04x}  Latch: {:04x}\n", R1541.via2.t1c, R1541.via2.t1l);
+	output += format(" Timer 2 Counter: {:04x}  Latch: {:04x}\n", R1541.via2.t2c, R1541.via2.t2l);
+	output += format(" ACR: {:02x}\n", R1541.via2.acr);
+	output += format(" PCR: {:02x}\n", R1541.via2.pcr);
 	output += " Pending interrupts: ";
-	dump_via_ints(R1541.via2_ifr);
+	dump_via_ints(R1541.via2.ifr);
 	output += " Enabled interrupts: ";
-	dump_via_ints(R1541.via2_ier);
+	dump_via_ints(R1541.via2.ier);
 }
 
 

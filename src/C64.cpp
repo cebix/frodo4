@@ -444,9 +444,9 @@ bool C64::emulate_c64_cycle()
 
 void C64::emulate_1541_cycle()
 {
-	TheCPU1541->CountVIATimers(1);
+	TheCPU1541->EmulateVIACycle();
 	if (!TheCPU1541->Idle) {
-		TheCPU1541->EmulateCycle();
+		TheCPU1541->EmulateCPUCycle();
 	}
 }
 

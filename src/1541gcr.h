@@ -39,14 +39,14 @@ public:
 	void SetState(const Job1541State *state);
 	void NewPrefs(const Prefs *prefs);
 
-	void SetMotor(bool on);
+	void SetMotor(bool on) { motor_on = on; }
 	void MoveHeadOut(uint32_t cycle_counter);
 	void MoveHeadIn(uint32_t cycle_counter);
 
 	bool SyncFound(uint32_t cycle_counter);
 	bool ByteReady(uint32_t cycle_counter);
 	uint8_t ReadGCRByte(uint32_t cycle_counter);
-	uint8_t WPState();
+	bool WPSensorClosed();
 
 	void WriteSector();
 	void FormatTrack();
@@ -107,15 +107,5 @@ struct Job1541State {
 	bool disk_changed;
 	bool byte_ready;
 };
-
-
-/*
- *  Control spindle motor
- */
-
-inline void Job1541::SetMotor(bool on)
-{
-	motor_on = on;
-}
 
 #endif

@@ -54,14 +54,11 @@
  *  - Only the highest bit of the n_flag variable is used
  *  - The $f2 opcode that would normally crash the 6502 is
  *    used to implement emulator-specific functions
- *  - The 1541 6502 emulation also includes a very simple VIA
- *    emulation (enough to make the IEC bus and GCR loading work).
- *    It's too small to move it to a source file of its own.
  *
  * Incompatibilities:
  * ------------------
  *
- *  - VIA emulation incomplete
+ *  - VIA emulation incomplete (no port latches, CA2/CB2, no shift register)
  */
 
 #include "sysdeps.h"
@@ -90,7 +87,21 @@ MOS6502_1541::MOS6502_1541(C64 *c64, Job1541 *job, C64Display *disp, uint8_t *Ra
 	cycle_counter = 0;
 	first_irq_cycle = first_nmi_cycle = 0;
 
+	via1 = new MOS6522(this, INT_VIA1IRQ);
+	via2 = new MOS6522(this, INT_VIA2IRQ);
+
 	Reset();
+}
+
+
+/*
+ *  6502 destructor
+ */
+
+MOS6502_1541::~MOS6502_1541()
+{
+	delete via1;
+	delete via2;
 }
 
 
@@ -106,30 +117,11 @@ void MOS6502_1541::AsyncReset()
 
 
 /*
- *  Reset CPU
+ *  Reset 1541
  */
 
 void MOS6502_1541::Reset()
 {
-	// IEC lines and VIA registers
-	//
-	// Note: 6522 reset doesn't actually touch the timers nor the shift
-	// register, but we want to avoid undefined behavior.
-	IECLines = 0x38;
-	atn_ack = 0x08;
-
-	via1_pra = via1_ddra = via1_prb = via1_ddrb = 0;
-	via1_t1c = via1_t1l = via1_t2c = via1_t2l = 0xffff;
-	via1_sr = 0;
-	via1_acr = via1_pcr = 0;
-	via1_ifr = via1_ier = 0;
-
-	via2_pra = via2_ddra = via2_prb = via2_ddrb = 0;
-	via2_t1c = via2_t1l = via2_t2c = via2_t2l = 0xffff;
-	via2_sr = 0;
-	via2_acr = via2_pcr = 0;
-	via2_ifr = via2_ier = 0;
-
 	// Clear all interrupt lines
 	interrupt.intr_any = 0;
 	opflags = 0;
@@ -138,13 +130,36 @@ void MOS6502_1541::Reset()
 	pc = read_word(0xfffc);
 	state = 0;
 
+	// IEC lines and VIA registers
+	IECLines = 0x38;
+	atn_ack = 0x08;
+
+	via1->Reset();
+	via2->Reset();
+
 	// Wake up 1541
 	Idle = false;
 }
 
 
 /*
- *  Get 6502 register state
+ *  Reset VIA
+ */
+
+void MOS6522::Reset()
+{
+	// Note: 6522 reset doesn't actually touch the timers nor the shift
+	// register, but we want to avoid undefined behavior.
+	pra = ddra = prb = ddrb = 0;
+	t1c = t1l = t2c = t2l = 0xffff;
+	sr = 0;
+	acr = pcr = 0;
+	ifr = ier = 0;
+}
+
+
+/*
+ *  Get 1541 register state
  */
 
 void MOS6502_1541::GetState(MOS6502State *s) const
@@ -172,26 +187,29 @@ void MOS6502_1541::GetState(MOS6502State *s) const
 	s->idle = Idle;
 	s->opflags = opflags;
 
-	s->via1_pra = via1_pra; s->via1_ddra = via1_ddra;
-	s->via1_prb = via1_prb; s->via1_ddrb = via1_ddrb;
-	s->via1_t1c = via1_t1c; s->via1_t1l = via1_t1l;
-	s->via1_t2c = via1_t2c; s->via1_t2l = via1_t2l;
-	s->via1_sr = via1_sr;
-	s->via1_acr = via1_acr; s->via1_pcr = via1_pcr;
-	s->via1_ifr = via1_ifr; s->via1_ier = via1_ier;
-
-	s->via2_pra = via2_pra; s->via2_ddra = via2_ddra;
-	s->via2_prb = via2_prb; s->via2_ddrb = via2_ddrb;
-	s->via2_t1c = via2_t1c; s->via2_t1l = via2_t1l;
-	s->via2_t2c = via2_t2c; s->via2_t2l = via2_t2l;
-	s->via2_sr = via2_sr;
-	s->via2_acr = via2_acr; s->via2_pcr = via2_pcr;
-	s->via2_ifr = via2_ifr; s->via2_ier = via2_ier;
+	via1->GetState(&(s->via1));
+	via2->GetState(&(s->via2));
 }
 
 
 /*
- *  Restore 6502 state
+ *  Get VIA register state
+ */
+
+void MOS6522::GetState(MOS6522State * s) const
+{
+	s->pra = pra; s->ddra = ddra;
+	s->prb = prb; s->ddrb = ddrb;
+	s->t1c = t1c; s->t1l  = t1l;
+	s->t2c = t2c; s->t2l  = t2l;
+	s->sr  = sr;
+	s->acr = acr; s->pcr  = pcr;
+	s->ifr = ifr; s->ier  = ier;
+}
+
+
+/*
+ *  Restore 1541 state
  */
 
 void MOS6502_1541::SetState(const MOS6502State *s)
@@ -221,23 +239,26 @@ void MOS6502_1541::SetState(const MOS6502State *s)
 	Idle = s->idle;
 	opflags = s->opflags;
 
-	via1_pra = s->via1_pra; via1_ddra = s->via1_ddra;
-	via1_prb = s->via1_prb; via1_ddrb = s->via1_ddrb;
-	via1_t1c = s->via1_t1c; via1_t1l = s->via1_t1l;
-	via1_t2c = s->via1_t2c; via1_t2l = s->via1_t2l;
-	via1_sr = s->via1_sr;
-	via1_acr = s->via1_acr; via1_pcr = s->via1_pcr;
-	via1_ifr = s->via1_ifr; via1_ier = s->via1_ier;
+	via1->SetState(&(s->via1));
+	via2->SetState(&(s->via2));
 
-	via2_pra = s->via2_pra; via2_ddra = s->via2_ddra;
-	via2_prb = s->via2_prb; via2_ddrb = s->via2_ddrb;
-	via2_t1c = s->via2_t1c; via2_t1l = s->via2_t1l;
-	via2_t2c = s->via2_t2c; via2_t2l = s->via2_t2l;
-	via2_sr = s->via2_sr;
-	via2_acr = s->via2_acr; via2_pcr = s->via2_pcr;
-	via2_ifr = s->via2_ifr; via2_ier = s->via2_ier;
+	set_iec_lines(~(via1->PBOut()));
+}
 
-	set_iec_lines(~via1_prb & via1_ddrb);
+
+/*
+ *  Set VIA register state
+ */
+
+void MOS6522::SetState(const MOS6522State * s)
+{
+	pra = s->pra; ddra = s->ddra;
+	prb = s->prb; ddrb = s->ddrb;
+	t1c = s->t1c; t1l  = s->t1l;
+	t2c = s->t2c; t2l  = s->t2l;
+	sr  = s->sr;
+	acr = s->acr; pcr  = s->pcr;
+	ifr = s->ifr; ier  = s->ier;
 }
 
 
@@ -254,109 +275,74 @@ uint8_t MOS6502_1541::CalcIECLines() const
 
 
 /*
- *  Read a byte from VIA 1
+ *  Trigger VIA interrupt
  */
 
-inline uint8_t MOS6502_1541::read_byte_via1(uint16_t adr)
+inline void MOS6522::trigger_irq()
 {
-	switch (adr & 0xf) {
-		case 0: {
-			uint8_t iec = ~CalcIECLines();		// 1541 reads inverted bus lines
-			uint8_t in = ((iec & 0x20) >> 5)	// DATA from bus on PB0
-			           | ((iec & 0x10) >> 2)	// CLK from bus on PB2
-			           | ((iec & 0x08) << 4)	// ATN from bus on PB7
-			           | 0x1a;					// Output lines high
-			return (via1_prb & via1_ddrb) | (in & ~via1_ddrb);
-		}
-		case 1:
-			via1_ifr &= 0xfd;	// Clear CA1 interrupt
-			interrupt.intr[INT_VIA1IRQ] = false;
-			return 0xff;		// Keep 1541C ROMs happy (track 0 sensor)
-		case 15:
-			return 0xff;		// Keep 1541C ROMs happy (track 0 sensor)
-		case 2:
-			return via1_ddrb;
-		case 3:
-			return via1_ddra;
-		case 4:
-			via1_ifr &= 0xbf;
-			return via1_t1c;
-		case 5:
-			return via1_t1c >> 8;
-		case 6:
-			return via1_t1l;
-		case 7:
-			return via1_t1l >> 8;
-		case 8:
-			via1_ifr &= 0xdf;
-			return via1_t2c;
-		case 9:
-			return via1_t2c >> 8;
-		case 10:
-			return via1_sr;
-		case 11:
-			return via1_acr;
-		case 12:
-			return via1_pcr;
-		case 13:
-			return via1_ifr | (via1_ifr & via1_ier ? 0x80 : 0);
-		case 14:
-			return via1_ier | 0x80;
-		default:	// Can't happen
-			return 0;
+	the_cpu->TriggerInterrupt(irq_type);
+}
+
+void MOS6502_1541::TriggerInterrupt(unsigned which)
+{
+	if (!(interrupt.intr[which])) {
+		first_irq_cycle = cycle_counter;
 	}
+	interrupt.intr[which] = true;
+
+	// Wake up 1541
+	Idle = false;
+}
+
+inline void MOS6522::TriggerCA1Interrupt()
+{
+	if (pcr & 0x01) {		// CA1 positive edge (1541 gets inverted bus signals)
+		ifr |= 0x02;
+		if (ier & 0x02) {	// CA1 interrupt enabled?
+			trigger_irq();
+		}
+	}
+}
+
+// Interrupt by negative edge of ATN on IEC bus
+void MOS6502_1541::TriggerIECInterrupt()
+{
+	via1->TriggerCA1Interrupt();
 }
 
 
 /*
- *  Read a byte from VIA 2
+ *  Emulate VIAs for one cycle
  */
 
-inline uint8_t MOS6502_1541::read_byte_via2(uint16_t adr)
+void MOS6522::EmulateCycle()
 {
-	switch (adr & 0xf) {
-		case 0: {
-			uint8_t byte = the_job->WPState();
-			if (!the_job->SyncFound(cycle_counter)) {
-				byte |= 0x80;
-			}
-			return (byte & ~via2_ddrb) | (via2_prb & via2_ddrb);
+	t1c -= 1;
+	if (t1c == 0xffff) {
+		t1c = t1l;			// Reload from latch
+		ifr |= 0x40;
+		if (ier & 0x40) {
+			trigger_irq();
 		}
-		case 1:
-		case 15:
-			return the_job->ReadGCRByte(cycle_counter);
-		case 2:
-			return via2_ddrb;
-		case 3:
-			return via2_ddra;
-		case 4:
-			via2_ifr &= 0xbf;
-			interrupt.intr[INT_VIA2IRQ] = false;	// Clear IRQ
-			return via2_t1c;
-		case 5:
-			return via2_t1c >> 8;
-		case 6:
-			return via2_t1l;
-		case 7:
-			return via2_t1l >> 8;
-		case 8:
-			via2_ifr &= 0xdf;
-			return via2_t2c;
-		case 9:
-			return via2_t2c >> 8;
-		case 10:
-			return via2_sr;
-		case 11:
-			return via2_acr;
-		case 12:
-			return via2_pcr;
-		case 13:
-			return via2_ifr | (via2_ifr & via2_ier ? 0x80 : 0);
-		case 14:
-			return via2_ier | 0x80;
-		default:	// Can't happen
-			return 0;
 	}
+
+	if (!(acr & 0x20)) {	// Only count in one-shot mode
+		t2c -= 1;
+		if (t2c == 0xffff) {
+			ifr |= 0x20;
+			if (ier & 0x20) {
+				trigger_irq();
+			}
+		}
+	}
+}
+
+void MOS6502_1541::EmulateVIACycle()
+{
+	++cycle_counter;
+
+	via1->EmulateCycle();
+	via2->EmulateCycle();
 }
 
 
@@ -367,14 +353,57 @@ inline uint8_t MOS6502_1541::read_byte_via2(uint16_t adr)
 uint8_t MOS6502_1541::read_byte(uint16_t adr)
 {
 	if (adr >= 0x8000) {
+
+		// ROM
 		return rom[adr & 0x3fff];
+
 	} else if ((adr & 0x1800) == 0x0000) {
+
+		// RAM
 		return ram[adr & 0x07ff];
+
 	} else if ((adr & 0x1c00) == 0x1800) {
-		return read_byte_via1(adr);
+
+		// VIA 1
+		switch (adr & 0xf) {
+			case 0: {	// Port B
+				uint8_t iec = ~CalcIECLines();		// 1541 reads inverted bus lines
+				uint8_t in = ((iec & 0x20) >> 5)	// DATA from bus on PB0
+						   | ((iec & 0x10) >> 2)	// CLK from bus on PB2
+						   | ((iec & 0x08) << 4)	// ATN from bus on PB7
+						   | 0x1a;					// Output lines high
+				via1->SetPBIn(in);
+				break;
+			}
+			case 1:		// Port A
+			case 15:	// Port A (no handshake)
+				via1->SetPAIn(0xff);	// Keep 1541C ROMs happy (track 0 sensor)
+				break;
+		}
+		return via1->ReadRegister(adr);
+
 	} else if ((adr & 0x1c00) == 0x1c00) {
-		return read_byte_via2(adr);
+
+		// VIA 2
+		switch (adr & 0xf) {
+			case 0: {	// Port B
+				uint8_t in = the_job->WPSensorClosed() ? 0 : 0x10;
+				if (!the_job->SyncFound(cycle_counter)) {
+					in |= 0x80;
+				}
+				via2->SetPBIn(in);
+				break;
+			}
+			case 1:		// Port A
+			case 15:	// Port A (no handshake)
+				uint8_t in = the_job->ReadGCRByte(cycle_counter);
+				via2->SetPAIn(in);
+				break;
+		}
+		return via2->ReadRegister(adr);
+
 	} else {
+
 		// Open address
 		return adr >> 8;
 	}
@@ -392,7 +421,7 @@ inline uint16_t MOS6502_1541::read_word(uint16_t adr)
 
 
 /*
- *  Write a byte to VIA 1
+ *  Set state of 1541 IEC lines from inverted VIA 1 port B output
  */
 
 void MOS6502_1541::set_iec_lines(uint8_t inv_out)
@@ -404,142 +433,6 @@ void MOS6502_1541::set_iec_lines(uint8_t inv_out)
 	atn_ack = (~inv_out & 0x10) >> 1;	// PB4
 }
 
-void MOS6502_1541::write_byte_via1(uint16_t adr, uint8_t byte)
-{
-	switch (adr & 0xf) {
-		case 0:
-			via1_prb = byte;
-			set_iec_lines(~via1_prb & via1_ddrb);
-			break;
-		case 1:
-		case 15:
-			via1_pra = byte;
-			break;
-		case 2:
-			via1_ddrb = byte;
-			set_iec_lines(~via1_prb & via1_ddrb);
-			break;
-		case 3:
-			via1_ddra = byte;
-			break;
-		case 4:
-		case 6:
-			via1_t1l = (via1_t1l & 0xff00) | byte;
-			break;
-		case 5:
-			via1_t1l = (via1_t1l & 0xff) | (byte << 8);
-			via1_ifr &= 0xbf;
-			via1_t1c = via1_t1l;
-			break;
-		case 7:
-			via1_t1l = (via1_t1l & 0xff) | (byte << 8);
-			break;
-		case 8:
-			via1_t2l = (via1_t2l & 0xff00) | byte;
-			break;
-		case 9:
-			via1_t2l = (via1_t2l & 0xff) | (byte << 8);
-			via1_ifr &= 0xdf;
-			via1_t2c = via1_t2l;
-			break;
-		case 10:
-			via1_sr = byte;
-			break;
-		case 11:
-			via1_acr = byte;
-			break;
-		case 12:
-			via1_pcr = byte;
-			break;
-		case 13:
-			via1_ifr &= ~byte;
-			break;
-		case 14:
-			if (byte & 0x80) {
-				via1_ier |= byte & 0x7f;
-			} else {
-				via1_ier &= ~byte;
-			}
-			break;
-	}
-}
-
-
-/*
- *  Write a byte to VIA 2
- */
-
-void MOS6502_1541::write_byte_via2(uint16_t adr, uint8_t byte)
-{
-	switch (adr & 0xf) {
-		case 0:
-			if ((via2_prb ^ byte) & 0x03) {	// Bits 0/1: Stepper motor
-				if ((via2_prb & 3) == ((byte+1) & 3)) {
-					the_job->MoveHeadOut(cycle_counter);
-				} else if ((via2_prb & 3) == ((byte-1) & 3)) {
-					the_job->MoveHeadIn(cycle_counter);
-				}
-			}
-			if ((via2_prb ^ byte) & 0x04) {	// Bit 2: Spindle motor
-				the_job->SetMotor(byte & 0x04);
-			}
-			if ((via2_prb ^ byte) & 0x08) {	// Bit 3: Drive LED
-				the_display->UpdateLEDs((byte & 8) ? LED_ON : LED_OFF, LED_OFF, LED_OFF, LED_OFF);
-			}
-			via2_prb = byte;
-			break;
-		case 1:
-		case 15:
-			via2_pra = byte;
-			break;
-		case 2:
-			via2_ddrb = byte;
-			break;
-		case 3:
-			via2_ddra = byte;
-			break;
-		case 4:
-		case 6:
-			via2_t1l = (via2_t1l & 0xff00) | byte;
-			break;
-		case 5:
-			via2_t1l = (via2_t1l & 0xff) | (byte << 8);
-			via2_ifr &= 0xbf;
-			via2_t1c = via2_t1l;
-			break;
-		case 7:
-			via2_t1l = (via2_t1l & 0xff) | (byte << 8);
-			break;
-		case 8:
-			via2_t2l = (via2_t2l & 0xff00) | byte;
-			break;
-		case 9:
-			via2_t2l = (via2_t2l & 0xff) | (byte << 8);
-			via2_ifr &= 0xdf;
-			via2_t2c = via2_t2l;
-			break;
-		case 10:
-			via2_sr = byte;
-			break;
-		case 11:
-			via2_acr = byte;
-			break;
-		case 12:
-			via2_pcr = byte;
-			break;
-		case 13:
-			via2_ifr &= ~byte;
-			break;
-		case 14:
-			if (byte & 0x80) {
-				via2_ier |= byte & 0x7f;
-			} else {
-				via2_ier &= ~byte;
-			}
-			break;
-	}
-}
-
 
 /*
  *  Write a byte to the CPU's address space
@@ -548,13 +441,52 @@ void MOS6502_1541::write_byte_via2(uint16_t adr, uint8_t byte)
 inline void MOS6502_1541::write_byte(uint16_t adr, uint8_t byte)
 {
 	if (adr >= 0x8000) {
+
 		// ignore writes to ROM
+
 	} else if ((adr & 0x1800) == 0x0000) {
+
+		// RAM
 		ram[adr & 0x07ff] = byte;
+
 	} else if ((adr & 0x1c00) == 0x1800) {
-		write_byte_via1(adr, byte);
+
+		// VIA 1
+		via1->WriteRegister(adr, byte);
+
+		switch (adr & 0xf) {
+			case 0:	// Port B
+			case 2:	// DDR B
+				set_iec_lines(~(via1->PBOut()));
+				break;
+		}
+
 	} else if ((adr & 0x1c00) == 0x1c00) {
-		write_byte_via2(adr, byte);
+
+		// VIA 2
+		uint8_t old_pb_out = via2->PBOut();
+
+		via2->WriteRegister(adr, byte);
+
+		switch (adr & 0xf) {
+			case 0:	// Port B
+			case 2:	// DDR B
+				uint8_t pb_out = via2->PBOut();
+				if ((old_pb_out ^ pb_out) & 0x03) {	// Bits 0/1: Stepper motor
+					if ((old_pb_out & 3) == ((pb_out + 1) & 3)) {
+						the_job->MoveHeadOut(cycle_counter);
+					} else if ((old_pb_out & 3) == ((pb_out - 1) & 3)) {
+						the_job->MoveHeadIn(cycle_counter);
+					}
+				}
+				if ((old_pb_out ^ pb_out) & 0x04) {	// Bit 2: Spindle motor
+					the_job->SetMotor(pb_out & 0x04);
+				}
+				if ((old_pb_out ^ pb_out) & 0x08) {	// Bit 3: Drive LED
+					the_display->UpdateLEDs((pb_out & 8) ? LED_ON : LED_OFF, LED_OFF, LED_OFF, LED_OFF);
+				}
+				break;
+		}
 	}
 }
 
@@ -668,7 +600,7 @@ void MOS6502_1541::illegal_op(uint8_t op, uint16_t at)
 
 
 /*
- *  Emulate one 6502 clock cycle
+ *  Emulate one CPU clock cycle
  */
 
 // Read byte from memory
@@ -679,7 +611,7 @@ void MOS6502_1541::illegal_op(uint8_t op, uint16_t at)
 #define read_idle(adr) \
 	read_byte(adr);
 
-void MOS6502_1541::EmulateCycle()
+void MOS6502_1541::EmulateCPUCycle()
 {
 	uint8_t data, tmp;
 
@@ -728,6 +660,4 @@ void MOS6502_1541::EmulateCycle()
 			illegal_op(op, pc - 1);
 			break;
 	}
-
-	++cycle_counter;
 }

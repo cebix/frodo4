@@ -42,31 +42,94 @@ enum {
 class C64;
 class Job1541;
 class C64Display;
+class MOS6502_1541;
 struct MOS6502State;
+struct MOS6522State;
+
+
+// 6522 emulation (VIA)
+class MOS6522 {
+public:
+	MOS6522(MOS6502_1541 * cpu, unsigned irq) : the_cpu(cpu), irq_type(irq) { }
+	~MOS6522() { }
+
+#ifdef FRODO_SC
+	void EmulateCycle();			// Emulate one clock cycle
+#else
+	void CountTimers(int cycles);	// Emulate timers
+#endif
+	void Reset();
+
+	void GetState(MOS6522State * s) const;
+	void SetState(const MOS6522State * s);
+
+	uint8_t ReadRegister(uint16_t adr);
+	void WriteRegister(uint16_t adr, uint8_t byte);
+
+	void SetPAIn(uint8_t byte) { pa_in = byte; }
+	void SetPBIn(uint8_t byte) { pb_in = byte; }
+	uint8_t PAOut() const { return pra | ~ddra; }
+	uint8_t PBOut() const { return prb | ~ddrb; }
+
+	uint8_t PCR() const { return pcr; }
+
+	void TriggerCA1Interrupt();
+
+private:
+	void trigger_irq();
+	void clear_irq(uint8_t flag);
+
+	MOS6502_1541 * the_cpu;	// Pointer to CPU object
+
+	unsigned irq_type;		// Which interrupt type to trigger
+
+	// Registers
+	uint8_t pra;
+	uint8_t ddra;
+	uint8_t prb;
+	uint8_t ddrb;
+	uint16_t t1c;	// T1 counter
+	uint16_t t1l;	// T1 latch
+	uint16_t t2c;	// T2 counter
+	uint16_t t2l;	// T2 latch
+	uint8_t sr;
+	uint8_t acr;
+	uint8_t pcr;
+	uint8_t ifr;
+	uint8_t ier;
+
+	// Input lines for ports
+	uint8_t pa_in = 0;
+	uint8_t pb_in = 0;
+};
 
 
 // 6502 emulation (1541)
 class MOS6502_1541 {
 public:
 	MOS6502_1541(C64 *c64, Job1541 *job, C64Display *disp, uint8_t *Ram, uint8_t *Rom);
+	~MOS6502_1541();
 
 #ifdef FRODO_SC
-	void EmulateCycle();				// Emulate one clock cycle
+	void EmulateCPUCycle();				// Emulate one clock cycle
+	void EmulateVIACycle();
 #else
 	int EmulateLine(int cycles_left);	// Emulate until cycles_left underflows
+	void CountVIATimers(int cycles);
 #endif
 	void Reset();
 	void AsyncReset();					// Reset the CPU asynchronously
 
 	uint32_t CycleCounter() const { return cycle_counter; }
 
-	void GetState(MOS6502State *s) const;
-	void SetState(const MOS6502State *s);
+	void GetState(MOS6502State * s) const;
+	void SetState(const MOS6502State * s);
 
 	uint8_t ExtReadByte(uint16_t adr);
 	void ExtWriteByte(uint16_t adr, uint8_t byte);
 
-	void CountVIATimers(int cycles);
+	void TriggerInterrupt(unsigned which);
+	void ClearInterrupt(unsigned which) { interrupt.intr[which] = false; }
 
 	void TriggerIECInterrupt();
 	uint8_t CalcIECLines() const;
@@ -80,9 +143,6 @@ public:
 	bool Idle;				// true: 1541 is idle
 
 private:
-	void trigger_via1_irq();
-	void trigger_via2_irq();
-
 	uint8_t read_byte(uint16_t adr);
 	uint8_t read_byte_via1(uint16_t adr);
 	uint8_t read_byte_via2(uint16_t adr);
@@ -90,7 +150,9 @@ private:
 	void write_byte(uint16_t adr, uint8_t byte);
 	void write_byte_via1(uint16_t adr, uint8_t byte);
 	void write_byte_via2(uint16_t adr, uint8_t byte);
+
 	void set_iec_lines(uint8_t inv_out);
+	bool set_overflow_enabled() const { return (via2->PCR() & 0x0e) == 0x0e; }	// CA2 high output
 
 	uint8_t read_zp(uint16_t adr);
 	uint16_t read_zp_word(uint16_t adr);
@@ -139,34 +201,28 @@ private:
 
 	uint8_t atn_ack;		// ATN acknowledge: 0x00 or 0x08 (XOR value for IECLines ATN)
 
-	uint8_t via1_pra;		// PRA of VIA 1
-	uint8_t via1_ddra;		// DDRA of VIA 1
-	uint8_t via1_prb;		// PRB of VIA 1
-	uint8_t via1_ddrb;		// DDRB of VIA 1
-	uint16_t via1_t1c;		// T1 Counter of VIA 1
-	uint16_t via1_t1l;		// T1 Latch of VIA 1
-	uint16_t via1_t2c;		// T2 Counter of VIA 1
-	uint16_t via1_t2l;		// T2 Latch of VIA 1
-	uint8_t via1_sr;		// SR of VIA 1
-	uint8_t via1_acr;		// ACR of VIA 1
-	uint8_t via1_pcr;		// PCR of VIA 1
-	uint8_t via1_ifr;		// IFR of VIA 1
-	uint8_t via1_ier;		// IER of VIA 1
-
-	uint8_t via2_pra;		// PRA of VIA 2
-	uint8_t via2_ddra;		// DDRA of VIA 2
-	uint8_t via2_prb;		// PRB of VIA 2
-	uint8_t via2_ddrb;		// DDRB of VIA 2
-	uint16_t via2_t1c;		// T1 Counter of VIA 2
-	uint16_t via2_t1l;		// T1 Latch of VIA 2
-	uint16_t via2_t2c;		// T2 Counter of VIA 2
-	uint16_t via2_t2l;		// T2 Latch of VIA 2
-	uint8_t via2_sr;		// SR of VIA 2
-	uint8_t via2_acr;		// ACR of VIA 2
-	uint8_t via2_pcr;		// PCR of VIA 2
-	uint8_t via2_ifr;		// IFR of VIA 2
-	uint8_t via2_ier;		// IER of VIA 2
+	MOS6522 * via1 = nullptr;	// VIA 1 object
+	MOS6522 * via2 = nullptr;	// VIA 2 object
 };
+
+
+// VIA state
+struct MOS6522State {
+	uint8_t pra;
+	uint8_t ddra;
+	uint8_t prb;
+	uint8_t ddrb;
+	uint16_t t1c;
+	uint16_t t1l;
+	uint16_t t2c;
+	uint16_t t2l;
+	uint8_t sr;
+	uint8_t acr;
+	uint8_t pcr;
+	uint8_t ifr;
+	uint8_t ier;
+};
+
 
 // 6502 and VIA state
 struct MOS6502State {
@@ -182,121 +238,133 @@ struct MOS6502State {
 	bool idle;
 	uint8_t opflags;
 
-	uint8_t via1_pra;		// VIA 1
-	uint8_t via1_ddra;
-	uint8_t via1_prb;
-	uint8_t via1_ddrb;
-	uint16_t via1_t1c;
-	uint16_t via1_t1l;
-	uint16_t via1_t2c;
-	uint16_t via1_t2l;
-	uint8_t via1_sr;
-	uint8_t via1_acr;
-	uint8_t via1_pcr;
-	uint8_t via1_ifr;
-	uint8_t via1_ier;
-
-	uint8_t via2_pra;		// VIA 2
-	uint8_t via2_ddra;
-	uint8_t via2_prb;
-	uint8_t via2_ddrb;
-	uint16_t via2_t1c;
-	uint16_t via2_t1l;
-	uint16_t via2_t2c;
-	uint16_t via2_t2l;
-	uint8_t via2_sr;
-	uint8_t via2_acr;
-	uint8_t via2_pcr;
-	uint8_t via2_ifr;
-	uint8_t via2_ier;
+	MOS6522State via1;		// VIA 1
+	MOS6522State via2;		// VIA 2
 };
 
 
-/*
- *  Trigger VIA 1 IRQ
- */
-
-inline void MOS6502_1541::trigger_via1_irq()
+// Clear VIA interrupt flag, deassert IRQ line if no interrupts are pending.
+inline void MOS6522::clear_irq(uint8_t flag)
 {
-#ifdef FRODO_SC
-	if (!(interrupt.intr[INT_VIA1IRQ])) {
-		first_irq_cycle = the_c64->CycleCounter();
-	}
-#endif
-	interrupt.intr[INT_VIA1IRQ] = true;
-	Idle = false;
-}
-
-
-/*
- *  Trigger VIA 2 IRQ
- */
-
-inline void MOS6502_1541::trigger_via2_irq()
-{
-#ifdef FRODO_SC
-	if (!(interrupt.intr[INT_VIA2IRQ])) {
-		first_irq_cycle = the_c64->CycleCounter();
-	}
-#endif
-	interrupt.intr[INT_VIA2IRQ] = true;
-	Idle = false;
-}
-
-
-/*
- *  Count VIA timers
- *
- *  Note: This is not cycle-exact, especially with respect to
- *  interrupt timing, but close enough for standard use...
- */
-
-inline void MOS6502_1541::CountVIATimers(int cycles)
-{
-	unsigned long tmp;
-
-	via1_t1c = tmp = via1_t1c - cycles;
-	if (tmp > 0xffff) {
-		via1_t1c = via1_t1l;	// Reload from latch
-		via1_ifr |= 0x40;
-	}
-
-	if (!(via1_acr & 0x20)) {	// Only count in one-shot mode
-		via1_t2c = tmp = via1_t2c - cycles;
-		if (tmp > 0xffff) {
-			via1_ifr |= 0x20;
-		}
-	}
-
-	via2_t1c = tmp = via2_t1c - cycles;
-	if (tmp > 0xffff) {
-		via2_t1c = via2_t1l;	// Reload from latch
-		via2_ifr |= 0x40;
-		if (via2_ier & 0x40) {
-			trigger_via2_irq();
-		}
-	}
-
-	if (!(via2_acr & 0x20)) {	// Only count in one-shot mode
-		via2_t2c = tmp = via2_t2c - cycles;
-		if (tmp > 0xffff) {
-			via2_ifr |= 0x20;
-		}
+	ifr &= ~flag;
+	if ((ifr & ier & 0x7f) == 0) {
+		ifr &= 0x7f;
+		the_cpu->ClearInterrupt(irq_type);
 	}
 }
 
 
-/*
- *  Interrupt by negative edge of ATN on IEC bus
- */
-
-inline void MOS6502_1541::TriggerIECInterrupt()
+// Read from VIA register
+inline uint8_t MOS6522::ReadRegister(uint16_t adr)
 {
-	if (via1_pcr & 0x01) {	// CA1 positive edge (1541 gets inverted bus signals)
-		via1_ifr |= 0x02;
-		if (via1_ier & 0x02) {	// CA1 interrupt enabled?
-			trigger_via1_irq();
-		}
+	// TODO: CA2/CB2 interrupts, shift register
+
+	switch (adr & 0xf) {
+		case 0:
+			clear_irq(0x10);	// Clear CB1 interrupt
+			return (prb & ddrb) | (pb_in & ~ddrb);
+		case 1:
+			clear_irq(0x02);	// Clear CA1 interrupt
+			return (pra & ddra) | (pa_in & ~ddra);
+		case 2:
+			return ddrb;
+		case 3:
+			return ddra;
+		case 4:
+			clear_irq(0x40);	// Clear T1 interrupt
+			return t1c;
+		case 5:
+			return t1c >> 8;
+		case 6:
+			return t1l;
+		case 7:
+			return t1l >> 8;
+		case 8:
+			clear_irq(0x20);	// Clear T2 interrupt
+			return t2c;
+		case 9:
+			return t2c >> 8;
+		case 10:
+			return sr;
+		case 11:
+			return acr;
+		case 12:
+			return pcr;
+		case 13:
+			return ifr | (ifr & ier ? 0x80 : 0);
+		case 14:
+			return ier | 0x80;
+		case 15:
+			return (pra & ddra) | (pa_in & ~ddra);
+		default:	// Can't happen
+			return 0;
+	}
+}
+
+
+// Write to VIA register
+inline void MOS6522::WriteRegister(uint16_t adr, uint8_t byte)
+{
+	// TODO: CA2/CB2 interrupts, shift register
+
+	switch (adr & 0xf) {
+		case 0:
+			prb = byte;
+			clear_irq(0x10);	// Clear CB1 interrupt
+			break;
+		case 1:
+			pra = byte;
+			clear_irq(0x02);	// Clear CA1 interrupt
+			break;
+		case 2:
+			ddrb = byte;
+			break;
+		case 3:
+			ddra = byte;
+			break;
+		case 4:
+		case 6:
+			t1l = (t1l & 0xff00) | byte;
+			break;
+		case 5:
+			t1l = (t1l & 0xff) | (byte << 8);
+			t1c = t1l;
+			clear_irq(0x40);	// Clear T1 interrupt
+			break;
+		case 7:
+			t1l = (t1l & 0xff) | (byte << 8);
+			clear_irq(0x40);	// Clear T1 interrupt
+			break;
+		case 8:
+			t2l = (t2l & 0xff00) | byte;
+			break;
+		case 9:
+			t2l = (t2l & 0xff) | (byte << 8);
+			t2c = t2l;
+			clear_irq(0x20);	// Clear T2 interrupt
+			break;
+		case 10:
+			sr = byte;
+			break;
+		case 11:
+			acr = byte;
+			break;
+		case 12:
+			pcr = byte;
+			break;
+		case 13:
+			ifr &= ~byte;
+			break;
+		case 14:
+			if (byte & 0x80) {
+				ier |= byte & 0x7f;
+			} else {
+				ier &= ~byte;
+			}
+			break;
+		case 15:
+			pra = byte;
+			break;
 	}
 }
 
