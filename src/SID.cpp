@@ -403,6 +403,7 @@ public:
 	virtual void Resume();
 
 private:
+	void set_wave_table(int sid_type);
 	void calc_filter();
 	void calc_buffer(int16_t *buf, long count);
 
@@ -734,6 +735,26 @@ const uint16_t DigitalRenderer::TriSawRectTable_8580[0x100] = {
 };
 
 
+/*
+ *  Set waveform tables according to SID tyupe
+ */
+
+void DigitalRenderer::set_wave_table(int sid_type)
+{
+	if (sid_type == SIDTYPE_DIGITAL_6581) {
+		TriSawTable     = TriSawTable_6581;
+		TriRectTable    = TriRectTable_6581;
+		SawRectTable    = SawRectTable_6581;
+		TriSawRectTable = TriSawRectTable_6581;
+	} else {
+		TriSawTable     = TriSawTable_8580;
+		TriRectTable    = TriRectTable_8580;
+		SawRectTable    = SawRectTable_8580;
+		TriSawRectTable = TriSawRectTable_8580;
+	}
+}
+
+
 const int16_t MOS6581::EGDivTable[16] = {
 	9, 32,
 	63, 95,
@@ -794,6 +815,9 @@ DigitalRenderer::DigitalRenderer()
 
 	// Reset SID
 	Reset();
+
+	// Set waveform tables
+	set_wave_table(ThePrefs.SIDType);
 
 	SDL_AudioSpec desired;
 	SDL_zero(desired);
@@ -1028,18 +1052,7 @@ void DigitalRenderer::WriteRegister(uint16_t adr, uint8_t byte)
 
 void DigitalRenderer::NewPrefs(const Prefs *prefs)
 {
-	if (prefs->SIDType == SIDTYPE_DIGITAL_6581) {
-		TriSawTable     = TriSawTable_6581;
-		TriRectTable    = TriRectTable_6581;
-		SawRectTable    = SawRectTable_6581;
-		TriSawRectTable = TriSawRectTable_6581;
-	} else {
-		TriSawTable     = TriSawTable_8580;
-		TriRectTable    = TriRectTable_8580;
-		SawRectTable    = SawRectTable_8580;
-		TriSawRectTable = TriSawRectTable_8580;
-	}
-
+	set_wave_table(prefs->SIDType);
 	calc_filter();
 }
 
