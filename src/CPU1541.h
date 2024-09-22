@@ -101,6 +101,16 @@ private:
 	// Input lines for ports
 	uint8_t pa_in = 0;
 	uint8_t pb_in = 0;
+
+	// Flags for timer one-shot control
+	bool t1_irq_blocked;
+	bool t2_irq_blocked;
+
+							// Frodo SC:
+	uint8_t t1_load_delay;	// Delay line for T1 reload
+	uint8_t t2_load_delay;	// Delay line for T2 reload
+	uint8_t t2_input_delay;	// Delay line for T2 counter input
+	uint8_t irq_delay;		// Delay line for IRQ assertion
 };
 
 
@@ -208,7 +218,7 @@ private:
 
 // VIA state
 struct MOS6522State {
-	uint8_t pra;
+	uint8_t pra;			// Registers
 	uint8_t ddra;
 	uint8_t prb;
 	uint8_t ddrb;
@@ -221,6 +231,15 @@ struct MOS6522State {
 	uint8_t pcr;
 	uint8_t ifr;
 	uint8_t ier;
+
+	bool t1_irq_blocked;
+	bool t2_irq_blocked;
+
+							// Frodo SC:
+	uint8_t t1_load_delay;	// Delay line for T1 reload
+	uint8_t t2_load_delay;	// Delay line for T2 reload
+	uint8_t t2_input_delay;	// Delay line for T2 counter input
+	uint8_t irq_delay;		// Delay line for IRQ assertion
 };
 
 
@@ -249,7 +268,11 @@ inline void MOS6522::clear_irq(uint8_t flag)
 	ifr &= ~flag;
 	if ((ifr & ier & 0x7f) == 0) {
 		ifr &= 0x7f;
+#ifdef FRODO_SC
+		irq_delay = 0;
+#else
 		the_cpu->ClearInterrupt(irq_type);
+#endif
 	}
 }
 
@@ -257,8 +280,6 @@ inline void MOS6522::clear_irq(uint8_t flag)
 // Read from VIA register
 inline uint8_t MOS6522::ReadRegister(uint16_t adr)
 {
-	// TODO: CA2/CB2 interrupts, shift register
-
 	switch (adr & 0xf) {
 		case 0:
 			clear_irq(0x10);	// Clear CB1 interrupt
@@ -291,7 +312,7 @@ inline uint8_t MOS6522::ReadRegister(uint16_t adr)
 		case 12:
 			return pcr;
 		case 13:
-			return ifr | (ifr & ier ? 0x80 : 0);
+			return ifr;
 		case 14:
 			return ier | 0x80;
 		case 15:
@@ -305,8 +326,6 @@ inline uint8_t MOS6522::ReadRegister(uint16_t adr)
 // Write to VIA register
 inline void MOS6522::WriteRegister(uint16_t adr, uint8_t byte)
 {
-	// TODO: CA2/CB2 interrupts, shift register
-
 	switch (adr & 0xf) {
 		case 0:
 			prb = byte;
@@ -328,7 +347,12 @@ inline void MOS6522::WriteRegister(uint16_t adr, uint8_t byte)
 			break;
 		case 5:
 			t1l = (t1l & 0xff) | (byte << 8);
-			t1c = t1l;
+#ifdef FRODO_SC
+			t1_load_delay |= 1;	// Load in next cycle
+#else
+			t1c = t1l;			// Load immediately
+#endif
+			t1_irq_blocked = false;
 			clear_irq(0x40);	// Clear T1 interrupt
 			break;
 		case 7:
@@ -340,7 +364,12 @@ inline void MOS6522::WriteRegister(uint16_t adr, uint8_t byte)
 			break;
 		case 9:
 			t2l = (t2l & 0xff) | (byte << 8);
-			t2c = t2l;
+#ifdef FRODO_SC
+			t2_load_delay |= 1;	// Load in next cycle
+#else
+			t2c = t2l;			// Load immediately
+#endif
+			t2_irq_blocked = false;
 			clear_irq(0x20);	// Clear T2 interrupt
 			break;
 		case 10:
@@ -353,7 +382,7 @@ inline void MOS6522::WriteRegister(uint16_t adr, uint8_t byte)
 			pcr = byte;
 			break;
 		case 13:
-			ifr &= ~byte;
+			clear_irq(byte & 0x7f);
 			break;
 		case 14:
 			if (byte & 0x80) {

@@ -58,7 +58,8 @@
  * Incompatibilities:
  * ------------------
  *
- *  - VIA emulation incomplete (no port latches, CA2/CB2, no shift register)
+ *  - VIA emulation incomplete (no port latches, no timers on port B,
+ *    no CA2/CB2, no shift register)
  */
 
 #include "sysdeps.h"
@@ -155,6 +156,13 @@ void MOS6522::Reset()
 	sr = 0;
 	acr = pcr = 0;
 	ifr = ier = 0;
+
+	t1_irq_blocked = false;
+	t2_irq_blocked = false;
+	t1_load_delay = 0;
+	t2_load_delay = 0;
+	t2_input_delay = 0;
+	irq_delay = 0;
 }
 
 
@@ -205,6 +213,13 @@ void MOS6522::GetState(MOS6522State * s) const
 	s->sr  = sr;
 	s->acr = acr; s->pcr  = pcr;
 	s->ifr = ifr; s->ier  = ier;
+
+	s->t1_irq_blocked = t1_irq_blocked;
+	s->t2_irq_blocked = t2_irq_blocked;
+	s->t1_load_delay = t1_load_delay;
+	s->t2_load_delay = t2_load_delay;
+	s->t2_input_delay = t2_input_delay;
+	s->irq_delay = irq_delay;
 }
 
 
@@ -259,6 +274,13 @@ void MOS6522::SetState(const MOS6522State * s)
 	sr  = s->sr;
 	acr = s->acr; pcr  = s->pcr;
 	ifr = s->ifr; ier  = s->ier;
+
+	t1_irq_blocked = s->t1_irq_blocked;
+	t2_irq_blocked = s->t2_irq_blocked;
+	t1_load_delay = s->t1_load_delay;
+	t2_load_delay = s->t2_load_delay;
+	t2_input_delay = s->t2_input_delay;
+	irq_delay = s->irq_delay;
 }
 
 
@@ -278,12 +300,7 @@ uint8_t MOS6502_1541::CalcIECLines() const
  *  Trigger VIA interrupt
  */
 
-inline void MOS6522::trigger_irq()
-{
-	the_cpu->TriggerInterrupt(irq_type);
-}
-
-void MOS6502_1541::TriggerInterrupt(unsigned which)
+inline void MOS6502_1541::TriggerInterrupt(unsigned which)
 {
 	if (!(interrupt.intr[which])) {
 		first_irq_cycle = cycle_counter;
@@ -298,9 +315,6 @@ inline void MOS6522::TriggerCA1Interrupt()
 {
 	if (pcr & 0x01) {		// CA1 positive edge (1541 gets inverted bus signals)
 		ifr |= 0x02;
-		if (ier & 0x02) {	// CA1 interrupt enabled?
-			trigger_irq();
-		}
 	}
 }
 
@@ -317,23 +331,59 @@ void MOS6502_1541::TriggerIECInterrupt()
 
 void MOS6522::EmulateCycle()
 {
-	t1c -= 1;
-	if (t1c == 0xffff) {
-		t1c = t1l;			// Reload from latch
-		ifr |= 0x40;
-		if (ier & 0x40) {
-			trigger_irq();
+	// Shift delay lines
+	t1_load_delay <<= 1;
+	t2_load_delay <<= 1;
+	t2_input_delay <<= 1;
+	irq_delay <<= 1;
+
+	// Update timer inputs
+	if ((acr & 0x20) == 0) {		// Don't count PB6 pulses
+		t2_input_delay |= 1;
+	}
+
+	// Reload or count timer 1
+	if (t1_load_delay & 2) {		// One cycle of load delay
+		t1c = t1l;
+	} else {
+		t1c -= 1;
+		if (t1c == 0xffff) {
+			if (!t1_irq_blocked) {
+				ifr |= 0x40;
+			}
+			if ((acr & 0x40) == 0) {	// One-shot mode
+				t1_irq_blocked = true;
+			}
+			t1_load_delay |= 1;		// Reload in next cycle
 		}
 	}
 
-	if (!(acr & 0x20)) {	// Only count in one-shot mode
-		t2c -= 1;
-		if (t2c == 0xffff) {
-			ifr |= 0x20;
-			if (ier & 0x20) {
-				trigger_irq();
+	// Reload or count timer 2
+	if (t2_load_delay & 2) {		// One cycle of load delay
+		t2c = t2l;
+	} else {
+		if (t2_input_delay & 2) {	// One cycle of input delay
+			t2c -= 1;
+			if (t2c == 0xffff) {
+				if (!t2_irq_blocked) {
+					t2_irq_blocked = true;
+					ifr |= 0x20;
+				}
 			}
 		}
+	}
+
+	// Update IRQ status
+	if (ifr & ier) {
+		irq_delay |= 1;
+	}
+	if (irq_delay & 2) {			// One cycle of IRQ delay
+		if ((ifr & 0x80) == 0) {
+			ifr |= 0x80;
+			the_cpu->TriggerInterrupt(irq_type);
+		}
+	} else {
+		the_cpu->ClearInterrupt(irq_type);
 	}
 }
 

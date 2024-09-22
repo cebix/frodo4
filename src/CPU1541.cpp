@@ -58,7 +58,8 @@
  * Incompatibilities:
  * ------------------
  *
- *  - VIA emulation incomplete (no port latches, CA2/CB2, no shift register)
+ *  - VIA emulation incomplete (no port latches, no timers on port B,
+ *    no CA2/CB2, no shift register)
  *  - Extra cycles for crossing page boundaries are not accounted for
  */
 
@@ -153,6 +154,13 @@ void MOS6522::Reset()
 	sr = 0;
 	acr = pcr = 0;
 	ifr = ier = 0;
+
+	t1_irq_blocked = false;
+	t2_irq_blocked = false;
+	t1_load_delay = 0;
+	t2_load_delay = 0;
+	t2_input_delay = 0;
+	irq_delay = 0;
 }
 
 
@@ -203,6 +211,13 @@ void MOS6522::GetState(MOS6522State * s) const
 	s->sr  = sr;
 	s->acr = acr; s->pcr  = pcr;
 	s->ifr = ifr; s->ier  = ier;
+
+	s->t1_irq_blocked = t1_irq_blocked;
+	s->t2_irq_blocked = t2_irq_blocked;
+	s->t1_load_delay = 0;
+	s->t2_load_delay = 0;
+	s->t2_input_delay = 0;
+	s->irq_delay = 0;
 }
 
 
@@ -253,6 +268,9 @@ void MOS6522::SetState(const MOS6522State * s)
 	sr  = s->sr;
 	acr = s->acr; pcr  = s->pcr;
 	ifr = s->ifr; ier  = s->ier;
+
+	t1_irq_blocked = s->t1_irq_blocked;
+	t2_irq_blocked = s->t2_irq_blocked;
 }
 
 
@@ -274,6 +292,7 @@ uint8_t MOS6502_1541::CalcIECLines() const
 
 inline void MOS6522::trigger_irq()
 {
+	ifr |= 0x80;
 	the_cpu->TriggerInterrupt(irq_type);
 }
 
@@ -312,19 +331,27 @@ void MOS6522::CountTimers(int cycles)
 
 	t1c = tmp = t1c - cycles;
 	if (tmp > 0xffff) {
-		t1c = t1l;			// Reload from latch
-		ifr |= 0x40;
-		if (ier & 0x40) {
-			trigger_irq();
+		if (!t1_irq_blocked) {
+			ifr |= 0x40;
+			if (ier & 0x40) {
+				trigger_irq();
+			}
 		}
+		if ((acr & 0x40) == 0) {	// One-shot mode
+			t1_irq_blocked = true;
+		}
+		t1c = t1l;					// Reload from latch
 	}
 
-	if (!(acr & 0x20)) {	// Only count in one-shot mode
+	if ((acr & 0x20) == 0) {		// Only count in one-shot mode
 		t2c = tmp = t2c - cycles;
 		if (tmp > 0xffff) {
-			ifr |= 0x20;
-			if (ier & 0x20) {
-				trigger_irq();
+			if (!t2_irq_blocked) {
+				t2_irq_blocked = true;
+				ifr |= 0x20;
+				if (ier & 0x20) {
+					trigger_irq();
+				}
 			}
 		}
 	}
