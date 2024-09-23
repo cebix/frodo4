@@ -71,11 +71,12 @@ void MOS6526::Reset()
 
 	ta_cnt_phi2 = tb_cnt_phi2 = tb_cnt_ta = false;
 
-	ta_int_next_cycle = tb_int_next_cycle = false;
 	has_new_cra = has_new_crb = false;
 	ta_toggle = tb_toggle = false;
 	ta_state = tb_state = T_STOP;
-	ta_output = 0;
+	ta_output = tb_output = 0;
+
+	irq_delay = 0;
 }
 
 void MOS6526_1::Reset()
@@ -146,8 +147,6 @@ void MOS6526::GetState(MOS6526State * s) const
 	s->tod_latched = tod_latched;
 	s->tod_alarm = tod_alarm;
 
-	s->ta_int_next_cycle = ta_int_next_cycle;
-	s->tb_int_next_cycle = tb_int_next_cycle;
 	s->has_new_cra = has_new_cra;
 	s->has_new_crb = has_new_crb;
 	s->ta_toggle = ta_toggle;
@@ -157,6 +156,9 @@ void MOS6526::GetState(MOS6526State * s) const
 	s->new_cra = new_cra;
 	s->new_crb = new_crb;
 	s->ta_output = ta_output;
+	s->tb_output = tb_output;
+
+	s->irq_delay = irq_delay;
 }
 
 
@@ -205,8 +207,6 @@ void MOS6526::SetState(const MOS6526State * s)
 	tb_cnt_phi2 = ((crb & 0x60) == 0x00);
 	tb_cnt_ta = ((crb & 0x40) == 0x40);		// Ignore CNT, which is pulled high
 
-	ta_int_next_cycle = s->ta_int_next_cycle;
-	tb_int_next_cycle = s->tb_int_next_cycle;
 	has_new_cra = s->has_new_cra;
 	has_new_crb = s->has_new_crb;
 	ta_toggle = s->ta_toggle;
@@ -216,6 +216,9 @@ void MOS6526::SetState(const MOS6526State * s)
 	new_cra = s->new_cra;
 	new_crb = s->new_crb;
 	ta_output = s->ta_output;
+	tb_output = s->tb_output;
+
+	irq_delay = s->irq_delay;
 }
 
 void MOS6526_2::SetState(const MOS6526State * s)
@@ -236,7 +239,7 @@ uint8_t MOS6526::timer_on_pb(uint8_t byte)
 	if (cra & 0x02) {
 
 		// TA output to PB6
-		if ((cra & 0x04) ? ta_toggle : ta_int_next_cycle) {
+		if ((cra & 0x04) ? ta_toggle : (ta_output & 1)) {
 			byte |= 0x40;
 		} else {
 			byte &= 0xbf;
@@ -246,7 +249,7 @@ uint8_t MOS6526::timer_on_pb(uint8_t byte)
 	if (crb & 0x02) {
 
 		// TB output to PB7
-		if ((crb & 0x04) ? tb_toggle : tb_int_next_cycle) {
+		if ((crb & 0x04) ? tb_toggle : (tb_output & 1)) {
 			byte |= 0x80;
 		} else {
 			byte &= 0x7f;
@@ -388,17 +391,10 @@ void MOS6526_2::WriteRegister(uint8_t reg, uint8_t byte)
 
 void MOS6526::EmulateCycle()
 {
-	// Trigger pending interrupts
-	if (ta_int_next_cycle) {
-		ta_int_next_cycle = false;
-		set_int_flag(1);
-	}
-	if (tb_int_next_cycle) {
-		tb_int_next_cycle = false;
-		set_int_flag(2);
-	}
-
-	bool ta_underflow = false;
+	// Shift delay lines
+	ta_output <<= 1;
+	tb_output <<= 1;
+	irq_delay <<= 1;
 
 	// Timer A state machine
 	switch (ta_state) {
@@ -439,8 +435,7 @@ ta_count:
 			if (ta_state != T_STOP) {
 ta_interrupt:
 				ta = latcha;			// Reload timer
-				ta_int_next_cycle = true; // Trigger interrupt in next cycle
-				icr |= 1;				// But set ICR bit now
+				icr |= 1;				// Raise timer A interrupt
 				ta_toggle = !ta_toggle;	// Toggle PB6 output
 
 				if (cra & 8) {			// One-shot?
@@ -451,7 +446,8 @@ ta_interrupt:
 					ta_state = T_LOAD_THEN_COUNT;	// No, delay one cycle (and reload)
 				}
 			}
-			ta_underflow = true;
+
+			ta_output |= 1;
 		}
 	}
 
@@ -541,17 +537,16 @@ ta_idle:
 tb_count:
 	if (tb_cnt_phi2 || tb_cnt_ta) {
 		if (tb != 0) {	// Decrement timer if != 0
-			if (tb_cnt_phi2 || (ta_output & 0x03) == 0x02) {	// Cascaded mode takes two cycles to count
+			if (tb_cnt_phi2 || (ta_output & 4)) {	// Cascaded mode takes two cycles to count
 				--tb;
 			}
 		}
 		if (tb == 0) {	// Timer expired?
 			if (tb_state != T_STOP) {
 tb_interrupt:
-				if (!tb_cnt_ta || (ta_output & 0x06) == 0x00) {	// Cascaded mode takes two cycles to reset while tb == 0
+				if (!tb_cnt_ta || (ta_output & 0x0c) == 0) {	// Cascaded mode takes two cycles to reset while tb == 0
 					tb = latchb;			// Reload timer
-					tb_int_next_cycle = true; // Trigger interrupt in next cycle
-					icr |= 2;				// But set ICR bit now
+					icr |= 2;				// Raise timer B interrupt
 					tb_toggle = !tb_toggle;	// Toggle PB7 output
 
 					if (crb & 8) {			// One-shot?
@@ -563,6 +558,8 @@ tb_interrupt:
 					}
 				}
 			}
+
+			tb_output |= 1;
 		}
 	}
 
@@ -620,8 +617,18 @@ tb_idle:
 		tb_cnt_ta = ((crb & 0x40) == 0x40);	// Ignore CNT, which is pulled high
 	}
 
-	// Shift TA output along
-	ta_output = (ta_output << 1) | ta_underflow;
+	// Update IRQ status
+	if (icr & int_mask) {
+		irq_delay |= 1;
+	}
+	if (irq_delay & 2) {	// One cycle of IRQ delay
+		if ((icr & 0x80) == 0) {
+			icr |= 0x80;
+			trigger_irq();
+		}
+	} else {
+		clear_irq();
+	}
 }
 
 

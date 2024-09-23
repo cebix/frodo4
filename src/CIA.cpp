@@ -139,8 +139,6 @@ void MOS6526::GetState(MOS6526State * s) const
 	s->tod_latched = tod_latched;
 	s->tod_alarm = tod_alarm;
 
-	s->ta_int_next_cycle = false;
-	s->tb_int_next_cycle = false;
 	s->has_new_cra = false;
 	s->has_new_crb = false;
 	s->ta_toggle = false;
@@ -150,6 +148,8 @@ void MOS6526::GetState(MOS6526State * s) const
 	s->new_cra = 0;
 	s->new_crb = 0;
 	s->ta_output = 0;
+
+	s->irq_delay = 0;
 }
 
 

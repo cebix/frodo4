@@ -91,15 +91,15 @@ protected:
 	uint8_t pb_in = 0;
 
 #ifdef FRODO_SC
-	bool ta_int_next_cycle,		// Flag: Trigger Timer A interrupt in next cycle
-		 tb_int_next_cycle,		// Flag: Trigger Timer B interrupt in next cycle
-		 has_new_cra,			// Flag: New value for CRA pending
-		 has_new_crb,			// Flag: New value for CRB pending
-		 ta_toggle,				// Timer A output to PB6 toggle state
-		 tb_toggle;				// Timer B output to PB7 toggle state
+	bool has_new_cra;			// Flag: New value for CRA pending
+	bool has_new_crb;			// Flag: New value for CRB pending
+	bool ta_toggle;				// Timer A output to PB6 toggle state
+	bool tb_toggle;				// Timer B output to PB7 toggle state
 	char ta_state, tb_state;	// Timer A/B states
 	uint8_t new_cra, new_crb;	// New values for CRA/CRB
-	uint8_t ta_output;			// Shift register for previous TA output states
+	uint8_t ta_output;			// Delay line for TA output
+	uint8_t tb_output;			// Delay line for TB output
+	uint8_t irq_delay;			// Delay line for IRQ assertion
 #endif
 };
 
@@ -205,8 +205,6 @@ struct MOS6526State {
 	bool tod_alarm;
 
 						// FrodoSC:
-	bool ta_int_next_cycle;
-	bool tb_int_next_cycle;
 	bool has_new_cra;
 	bool has_new_crb;
 	bool ta_toggle;
@@ -216,6 +214,8 @@ struct MOS6526State {
 	uint8_t new_cra;
 	uint8_t new_crb;
 	uint8_t ta_output;
+	uint8_t tb_output;
+	uint8_t irq_delay;
 };
 
 
@@ -226,10 +226,12 @@ struct MOS6526State {
 inline void MOS6526::set_int_flag(uint8_t flag)
 {
 	icr |= flag;
+#ifndef FRODO_SC
 	if (int_mask & flag) {
 		icr |= 0x80;
 		trigger_irq();
 	}
+#endif
 }
 
 
@@ -310,8 +312,7 @@ inline uint8_t MOS6526::read_register(uint8_t reg)
 			uint8_t ret = icr; // Read and clear ICR
 			icr = 0;
 #ifdef FRODO_SC
-			ta_int_next_cycle = false;
-			tb_int_next_cycle = false;
+			irq_delay = 0;
 #endif
 			clear_irq();
 			return ret;
@@ -422,20 +423,26 @@ inline void MOS6526::write_register(uint8_t reg, uint8_t byte)
 			break;
 
 		case 13:
-#ifndef FRODO_SC
+#ifdef FRODO_SC
+			if (byte & 0x80) {
+				int_mask |= byte & 0x1f;
+			} else {
+				int_mask &= ~(byte & 0x1f);
+			}
+#else
 			if (ThePrefs.CIAIRQHack) {	// Hack for addressing modes that read from the address
 				icr = 0;
 			}
-#endif
 			if (byte & 0x80) {
 				int_mask |= byte & 0x1f;
-				if (icr & int_mask & 0x1f) { // Trigger IRQ if pending
+				if (icr & int_mask) {	// Trigger IRQ if pending
 					icr |= 0x80;
 					trigger_irq();
 				}
 			} else {
 				int_mask &= ~(byte & 0x1f);
 			}
+#endif
 			break;
 
 		case 14:
