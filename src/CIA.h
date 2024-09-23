@@ -82,7 +82,6 @@ protected:
 	bool tod_latched;		// Flag: TOD latched
 	bool tod_alarm;			// Flag: TOD in alarm state
 
-	bool ta_cnt_phi2;	// Flag: Timer A is counting Phi 2
 	bool tb_cnt_phi2;	// Flag: Timer B is counting Phi 2
 	bool tb_cnt_ta;		// Flag: Timer B is counting underflows of Timer A
 
@@ -454,7 +453,6 @@ inline void MOS6526::write_register(uint8_t reg, uint8_t byte)
 			if (byte & 0x10) { // Force load
 				ta = latcha;
 			}
-			ta_cnt_phi2 = ((byte & 0x21) == 0x01);
 #endif
 			break;
 

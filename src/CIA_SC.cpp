@@ -69,7 +69,7 @@ void MOS6526::Reset()
 	tod_latched = false;
 	tod_alarm = false;
 
-	ta_cnt_phi2 = tb_cnt_phi2 = tb_cnt_ta = false;
+	tb_cnt_phi2 = tb_cnt_ta = false;
 
 	has_new_cra = has_new_crb = false;
 	ta_toggle = tb_toggle = false;
@@ -203,7 +203,6 @@ void MOS6526::SetState(const MOS6526State * s)
 	tod_latched = s->tod_latched;
 	tod_alarm = s->tod_alarm;
 
-	ta_cnt_phi2 = ((cra & 0x20) == 0x00);
 	tb_cnt_phi2 = ((crb & 0x60) == 0x00);
 	tb_cnt_ta = ((crb & 0x40) == 0x40);		// Ignore CNT, which is pulled high
 
@@ -412,12 +411,8 @@ void MOS6526::EmulateCycle()
 			goto ta_idle;
 		case T_LOAD_THEN_WAIT_THEN_COUNT:
 			ta_state = T_WAIT_THEN_COUNT;
-			if (ta == 1 && ta_cnt_phi2) {
-				goto ta_interrupt;	// Interrupt if timer == 1
-			} else {
-				ta = latcha;		// Reload timer
-				goto ta_idle;
-			}
+			ta = latcha;			// Reload timer
+			goto ta_idle;
 		case T_COUNT:
 			goto ta_count;
 		case T_COUNT_THEN_STOP:
@@ -427,7 +422,7 @@ void MOS6526::EmulateCycle()
 
 	// Count timer A
 ta_count:
-	if (ta_cnt_phi2) {
+	if ((cra & 0x20) == 0) {
 		if (ta != 0) {	// Decrement timer if != 0
 			--ta;
 		}
@@ -478,7 +473,7 @@ ta_idle:
 				} else {					// Timer stopped, was running
 					if (new_cra & 0x10) {	// Force load
 						ta_state = T_LOAD_THEN_STOP;
-					} else if (ta_cnt_phi2) {	// No force load
+					} else if ((cra & 0x20) == 0) {	// No force load
 						ta_state = T_COUNT_THEN_STOP;
 					} else {
 						ta_state = T_STOP;
@@ -501,7 +496,6 @@ ta_idle:
 		}
 		cra = new_cra & 0xef;	// Clear force load
 		has_new_cra = false;
-		ta_cnt_phi2 = ((cra & 0x20) == 0x00);
 	}
 
 	// Timer B state machine
@@ -520,12 +514,8 @@ ta_idle:
 			goto tb_idle;
 		case T_LOAD_THEN_WAIT_THEN_COUNT:
 			tb_state = T_WAIT_THEN_COUNT;
-			if (tb == 1 && tb_cnt_phi2) {
-				goto tb_interrupt;	// Interrupt if timer == 1
-			} else {
-				tb = latchb;		// Reload timer
-				goto tb_idle;
-			}
+			tb = latchb;			// Reload timer
+			goto tb_idle;
 		case T_COUNT:
 			goto tb_count;
 		case T_COUNT_THEN_STOP:

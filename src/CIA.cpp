@@ -68,7 +68,7 @@ void MOS6526::Reset()
 	tod_latched = false;
 	tod_alarm = false;
 
-	ta_cnt_phi2 = tb_cnt_phi2 = tb_cnt_ta = false;
+	tb_cnt_phi2 = tb_cnt_ta = false;
 }
 
 void MOS6526_1::Reset()
@@ -148,6 +148,7 @@ void MOS6526::GetState(MOS6526State * s) const
 	s->new_cra = 0;
 	s->new_crb = 0;
 	s->ta_output = 0;
+	s->tb_output = 0;
 
 	s->irq_delay = 0;
 }
@@ -194,7 +195,6 @@ void MOS6526::SetState(const MOS6526State * s)
 	tod_latched = s->tod_latched;
 	tod_alarm = s->tod_alarm;
 
-	ta_cnt_phi2 = ((cra & 0x21) == 0x01);
 	tb_cnt_phi2 = ((crb & 0x61) == 0x01);
 	tb_cnt_ta = ((crb & 0x41) == 0x41);		// Ignore CNT, which is pulled high
 }
@@ -347,7 +347,7 @@ void MOS6526::EmulateLine(int cycles)
 	unsigned long tmp;
 
 	// Timer A
-	if (ta_cnt_phi2) {
+	if ((cra & 0x21) == 0x01) {		// Counting Phi2 and started?
 		ta = tmp = ta - cycles;		// Decrement timer
 
 		if (tmp > 0xffff) {			// Underflow?
@@ -355,7 +355,6 @@ void MOS6526::EmulateLine(int cycles)
 
 			if (cra & 8) {			// One-shot?
 				cra &= 0xfe;
-				ta_cnt_phi2 = false;
 			}
 			set_int_flag(1);
 			if (tb_cnt_ta) {		// Timer B counting underflows of Timer A?
