@@ -60,6 +60,8 @@ protected:
 	virtual void trigger_irq() = 0;
 	virtual void clear_irq() = 0;
 
+	void check_tod_alarm();
+
 	uint8_t timer_on_pb(uint8_t prb);
 
 	MOS6510 * the_cpu;	// Pointer to CPU object
@@ -68,18 +70,21 @@ protected:
 
 	uint16_t ta, tb, latcha, latchb;
 
-	uint8_t tod_10ths, tod_sec, tod_min, tod_hr;
-	uint8_t alm_10ths, alm_sec, alm_min, alm_hr;
+	uint8_t tod_10ths, tod_sec, tod_min, tod_hr;	// TOD counter
+	uint8_t ltc_10ths, ltc_sec, ltc_min, ltc_hr;	// TOD latch
+	uint8_t alm_10ths, alm_sec, alm_min, alm_hr;	// TOD alarm
 
 	uint8_t sdr, icr, cra, crb;
 	uint8_t int_mask;
 
-	int tod_divider;	// TOD frequency divider
+	unsigned tod_counter;	// TOD frequency counter
+	bool tod_halted;		// Flag: TOD halted
+	bool tod_latched;		// Flag: TOD latched
+	bool tod_alarm;			// Flag: TOD in alarm state
 
-	bool tod_halt,		// Flag: TOD halted
-		 ta_cnt_phi2,	// Flag: Timer A is counting Phi 2
-		 tb_cnt_phi2,	// Flag: Timer B is counting Phi 2
-	     tb_cnt_ta;		// Flag: Timer B is counting underflows of Timer A
+	bool ta_cnt_phi2;	// Flag: Timer A is counting Phi 2
+	bool tb_cnt_phi2;	// Flag: Timer B is counting Phi 2
+	bool tb_cnt_ta;		// Flag: Timer B is counting underflows of Timer A
 
 	// Input lines for ports
 	uint8_t pa_in = 0;
@@ -184,11 +189,20 @@ struct MOS6526State {
 						// Additional registers
 	uint16_t latcha;	// Timer latches
 	uint16_t latchb;
-	uint8_t alm_10ths;	// Alarm time
+	uint8_t ltc_10ths;	// TOD latch
+	uint8_t ltc_sec;
+	uint8_t ltc_min;
+	uint8_t ltc_hr;
+	uint8_t alm_10ths;	// TOD alarm time
 	uint8_t alm_sec;
 	uint8_t alm_min;
 	uint8_t alm_hr;
 	uint8_t int_mask;	// Enabled interrupts
+
+	uint8_t tod_counter;
+	bool tod_halted;
+	bool tod_latched;
+	bool tod_alarm;
 
 						// FrodoSC:
 	bool ta_int_next_cycle;
@@ -216,6 +230,24 @@ inline void MOS6526::set_int_flag(uint8_t flag)
 		icr |= 0x80;
 		trigger_irq();
 	}
+}
+
+
+/*
+ *  Check for TOD alarm
+ */
+
+inline void MOS6526::check_tod_alarm()
+{
+	bool alarm_match = (tod_10ths == alm_10ths && tod_sec == alm_sec &&
+	                    tod_min == alm_min && tod_hr == alm_hr);
+
+	// Raise interrupt on positive edge of alarm match
+	if (alarm_match && !tod_alarm) {
+		set_int_flag(4);
+	}
+
+	tod_alarm = alarm_match;
 }
 
 
@@ -251,16 +283,25 @@ inline uint8_t MOS6526::read_register(uint8_t reg)
 		case 7:
 			return tb >> 8;
 
-		case 8:
-			tod_halt = false;
-			return tod_10ths;
+		case 8: {
+			uint8_t ret = tod_latched ? ltc_10ths : tod_10ths;
+			tod_latched = false;
+			return ret;
+		}
 		case 9:
-			return tod_sec;
+			return tod_latched ? ltc_sec : tod_sec;
 		case 10:
-			return tod_min;
-		case 11:
-			tod_halt = true;
-			return tod_hr;
+			return tod_latched ? ltc_min : tod_min;
+		case 11: {
+			if (! tod_latched) {
+				ltc_10ths = tod_10ths;
+				ltc_sec = tod_sec;
+				ltc_min = tod_min;
+				ltc_hr = tod_hr;
+				tod_latched = true;
+			}
+			return tod_latched ? ltc_hr : tod_hr;
+		}
 
 		case 12:
 			return sdr;
@@ -327,32 +368,52 @@ inline void MOS6526::write_register(uint8_t reg, uint8_t byte)
 			break;
 
 		case 8:
+			byte &= 0x0f;
 			if (crb & 0x80) {
-				alm_10ths = byte & 0x0f;
+				if (alm_10ths != byte) {
+					check_tod_alarm();
+				}
+				alm_10ths = byte;
 			} else {
-				tod_10ths = byte & 0x0f;
+				if (tod_10ths != byte) {
+					check_tod_alarm();
+				}
+				tod_10ths = byte;
+				tod_halted = false;
 			}
+			check_tod_alarm();
 			break;
 		case 9:
+			byte &= 0x7f;
 			if (crb & 0x80) {
-				alm_sec = byte & 0x7f;
+				alm_sec = byte;
 			} else {
-				tod_sec = byte & 0x7f;
+				tod_sec = byte;
 			}
+			check_tod_alarm();
 			break;
 		case 10:
+			byte &= 0x7f;
 			if (crb & 0x80) {
-				alm_min = byte & 0x7f;
+				alm_min = byte;
 			} else {
-				tod_min = byte & 0x7f;
+				tod_min = byte;
 			}
+			check_tod_alarm();
 			break;
 		case 11:
-			if (crb & 0x80) {
-				alm_hr = byte & 0x9f;
-			} else {
-				tod_hr = byte & 0x9f;
+			byte &= 0x9f;
+			if ((byte & 0x1f) == 0x12) {
+				byte ^= 0x80;	// Invert AM/PM if hours = 12
 			}
+			if (crb & 0x80) {
+				alm_hr = byte;
+			} else {
+				tod_hr = byte;
+				tod_halted = true;
+				tod_counter = 0;
+			}
+			check_tod_alarm();
 			break;
 
 		case 12:

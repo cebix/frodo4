@@ -34,7 +34,6 @@
  * Incompatibilities:
  * ------------------
  *
- *  - The TOD clock should not be stopped on a read access, but latched.
  *  - The SDR interrupt is faked.
  *  - Some small incompatibilities with the timers.
  */
@@ -59,13 +58,16 @@ void MOS6526::Reset()
 	ta = tb = 0xffff;
 	latcha = latchb = 1;
 
-	tod_10ths = tod_sec = tod_min = tod_hr = 0;
+	tod_10ths = tod_sec = tod_min = 0; tod_hr = 1;
+	ltc_10ths = ltc_sec = ltc_min = 0; ltc_hr = 1;
 	alm_10ths = alm_sec = alm_min = alm_hr = 0;
 
 	sdr = icr = cra = crb = int_mask = 0;
 
-	tod_halt = false;
-	tod_divider = 0;
+	tod_counter = 0;
+	tod_halted = true;
+	tod_latched = false;
+	tod_alarm = false;
 
 	ta_cnt_phi2 = tb_cnt_phi2 = tb_cnt_ta = false;
 
@@ -125,6 +127,10 @@ void MOS6526::GetState(MOS6526State * s) const
 	s->tod_sec = tod_sec;
 	s->tod_min = tod_min;
 	s->tod_hr = tod_hr;
+	s->ltc_10ths = ltc_10ths;
+	s->ltc_sec = ltc_sec;
+	s->ltc_min = ltc_min;
+	s->ltc_hr = ltc_hr;
 	s->alm_10ths = alm_10ths;
 	s->alm_sec = alm_sec;
 	s->alm_min = alm_min;
@@ -134,6 +140,11 @@ void MOS6526::GetState(MOS6526State * s) const
 
 	s->int_flags = icr;
 	s->int_mask = int_mask;
+
+	s->tod_counter = tod_counter;
+	s->tod_halted = tod_halted;
+	s->tod_latched = tod_latched;
+	s->tod_alarm = tod_alarm;
 
 	s->ta_int_next_cycle = ta_int_next_cycle;
 	s->tb_int_next_cycle = tb_int_next_cycle;
@@ -171,6 +182,10 @@ void MOS6526::SetState(const MOS6526State * s)
 	tod_sec = s->tod_sec;
 	tod_min = s->tod_min;
 	tod_hr = s->tod_hr;
+	ltc_10ths = s->ltc_10ths;
+	ltc_sec = s->ltc_sec;
+	ltc_min = s->ltc_min;
+	ltc_hr = s->ltc_hr;
 	alm_10ths = s->alm_10ths;
 	alm_sec = s->alm_sec;
 	alm_min = s->alm_min;
@@ -181,7 +196,11 @@ void MOS6526::SetState(const MOS6526State * s)
 	icr = s->int_flags;
 	int_mask = s->int_mask;
 
-	tod_halt = false;
+	tod_counter = s->tod_counter;
+	tod_halted = s->tod_halted;
+	tod_latched = s->tod_latched;
+	tod_alarm = s->tod_alarm;
+
 	ta_cnt_phi2 = ((cra & 0x20) == 0x00);
 	tb_cnt_phi2 = ((crb & 0x60) == 0x00);
 	tb_cnt_ta = ((crb & 0x40) == 0x40);		// Ignore CNT, which is pulled high
@@ -612,71 +631,72 @@ tb_idle:
 
 void MOS6526::CountTOD()
 {
+	if (tod_halted)
+		return;
+
+	// Increment TOD counter
+	unsigned tod_compare = (cra & 0x80) ? 4 : 5;
+	if (tod_counter != tod_compare) {
+		++tod_counter;
+		if (tod_counter > 5) {
+			tod_counter = 0;
+		}
+		return;
+	}
+
+	// Count TOD
+	tod_counter = 0;
+
 	uint8_t lo, hi;
 
-	// Decrement frequency divider
-	if (tod_divider) {
-		tod_divider--;
-	} else {
+	// 1/10 seconds
+	tod_10ths = (tod_10ths + 1) & 0x0f;
+	if (tod_10ths == 10) {
+		tod_10ths = 0;
 
-		// Reload divider according to 50/60 Hz flag
-		if (cra & 0x80) {
-			tod_divider = 4;
-		} else {
-			tod_divider = 5;
+		// Seconds
+		lo = (tod_sec + 1) & 0x0f;
+		hi = tod_sec >> 4;
+		if (lo == 10) {
+			lo = 0;
+			hi = (hi + 1) & 0x07;
 		}
+		if (hi == 6) {
+			tod_sec = 0;
 
-		// 1/10 seconds
-		tod_10ths++;
-		if (tod_10ths > 9) {
-			tod_10ths = 0;
-
-			// Seconds
-			lo = (tod_sec & 0x0f) + 1;
-			hi = tod_sec >> 4;
-			if (lo > 9) {
+			// Minutes
+			lo = (tod_min + 1) & 0x0f;
+			hi = tod_min >> 4;
+			if (lo == 10) {
 				lo = 0;
-				hi++;
+				hi = (hi + 1) & 0x07;
 			}
-			if (hi > 5) {
-				tod_sec = 0;
+			if (hi == 6) {
+				tod_min = 0;
 
-				// Minutes
-				lo = (tod_min & 0x0f) + 1;
-				hi = tod_min >> 4;
-				if (lo > 9) {
+				// Hours
+				lo = (tod_hr + 1) & 0x0f;
+				hi = (tod_hr >> 4) & 1;
+				if (((hi << 4) | lo) == 10) {
 					lo = 0;
-					hi++;
+					hi = (hi + 1) & 1;
 				}
-				if (hi > 5) {
-					tod_min = 0;
-
-					// Hours
-					lo = (tod_hr & 0x0f) + 1;
-					hi = (tod_hr >> 4) & 1;
-					tod_hr &= 0x80;		// Keep AM/PM flag
-					if (lo > 9) {
-						lo = 0;
-						hi++;
-					}
-					tod_hr |= (hi << 4) | lo;
-					if ((tod_hr & 0x1f) > 0x11) {
-						tod_hr = (tod_hr & 0x80) ^ 0x80;
-					}
-				} else {
-					tod_min = (hi << 4) | lo;
+				tod_hr = (tod_hr & 0x80) | (hi << 4) | lo;
+				if ((tod_hr & 0x1f) == 0x13) {
+					tod_hr = (tod_hr & 0x80) | 1;	// 1 AM follows 12 AM, 1 PM follows 12 PM
+				} else if ((tod_hr & 0x1f) == 0x12) {
+					tod_hr ^= 0x80;					// 12 AM follows 11 PM, 12 PM follows 11 AM
 				}
 			} else {
-				tod_sec = (hi << 4) | lo;
+				tod_min = (hi << 4) | lo;
 			}
-		}
-
-		// Alarm time reached? Trigger interrupt if enabled
-		if (tod_10ths == alm_10ths && tod_sec == alm_sec &&
-			tod_min == alm_min && tod_hr == alm_hr) {
-			set_int_flag(4);
+		} else {
+			tod_sec = (hi << 4) | lo;
 		}
 	}
+
+	// Check for alarm
+	check_tod_alarm();
 }
 
 
