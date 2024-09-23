@@ -32,26 +32,37 @@ struct MOS6526State;
 
 class MOS6526 {
 public:
-	MOS6526(MOS6510 *CPU);
+	MOS6526(MOS6510 * cpu) : the_cpu(cpu) { }
 	virtual ~MOS6526() { }
 
 	void Reset();
 
-	void GetState(MOS6526State *cs) const;
-	virtual void SetState(const MOS6526State *cs);
+	void GetState(MOS6526State * s) const;
+	virtual void SetState(const MOS6526State * s);
 
 #ifdef FRODO_SC
-	void CheckIRQs();
 	void EmulateCycle();
 #else
 	void EmulateLine(int cycles);
 #endif
 	void CountTOD();
 
-	virtual void TriggerInterrupt(int bit) = 0;
+	void SetPAIn(uint8_t byte) { pa_in = byte; }
+	void SetPBIn(uint8_t byte) { pb_in = byte; }
+	uint8_t PAOut() const { return pra | ~ddra; }
+	uint8_t PBOut() const { return prb | ~ddrb; }
 
 protected:
-	MOS6510 *the_cpu;	// Pointer to 6510
+	uint8_t read_register(uint8_t reg);
+	void write_register(uint8_t reg, uint8_t byte);
+
+	void set_int_flag(uint8_t flag);
+	virtual void trigger_irq() = 0;
+	virtual void clear_irq() = 0;
+
+	uint8_t timer_on_pb(uint8_t prb);
+
+	MOS6510 * the_cpu;	// Pointer to CPU object
 
 	uint8_t pra, prb, ddra, ddrb;
 
@@ -70,9 +81,11 @@ protected:
 		 tb_cnt_phi2,	// Flag: Timer B is counting Phi 2
 	     tb_cnt_ta;		// Flag: Timer B is counting underflows of Timer A
 
-#ifdef FRODO_SC
-	uint8_t timer_on_pb(uint8_t prb);
+	// Input lines for ports
+	uint8_t pa_in = 0;
+	uint8_t pb_in = 0;
 
+#ifdef FRODO_SC
 	bool ta_int_next_cycle,		// Flag: Trigger Timer A interrupt in next cycle
 		 tb_int_next_cycle,		// Flag: Trigger Timer B interrupt in next cycle
 		 has_new_cra,			// Flag: New value for CRA pending
@@ -88,14 +101,12 @@ protected:
 
 class MOS6526_1 : public MOS6526 {
 public:
-	MOS6526_1(MOS6510 *CPU, MOS6569 *VIC);
+	MOS6526_1(MOS6510 * cpu, MOS6569 * vic) : MOS6526(cpu), the_vic(vic) { }
 
 	void Reset();
 
-	uint8_t ReadRegister(uint16_t adr);
-	void WriteRegister(uint16_t adr, uint8_t byte);
-
-	void TriggerInterrupt(int bit) override;
+	uint8_t ReadRegister(uint8_t reg);
+	void WriteRegister(uint8_t reg, uint8_t byte);
 
 	uint8_t KeyMatrix[8];	// C64 keyboard matrix, 1 bit/key (0: key down, 1: key up)
 	uint8_t RevMatrix[8];	// Reversed keyboard matrix
@@ -104,9 +115,12 @@ public:
 	uint8_t Joystick2;		// Joystick 2 AND value
 
 private:
+	void trigger_irq() override;
+	void clear_irq() override;
+
 	void check_lp();
 
-	MOS6569 *the_vic;
+	MOS6569 * the_vic;		// Pointer to VIC object
 
 	uint8_t prev_lp;		// Previous state of LP line (bit 4)
 };
@@ -114,26 +128,27 @@ private:
 
 class MOS6526_2 : public MOS6526{
 public:
-	MOS6526_2(MOS6510 *CPU, MOS6569 *VIC, MOS6502_1541 *CPU1541);
+	MOS6526_2(MOS6510 * cpu, MOS6569 * vic, MOS6502_1541 * cpu_1541) : MOS6526(cpu), the_vic(vic), the_cpu_1541(cpu_1541) { }
 
 	void Reset();
 
-	void SetState(const MOS6526State *cs) override;
+	void SetState(const MOS6526State * s) override;
 
-	uint8_t ReadRegister(uint16_t adr);
-	void WriteRegister(uint16_t adr, uint8_t byte);
-
-	void TriggerInterrupt(int bit) override;
+	uint8_t ReadRegister(uint8_t reg);
+	void WriteRegister(uint8_t reg, uint8_t byte);
 
 	uint8_t IECLines;		// State of IEC lines from C64 side
 							// (bit 5 - DATA, bit 4 - CLK, bit 3 - ATN)
 							// Wire-AND with 1541 state to obtain physical line state
 
 private:
+	void trigger_irq() override;
+	void clear_irq() override;
+
 	void write_pa(uint8_t inv_out);
 
-	MOS6569 *the_vic;
-	MOS6502_1541 *the_cpu_1541;
+	MOS6569 * the_vic;				// Pointer to VIC object
+	MOS6502_1541 * the_cpu_1541;	// Pointer to 1541 CPU object
 };
 
 
@@ -163,7 +178,7 @@ struct MOS6526State {
 	uint8_t tod_min;
 	uint8_t tod_hr;
 	uint8_t sdr;
-	uint8_t int_data;	// Pending interrupts
+	uint8_t int_flags;	// Pending interrupts
 	uint8_t cra;
 	uint8_t crb;
 						// Additional registers
@@ -191,63 +206,204 @@ struct MOS6526State {
 
 
 /*
- *  Emulate CIA for one cycle/raster line
+ *  Set interrupt flag
  */
 
+inline void MOS6526::set_int_flag(uint8_t flag)
+{
+	icr |= flag;
+	if (int_mask & flag) {
+		icr |= 0x80;
+		trigger_irq();
+	}
+}
+
+
+/*
+ *  Read from CIA register
+ */
+
+inline uint8_t MOS6526::read_register(uint8_t reg)
+{
+	switch (reg) {
+		case 0:
+			return (pra & ddra) | (pa_in & ~ddra);
+		case 1: {
+			uint8_t ret = (prb & ddrb) | (pb_in & ~ddrb);
+
+			if ((cra | crb) & 0x02) {	// TA/TB output to PB enabled?
+				ret = timer_on_pb(ret);
+			}
+
+			return ret;
+		}
+		case 2:
+			return ddra;
+		case 3:
+			return ddrb;
+
+		case 4:
+			return ta;
+		case 5:
+			return ta >> 8;
+		case 6:
+			return tb;
+		case 7:
+			return tb >> 8;
+
+		case 8:
+			tod_halt = false;
+			return tod_10ths;
+		case 9:
+			return tod_sec;
+		case 10:
+			return tod_min;
+		case 11:
+			tod_halt = true;
+			return tod_hr;
+
+		case 12:
+			return sdr;
+
+		case 13: {
+			uint8_t ret = icr; // Read and clear ICR
+			icr = 0;
 #ifdef FRODO_SC
-inline void MOS6526::CheckIRQs()
-{
-	// Trigger pending interrupts
-	if (ta_int_next_cycle) {
-		ta_int_next_cycle = false;
-		TriggerInterrupt(1);
-	}
-	if (tb_int_next_cycle) {
-		tb_int_next_cycle = false;
-		TriggerInterrupt(2);
-	}
-}
-#else
-inline void MOS6526::EmulateLine(int cycles)
-{
-	unsigned long tmp;
-
-	// Timer A
-	if (ta_cnt_phi2) {
-		ta = tmp = ta - cycles;		// Decrement timer
-
-		if (tmp > 0xffff) {			// Underflow?
-			ta = latcha;			// Reload timer
-
-			if (cra & 8) {			// One-shot?
-				cra &= 0xfe;
-				ta_cnt_phi2 = false;
-			}
-			TriggerInterrupt(1);
-			if (tb_cnt_ta) {		// Timer B counting underflows of Timer A?
-				tb = tmp = tb - 1;	// tmp = --tb doesn't work
-				if (tmp > 0xffff) goto tb_underflow;
-			}
-		}
-	}
-
-	// Timer B
-	if (tb_cnt_phi2) {
-		tb = tmp = tb - cycles;		// Decrement timer
-
-		if (tmp > 0xffff) {			// Underflow?
-tb_underflow:
-			tb = latchb;
-
-			if (crb & 8) {			// One-shot?
-				crb &= 0xfe;
-				tb_cnt_phi2 = false;
-				tb_cnt_ta = false;
-			}
-			TriggerInterrupt(2);
-		}
-	}
-}
+			ta_int_next_cycle = false;
+			tb_int_next_cycle = false;
 #endif
+			clear_irq();
+			return ret;
+		}
+
+		case 14:
+			return cra;
+		case 15:
+			return crb;
+
+		default:	// Can't happen
+			return 0;
+	}
+}
+
+
+/*
+ *  Write to CIA register
+ */
+
+inline void MOS6526::write_register(uint8_t reg, uint8_t byte)
+{
+	switch (reg) {
+		case 0:
+			pra = byte;
+			break;
+		case 1:
+			prb = byte;
+			break;
+		case 2:
+			ddra = byte;
+			break;
+		case 3:
+			ddrb = byte;
+			break;
+
+		case 4:
+			latcha = (latcha & 0xff00) | byte;
+			break;
+		case 5:
+			latcha = (latcha & 0xff) | (byte << 8);
+			if (!(cra & 1)) {	// Reload timer if stopped
+				ta = latcha;
+			}
+			break;
+		case 6:
+			latchb = (latchb & 0xff00) | byte;
+			break;
+		case 7:
+			latchb = (latchb & 0xff) | (byte << 8);
+			if (!(crb & 1)) {	// Reload timer if stopped
+				tb = latchb;
+			}
+			break;
+
+		case 8:
+			if (crb & 0x80) {
+				alm_10ths = byte & 0x0f;
+			} else {
+				tod_10ths = byte & 0x0f;
+			}
+			break;
+		case 9:
+			if (crb & 0x80) {
+				alm_sec = byte & 0x7f;
+			} else {
+				tod_sec = byte & 0x7f;
+			}
+			break;
+		case 10:
+			if (crb & 0x80) {
+				alm_min = byte & 0x7f;
+			} else {
+				tod_min = byte & 0x7f;
+			}
+			break;
+		case 11:
+			if (crb & 0x80) {
+				alm_hr = byte & 0x9f;
+			} else {
+				tod_hr = byte & 0x9f;
+			}
+			break;
+
+		case 12:
+			sdr = byte;
+			set_int_flag(8);	// Fake SDR interrupt for programs that need it
+			break;
+
+		case 13:
+#ifndef FRODO_SC
+			if (ThePrefs.CIAIRQHack) {	// Hack for addressing modes that read from the address
+				icr = 0;
+			}
+#endif
+			if (byte & 0x80) {
+				int_mask |= byte & 0x1f;
+				if (icr & int_mask & 0x1f) { // Trigger IRQ if pending
+					icr |= 0x80;
+					trigger_irq();
+				}
+			} else {
+				int_mask &= ~(byte & 0x1f);
+			}
+			break;
+
+		case 14:
+#ifdef FRODO_SC
+			has_new_cra = true;		// Delay write by 1 cycle
+			new_cra = byte;
+#else
+			cra = byte & 0xef;
+			if (byte & 0x10) { // Force load
+				ta = latcha;
+			}
+			ta_cnt_phi2 = ((byte & 0x21) == 0x01);
+#endif
+			break;
+
+		case 15:
+#ifdef FRODO_SC
+			has_new_crb = true;		// Delay write by 1 cycle
+			new_crb = byte;
+#else
+			crb = byte & 0xef;
+			if (byte & 0x10) { // Force load
+				tb = latchb;
+			}
+			tb_cnt_phi2 = ((byte & 0x61) == 0x01);
+			tb_cnt_ta = ((byte & 0x41) == 0x41);	// Ignore CNT, which is pulled high
+#endif
+			break;
+	}
+}
 
 #endif

@@ -84,11 +84,6 @@
 #include "Version.h"
 
 
-enum {
-	INT_RESET = 3
-};
-
-
 /*
  *  6510 constructor: Initialize registers
  */

@@ -1611,7 +1611,7 @@ static void view_cia_state()
 	output += format("Serial mode : {}\n\n", cs.cra & 0x40 ? "Output" : "Input");
 
 	output += "Pending int.: ";
-	dump_cia_ints(cs.int_data);
+	dump_cia_ints(cs.int_flags);
 	output += "Enabled int.: ";
 	dump_cia_ints(cs.int_mask);
 }

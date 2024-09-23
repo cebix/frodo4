@@ -35,7 +35,7 @@
 enum {
 	INT_VIA1IRQ,
 	INT_VIA2IRQ,
-	INT_RESET,
+	INT_RESET1541
 };
 
 
@@ -53,15 +53,16 @@ public:
 	MOS6522(MOS6502_1541 * cpu, unsigned irq) : the_cpu(cpu), irq_type(irq) { }
 	~MOS6522() { }
 
+	void Reset();
+
+	void GetState(MOS6522State * s) const;
+	void SetState(const MOS6522State * s);
+
 #ifdef FRODO_SC
 	void EmulateCycle();			// Emulate one clock cycle
 #else
 	void CountTimers(int cycles);	// Emulate timers
 #endif
-	void Reset();
-
-	void GetState(MOS6522State * s) const;
-	void SetState(const MOS6522State * s);
 
 	uint8_t ReadRegister(uint16_t adr);
 	void WriteRegister(uint16_t adr, uint8_t byte);
@@ -262,7 +263,10 @@ struct MOS6502State {
 };
 
 
-// Clear VIA interrupt flag, deassert IRQ line if no interrupts are pending.
+/*
+ *  Clear VIA interrupt flag, deassert IRQ line if no interrupts are pending.
+ */
+
 inline void MOS6522::clear_irq(uint8_t flag)
 {
 	ifr &= ~flag;
@@ -277,7 +281,10 @@ inline void MOS6522::clear_irq(uint8_t flag)
 }
 
 
-// Read from VIA register
+/*
+ *  Read from VIA register
+ */
+
 inline uint8_t MOS6522::ReadRegister(uint16_t adr)
 {
 	switch (adr & 0xf) {
@@ -323,7 +330,10 @@ inline uint8_t MOS6522::ReadRegister(uint16_t adr)
 }
 
 
-// Write to VIA register
+/*
+ *  Write to VIA register
+ */
+
 inline void MOS6522::WriteRegister(uint16_t adr, uint8_t byte)
 {
 	switch (adr & 0xf) {

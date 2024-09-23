@@ -48,7 +48,7 @@
  *  - The possible interrupt sources are:
  *      INT_VIA1IRQ: I flag is checked, jump to ($fffe)
  *      INT_VIA2IRQ: I flag is checked, jump to ($fffe)
- *      INT_RESET: Jump to ($fffc)
+ *      INT_RESET1541: Jump to ($fffc)
  *  - The z_flag variable has the inverse meaning of the
  *    6502 Z flag
  *  - Only the highest bit of the n_flag variable is used
@@ -112,7 +112,7 @@ MOS6502_1541::~MOS6502_1541()
 
 void MOS6502_1541::AsyncReset()
 {
-	interrupt.intr[INT_RESET] = true;
+	interrupt.intr[INT_RESET1541] = true;
 	Idle = false;
 }
 
@@ -190,7 +190,7 @@ void MOS6502_1541::GetState(MOS6502State *s) const
 
 	s->intr[INT_VIA1IRQ] = interrupt.intr[INT_VIA1IRQ];
 	s->intr[INT_VIA2IRQ] = interrupt.intr[INT_VIA2IRQ];
-	s->intr[INT_RESET] = interrupt.intr[INT_RESET];
+	s->intr[INT_RESET1541] = interrupt.intr[INT_RESET1541];
 	s->instruction_complete = (state == 0);
 	s->idle = Idle;
 	s->opflags = opflags;
@@ -247,7 +247,7 @@ void MOS6502_1541::SetState(const MOS6502State *s)
 
 	interrupt.intr[INT_VIA1IRQ] = s->intr[INT_VIA1IRQ];
 	interrupt.intr[INT_VIA2IRQ] = s->intr[INT_VIA2IRQ];
-	interrupt.intr[INT_RESET] = s->intr[INT_RESET];
+	interrupt.intr[INT_RESET1541] = s->intr[INT_RESET1541];
 	if (s->instruction_complete) {
 		state = 0;
 	}
@@ -302,7 +302,7 @@ uint8_t MOS6502_1541::CalcIECLines() const
 
 inline void MOS6502_1541::TriggerInterrupt(unsigned which)
 {
-	if (!(interrupt.intr[which])) {
+	if (!(interrupt.intr[INT_VIA1IRQ] || interrupt.intr[INT_VIA2IRQ])) {
 		first_irq_cycle = cycle_counter;
 	}
 	interrupt.intr[which] = true;
@@ -667,7 +667,7 @@ void MOS6502_1541::EmulateCPUCycle()
 
 	// Any pending interrupts in state 0 (opcode fetch)?
 	if (state == 0 && interrupt.intr_any) {
-		if (interrupt.intr[INT_RESET]) {
+		if (interrupt.intr[INT_RESET1541]) {
 			Reset();
 		} else if ((interrupt.intr[INT_VIA1IRQ] || interrupt.intr[INT_VIA2IRQ]) &&
 				   (!i_flag || (opflags & OPFLAG_IRQ_DISABLED)) && !(opflags & OPFLAG_IRQ_ENABLED)) {

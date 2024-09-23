@@ -426,8 +426,6 @@ bool C64::emulate_c64_cycle()
 	if (flags & VIC_HBLANK) {
 		TheSID->EmulateLine();
 	}
-	TheCIA1->CheckIRQs();
-	TheCIA2->CheckIRQs();
 	TheCIA1->EmulateCycle();
 	TheCIA2->EmulateCycle();
 	TheCPU->EmulateCycle();

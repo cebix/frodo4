@@ -42,7 +42,7 @@
  *  - The possible interrupt sources are:
  *      INT_VIA1IRQ: I flag is checked, jump to ($fffe)
  *      INT_VIA2IRQ: I flag is checked, jump to ($fffe)
- *      INT_RESET: Jump to ($fffc)
+ *      INT_RESET1541: Jump to ($fffc)
  *  - Interrupts are not checked before every opcode but only
  *    at certain times:
  *      On entering EmulateLine()
@@ -112,7 +112,7 @@ MOS6502_1541::~MOS6502_1541()
 
 void MOS6502_1541::AsyncReset()
 {
-	interrupt.intr[INT_RESET] = true;
+	interrupt.intr[INT_RESET1541] = true;
 	Idle = false;
 }
 
@@ -188,7 +188,7 @@ void MOS6502_1541::GetState(MOS6502State *s) const
 
 	s->intr[INT_VIA1IRQ] = interrupt.intr[INT_VIA1IRQ];
 	s->intr[INT_VIA2IRQ] = interrupt.intr[INT_VIA2IRQ];
-	s->intr[INT_RESET] = interrupt.intr[INT_RESET];
+	s->intr[INT_RESET1541] = interrupt.intr[INT_RESET1541];
 	s->instruction_complete = true;
 	s->idle = Idle;
 	s->opflags = 0;
@@ -245,7 +245,7 @@ void MOS6502_1541::SetState(const MOS6502State *s)
 
 	interrupt.intr[INT_VIA1IRQ] = s->intr[INT_VIA1IRQ];
 	interrupt.intr[INT_VIA2IRQ] = s->intr[INT_VIA2IRQ];
-	interrupt.intr[INT_RESET] = s->intr[INT_RESET];
+	interrupt.intr[INT_RESET1541] = s->intr[INT_RESET1541];
 	Idle = s->idle;
 
 	via1->SetState(&(s->via1));
@@ -703,7 +703,7 @@ int MOS6502_1541::EmulateLine(int cycles_left)
 	// Any pending interrupts?
 	if (interrupt.intr_any) {
 handle_int:
-		if (interrupt.intr[INT_RESET]) {
+		if (interrupt.intr[INT_RESET1541]) {
 			Reset();
 		} else if ((interrupt.intr[INT_VIA1IRQ] || interrupt.intr[INT_VIA2IRQ]) && !i_flag) {
 			push_byte(pc >> 8);

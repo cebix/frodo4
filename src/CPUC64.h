@@ -39,8 +39,8 @@
 enum {
 	INT_VICIRQ,
 	INT_CIAIRQ,
-	INT_NMI
-	// INT_RESET (private)
+	INT_NMI,
+	INT_RESET
 };
 
 
@@ -63,11 +63,14 @@ public:
 #else
 	int EmulateLine(int cycles_left);	// Emulate until cycles_left underflows
 #endif
+
 	void Reset();
 	void AsyncReset();					// Reset the CPU asynchronously
 	void AsyncNMI();					// Raise NMI asynchronously (NMI pulse)
+
 	void GetState(MOS6510State *s) const;
 	void SetState(const MOS6510State *s);
+
 	uint8_t ExtReadByte(uint16_t adr);
 	void ExtWriteByte(uint16_t adr, uint8_t byte);
 	uint8_t REUReadByte(uint16_t adr);
@@ -214,6 +217,7 @@ inline void MOS6510::TriggerNMI()
 	}
 }
 #endif
+
 inline void MOS6510::ClearVICIRQ()
 {
 	interrupt.intr[INT_VICIRQ] = false;

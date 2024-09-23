@@ -22,23 +22,21 @@
  * Notes:
  * ------
  *
- *  - The Emulate() function is called for every emulated Phi2
- *    clock cycle. It counts down the timers and triggers
- *    interrupts if necessary.
- *  - The TOD clocks are counted by CountTOD() during the VBlank, so
- *    the input frequency is 50Hz
- *  - The fields KeyMatrix and RevMatrix contain one bit for each
- *    key on the C64 keyboard (0: key pressed, 1: key released).
- *    KeyMatrix is used for normal keyboard polling (PRA->PRB),
- *    RevMatrix for reversed polling (PRB->PRA).
+ *  - The EmulateCycle() function is called for every emulated Phi2 clock
+ *    cycle. It counts down the timers and triggers interrupts if necessary.
+ *  - The TOD clocks are counted by CountTOD() during the VBlank, so the
+ *    input frequency is 50Hz.
+ *  - The fields KeyMatrix and RevMatrix contain one bit for each key on the
+ *    C64 keyboard (0: key pressed, 1: key released). KeyMatrix is used for
+ *    normal keyboard polling (PRA->PRB), RevMatrix for reversed polling
+ *    (PRB->PRA).
  *
  * Incompatibilities:
  * ------------------
  *
- *  - The TOD clock should not be stopped on a read access, but be
- *    latched
- *  - The SDR interrupt is faked
- *  - Some small incompatibilities with the timers
+ *  - The TOD clock should not be stopped on a read access, but latched.
+ *  - The SDR interrupt is faked.
+ *  - Some small incompatibilities with the timers.
  */
 
 #include "sysdeps.h"
@@ -48,15 +46,6 @@
 #include "CPU1541.h"
 #include "VIC.h"
 #include "Prefs.h"
-
-
-/*
- *  Constructors
- */
-
-MOS6526::MOS6526(MOS6510 *CPU) : the_cpu(CPU) {}
-MOS6526_1::MOS6526_1(MOS6510 *CPU, MOS6569 *VIC) : MOS6526(CPU), the_vic(VIC) {}
-MOS6526_2::MOS6526_2(MOS6510 *CPU, MOS6569 *VIC, MOS6502_1541 *CPU1541) : MOS6526(CPU), the_vic(VIC), the_cpu_1541(CPU1541) {}
 
 
 /*
@@ -116,47 +105,47 @@ void MOS6526_2::Reset()
  *  Get CIA state
  */
 
-void MOS6526::GetState(MOS6526State *cs) const
+void MOS6526::GetState(MOS6526State * s) const
 {
-	cs->pra = pra;
-	cs->prb = prb;
-	cs->ddra = ddra;
-	cs->ddrb = ddrb;
+	s->pra = pra;
+	s->prb = prb;
+	s->ddra = ddra;
+	s->ddrb = ddrb;
 
-	cs->ta_lo = ta & 0xff;
-	cs->ta_hi = ta >> 8;
-	cs->tb_lo = tb & 0xff;
-	cs->tb_hi = tb >> 8;
-	cs->latcha = latcha;
-	cs->latchb = latchb;
-	cs->cra = cra;
-	cs->crb = crb;
+	s->ta_lo = ta & 0xff;
+	s->ta_hi = ta >> 8;
+	s->tb_lo = tb & 0xff;
+	s->tb_hi = tb >> 8;
+	s->latcha = latcha;
+	s->latchb = latchb;
+	s->cra = cra;
+	s->crb = crb;
 
-	cs->tod_10ths = tod_10ths;
-	cs->tod_sec = tod_sec;
-	cs->tod_min = tod_min;
-	cs->tod_hr = tod_hr;
-	cs->alm_10ths = alm_10ths;
-	cs->alm_sec = alm_sec;
-	cs->alm_min = alm_min;
-	cs->alm_hr = alm_hr;
+	s->tod_10ths = tod_10ths;
+	s->tod_sec = tod_sec;
+	s->tod_min = tod_min;
+	s->tod_hr = tod_hr;
+	s->alm_10ths = alm_10ths;
+	s->alm_sec = alm_sec;
+	s->alm_min = alm_min;
+	s->alm_hr = alm_hr;
 
-	cs->sdr = sdr;
+	s->sdr = sdr;
 
-	cs->int_data = icr;
-	cs->int_mask = int_mask;
+	s->int_flags = icr;
+	s->int_mask = int_mask;
 
-	cs->ta_int_next_cycle = ta_int_next_cycle;
-	cs->tb_int_next_cycle = tb_int_next_cycle;
-	cs->has_new_cra = has_new_cra;
-	cs->has_new_crb = has_new_crb;
-	cs->ta_toggle = ta_toggle;
-	cs->tb_toggle = tb_toggle;
-	cs->ta_state = ta_state;
-	cs->tb_state = tb_state;
-	cs->new_cra = new_cra;
-	cs->new_crb = new_crb;
-	cs->ta_output = ta_output;
+	s->ta_int_next_cycle = ta_int_next_cycle;
+	s->tb_int_next_cycle = tb_int_next_cycle;
+	s->has_new_cra = has_new_cra;
+	s->has_new_crb = has_new_crb;
+	s->ta_toggle = ta_toggle;
+	s->tb_toggle = tb_toggle;
+	s->ta_state = ta_state;
+	s->tb_state = tb_state;
+	s->new_cra = new_cra;
+	s->new_crb = new_crb;
+	s->ta_output = ta_output;
 }
 
 
@@ -164,57 +153,57 @@ void MOS6526::GetState(MOS6526State *cs) const
  *  Restore CIA state
  */
 
-void MOS6526::SetState(const MOS6526State *cs)
+void MOS6526::SetState(const MOS6526State * s)
 {
-	pra = cs->pra;
-	prb = cs->prb;
-	ddra = cs->ddra;
-	ddrb = cs->ddrb;
+	pra = s->pra;
+	prb = s->prb;
+	ddra = s->ddra;
+	ddrb = s->ddrb;
 
-	ta = (cs->ta_hi << 8) | cs->ta_lo;
-	tb = (cs->tb_hi << 8) | cs->tb_lo;
-	latcha = cs->latcha;
-	latchb = cs->latchb;
-	cra = cs->cra;
-	crb = cs->crb;
+	ta = (s->ta_hi << 8) | s->ta_lo;
+	tb = (s->tb_hi << 8) | s->tb_lo;
+	latcha = s->latcha;
+	latchb = s->latchb;
+	cra = s->cra;
+	crb = s->crb;
 
-	tod_10ths = cs->tod_10ths;
-	tod_sec = cs->tod_sec;
-	tod_min = cs->tod_min;
-	tod_hr = cs->tod_hr;
-	alm_10ths = cs->alm_10ths;
-	alm_sec = cs->alm_sec;
-	alm_min = cs->alm_min;
-	alm_hr = cs->alm_hr;
+	tod_10ths = s->tod_10ths;
+	tod_sec = s->tod_sec;
+	tod_min = s->tod_min;
+	tod_hr = s->tod_hr;
+	alm_10ths = s->alm_10ths;
+	alm_sec = s->alm_sec;
+	alm_min = s->alm_min;
+	alm_hr = s->alm_hr;
 
-	sdr = cs->sdr;
+	sdr = s->sdr;
 
-	icr = cs->int_data;
-	int_mask = cs->int_mask;
+	icr = s->int_flags;
+	int_mask = s->int_mask;
 
 	tod_halt = false;
 	ta_cnt_phi2 = ((cra & 0x20) == 0x00);
 	tb_cnt_phi2 = ((crb & 0x60) == 0x00);
 	tb_cnt_ta = ((crb & 0x40) == 0x40);		// Ignore CNT, which is pulled high
 
-	ta_int_next_cycle = cs->ta_int_next_cycle;
-	tb_int_next_cycle = cs->tb_int_next_cycle;
-	has_new_cra = cs->has_new_cra;
-	has_new_crb = cs->has_new_crb;
-	ta_toggle = cs->ta_toggle;
-	tb_toggle = cs->tb_toggle;
-	ta_state = cs->ta_state;
-	tb_state = cs->tb_state;
-	new_cra = cs->new_cra;
-	new_crb = cs->new_crb;
-	ta_output = cs->ta_output;
+	ta_int_next_cycle = s->ta_int_next_cycle;
+	tb_int_next_cycle = s->tb_int_next_cycle;
+	has_new_cra = s->has_new_cra;
+	has_new_crb = s->has_new_crb;
+	ta_toggle = s->ta_toggle;
+	tb_toggle = s->tb_toggle;
+	ta_state = s->ta_state;
+	tb_state = s->tb_state;
+	new_cra = s->new_cra;
+	new_crb = s->new_crb;
+	ta_output = s->ta_output;
 }
 
-void MOS6526_2::SetState(const MOS6526State *cs)
+void MOS6526_2::SetState(const MOS6526State * s)
 {
-	MOS6526::SetState(cs);
+	MOS6526::SetState(s);
 
-	uint8_t inv_out = ~pra & ddra;
+	uint8_t inv_out = ~PAOut();
 	IECLines = inv_out & 0x38;
 }
 
@@ -223,7 +212,7 @@ void MOS6526_2::SetState(const MOS6526State *cs)
  *  Output TA/TB to PB6/7
  */
 
-inline uint8_t MOS6526::timer_on_pb(uint8_t byte)
+uint8_t MOS6526::timer_on_pb(uint8_t byte)
 {
 	if (cra & 0x02) {
 
@@ -253,11 +242,11 @@ inline uint8_t MOS6526::timer_on_pb(uint8_t byte)
  *  Read from register (CIA 1)
  */
 
-uint8_t MOS6526_1::ReadRegister(uint16_t adr)
+uint8_t MOS6526_1::ReadRegister(uint8_t reg)
 {
-	switch (adr) {
-		case 0x00: {
-			uint8_t ret = pra | ~ddra, tst = (prb | ~ddrb) & Joystick1;
+	switch (reg) {
+		case 0: {	// Port A: Handle keyboard and joysticks
+			uint8_t ret = PAOut(), tst = PBOut() & Joystick1;
 			if (!(tst & 0x01)) ret &= RevMatrix[0];	// AND all active columns
 			if (!(tst & 0x02)) ret &= RevMatrix[1];
 			if (!(tst & 0x04)) ret &= RevMatrix[2];
@@ -268,8 +257,8 @@ uint8_t MOS6526_1::ReadRegister(uint16_t adr)
 			if (!(tst & 0x80)) ret &= RevMatrix[7];
 			return ret & Joystick2;
 		}
-		case 0x01: {
-			uint8_t ret = ~ddrb, tst = (pra | ~ddra) & Joystick2;
+		case 1: {	// Port B: Handle keyboard and joysticks
+			uint8_t ret = ~ddrb, tst = PAOut() & Joystick2;
 			if (!(tst & 0x01)) ret &= KeyMatrix[0];	// AND all active rows
 			if (!(tst & 0x02)) ret &= KeyMatrix[1];
 			if (!(tst & 0x04)) ret &= KeyMatrix[2];
@@ -280,36 +269,15 @@ uint8_t MOS6526_1::ReadRegister(uint16_t adr)
 			if (!(tst & 0x80)) ret &= KeyMatrix[7];
 			ret = (ret | (prb & ddrb)) & Joystick1;
 
-			// TA/TB output to PB enabled?
-			if ((cra | crb) & 0x02) {
+			if ((cra | crb) & 0x02) {	// TA/TB output to PB enabled?
 				ret = timer_on_pb(ret);
 			}
 
 			return ret;
 		}
-		case 0x02: return ddra;
-		case 0x03: return ddrb;
-		case 0x04: return ta;
-		case 0x05: return ta >> 8;
-		case 0x06: return tb;
-		case 0x07: return tb >> 8;
-		case 0x08: tod_halt = false; return tod_10ths;
-		case 0x09: return tod_sec;
-		case 0x0a: return tod_min;
-		case 0x0b: tod_halt = true; return tod_hr;
-		case 0x0c: return sdr;
-		case 0x0d: {
-			uint8_t ret = icr;			// Read and clear ICR
-			icr = 0;
-			ta_int_next_cycle = false;
-			tb_int_next_cycle = false;
-			the_cpu->ClearCIAIRQ();		// Clear IRQ
-			return ret;
-		}
-		case 0x0e: return cra;
-		case 0x0f: return crb;
+		default:
+			return read_register(reg);
 	}
-	return 0;	// Can't happen
 }
 
 
@@ -317,47 +285,22 @@ uint8_t MOS6526_1::ReadRegister(uint16_t adr)
  *  Read from register (CIA 2)
  */
 
-uint8_t MOS6526_2::ReadRegister(uint16_t adr)
+uint8_t MOS6526_2::ReadRegister(uint8_t reg)
 {
-	switch (adr) {
-		case 0x00: {
+	switch (reg) {
+		case 0: {	// Port A: IEC
 			uint8_t in = ((the_cpu_1541->CalcIECLines() & 0x30) << 2)	// DATA and CLK from bus
 			           | 0x3f;											// Other lines high
-			return (pra & ddra) | (in & ~ddra);
+			SetPAIn(in);
+			break;
 		}
-		case 0x01: {
-			uint8_t ret = prb | ~ddrb;				// Input lines read as high
-
-			// TA/TB output to PB enabled?
-			if ((cra | crb) & 0x02) {
-				ret = timer_on_pb(ret);
-			}
-
-			return ret;
+		case 1: {	// Port B: User port
+			SetPBIn(0);
+			break;
 		}
-		case 0x02: return ddra;
-		case 0x03: return ddrb;
-		case 0x04: return ta;
-		case 0x05: return ta >> 8;
-		case 0x06: return tb;
-		case 0x07: return tb >> 8;
-		case 0x08: tod_halt = false; return tod_10ths;
-		case 0x09: return tod_sec;
-		case 0x0a: return tod_min;
-		case 0x0b: tod_halt = true; return tod_hr;
-		case 0x0c: return sdr;
-		case 0x0d: {
-			uint8_t ret = icr; // Read and clear ICR
-			icr = 0;
-			ta_int_next_cycle = false;
-			tb_int_next_cycle = false;
-			the_cpu->ClearNMI();
-			return ret;
-		}
-		case 0x0e: return cra;
-		case 0x0f: return crb;
 	}
-	return 0;	// Can't happen
+
+	return read_register(reg);
 }
 
 
@@ -368,105 +311,21 @@ uint8_t MOS6526_2::ReadRegister(uint16_t adr)
 // Write to port B, check for lightpen interrupt
 inline void MOS6526_1::check_lp()
 {
-	uint8_t new_lp = (prb | ~ddrb) & 0x10;
+	uint8_t new_lp = PBOut() & 0x10;
 	if (new_lp != prev_lp) {
 		the_vic->TriggerLightpen();
 		prev_lp = new_lp;
 	}
 }
 
-void MOS6526_1::WriteRegister(uint16_t adr, uint8_t byte)
+void MOS6526_1::WriteRegister(uint8_t reg, uint8_t byte)
 {
-	switch (adr) {
-		case 0x0:
-			pra = byte;
-			break;
-		case 0x1:
-			prb = byte;
+	write_register(reg, byte);
+
+	switch (reg) {
+		case 1:	// Port B: Handle VIC lightpen input
+		case 3:
 			check_lp();
-			break;
-		case 0x2:
-			ddra = byte;
-			break;
-		case 0x3:
-			ddrb = byte;
-			check_lp();
-			break;
-
-		case 0x4:
-			latcha = (latcha & 0xff00) | byte;
-			break;
-		case 0x5:
-			latcha = (latcha & 0xff) | (byte << 8);
-			if (!(cra & 1)) {	// Reload timer if stopped
-				ta = latcha;
-			}
-			break;
-
-		case 0x6:
-			latchb = (latchb & 0xff00) | byte;
-			break;
-		case 0x7:
-			latchb = (latchb & 0xff) | (byte << 8);
-			if (!(crb & 1)) {	// Reload timer if stopped
-				tb = latchb;
-			}
-			break;
-
-		case 0x8:
-			if (crb & 0x80) {
-				alm_10ths = byte & 0x0f;
-			} else {
-				tod_10ths = byte & 0x0f;
-			}
-			break;
-		case 0x9:
-			if (crb & 0x80) {
-				alm_sec = byte & 0x7f;
-			} else {
-				tod_sec = byte & 0x7f;
-			}
-			break;
-		case 0xa:
-			if (crb & 0x80) {
-				alm_min = byte & 0x7f;
-			} else {
-				tod_min = byte & 0x7f;
-			}
-			break;
-		case 0xb:
-			if (crb & 0x80) {
-				alm_hr = byte & 0x9f;
-			} else {
-				tod_hr = byte & 0x9f;
-			}
-			break;
-
-		case 0xc:
-			sdr = byte;
-			TriggerInterrupt(8);	// Fake SDR interrupt for programs that need it
-			break;
-
-		case 0xd:
-			if (byte & 0x80) {
-				int_mask |= byte & 0x1f;
-			} else {
-				int_mask &= ~(byte & 0x1f);
-			}
-			if ((byte & 0x80) && (icr & int_mask & 0x1f)) { // Trigger IRQ if pending
-				icr |= 0x80;
-				the_cpu->TriggerCIAIRQ();
-			}
-			break;
-
-		case 0xe:
-			has_new_cra = true;		// Delay write by 1 cycle
-			new_cra = byte;
-			break;
-
-		case 0xf:
-			has_new_crb = true;		// Delay write by 1 cycle
-			new_crb = byte;
 			break;
 	}
 }
@@ -491,112 +350,35 @@ inline void MOS6526_2::write_pa(uint8_t inv_out)
 	}
 }
 
-void MOS6526_2::WriteRegister(uint16_t adr, uint8_t byte)
+void MOS6526_2::WriteRegister(uint8_t reg, uint8_t byte)
 {
-	switch (adr) {
-		case 0x0:
-			pra = byte;
-			write_pa(~pra & ddra);
-			break;
-		case 0x1:
-			prb = byte;
-			break;
-		case 0x2:
-			ddra = byte;
-			write_pa(~pra & ddra);
-			break;
-		case 0x3:
-			ddrb = byte;
-			break;
+	write_register(reg, byte);
 
-		case 0x4:
-			latcha = (latcha & 0xff00) | byte;
-			break;
-		case 0x5:
-			latcha = (latcha & 0xff) | (byte << 8);
-			if (!(cra & 1)) {	// Reload timer if stopped
-				ta = latcha;
-			}
-			break;
-
-		case 0x6:
-			latchb = (latchb & 0xff00) | byte;
-			break;
-		case 0x7:
-			latchb = (latchb & 0xff) | (byte << 8);
-			if (!(crb & 1)) {	// Reload timer if stopped
-				tb = latchb;
-			}
-			break;
-
-		case 0x8:
-			if (crb & 0x80) {
-				alm_10ths = byte & 0x0f;
-			} else {
-				tod_10ths = byte & 0x0f;
-			}
-			break;
-		case 0x9:
-			if (crb & 0x80) {
-				alm_sec = byte & 0x7f;
-			} else {
-				tod_sec = byte & 0x7f;
-			}
-			break;
-		case 0xa:
-			if (crb & 0x80) {
-				alm_min = byte & 0x7f;
-			} else {
-				tod_min = byte & 0x7f;
-			}
-			break;
-		case 0xb:
-			if (crb & 0x80) {
-				alm_hr = byte & 0x9f;
-			} else {
-				tod_hr = byte & 0x9f;
-			}
-			break;
-
-		case 0xc:
-			sdr = byte;
-			TriggerInterrupt(8);	// Fake SDR interrupt for programs that need it
-			break;
-
-		case 0xd:
-			if (byte & 0x80) {
-				int_mask |= byte & 0x1f;
-			} else {
-				int_mask &= ~(byte & 0x1f);
-			}
-			if ((byte & 0x80) && (icr & int_mask & 0x1f)) { // Trigger NMI if pending
-				icr |= 0x80;
-				the_cpu->TriggerNMI();
-			}
-			break;
-
-		case 0xe:
-			has_new_cra = true;		// Delay write by 1 cycle
-			new_cra = byte;
-			ta_cnt_phi2 = ((byte & 0x20) == 0x00);
-			break;
-
-		case 0xf:
-			has_new_crb = true;		// Delay write by 1 cycle
-			new_crb = byte;
-			tb_cnt_phi2 = ((byte & 0x60) == 0x00);
-			tb_cnt_ta = ((byte & 0x40) == 0x40);	// Ignore CNT, which is pulled high
+	switch (reg) {
+		case 0:	// Port A: Handle VIC bank and IEC port
+		case 2:
+			write_pa(~PAOut());
 			break;
 	}
 }
 
 
 /*
- *  Emulate CIA for one cycle/raster line
+ *  Emulate CIA for one cycle
  */
 
 void MOS6526::EmulateCycle()
 {
+	// Trigger pending interrupts
+	if (ta_int_next_cycle) {
+		ta_int_next_cycle = false;
+		set_int_flag(1);
+	}
+	if (tb_int_next_cycle) {
+		tb_int_next_cycle = false;
+		set_int_flag(2);
+	}
+
 	bool ta_underflow = false;
 
 	// Timer A state machine
@@ -892,35 +674,36 @@ void MOS6526::CountTOD()
 		// Alarm time reached? Trigger interrupt if enabled
 		if (tod_10ths == alm_10ths && tod_sec == alm_sec &&
 			tod_min == alm_min && tod_hr == alm_hr) {
-			TriggerInterrupt(4);
+			set_int_flag(4);
 		}
 	}
 }
 
 
 /*
- *  Trigger IRQ (CIA 1)
+ *  Interrupt functions
  */
 
-void MOS6526_1::TriggerInterrupt(int bit)
+// Trigger IRQ (CIA 1)
+void MOS6526_1::trigger_irq()
 {
-	icr |= bit;
-	if (int_mask & bit) {
-		icr |= 0x80;
-		the_cpu->TriggerCIAIRQ();
-	}
+	the_cpu->TriggerCIAIRQ();
 }
 
-
-/*
- *  Trigger NMI (CIA 2)
- */
-
-void MOS6526_2::TriggerInterrupt(int bit)
+// Clear IRQ (CIA 1)
+void MOS6526_1::clear_irq()
 {
-	icr |= bit;
-	if (int_mask & bit) {
-		icr |= 0x80;
-		the_cpu->TriggerNMI();
-	}
+	the_cpu->ClearCIAIRQ();
+}
+
+// Trigger NMI (CIA 2)
+void MOS6526_2::trigger_irq()
+{
+	the_cpu->TriggerNMI();
+}
+
+// Clear NMI (CIA 2)
+void MOS6526_2::clear_irq()
+{
+	the_cpu->ClearNMI();
 }
