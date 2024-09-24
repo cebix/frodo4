@@ -623,13 +623,15 @@ void MOS6510::EmulateCycle()
 	if (state == 0 && interrupt.intr_any) {
 		if (interrupt.intr[INT_RESET]) {
 			Reset();
-		} else if (interrupt.intr[INT_NMI]) {
+
+		} else if (interrupt.intr[INT_NMI] && !jammed) {
 			if (the_c64->CycleCounter() - first_nmi_cycle >= 2) {
 				interrupt.intr[INT_NMI] = false;	// Simulate an edge-triggered input
 				state = 0x0010;
 				opflags = 0;
 			}
-		} else if ((interrupt.intr[INT_VICIRQ] || interrupt.intr[INT_CIAIRQ]) &&
+
+		} else if ((interrupt.intr[INT_VICIRQ] || interrupt.intr[INT_CIAIRQ]) && !jammed &&
 				   (!i_flag || (opflags & OPFLAG_IRQ_DISABLED)) && !(opflags & OPFLAG_IRQ_ENABLED)) {
 			if (the_c64->CycleCounter() - first_irq_cycle >= 2) {
 				state = 0x0008;

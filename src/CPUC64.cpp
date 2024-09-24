@@ -693,7 +693,7 @@ handle_int:
 		if (interrupt.intr[INT_RESET]) {
 			Reset();
 
-		} else if (interrupt.intr[INT_NMI]) {
+		} else if (interrupt.intr[INT_NMI] && !jammed) {
 			interrupt.intr[INT_NMI] = false;	// Simulate an edge-triggered input
 			push_byte(pc >> 8);
 			push_byte(pc);
@@ -703,7 +703,7 @@ handle_int:
 			jump(adr);
 			last_cycles = 7;
 
-		} else if ((interrupt.intr[INT_VICIRQ] || interrupt.intr[INT_CIAIRQ]) && !i_flag) {
+		} else if ((interrupt.intr[INT_VICIRQ] || interrupt.intr[INT_CIAIRQ]) && !i_flag && !jammed) {
 			push_byte(pc >> 8);
 			push_byte(pc);
 			push_flags(false);

@@ -531,7 +531,8 @@ void MOS6502_1541::EmulateCPUCycle()
 	if (state == 0 && interrupt.intr_any) {
 		if (interrupt.intr[INT_RESET1541]) {
 			Reset();
-		} else if ((interrupt.intr[INT_VIA1IRQ] || interrupt.intr[INT_VIA2IRQ]) &&
+
+		} else if ((interrupt.intr[INT_VIA1IRQ] || interrupt.intr[INT_VIA2IRQ]) && !jammed &&
 				   (!i_flag || (opflags & OPFLAG_IRQ_DISABLED)) && !(opflags & OPFLAG_IRQ_ENABLED)) {
 			if (cycle_counter - first_irq_cycle >= 2) {
 				state = 0x0008;

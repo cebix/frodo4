@@ -595,7 +595,8 @@ int MOS6502_1541::EmulateLine(int cycles_left)
 handle_int:
 		if (interrupt.intr[INT_RESET1541]) {
 			Reset();
-		} else if ((interrupt.intr[INT_VIA1IRQ] || interrupt.intr[INT_VIA2IRQ]) && !i_flag) {
+
+		} else if ((interrupt.intr[INT_VIA1IRQ] || interrupt.intr[INT_VIA2IRQ]) && !i_flag && !jammed) {
 			push_byte(pc >> 8);
 			push_byte(pc);
 			push_flags(false);
