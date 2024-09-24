@@ -23,6 +23,7 @@
 
 #include <SDL.h>
 
+#include <chrono>
 #include <string>
 
 
@@ -34,15 +35,6 @@ constexpr int DISPLAY_Y = 0x110;
 constexpr int DISPLAY_X = 0x180;
 constexpr int DISPLAY_Y = 0x110;
 #endif
-
-
-// LED states
-enum {
-	LED_OFF,		// LED off
-	LED_ON,			// LED on (green)
-	LED_ERROR_ON,	// LED blinking (red), currently on
-	LED_ERROR_OFF	// LED blinking, currently off
-};
 
 
 class C64;
@@ -57,14 +49,19 @@ public:
 	void Pause();
 	void Resume();
 
+	void NewPrefs(const Prefs *prefs);
+
 	void Update();
-	void UpdateLEDs(int l0, int l1, int l2, int l3);
-	void UpdateSpeedometer(int speed);
+
+	void SetLEDs(int l0, int l1, int l2, int l3);
+	void SetSpeedometer(int speed);
+	void ShowNotification(std::string s);
+
 	uint8_t *BitmapBase();
 	int BitmapXMod();
+
 	void PollKeyboard(uint8_t *key_matrix, uint8_t *rev_matrix, uint8_t *joystick);
 	bool NumLock();
-	void NewPrefs(const Prefs *prefs);
 
 private:
 	void init_colors(int palette_prefs);
@@ -83,6 +80,7 @@ private:
 
 	int led_state[4];
 	int old_led_state[4];
+	SDL_TimerID pulse_timer = 0;		// Timer for LED error blinking
 
 	SDL_Window * the_window = nullptr;
 	SDL_Renderer * the_renderer = nullptr;
@@ -91,15 +89,11 @@ private:
 	uint8_t * pixel_buffer = nullptr;	// Buffer for VIC to draw into
 	uint32_t palette[256];				// Mapping of VIC color values to native ARGB
 
-	char speedometer_string[16];		// Speedometer text
-	SDL_TimerID pulse_timer = 0;		// Timer for LED error blinking
+	char speedometer_string[16];		// Speedometer text (screen code)
+	char notification[46];				// Notification text (screen code)
+	std::chrono::time_point<std::chrono::steady_clock> notification_time;	// Time of notification
 
 	bool num_locked = false;			// For keyboard joystick swap
 };
-
-
-// Exported functions
-extern long ShowRequester(const char *str, const char *button1, const char *button2 = nullptr);
-
 
 #endif

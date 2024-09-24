@@ -1350,5 +1350,5 @@
 		case 0x92:
 		case 0xb2:
 		case 0xd2:
-			illegal_op(read_byte(pc - 1), pc - 1);
-			break;
+			illegal_op(pc - 1);
+			ENDOP(2);

@@ -79,8 +79,9 @@
 #include "CIA.h"
 #include "REU.h"
 #include "IEC.h"
-#include "Display.h"
 #include "Version.h"
+
+#include <format>
 
 
 /*
@@ -575,6 +576,7 @@ void MOS6510::Reset()
 	// Read reset vector
 	pc = read_word(0xfffc);
 	state = 0;
+	jammed = false;
 }
 
 
@@ -582,14 +584,18 @@ void MOS6510::Reset()
  *  Illegal opcode encountered
  */
 
-void MOS6510::illegal_op(uint8_t op, uint16_t at)
+void MOS6510::illegal_op(uint16_t adr)
 {
-	char illop_msg[80];
+	// Notify user once
+	if (! jammed) {
+		std::string s = std::format("C64 crashed at ${:04X}, press F12 to reset", adr);
+		the_c64->ShowNotification(s);
+		jammed = true;
+	}
 
-	sprintf(illop_msg, "Illegal opcode %02x at %04x.", op, at);
-	ShowRequester(illop_msg, "Reset");
-	the_c64->Reset();
-	Reset();
+	// Keep executing opcode
+	--pc;
+	state = 0;
 }
 
 
@@ -637,7 +643,7 @@ void MOS6510::EmulateCycle()
 		// Extension opcode
 		case O_EXT:
 			if (pc < 0xe000) {
-				illegal_op(0xf2, pc - 1);
+				illegal_op(pc - 1);
 				break;
 			}
 			switch (read_byte(pc++)) {
@@ -679,13 +685,13 @@ void MOS6510::EmulateCycle()
 					pc = 0xedac;
 					Last;
 				default:
-					illegal_op(0xf2, pc - 1);
+					illegal_op(pc - 1);
 					break;
 			}
 			break;
 
 		default:
-			illegal_op(op, pc - 1);
+			illegal_op(pc - 1);
 			break;
 	}
 }

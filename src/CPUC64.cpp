@@ -80,8 +80,9 @@
 #include "CIA.h"
 #include "REU.h"
 #include "IEC.h"
-#include "Display.h"
 #include "Version.h"
+
+#include <format>
 
 
 /*
@@ -621,6 +622,7 @@ void MOS6510::Reset()
 
 	// Read reset vector
 	jump(read_word(0xfffc));
+	jammed = false;
 }
 
 
@@ -628,14 +630,17 @@ void MOS6510::Reset()
  *  Illegal opcode encountered
  */
 
-void MOS6510::illegal_op(uint8_t op, uint16_t at)
+void MOS6510::illegal_op(uint16_t adr)
 {
-	char illop_msg[80];
+	// Notify user once
+	if (! jammed) {
+		std::string s = std::format("C64 crashed at ${:04X}, press F12 to reset", adr);
+		the_c64->ShowNotification(s);
+		jammed = true;
+	}
 
-	sprintf(illop_msg, "Illegal opcode %02x at %04x.", op, at);
-	ShowRequester(illop_msg, "Reset");
-	the_c64->Reset();
-	Reset();
+	// Keep executing opcode
+	--pc;
 }
 
 
@@ -714,10 +719,8 @@ handle_int:
 		// Extension opcode
 		case 0xf2:
 			if (pc < 0xe000) {
-				illegal_op(0xf2, pc - 1);
-				break;
-			}
-			switch (read_byte_imm()) {
+				illegal_op(pc - 1);
+			} else switch (read_byte_imm()) {
 				case 0x00:
 					ram[0x90] |= TheIEC->Out(ram[0x95], ram[0xa3] & 0x80);
 					c_flag = false;
@@ -756,10 +759,10 @@ handle_int:
 					jump(0xedac);
 					break;
 				default:
-					illegal_op(0xf2, pc - 1);
+					illegal_op(pc - 1);
 					break;
 			}
-			break;
+			ENDOP(2);
 		}
 	}
 

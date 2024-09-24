@@ -31,12 +31,24 @@
 #include <filesystem>
 #include <format>
 namespace fs = std::filesystem;
+namespace chrono = std::chrono;
 
 #include <stdlib.h>
 
 
+// Drive LED display states
+enum {
+	LED_OFF = DRVLED_OFF,			// LED off
+	LED_ON = DRVLED_ON,				// LED on (green)
+	LED_ERROR_ON = DRVLED_ERROR,	// LED blinking (red), currently on
+	LED_ERROR_OFF					// LED blinking, currently off
+};
+
 // Period of LED error blinking
 constexpr uint32_t PULSE_ms = 400;
+
+// Notification timeout
+constexpr uint32_t NOTIFICATION_TIMEOUT_ms = 4000;
 
 
 // C64 color palettes based on measurements by Philip "Pepto" Timmermann <pepto@pepto.de>
@@ -69,10 +81,6 @@ static const uint8_t palette_colodore_blue[16] = {
 };
 
 
-// For requester
-static SDL_Window * c64_window = nullptr;
-
-
 // Colors for speedometer/drive LEDs
 enum {
 	black = 0,
@@ -92,6 +100,7 @@ enum {
 C64Display::C64Display(C64 * c64) : the_c64(c64)
 {
 	speedometer_string[0] = 0;
+	notification[0] = 0;
 
 	// Create window and renderer
 	uint32_t flags;
@@ -113,8 +122,6 @@ C64Display::C64Display(C64 * c64) : the_c64(c64)
 	SDL_SetWindowTitle(the_window, VERSION_STRING);
 	SDL_SetWindowMinimumSize(the_window, DISPLAY_X, DISPLAY_Y);
 	SDL_RenderSetLogicalSize(the_renderer, DISPLAY_X, DISPLAY_Y);
-
-	c64_window = the_window;
 
 	// Clear screen to black
 	SDL_SetRenderDrawColor(the_renderer, 0, 0, 0, 255);
@@ -148,6 +155,9 @@ C64Display::C64Display(C64 * c64) : the_c64(c64)
 	if (pulse_timer == 0) {
 		error_and_quit(std::format("Couldn't create SDL pulse timer ({})\n", SDL_GetError()));
 	}
+
+	// Show greeting
+	ShowNotification("Welcome to Frodo, press F10 for settings");
 }
 
 
@@ -169,8 +179,6 @@ C64Display::~C64Display()
 	if (the_window) {
 		SDL_DestroyWindow(the_window);
 	}
-
-	c64_window = nullptr;
 }
 
 
@@ -223,10 +231,10 @@ void C64Display::NewPrefs(const Prefs *prefs)
 
 
 /*
- *  Update drive LED display (deferred until Update())
+ *  Set drive LED display (display is deferred until Update())
  */
 
-void C64Display::UpdateLEDs(int l0, int l1, int l2, int l3)
+void C64Display::SetLEDs(int l0, int l1, int l2, int l3)
 {
 	led_state[0] = l0;
 	led_state[1] = l1;
@@ -236,15 +244,100 @@ void C64Display::UpdateLEDs(int l0, int l1, int l2, int l3)
 
 
 /*
+ *  Show notification to user (display is deferred until Update())
+ */
+
+void C64Display::ShowNotification(std::string s)
+{
+	// Convert message to screen codes
+	unsigned size = s.length();
+	if (size >= sizeof(notification)) {
+		size = sizeof(notification) - 1;
+	}
+	for (unsigned i = 0; i < size; ++i) {
+		char c = s[i];
+		if (c == '@') {
+			c = 0x00;
+		} else if ((c >= 'a') && (c <= 'z')) {
+			c ^= 0x60;
+		}
+		notification[i] = c;
+	}
+	notification[size] = '\0';
+
+	// Remember notification time
+	notification_time = chrono::steady_clock::now();
+}
+
+
+/*
+ *  LED error blink
+ */
+
+uint32_t C64Display::pulse_handler_static(uint32_t interval, void * arg)
+{
+	C64Display * disp = static_cast<C64Display *>(arg);
+	disp->pulse_handler();
+	return interval;
+}
+
+void C64Display::pulse_handler()
+{
+	for (int i = 0; i < 4; ++i) {
+		switch (led_state[i]) {
+			case LED_ERROR_ON:
+				led_state[i] = LED_ERROR_OFF;
+				break;
+			case LED_ERROR_OFF:
+				led_state[i] = LED_ERROR_ON;
+				break;
+		}
+	}
+}
+
+
+/*
+ *  Set speedometer display (deferred until Update())
+ */
+
+void C64Display::SetSpeedometer(int speed)
+{
+	static int delay = 0;
+
+	if (delay >= 20) {
+		delay = 0;
+		if (speed == 100) {
+			speedometer_string[0] = '\0';  // hide if speed = 100%
+		} else {
+			sprintf(speedometer_string, "%d%%", speed);
+		}
+	} else {
+		delay++;
+	}
+}
+
+
+/*
  *  Redraw bitmap
  */
 
 void C64Display::Update()
 {
+	// Draw notification
+	if (notification[0]) {
+		int elapsed_ms = chrono::duration_cast<chrono::milliseconds>(chrono::steady_clock::now() - notification_time).count();
+		if (elapsed_ms > NOTIFICATION_TIMEOUT_ms) {
+			notification[0] = 0;
+		} else {
+			draw_string(5, 5, notification, black);
+			draw_string(4, 4, notification, shine_gray);
+		}
+	}
+
 	if (ThePrefs.ShowLEDs) {
 
 		// Draw speedometer/LEDs
-		draw_string(8, DISPLAY_Y - 8, speedometer_string, black);
+		draw_string(9, DISPLAY_Y - 8, speedometer_string, black);
 		draw_string(8, DISPLAY_Y - 9, speedometer_string, shine_gray);
 
 		for (unsigned i = 0; i < 4; ++i) {
@@ -330,7 +423,7 @@ void C64Display::fill_rect(const SDL_Rect & r, uint8_t color) const
 }
 
 /*
- *  Draw string into pixel buffer using the C64 ROM font
+ *  Draw string into pixel buffer using the C64 lower-case ROM font
  */
 
 void C64Display::draw_string(unsigned x, unsigned y, const char *str, uint8_t front_color) const
@@ -349,53 +442,6 @@ void C64Display::draw_string(unsigned x, unsigned y, const char *str, uint8_t fr
 			p += DISPLAY_X;
 		}
 		pb += 8;
-	}
-}
-
-
-/*
- *  LED error blink
- */
-
-uint32_t C64Display::pulse_handler_static(uint32_t interval, void * arg)
-{
-	C64Display * disp = static_cast<C64Display *>(arg);
-	disp->pulse_handler();
-	return interval;
-}
-
-void C64Display::pulse_handler()
-{
-	for (int i = 0; i < 4; ++i) {
-		switch (led_state[i]) {
-			case LED_ERROR_ON:
-				led_state[i] = LED_ERROR_OFF;
-				break;
-			case LED_ERROR_OFF:
-				led_state[i] = LED_ERROR_ON;
-				break;
-		}
-	}
-}
-
-
-/*
- *  Update speedometer display (deferred until Update())
- */
-
-void C64Display::UpdateSpeedometer(int speed)
-{
-	static int delay = 0;
-
-	if (delay >= 20) {
-		delay = 0;
-		if (speed == 100) {
-			speedometer_string[0] = '\0';  // hide if speed = 100%
-		} else {
-			sprintf(speedometer_string, "%d%%", speed);
-		}
-	} else {
-		delay++;
 	}
 }
 
@@ -669,11 +715,13 @@ void C64Display::PollKeyboard(uint8_t *key_matrix, uint8_t *rev_matrix, uint8_t 
 
 					// Turn off 1541 processor emulation and mount directory
 					the_c64->SetEmul1541Proc(false, filename);
+					ShowNotification("Directory mounted");
 
 				} else if (IsMountableFile(filename, type)) {
 
 					// Mount disk image file
 					the_c64->SetEmul1541Proc(ThePrefs.Emul1541Proc, filename);
+					ShowNotification("Disk image file mounted");
 
 				} else if (IsSnapshotFile(filename)) {
 
@@ -683,7 +731,11 @@ void C64Display::PollKeyboard(uint8_t *key_matrix, uint8_t *rev_matrix, uint8_t 
 				} else if (IsBASICProgram(filename)) {
 
 					// Load BASIC file directly into RAM
-					the_c64->DMALoad(filename);
+					std::string message;
+					if (the_c64->DMALoad(filename, message)) {
+						message = "Program loaded, type RUN to start";
+					}
+					ShowNotification(message);
 				}
 
 				SDL_free(filename);
@@ -749,15 +801,4 @@ void C64Display::init_colors(int palette_prefs)
 	palette[shadow_gray] = (0x80 << 16) | (0x80 << 8) | (0x80 << 0);
 	palette[red]         = (0xf0 << 16) | (0x00 << 8) | (0x00 << 0);
 	palette[green]       = (0x00 << 16) | (0xf0 << 8) | (0x00 << 0);
-}
-
-
-/*
- *  Show a requester (error message)
- */
-
-long int ShowRequester(const char *a, const char *b, const char *)
-{
-	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_WARNING, VERSION_STRING, a, c64_window);
-	return 1;
 }

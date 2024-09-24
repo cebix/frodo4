@@ -40,7 +40,6 @@ enum {
 
 class C64;
 class Job1541;
-class C64Display;
 class MOS6526_2;
 struct MOS6502State;
 
@@ -48,7 +47,7 @@ struct MOS6502State;
 // 6502 emulation (1541)
 class MOS6502_1541 {
 public:
-	MOS6502_1541(C64 *c64, Job1541 *job, C64Display *disp, uint8_t *Ram, uint8_t *Rom);
+	MOS6502_1541(C64 * c64, Job1541 * job, uint8_t * Ram, uint8_t * Rom);
 	~MOS6502_1541();
 
 #ifdef FRODO_SC
@@ -100,16 +99,15 @@ private:
 	void write_zp(uint16_t adr, uint8_t byte);
 
 	void jump(uint16_t adr);
-	void illegal_op(uint8_t op, uint16_t at);
+	void illegal_op(uint16_t adr);
 
 	void do_adc(uint8_t byte);
 	void do_sbc(uint8_t byte);
 
-	uint8_t *ram;			// Pointer to main RAM
-	uint8_t *rom;			// Pointer to ROM
-	C64 *the_c64;			// Pointer to C64 object
-	C64Display *the_display; // Pointer to C64 display object
-	Job1541 *the_job;		// Pointer to 1541 job object
+	uint8_t * ram;			// Pointer to main RAM
+	uint8_t * rom;			// Pointer to ROM
+	C64 * the_c64;			// Pointer to C64 object
+	Job1541 * the_job;		// Pointer to 1541 job object
 
 	uint32_t cycle_counter;
 
@@ -122,6 +120,8 @@ private:
 	bool v_flag, d_flag, i_flag, c_flag;
 	uint8_t a, x, y, sp;
 	uint16_t pc;
+
+	bool jammed;	// Flag: CPU jammed, user notified
 
 #ifdef FRODO_SC
 	uint32_t first_irq_cycle;

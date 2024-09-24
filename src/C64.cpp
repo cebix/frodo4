@@ -131,14 +131,14 @@ C64::C64() : quit_requested(false), prefs_editor_requested(false), load_snapshot
 	TheCPU = new MOS6510(this, RAM, Basic, Kernal, Char, Color);
 
 	TheJob1541 = new Job1541(RAM1541);
-	TheCPU1541 = new MOS6502_1541(this, TheJob1541, TheDisplay, RAM1541, ROM1541);
+	TheCPU1541 = new MOS6502_1541(this, TheJob1541, RAM1541, ROM1541);
 	TheJob1541->SetCPU(TheCPU1541);
 
 	TheVIC = TheCPU->TheVIC = new MOS6569(this, TheDisplay, TheCPU, RAM, Char, Color);
 	TheSID = TheCPU->TheSID = new MOS6581;
 	TheCIA1 = TheCPU->TheCIA1 = new MOS6526_1(TheCPU, TheVIC);
 	TheCIA2 = TheCPU->TheCIA2 = TheCPU1541->TheCIA2 = new MOS6526_2(TheCPU, TheVIC, TheCPU1541);
-	TheIEC = TheCPU->TheIEC = new IEC(TheDisplay);
+	TheIEC = TheCPU->TheIEC = new IEC(this);
 	TheREU = TheCPU->TheREU = new REU(TheCPU);
 
 	// Initialize joystick variables
@@ -550,7 +550,12 @@ void C64::vblank()
 
 	// Handle request for snapshot loading
 	if (load_snapshot_requested) {
-		LoadSnapshot(requested_snapshot, &ThePrefs);
+		std::string error;
+		if (LoadSnapshot(requested_snapshot, &ThePrefs, error)) {
+			ShowNotification("Snapshot loaded");
+		} else {
+			ShowNotification(error);
+		}
 		load_snapshot_requested = false;
 	}
 
@@ -596,7 +601,7 @@ void C64::vblank()
 		}
 	}
 
-	TheDisplay->UpdateSpeedometer(speed_index);
+	TheDisplay->SetSpeedometer(speed_index);
 }
 
 
@@ -1013,11 +1018,11 @@ void C64::RestoreSnapshot(const Snapshot * s)
  *  Save snapshot file (emulation must be paused and in VBlank)
  */
 
-bool C64::SaveSnapshot(const std::string & filename)
+bool C64::SaveSnapshot(const std::string & filename, std::string & ret_error_msg)
 {
 	FILE * f = fopen(filename.c_str(), "wb");
 	if (f == nullptr) {
-		ShowRequester("Can't create snapshot file", "OK", nullptr);
+		ret_error_msg = "Can't create snapshot file";
 		return false;
 	}
 
@@ -1028,7 +1033,7 @@ bool C64::SaveSnapshot(const std::string & filename)
 	// to make snapshot files portable
 
 	if (fwrite(s.get(), sizeof(Snapshot), 1, f) != 1) {
-		ShowRequester("Error writing to snapshot file", "OK", nullptr);
+		ret_error_msg = "Error writing to snapshot file";
 		fclose(f);
 		return false;
 	}
@@ -1042,18 +1047,18 @@ bool C64::SaveSnapshot(const std::string & filename)
  *  Load snapshot file (emulation must be paused and in VBlank)
  */
 
-bool C64::LoadSnapshot(const std::string & filename, Prefs * prefs)
+bool C64::LoadSnapshot(const std::string & filename, Prefs * prefs, std::string & ret_error_msg)
 {
 	FILE * f = fopen(filename.c_str(), "rb");
 	if (f == nullptr) {
-		ShowRequester("Can't open snapshot file", "OK", nullptr);
+		ret_error_msg = "Can't open snapshot file";
 		return false;
 	}
 
 	auto s = std::make_unique<Snapshot>();
 
 	if (fread(s.get(), sizeof(Snapshot), 1, f) != 1) {
-		ShowRequester("Error reading snapshot file", "OK", nullptr);
+		ret_error_msg = "Error reading snapshot file";
 		fclose(f);
 		return false;
 	}
@@ -1061,7 +1066,7 @@ bool C64::LoadSnapshot(const std::string & filename, Prefs * prefs)
 	fclose(f);
 
 	if (memcmp(s->magic, SNAPSHOT_HEADER, sizeof(s->magic)) != 0) {
-		ShowRequester("Not a Frodo snapshot file", "OK", nullptr);
+		ret_error_msg = "Not a Frodo snapshot file";
 		return false;
 	}
 
@@ -1088,19 +1093,19 @@ bool C64::LoadSnapshot(const std::string & filename, Prefs * prefs)
  *  Load C64 program directly into RAM
  */
 
-bool C64::DMALoad(const std::string & filename)
+bool C64::DMALoad(const std::string & filename, std::string & ret_error_msg)
 {
 	// Open file
 	FILE * f = fopen(filename.c_str(), "rb");
 	if (f == nullptr) {
-		ShowRequester("Can't open program file", "OK", nullptr);
+		ret_error_msg = "Can't open program file";
 		return false;
 	}
 
 	// Read load address
 	uint8_t header[2];
 	if (fread(header, sizeof(header), 1, f) != 1) {
-		ShowRequester("Error reading program file", "OK", nullptr);
+		ret_error_msg = "Error reading program file";
 		return false;
 	}
 
@@ -1212,4 +1217,24 @@ bool IsSnapshotFile(const char * filename)
 	fclose(f);
 
 	return memcmp(magic, SNAPSHOT_HEADER, sizeof(magic)) == 0;
+}
+
+
+/*
+ *  Set drive LEDs (forward to display)
+ */
+
+void C64::SetDriveLEDs(int l0, int l1, int l2, int l3)
+{
+	TheDisplay->SetLEDs(l0, l1, l2, l3);
+}
+
+
+/*
+ *  Show notification to user (forward to display)
+ */
+
+void C64::ShowNotification(std::string s)
+{
+	TheDisplay->ShowNotification(s);
 }

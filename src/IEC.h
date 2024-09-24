@@ -129,14 +129,15 @@ struct c64_dir_entry {
 	uint8_t sa_lo, sa_hi;	// C64 start address
 };
 
+
+class C64;
 class Drive;
-class C64Display;
 class Prefs;
 
 // Class for complete IEC bus system with drives 8..11
 class IEC {
 public:
-	IEC(C64Display *display);
+	IEC(C64 * c64);
 	~IEC();
 
 	void Reset();
@@ -165,7 +166,7 @@ private:
 	uint8_t data_out(uint8_t byte, bool eoi);
 	uint8_t data_in(uint8_t &byte);
 
-	C64Display *the_display;	// Pointer to display object (for drive LEDs)
+	C64 * the_c64;	// Pointer to C64 object (for drive LEDs)
 
 	uint8_t name_buf[NAMEBUF_LENGTH];	// Buffer for file names and command strings
 	uint8_t *name_ptr;		// Pointer for reception of file name
@@ -253,7 +254,7 @@ extern char petscii2ascii(uint8_t c);
 extern void petscii2ascii(char *dest, const uint8_t *src, int max);
 
 // Check whether file is a mountable disk image or archive file, return type
-extern bool IsMountableFile(const std::string & path, int &type);
+extern bool IsMountableFile(const std::string & path, int & ret_type);
 
 // Read directory of mountable disk image or archive file into c64_dir_entry vector
 extern bool ReadDirectory(const std::string & path, int type, std::vector<c64_dir_entry> &vec);

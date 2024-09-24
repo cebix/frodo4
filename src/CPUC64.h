@@ -110,7 +110,7 @@ private:
 	void write_zp(uint16_t adr, uint8_t byte);
 
 	void new_config();
-	void illegal_op(uint8_t op, uint16_t at);
+	void illegal_op(uint16_t adr);
 
 	void do_adc(uint8_t byte);
 	void do_sbc(uint8_t byte);
@@ -133,6 +133,8 @@ private:
 	uint8_t a, x, y, sp;
 
 	uint16_t pc;
+
+	bool jammed;	// Flag: CPU jammed, user notified
 
 #ifdef FRODO_SC
 	uint32_t first_irq_cycle, first_nmi_cycle;

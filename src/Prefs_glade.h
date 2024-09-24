@@ -28,6 +28,8 @@
 
 #include <SDL.h>
 
+#include <format>
+
 
 // GTK builder object
 static GtkBuilder *builder = nullptr;
@@ -595,22 +597,27 @@ extern "C" void on_load_snapshot(GtkMenuItem *menuitem, gpointer user_data)
 	gtk_button_set_label(GTK_BUTTON(snapshot_accept_button), "Load");
 
 	bool load_ok = false;
+	std::string message;
+
 	char * filename = nullptr;
 
 	gint res = gtk_dialog_run(GTK_DIALOG(snapshot_dialog));
 	if (res == GTK_RESPONSE_ACCEPT) {
 		filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(snapshot_dialog));
-		load_ok = TheC64->LoadSnapshot(filename, prefs);
+		load_ok = TheC64->LoadSnapshot(filename, prefs, message);
+		if (load_ok) {
+			message = std::format("Snapshot file '{}' loaded.", filename);
+		}
 		SAM_GetState(TheC64);	// Get new state from snapshot
 		set_values();			// Drive settings may have changed
 	}
 
 	gtk_widget_hide(snapshot_dialog);
 
-	if (load_ok) {
-		GtkWidget * msg = gtk_message_dialog_new(prefs_win,
-			GTK_DIALOG_MODAL, GTK_MESSAGE_INFO, GTK_BUTTONS_OK,
-			"Snapshot file '%s' loaded.", filename
+	if (res == GTK_RESPONSE_ACCEPT) {
+		GtkWidget * msg = gtk_message_dialog_new(prefs_win, GTK_DIALOG_MODAL,
+			load_ok ? GTK_MESSAGE_INFO : GTK_MESSAGE_ERROR, GTK_BUTTONS_OK,
+			message.c_str()
 		);
 		gtk_dialog_run(GTK_DIALOG(msg));
 		gtk_widget_destroy(msg);
@@ -628,21 +635,26 @@ extern "C" void on_save_snapshot(GtkMenuItem *menuitem, gpointer user_data)
 	gtk_button_set_label(GTK_BUTTON(snapshot_accept_button), "Save");
 
 	bool save_ok = false;
+	std::string message;
+
 	char * filename = nullptr;
 
 	gint res = gtk_dialog_run(GTK_DIALOG(snapshot_dialog));
 	if (res == GTK_RESPONSE_ACCEPT) {
 		filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(snapshot_dialog));
-		save_ok = TheC64->SaveSnapshot(filename);
+		save_ok = TheC64->SaveSnapshot(filename, message);
+		if (save_ok) {
+			message = std::format("Snapshot file '{}' saved.", filename);
+		}
 		SAM_GetState(TheC64);	// Saving a snapshot may advance the state a few cycles in Frodo SC
 	}
 
 	gtk_widget_hide(snapshot_dialog);
 
-	if (save_ok) {
-		GtkWidget * msg = gtk_message_dialog_new(prefs_win,
-			GTK_DIALOG_MODAL, GTK_MESSAGE_INFO, GTK_BUTTONS_OK,
-			"Snapshot file '%s' saved.", filename
+	if (res == GTK_RESPONSE_ACCEPT) {
+		GtkWidget * msg = gtk_message_dialog_new(prefs_win, GTK_DIALOG_MODAL,
+			save_ok ? GTK_MESSAGE_INFO : GTK_MESSAGE_ERROR, GTK_BUTTONS_OK,
+			message.c_str()
 		);
 		gtk_dialog_run(GTK_DIALOG(msg));
 		gtk_widget_destroy(msg);

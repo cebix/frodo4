@@ -44,11 +44,11 @@
 #include "sysdeps.h"
 
 #include "IEC.h"
+#include "C64.h"
 #include "1541fs.h"
 #include "1541d64.h"
 #include "1541t64.h"
 #include "Prefs.h"
-#include "Display.h"
 #include "Version.h"
 
 #include <filesystem>
@@ -99,7 +99,7 @@ Drive *IEC::create_drive(const std::string & path)
 	}
 }
 
-IEC::IEC(C64Display *display) : the_display(display)
+IEC::IEC(C64 * c64) : the_c64(c64)
 {
 	// Create drives 8..11
 	for (unsigned i = 0; i < 4; ++i) {
@@ -179,7 +179,7 @@ void IEC::UpdateLEDs()
 	int l2 = drive[2] ? drive[2]->LED : DRVLED_OFF;
 	int l3 = drive[3] ? drive[3]->LED : DRVLED_OFF;
 
-	the_display->UpdateLEDs(l0, l1, l2, l3);
+	the_c64->SetDriveLEDs(l0, l1, l2, l3);
 }
 
 
@@ -508,6 +508,7 @@ void Drive::set_error(int error, int track, int sector)
 	} else if (LED == DRVLED_ERROR) {
 		LED = DRVLED_OFF;
 	}
+
 	the_iec->UpdateLEDs();
 }
 
@@ -949,7 +950,7 @@ void petscii2ascii(char *dest, const uint8_t *src, int n)
  *  Check whether file is a mountable disk image or archive file, return type
  */
 
-bool IsMountableFile(const std::string & path, int & type)
+bool IsMountableFile(const std::string & path, int & ret_type)
 {
 	// Reject directories
 	if (fs::is_directory(path))
@@ -974,10 +975,10 @@ bool IsMountableFile(const std::string & path, int & type)
 	fclose(f);
 
 	if (IsImageFile(path, header, size)) {
-		type = FILE_IMAGE;
+		ret_type = FILE_IMAGE;
 		return true;
 	} else if (IsArchFile(path, header, size)) {
-		type = FILE_ARCH;
+		ret_type = FILE_ARCH;
 		return true;
 	} else {
 		return false;
@@ -1005,7 +1006,7 @@ bool ReadDirectory(const std::string & path, int type, std::vector<c64_dir_entry
 
 
 /*
- *  Check whether file is a mountable disk image or archive file, return type
+ *  Check whether file is likely to be a BASIC program
  */
 
 bool IsBASICProgram(const std::string & path)

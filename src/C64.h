@@ -87,16 +87,19 @@ public:
 
 	void MakeSnapshot(Snapshot * s);
 	void RestoreSnapshot(const Snapshot * s);
-	bool SaveSnapshot(const std::string & filename);
-	bool LoadSnapshot(const std::string & filename, Prefs * prefs);
+	bool SaveSnapshot(const std::string & filename, std::string & ret_error_msg);
+	bool LoadSnapshot(const std::string & filename, Prefs * prefs, std::string & ret_error_msg);
 
-	bool DMALoad(const std::string & filename);
+	bool DMALoad(const std::string & filename, std::string & ret_error_msg);
 
 	void SetPlayMode(PlayMode mode);
 	PlayMode GetPlayMode() const { return play_mode; }
 
 	void JoystickAdded(int32_t index);
 	void JoystickRemoved(int32_t instance_id);
+
+	void SetDriveLEDs(int l0, int l1, int l2, int l3);
+	void ShowNotification(std::string s);
 
 	uint8_t *RAM, *Basic, *Kernal,
 	        *Char, *Color;		// C64

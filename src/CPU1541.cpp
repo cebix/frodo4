@@ -67,15 +67,17 @@
 #include "1541gcr.h"
 #include "C64.h"
 #include "CIA.h"
-#include "Display.h"
+#include "IEC.h"
+
+#include <format>
 
 
 /*
  *  6502 constructor: Initialize registers
  */
 
-MOS6502_1541::MOS6502_1541(C64 *c64, Job1541 *job, C64Display *disp, uint8_t *Ram, uint8_t *Rom)
- : ram(Ram), rom(Rom), the_c64(c64), the_display(disp), the_job(job)
+MOS6502_1541::MOS6502_1541(C64 * c64, Job1541 * job, uint8_t * Ram, uint8_t * Rom)
+ : ram(Ram), rom(Rom), the_c64(c64), the_job(job)
 {
 	a = x = y = 0;
 	sp = 0xff;
@@ -126,6 +128,7 @@ void MOS6502_1541::Reset()
 
 	// Read reset vector
 	jump(read_word(0xfffc));
+	jammed = false;
 
 	// IEC lines and VIA registers
 	IECLines = 0x38;
@@ -386,7 +389,7 @@ inline void MOS6502_1541::write_byte(uint16_t adr, uint8_t byte)
 					the_job->SetMotor(pb_out & 0x04);
 				}
 				if ((old_pb_out ^ pb_out) & 0x08) {	// Bit 3: Drive LED
-					the_display->UpdateLEDs((pb_out & 8) ? LED_ON : LED_OFF, LED_OFF, LED_OFF, LED_OFF);
+					the_c64->SetDriveLEDs((pb_out & 8) ? DRVLED_ON : DRVLED_OFF, DRVLED_OFF, DRVLED_OFF, DRVLED_OFF);
 				}
 				break;
 		}
@@ -530,15 +533,17 @@ void MOS6502_1541::do_sbc(uint8_t byte)
  *  Illegal opcode encountered
  */
 
-void MOS6502_1541::illegal_op(uint8_t op, uint16_t at)
+void MOS6502_1541::illegal_op(uint16_t adr)
 {
-	char illop_msg[80];
-
-	sprintf(illop_msg, "1541: Illegal opcode %02x at %04x.", op, at);
-	if (ShowRequester(illop_msg, "Reset 1541", "Reset C64")) {
-		the_c64->Reset();
+	// Notify user once
+	if (! jammed) {
+		std::string s = std::format("1541 crashed at ${:04X}, press F12 to reset", adr);
+		the_c64->ShowNotification(s);
+		jammed = true;
 	}
-	Reset();
+
+	// Keep executing opcode
+	--pc;
 }
 
 
@@ -606,10 +611,8 @@ handle_int:
 		// Extension opcode
 		case 0xf2:
 			if (pc < 0xc000) {
-				illegal_op(0xf2, pc - 1);
-				break;
-			}
-			switch (read_byte_imm()) {
+				illegal_op(pc - 1);
+			} else switch (read_byte_imm()) {
 				case 0x00:	// Go to sleep in DOS idle loop if error flag is clear and no command received
 					Idle = !(ram[0x26c] | ram[0x7c]);
 					jump(0xebff);
@@ -623,10 +626,10 @@ handle_int:
 					jump(0xfd8b);
 					break;
 				default:
-					illegal_op(0xf2, pc - 1);
+					illegal_op(pc - 1);
 					break;
 			}
-			break;
+			ENDOP(2);
 		}
 
 		cycle_counter += last_cycles;
