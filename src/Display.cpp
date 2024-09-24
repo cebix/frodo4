@@ -163,6 +163,13 @@ C64Display::~C64Display()
 
 	delete[] pixel_buffer;
 
+	if (the_renderer) {
+		SDL_DestroyRenderer(the_renderer);
+	}
+	if (the_window) {
+		SDL_DestroyWindow(the_window);
+	}
+
 	c64_window = nullptr;
 }
 

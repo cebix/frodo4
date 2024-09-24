@@ -80,6 +80,8 @@ void Frodo::ReadyToRun()
 		if (! fs::exists(snapshot_path)) {
 			fs::create_directories(snapshot_path);
 		}
+
+		SDL_free(path);
 	}
 	ThePrefs.Load(prefs_path);
 
