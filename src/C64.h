@@ -116,6 +116,8 @@ public:
 	Job1541 *TheJob1541;
 
 private:
+	void load_rom(const std::string & which, const std::string & path, uint8_t * where, size_t size, const uint8_t * builtin);
+	void load_rom_files();
 	void init_memory();
 
 	void pause();

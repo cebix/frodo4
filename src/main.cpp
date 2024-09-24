@@ -43,23 +43,6 @@ Frodo * TheApp = nullptr;	// Application object
 C64 * TheC64 = nullptr;		// Global C64 object
 
 
-// ROM file names
-#ifndef DATADIR
-#define DATADIR
-#endif
-
-#define BASIC_ROM_FILE DATADIR "Basic ROM"
-#define KERNAL_ROM_FILE DATADIR "Kernal ROM"
-#define CHAR_ROM_FILE DATADIR "Char ROM"
-#define DRIVE_ROM_FILE DATADIR "1541 ROM"
-
-// Builtin ROMs
-#include "Basic_ROM.h"
-#include "Kernal_ROM.h"
-#include "Char_ROM.h"
-#include "1541_ROM.h"
-
-
 /*
  *  Process command line arguments
  */
@@ -111,7 +94,6 @@ void Frodo::ReadyToRun()
 
 	// Create and start C64
 	TheC64 = new C64;
-	load_rom_files();
 	TheC64->Run();
 
 	delete TheC64;
@@ -131,34 +113,6 @@ bool Frodo::RunPrefsEditor()
 		ThePrefs = *prefs;
 	}
 	return result;
-}
-
-
-/*
- *  Load C64 ROM files
- */
-
-static void load_rom(const char *which, const char *path, uint8_t *where, size_t size, const uint8_t *builtin)
-{
-	FILE *f = fopen(path, "rb");
-	if (f) {
-		size_t actual = fread(where, 1, size, f);
-		fclose(f);
-		if (actual == size)
-			return;
-	}
-
-	// Use builtin ROM
-	printf("%s ROM file (%s) not readable, using builtin.\n", which, path);
-	memcpy(where, builtin, size);
-}
-
-void Frodo::load_rom_files()
-{
-	load_rom("Basic", BASIC_ROM_FILE, TheC64->Basic, BASIC_ROM_SIZE, builtin_basic_rom);
-	load_rom("Kernal", KERNAL_ROM_FILE, TheC64->Kernal, KERNAL_ROM_SIZE, builtin_kernal_rom);
-	load_rom("Char", CHAR_ROM_FILE, TheC64->Char, CHAR_ROM_SIZE, builtin_char_rom);
-	load_rom("1541", DRIVE_ROM_FILE, TheC64->ROM1541, DRIVE_ROM_SIZE, builtin_drive_rom);
 }
 
 

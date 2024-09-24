@@ -41,8 +41,6 @@ public:
 	bool RunPrefsEditor();
 
 private:
-	void load_rom_files();
-
 	std::filesystem::path prefs_path;		// Pathname of current preferences file
 	std::filesystem::path snapshot_path;	// Directory for saving snapshots
 };

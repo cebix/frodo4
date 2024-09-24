@@ -135,6 +135,15 @@ void Prefs::Load(fs::path prefs_path)
 			} else if (keyword == "DrivePath11") {
 				DrivePath[3] = value;
 
+			} else if (keyword == "BasicROM") {
+				BasicROMPath = value;
+			} else if (keyword == "KernalROM") {
+				KernalROMPath = value;
+			} else if (keyword == "CharROM") {
+				CharROMPath = value;
+			} else if (keyword == "DriveROM") {
+				DriveROMPath = value;
+
 			} else if (keyword == "SIDType") {
 				if (value == "DIGITAL") {
 					SIDType = SIDTYPE_DIGITAL_6581;
@@ -222,6 +231,11 @@ bool Prefs::Save(fs::path prefs_path)
 	for (unsigned i = 0; i < 4; ++i) {
 		file << "DrivePath" << (i+8) << " = " << DrivePath[i] << std::endl;
 	}
+
+	file << "BasicROM" << " = " << BasicROMPath << std::endl;
+	file << "KernalROM" << " = " << KernalROMPath << std::endl;
+	file << "CharROM" << " = " << CharROMPath << std::endl;
+	file << "DriveROM" << " = " << DriveROMPath << std::endl;
 
 	file << "SIDType = ";
 	switch (SIDType) {

@@ -93,6 +93,11 @@ public:
 	bool Emul1541Proc;		// Enable processor-level 1541 emulation
 	bool SIDFilters;		// Emulate SID filters
 	bool ShowLEDs;			// Show status bar
+
+	std::string BasicROMPath;	// Path for BASIC ROM
+	std::string KernalROMPath;	// Path for Kernal ROM
+	std::string CharROMPath;	// Path for Char ROM
+	std::string DriveROMPath;	// Path for Drive ROM
 };
 
 

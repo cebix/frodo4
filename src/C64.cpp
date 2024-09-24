@@ -49,6 +49,13 @@ bool IsFrodoSC = false;
 #endif
 
 
+// Builtin ROMs
+#include "Basic_ROM.h"
+#include "Kernal_ROM.h"
+#include "Char_ROM.h"
+#include "1541_ROM.h"
+
+
 // Snapshot magic header
 #define SNAPSHOT_HEADER "FrodoSnapshot4\0\0"
 
@@ -111,11 +118,14 @@ C64::C64() : quit_requested(false), prefs_editor_requested(false), load_snapshot
 	RAM1541 = new uint8_t[DRIVE_RAM_SIZE];
 	ROM1541 = new uint8_t[DRIVE_ROM_SIZE];
 
+	// Open display
+	TheDisplay = new C64Display(this);
+
 	// Initialize memory
 	init_memory();
 
-	// Open display
-	TheDisplay = new C64Display(this);
+	// Load ROM files
+	load_rom_files();
 
 	// Create the chips
 	TheCPU = new MOS6510(this, RAM, Basic, Kernal, Char, Color);
@@ -179,6 +189,44 @@ C64::~C64()
 	delete[] ROM1541;
 
 	delete[] rewind_buffer;
+}
+
+
+/*
+ *  Load ROM files
+ */
+
+void C64::load_rom(const std::string & which, const std::string & path, uint8_t * where, size_t size, const uint8_t * builtin)
+{
+	if (! path.empty()) {
+		FILE * f = fopen(path.c_str(), "rb");
+		if (f) {
+			fseek(f, 0, SEEK_END);
+			long file_size = ftell(f);
+			fseek(f, 0, SEEK_SET);
+
+			if (file_size == size) {
+				size_t actual = fread(where, 1, size, f);
+				if (actual == size) {
+					fclose(f);
+					return;
+				}
+			}
+
+			fclose(f);
+		}
+	}
+
+	// Use builtin ROM
+	memcpy(where, builtin, size);
+}
+
+void C64::load_rom_files()
+{
+	load_rom("Basic", ThePrefs.BasicROMPath, Basic, BASIC_ROM_SIZE, builtin_basic_rom);
+	load_rom("Kernal", ThePrefs.KernalROMPath, Kernal, KERNAL_ROM_SIZE, builtin_kernal_rom);
+	load_rom("Char", ThePrefs.CharROMPath, Char, CHAR_ROM_SIZE, builtin_char_rom);
+	load_rom("1541", ThePrefs.DriveROMPath, ROM1541, DRIVE_ROM_SIZE, builtin_drive_rom);
 }
 
 
