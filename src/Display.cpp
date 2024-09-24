@@ -431,8 +431,8 @@ void C64Display::draw_string(unsigned x, unsigned y, const char *str, uint8_t fr
 	uint8_t *pb = pixel_buffer + DISPLAY_X*y + x;
 	char c;
 	while ((c = *str++) != 0) {
-		uint8_t *q = the_c64->Char + c*8 + 0x800;
-		uint8_t *p = pb;
+		const uint8_t * q = the_c64->BuiltinChar + c*8 + 0x800;
+		uint8_t * p = pb;
 		for (unsigned y = 0; y < 8; y++) {
 			uint8_t v = *q++;
 			for (unsigned x = 0; x < 8; ++x) {

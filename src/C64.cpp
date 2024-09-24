@@ -114,6 +114,7 @@ C64::C64() : quit_requested(false), prefs_editor_requested(false), load_snapshot
 	Basic = new uint8_t[BASIC_ROM_SIZE];
 	Kernal = new uint8_t[KERNAL_ROM_SIZE];
 	Char = new uint8_t[CHAR_ROM_SIZE];
+	BuiltinChar = builtin_char_rom;
 	Color = new uint8_t[COLOR_RAM_SIZE];
 	RAM1541 = new uint8_t[DRIVE_RAM_SIZE];
 	ROM1541 = new uint8_t[DRIVE_ROM_SIZE];
@@ -767,11 +768,13 @@ void C64::JoystickAdded(int32_t index)
 
 		ThePrefs.Joystick2Port = index + 1;
 		open_close_joystick(1, 0, ThePrefs.Joystick2Port);
+		ShowNotification("Controller assigned to port 2");
 
 	} else if (joy[0] == nullptr && ThePrefs.Joystick2Port != index + 1) {
 
 		ThePrefs.Joystick1Port = index + 1;
 		open_close_joystick(0, 0, ThePrefs.Joystick1Port);
+		ShowNotification("Controller assigned to port 1");
 	}
 }
 
@@ -787,12 +790,14 @@ void C64::JoystickRemoved(int32_t instance_id)
 		// Unassign joystick port 1
 		open_close_joystick(0, ThePrefs.Joystick1Port, 0);
 		ThePrefs.Joystick1Port = 0;
+		ShowNotification("Controller on port 1 removed");
 
 	} else if (joy[1] && SDL_JoystickInstanceID(joy[1]) == instance_id) {
 
 		// Unassign joystick port 2
 		open_close_joystick(1, ThePrefs.Joystick2Port, 0);
 		ThePrefs.Joystick2Port = 0;
+		ShowNotification("Controller on port 2 removed");
 	}
 }
 

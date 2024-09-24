@@ -101,22 +101,28 @@ public:
 	void SetDriveLEDs(int l0, int l1, int l2, int l3);
 	void ShowNotification(std::string s);
 
-	uint8_t *RAM, *Basic, *Kernal,
-	        *Char, *Color;		// C64
-	uint8_t *RAM1541, *ROM1541;	// 1541
+	uint8_t * RAM;				// C64 memories
+	uint8_t * Basic;
+	uint8_t * Kernal;
+	uint8_t * Char;
+	const uint8_t * BuiltinChar;
+	uint8_t * Color;
 
-	C64Display *TheDisplay;
+	uint8_t * RAM1541;			// 1541 memories
+	uint8_t * ROM1541;
 
-	MOS6510 *TheCPU;			// C64
-	MOS6569 *TheVIC;
-	MOS6581 *TheSID;
-	MOS6526_1 *TheCIA1;
-	MOS6526_2 *TheCIA2;
-	IEC *TheIEC;
-	REU *TheREU;
+	C64Display * TheDisplay;	// Display object
 
-	MOS6502_1541 *TheCPU1541;	// 1541
-	Job1541 *TheJob1541;
+	MOS6510 * TheCPU;			// C64 objects
+	MOS6569 * TheVIC;
+	MOS6581 * TheSID;
+	MOS6526_1 * TheCIA1;
+	MOS6526_2 * TheCIA2;
+	IEC * TheIEC;
+	REU * TheREU;
+
+	MOS6502_1541 * TheCPU1541;	// 1541 objects
+	Job1541 * TheJob1541;
 
 private:
 	void load_rom(const std::string & which, const std::string & path, uint8_t * where, size_t size, const uint8_t * builtin);
