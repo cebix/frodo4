@@ -54,21 +54,20 @@ void MOS6526::Reset()
 {
 	pra = prb = ddra = ddrb = 0;
 
-	ta = tb = 0xffff;
-	latcha = latchb = 1;
-
 	tod_10ths = tod_sec = tod_min = 0; tod_hr = 1;
 	ltc_10ths = ltc_sec = ltc_min = 0; ltc_hr = 1;
 	alm_10ths = alm_sec = alm_min = alm_hr = 0;
 
 	sdr = icr = cra = crb = int_mask = 0;
 
+	ta.counter   = tb.counter   = 0xffff;
+	ta.latch     = tb.latch     = 1;
+	ta.pb_toggle = tb.pb_toggle = false;
+
 	tod_counter = 0;
 	tod_halted = true;
 	tod_latched = false;
 	tod_alarm = false;
-
-	tb_cnt_phi2 = tb_cnt_ta = false;
 }
 
 void MOS6526_1::Reset()
@@ -107,12 +106,13 @@ void MOS6526::GetState(MOS6526State * s) const
 	s->ddra = ddra;
 	s->ddrb = ddrb;
 
-	s->ta_lo = ta & 0xff;
-	s->ta_hi = ta >> 8;
-	s->tb_lo = tb & 0xff;
-	s->tb_hi = tb >> 8;
-	s->latcha = latcha;
-	s->latchb = latchb;
+	s->ta_lo = ta.counter & 0xff;
+	s->ta_hi = ta.counter >> 8;
+	s->tb_lo = tb.counter & 0xff;
+	s->tb_hi = tb.counter >> 8;
+	s->ta_latch = ta.latch;
+	s->tb_latch = tb.latch;
+
 	s->cra = cra;
 	s->crb = crb;
 
@@ -139,18 +139,19 @@ void MOS6526::GetState(MOS6526State * s) const
 	s->tod_latched = tod_latched;
 	s->tod_alarm = tod_alarm;
 
-	s->has_new_cra = false;
-	s->has_new_crb = false;
-	s->ta_toggle = false;
-	s->tb_toggle = false;
-	s->ta_state = (cra & 1) ? T_COUNT : T_STOP;
-	s->tb_state = (crb & 1) ? T_COUNT : T_STOP;
-	s->new_cra = 0;
-	s->new_crb = 0;
-	s->ta_output = 0;
-	s->tb_output = 0;
+	s->ta_pb_toggle = ta.pb_toggle;
+	s->tb_pb_toggle = tb.pb_toggle;
+	s->ta_output = false;
+	s->tb_output = false;
+	s->ta_count_delay = 0;
+	s->tb_count_delay = 0;
+	s->ta_load_delay = 0;
+	s->tb_load_delay = 0;
+	s->ta_oneshot_delay = 0;
+	s->tb_oneshot_delay = 0;
 
 	s->irq_delay = 0;
+	s->read_icr = false;
 }
 
 
@@ -165,10 +166,11 @@ void MOS6526::SetState(const MOS6526State * s)
 	ddra = s->ddra;
 	ddrb = s->ddrb;
 
-	ta = (s->ta_hi << 8) | s->ta_lo;
-	tb = (s->tb_hi << 8) | s->tb_lo;
-	latcha = s->latcha;
-	latchb = s->latchb;
+	ta.counter = (s->ta_hi << 8) | s->ta_lo;
+	tb.counter = (s->tb_hi << 8) | s->tb_lo;
+	ta.latch = s->ta_latch;
+	tb.latch = s->tb_latch;
+
 	cra = s->cra;
 	crb = s->crb;
 
@@ -195,8 +197,8 @@ void MOS6526::SetState(const MOS6526State * s)
 	tod_latched = s->tod_latched;
 	tod_alarm = s->tod_alarm;
 
-	tb_cnt_phi2 = ((crb & 0x61) == 0x01);
-	tb_cnt_ta = ((crb & 0x41) == 0x41);		// Ignore CNT, which is pulled high
+	ta.pb_toggle = s->ta_pb_toggle;
+	tb.pb_toggle = s->tb_pb_toggle;
 }
 
 void MOS6526_2::SetState(const MOS6526State * s)
@@ -212,9 +214,9 @@ void MOS6526_2::SetState(const MOS6526State * s)
  *  Output TA/TB to PB6/7
  */
 
-uint8_t MOS6526::timer_on_pb(uint8_t byte)
+uint8_t MOS6526::timer_on_pb(uint8_t byte) const
 {
-	// Not emulated
+	// TODO: Not emulated
 	return byte;
 }
 
@@ -348,35 +350,36 @@ void MOS6526::EmulateLine(int cycles)
 
 	// Timer A
 	if ((cra & 0x21) == 0x01) {		// Counting Phi2 and started?
-		ta = tmp = ta - cycles;		// Decrement timer
+		ta.counter = tmp = ta.counter - cycles;		// Decrement timer
 
 		if (tmp > 0xffff) {			// Underflow?
-			ta = latcha;			// Reload timer
+			ta.counter = ta.latch;	// Reload timer
 
 			if (cra & 8) {			// One-shot?
-				cra &= 0xfe;
+				cra &= ~1;			// Stop timer
 			}
+
 			set_int_flag(1);
-			if (tb_cnt_ta) {		// Timer B counting underflows of Timer A?
-				tb = tmp = tb - 1;	// tmp = --tb doesn't work
+
+			if ((crb & 0x41) == 0x41) {		// Timer B counting underflows of Timer A and started?
+				tb.counter = tmp = tb.counter - 1;
 				if (tmp > 0xffff) goto tb_underflow;
 			}
 		}
 	}
 
 	// Timer B
-	if (tb_cnt_phi2) {
-		tb = tmp = tb - cycles;		// Decrement timer
+	if ((crb & 0x61) == 0x01) {		// Count Phi2 and started?
+		tb.counter = tmp = tb.counter - cycles;		// Decrement timer
 
 		if (tmp > 0xffff) {			// Underflow?
 tb_underflow:
-			tb = latchb;
+			tb.counter = tb.latch;	// Reload timer
 
 			if (crb & 8) {			// One-shot?
-				crb &= 0xfe;
-				tb_cnt_phi2 = false;
-				tb_cnt_ta = false;
+				crb &= ~1;			// Stop timer
 			}
+
 			set_int_flag(2);
 		}
 	}

@@ -62,13 +62,10 @@ protected:
 
 	void check_tod_alarm();
 
-	uint8_t timer_on_pb(uint8_t prb);
-
 	MOS6510 * the_cpu;	// Pointer to CPU object
 
+	// Registers
 	uint8_t pra, prb, ddra, ddrb;
-
-	uint16_t ta, tb, latcha, latchb;
 
 	uint8_t tod_10ths, tod_sec, tod_min, tod_hr;	// TOD counter
 	uint8_t ltc_10ths, ltc_sec, ltc_min, ltc_hr;	// TOD latch
@@ -77,28 +74,41 @@ protected:
 	uint8_t sdr, icr, cra, crb;
 	uint8_t int_mask;
 
+	// Timer state
+	struct Timer {
+		uint16_t counter;
+		uint16_t latch;
+
+		bool pb_toggle;			// Timer output to PB toggle state
+
+#ifdef FRODO_SC
+		bool output;			// Timer output state
+		uint8_t count_delay;	// Delay line for counter input
+		uint8_t load_delay;		// Delay line for counter load
+		uint8_t oneshot_delay;	// Delay line for one-shot state
+#endif
+	};
+
+	Timer ta, tb;
+
+#ifdef FRODO_SC
+	void emulate_timer(Timer & t, uint8_t & cr, bool input);
+#endif
+	uint8_t timer_on_pb(uint8_t prb) const;
+
+	// TOD state
 	unsigned tod_counter;	// TOD frequency counter
 	bool tod_halted;		// Flag: TOD halted
 	bool tod_latched;		// Flag: TOD latched
 	bool tod_alarm;			// Flag: TOD in alarm state
-
-	bool tb_cnt_phi2;	// Flag: Timer B is counting Phi 2
-	bool tb_cnt_ta;		// Flag: Timer B is counting underflows of Timer A
 
 	// Input lines for ports
 	uint8_t pa_in = 0;
 	uint8_t pb_in = 0;
 
 #ifdef FRODO_SC
-	bool has_new_cra;			// Flag: New value for CRA pending
-	bool has_new_crb;			// Flag: New value for CRB pending
-	bool ta_toggle;				// Timer A output to PB6 toggle state
-	bool tb_toggle;				// Timer B output to PB7 toggle state
-	char ta_state, tb_state;	// Timer A/B states
-	uint8_t new_cra, new_crb;	// New values for CRA/CRB
-	uint8_t ta_output;			// Delay line for TA output
-	uint8_t tb_output;			// Delay line for TB output
-	uint8_t irq_delay;			// Delay line for IRQ assertion
+	uint8_t irq_delay;		// Delay line for IRQ assertion
+	bool read_icr;			// Flag: ICR read in previous cycle (timer B interrupt bug)
 #endif
 };
 
@@ -156,17 +166,6 @@ private:
 };
 
 
-// Timer states
-enum {
-	T_STOP,
-	T_WAIT_THEN_COUNT,
-	T_LOAD_THEN_STOP,
-	T_LOAD_THEN_COUNT,
-	T_LOAD_THEN_WAIT_THEN_COUNT,
-	T_COUNT,
-	T_COUNT_THEN_STOP
-};
-
 // CIA state
 struct MOS6526State {
 	uint8_t pra;
@@ -186,8 +185,11 @@ struct MOS6526State {
 	uint8_t cra;
 	uint8_t crb;
 						// Additional registers
-	uint16_t latcha;	// Timer latches
-	uint16_t latchb;
+	uint16_t ta_latch;	// Timer latches
+	uint16_t tb_latch;
+	bool ta_pb_toggle;
+	bool tb_pb_toggle;
+
 	uint8_t ltc_10ths;	// TOD latch
 	uint8_t ltc_sec;
 	uint8_t ltc_min;
@@ -196,6 +198,7 @@ struct MOS6526State {
 	uint8_t alm_sec;
 	uint8_t alm_min;
 	uint8_t alm_hr;
+
 	uint8_t int_mask;	// Enabled interrupts
 
 	uint8_t tod_counter;
@@ -204,17 +207,16 @@ struct MOS6526State {
 	bool tod_alarm;
 
 						// FrodoSC:
-	bool has_new_cra;
-	bool has_new_crb;
-	bool ta_toggle;
-	bool tb_toggle;
-	char ta_state;
-	char tb_state;
-	uint8_t new_cra;
-	uint8_t new_crb;
-	uint8_t ta_output;
-	uint8_t tb_output;
+	bool ta_output;
+	bool tb_output;
+	uint8_t ta_count_delay;
+	uint8_t tb_count_delay;
+	uint8_t ta_load_delay;
+	uint8_t tb_load_delay;
+	uint8_t ta_oneshot_delay;
+	uint8_t tb_oneshot_delay;
 	uint8_t irq_delay;
+	bool read_icr;
 };
 
 
@@ -276,13 +278,13 @@ inline uint8_t MOS6526::read_register(uint8_t reg)
 			return ddrb;
 
 		case 4:
-			return ta;
+			return ta.counter & 0xff;
 		case 5:
-			return ta >> 8;
+			return ta.counter >> 8;
 		case 6:
-			return tb;
+			return tb.counter & 0xff;
 		case 7:
-			return tb >> 8;
+			return tb.counter >> 8;
 
 		case 8: {
 			uint8_t ret = tod_latched ? ltc_10ths : tod_10ths;
@@ -312,6 +314,7 @@ inline uint8_t MOS6526::read_register(uint8_t reg)
 			icr = 0;
 #ifdef FRODO_SC
 			irq_delay = 0;
+			read_icr = true;
 #endif
 			clear_irq();
 			return ret;
@@ -349,21 +352,29 @@ inline void MOS6526::write_register(uint8_t reg, uint8_t byte)
 			break;
 
 		case 4:
-			latcha = (latcha & 0xff00) | byte;
+			ta.latch = (ta.latch & 0xff00) | byte;
 			break;
 		case 5:
-			latcha = (latcha & 0xff) | (byte << 8);
-			if (!(cra & 1)) {	// Reload timer if stopped
-				ta = latcha;
+			ta.latch = (ta.latch & 0xff) | (byte << 8);
+			if (!(cra & 1)) {			// Timer stopped?
+#ifdef FRODO_SC
+				ta.load_delay |= 1;		// Load timer in next cycle
+#else
+				ta.counter = ta.latch;	// Load timer immediately
+#endif
 			}
 			break;
 		case 6:
-			latchb = (latchb & 0xff00) | byte;
+			tb.latch = (tb.latch & 0xff00) | byte;
 			break;
 		case 7:
-			latchb = (latchb & 0xff) | (byte << 8);
-			if (!(crb & 1)) {	// Reload timer if stopped
-				tb = latchb;
+			tb.latch = (tb.latch & 0xff) | (byte << 8);
+			if (!(crb & 1)) {			// Timer stopped?
+#ifdef FRODO_SC
+				tb.load_delay |= 1;		// Load timer in next cycle
+#else
+				tb.counter = tb.latch;	// Load timer immediately
+#endif
 			}
 			break;
 
@@ -445,28 +456,28 @@ inline void MOS6526::write_register(uint8_t reg, uint8_t byte)
 			break;
 
 		case 14:
-#ifdef FRODO_SC
-			has_new_cra = true;		// Delay write by 1 cycle
-			new_cra = byte;
-#else
-			cra = byte & 0xef;
-			if (byte & 0x10) { // Force load
-				ta = latcha;
+			if ((cra & 1) == 0 && (byte & 1) != 0) {
+				ta.pb_toggle = true;	// Starting timer A resets PB toggle state
+			}
+			cra = byte;
+#ifndef FRODO_SC
+			if (cra & 0x10) {			// Timer A force load
+				cra &= ~0x10;
+				ta.counter = ta.latch;
 			}
 #endif
 			break;
 
 		case 15:
-#ifdef FRODO_SC
-			has_new_crb = true;		// Delay write by 1 cycle
-			new_crb = byte;
-#else
-			crb = byte & 0xef;
-			if (byte & 0x10) { // Force load
-				tb = latchb;
+			if ((crb & 1) == 0 && (byte & 1) != 0) {
+				tb.pb_toggle = true;	// Starting timer B resets PB toggle state
 			}
-			tb_cnt_phi2 = ((byte & 0x61) == 0x01);
-			tb_cnt_ta = ((byte & 0x41) == 0x41);	// Ignore CNT, which is pulled high
+			crb = byte;
+#ifndef FRODO_SC
+			if (crb & 0x10) {			// Timer B force load
+				crb &= ~0x10;
+				tb.counter = tb.latch;
+			}
 #endif
 			break;
 	}

@@ -1552,7 +1552,7 @@ static void view_cia_state()
 	output += format("Port A: {:02x}  DDR: {:02x}\n", cs.pra, cs.ddra);
 	output += format("Port B: {:02x}  DDR: {:02x}\n\n", cs.prb, cs.ddrb);
 	output += format("Timer A  : {}\n", cs.cra & 1 ? "On" : "Off");
-	output += format(" Counter : {:04x}  Latch: {:04x}\n", (cs.ta_hi << 8) | cs.ta_lo, cs.latcha);
+	output += format(" Counter : {:04x}  Latch: {:04x}\n", (cs.ta_hi << 8) | cs.ta_lo, cs.ta_latch);
 	output += format(" Run mode: {}\n", cs.cra & 8 ? "One-shot" : "Continuous");
 	output += format(" Input   : {}\n", cs.cra & 0x20 ? "CNT" : "Phi2");
 	output += " Output  : ";
@@ -1567,7 +1567,7 @@ static void view_cia_state()
 	}
 
 	output += format("Timer B  : {}\n", cs.crb & 1 ? "On" : "Off");
-	output += format(" Counter : {:04x}  Latch: {:04x}\n", (cs.tb_hi << 8) | cs.tb_lo, cs.latchb);
+	output += format(" Counter : {:04x}  Latch: {:04x}\n", (cs.tb_hi << 8) | cs.tb_lo, cs.tb_latch);
 	output += format(" Run mode: {}\n", cs.crb & 8 ? "One-shot" : "Continuous");
 	output += " Input   : ";
 	if (cs.crb & 0x40) {

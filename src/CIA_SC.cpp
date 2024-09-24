@@ -35,7 +35,6 @@
  * ------------------
  *
  *  - The SDR interrupt is faked.
- *  - Some small incompatibilities with the timers.
  */
 
 #include "sysdeps.h"
@@ -55,28 +54,27 @@ void MOS6526::Reset()
 {
 	pra = prb = ddra = ddrb = 0;
 
-	ta = tb = 0xffff;
-	latcha = latchb = 1;
-
 	tod_10ths = tod_sec = tod_min = 0; tod_hr = 1;
 	ltc_10ths = ltc_sec = ltc_min = 0; ltc_hr = 1;
 	alm_10ths = alm_sec = alm_min = alm_hr = 0;
 
 	sdr = icr = cra = crb = int_mask = 0;
 
+	ta.counter       = tb.counter       = 0xffff;
+	ta.latch         = tb.latch         = 1;
+	ta.pb_toggle     = tb.pb_toggle     = false;
+	ta.output        = tb.output        = false;
+	ta.count_delay   = tb.count_delay   = 0;
+	ta.load_delay    = tb.load_delay    = 0;
+	ta.oneshot_delay = tb.oneshot_delay = 0;
+
 	tod_counter = 0;
 	tod_halted = true;
 	tod_latched = false;
 	tod_alarm = false;
 
-	tb_cnt_phi2 = tb_cnt_ta = false;
-
-	has_new_cra = has_new_crb = false;
-	ta_toggle = tb_toggle = false;
-	ta_state = tb_state = T_STOP;
-	ta_output = tb_output = 0;
-
 	irq_delay = 0;
+	read_icr = false;
 }
 
 void MOS6526_1::Reset()
@@ -115,12 +113,13 @@ void MOS6526::GetState(MOS6526State * s) const
 	s->ddra = ddra;
 	s->ddrb = ddrb;
 
-	s->ta_lo = ta & 0xff;
-	s->ta_hi = ta >> 8;
-	s->tb_lo = tb & 0xff;
-	s->tb_hi = tb >> 8;
-	s->latcha = latcha;
-	s->latchb = latchb;
+	s->ta_lo = ta.counter & 0xff;
+	s->ta_hi = ta.counter >> 8;
+	s->tb_lo = tb.counter & 0xff;
+	s->tb_hi = tb.counter >> 8;
+	s->ta_latch = ta.latch;
+	s->tb_latch = tb.latch;
+
 	s->cra = cra;
 	s->crb = crb;
 
@@ -147,18 +146,19 @@ void MOS6526::GetState(MOS6526State * s) const
 	s->tod_latched = tod_latched;
 	s->tod_alarm = tod_alarm;
 
-	s->has_new_cra = has_new_cra;
-	s->has_new_crb = has_new_crb;
-	s->ta_toggle = ta_toggle;
-	s->tb_toggle = tb_toggle;
-	s->ta_state = ta_state;
-	s->tb_state = tb_state;
-	s->new_cra = new_cra;
-	s->new_crb = new_crb;
-	s->ta_output = ta_output;
-	s->tb_output = tb_output;
+	s->ta_pb_toggle = ta.pb_toggle;
+	s->tb_pb_toggle = tb.pb_toggle;
+	s->ta_output = ta.output;
+	s->tb_output = tb.output;
+	s->ta_count_delay = ta.count_delay;
+	s->tb_count_delay = tb.count_delay;
+	s->ta_load_delay = ta.load_delay;
+	s->tb_load_delay = tb.load_delay;
+	s->ta_oneshot_delay = ta.oneshot_delay;
+	s->tb_oneshot_delay = tb.oneshot_delay;
 
 	s->irq_delay = irq_delay;
+	s->read_icr = read_icr;
 }
 
 
@@ -173,10 +173,11 @@ void MOS6526::SetState(const MOS6526State * s)
 	ddra = s->ddra;
 	ddrb = s->ddrb;
 
-	ta = (s->ta_hi << 8) | s->ta_lo;
-	tb = (s->tb_hi << 8) | s->tb_lo;
-	latcha = s->latcha;
-	latchb = s->latchb;
+	ta.counter = (s->ta_hi << 8) | s->ta_lo;
+	tb.counter = (s->tb_hi << 8) | s->tb_lo;
+	ta.latch = s->ta_latch;
+	tb.latch = s->tb_latch;
+
 	cra = s->cra;
 	crb = s->crb;
 
@@ -203,21 +204,19 @@ void MOS6526::SetState(const MOS6526State * s)
 	tod_latched = s->tod_latched;
 	tod_alarm = s->tod_alarm;
 
-	tb_cnt_phi2 = ((crb & 0x60) == 0x00);
-	tb_cnt_ta = ((crb & 0x40) == 0x40);		// Ignore CNT, which is pulled high
-
-	has_new_cra = s->has_new_cra;
-	has_new_crb = s->has_new_crb;
-	ta_toggle = s->ta_toggle;
-	tb_toggle = s->tb_toggle;
-	ta_state = s->ta_state;
-	tb_state = s->tb_state;
-	new_cra = s->new_cra;
-	new_crb = s->new_crb;
-	ta_output = s->ta_output;
-	tb_output = s->tb_output;
+	ta.pb_toggle = s->ta_pb_toggle;
+	tb.pb_toggle = s->tb_pb_toggle;
+	ta.output = s->ta_output;
+	tb.output = s->tb_output;
+	ta.count_delay = s->ta_count_delay;
+	tb.count_delay = s->tb_count_delay;
+	ta.load_delay = s->ta_load_delay;
+	tb.load_delay = s->tb_load_delay;
+	ta.oneshot_delay = s->ta_oneshot_delay;
+	tb.oneshot_delay = s->tb_oneshot_delay;
 
 	irq_delay = s->irq_delay;
+	read_icr = s->read_icr;
 }
 
 void MOS6526_2::SetState(const MOS6526State * s)
@@ -233,12 +232,12 @@ void MOS6526_2::SetState(const MOS6526State * s)
  *  Output TA/TB to PB6/7
  */
 
-uint8_t MOS6526::timer_on_pb(uint8_t byte)
+uint8_t MOS6526::timer_on_pb(uint8_t byte) const
 {
 	if (cra & 0x02) {
 
 		// TA output to PB6
-		if ((cra & 0x04) ? ta_toggle : (ta_output & 1)) {
+		if ((cra & 0x04) ? ta.pb_toggle : ta.output) {
 			byte |= 0x40;
 		} else {
 			byte &= 0xbf;
@@ -248,7 +247,7 @@ uint8_t MOS6526::timer_on_pb(uint8_t byte)
 	if (crb & 0x02) {
 
 		// TB output to PB7
-		if ((crb & 0x04) ? tb_toggle : (tb_output & 1)) {
+		if ((crb & 0x04) ? tb.pb_toggle : tb.output) {
 			byte |= 0x80;
 		} else {
 			byte &= 0x7f;
@@ -388,224 +387,91 @@ void MOS6526_2::WriteRegister(uint8_t reg, uint8_t byte)
  *  Emulate CIA for one cycle
  */
 
+void MOS6526::emulate_timer(Timer & t, uint8_t & cr, bool input)
+{
+	// Decode CR bits
+	if (input && (cr & 1)) {	// Started and input active
+		t.count_delay |= 1;
+	}
+	if (cr & 8) {				// One-shot
+		t.oneshot_delay |= 1;
+	}
+	if (cr & 0x10) {			// Force load
+		t.load_delay |= 1;
+		cr &= ~0x10;
+	}
+
+	// Count timer
+	if (t.count_delay & 4) {	// Two cycles delay
+		--t.counter;
+	}
+
+	// Check for end condition
+	t.output = false;
+
+	if ((t.counter == 0) && (t.count_delay & 2)) {
+		t.output = true;				// Set timer output
+		t.pb_toggle = !t.pb_toggle;
+
+		if ((t.oneshot_delay & 3) != 0) {
+			cr &= ~1;					// Stop timer in one-shot mode
+			t.count_delay &= ~1;		// For at least two cycles
+		}
+
+		t.load_delay |= 2;				// Reload timer immediately
+	}
+
+	// Load timer
+	if (t.load_delay & 2) {		// One cycle delay
+		t.counter = t.latch;
+		t.count_delay &= ~2;	// Skip counting in next cycle
+	}
+}
+
 void MOS6526::EmulateCycle()
 {
 	// Shift delay lines
-	ta_output <<= 1;
-	tb_output <<= 1;
+	ta.count_delay <<= 1;
+	ta.load_delay <<= 1;
+	ta.oneshot_delay <<= 1;
+
+	tb.count_delay <<= 1;
+	tb.load_delay <<= 1;
+	tb.oneshot_delay <<= 1;
+
 	irq_delay <<= 1;
 
-	// Timer A state machine
-	switch (ta_state) {
-		case T_WAIT_THEN_COUNT:
-			ta_state = T_COUNT;		// fall through
-		case T_STOP:
-			goto ta_idle;
-		case T_LOAD_THEN_STOP:
-			ta = latcha;			// Reload timer
-			ta_state = T_STOP;
-			goto ta_idle;
-		case T_LOAD_THEN_COUNT:
-			ta = latcha;			// Reload timer
-			ta_state = T_COUNT;
-			goto ta_idle;
-		case T_LOAD_THEN_WAIT_THEN_COUNT:
-			ta_state = T_WAIT_THEN_COUNT;
-			ta = latcha;			// Reload timer
-			goto ta_idle;
-		case T_COUNT:
-			goto ta_count;
-		case T_COUNT_THEN_STOP:
-			ta_state = T_STOP;
-			goto ta_count;
+	// Emulate timer A
+	bool ta_input = (cra & 0x20) == 0;	// Count Phi2
+	emulate_timer(ta, cra, ta_input);
+
+	if (ta.output) {
+		set_int_flag(1);
 	}
 
-	// Count timer A
-ta_count:
-	if ((cra & 0x20) == 0) {
-		if (ta != 0) {	// Decrement timer if != 0
-			--ta;
-		}
-		if (ta == 0) {	// Timer expired?
-			if (ta_state != T_STOP) {
-ta_interrupt:
-				ta = latcha;			// Reload timer
-				icr |= 1;				// Raise timer A interrupt
-				ta_toggle = !ta_toggle;	// Toggle PB6 output
+	// Emulate timer B
+	bool tb_input;
+	switch (crb & 0x60) {
+		case 0x00:	// Count Phi2
+			tb_input = true;
+			break;
+		case 0x20:	// Count CNT (nothing connected)
+			tb_input = false;
+			break;
+		case 0x40:	// Count TA, without or with CNT
+		case 0x60:
+			tb_input = ta.output;
+			break;
+	}
+	emulate_timer(tb, crb, tb_input);
 
-				if (cra & 8) {			// One-shot?
-					cra &= 0xfe;		// Yes, stop timer
-					new_cra &= 0xfe;
-					ta_state = T_LOAD_THEN_STOP;	// Reload in next cycle
-				} else {
-					ta_state = T_LOAD_THEN_COUNT;	// No, delay one cycle (and reload)
-				}
-			}
-
-			ta_output |= 1;
+	if (tb.output) {
+		if (! read_icr) {	// Timer B does not raise interrupt if ICR was read in previous cycle (HW bug)
+			set_int_flag(2);
 		}
 	}
 
-	// Delayed write to CRA?
-ta_idle:
-	if (has_new_cra) {
-		switch (ta_state) {
-			case T_STOP:
-			case T_LOAD_THEN_STOP:
-				if (new_cra & 1) {			// Timer started, wasn't running
-					ta_toggle = true;		// Starting the timer resets the toggle bit
-					if (new_cra & 0x10) {	// Force load
-						ta_state = T_LOAD_THEN_WAIT_THEN_COUNT;
-					} else {				// No force load
-						ta_state = T_WAIT_THEN_COUNT;
-					}
-				} else {					// Timer stopped, was already stopped
-					if (new_cra & 0x10) {	// Force load
-						ta_state = T_LOAD_THEN_STOP;
-					}
-				}
-				break;
-			case T_COUNT:
-				if (new_cra & 1) {			// Timer started, was already running
-					if (new_cra & 0x10) {	// Force load
-						ta_state = T_LOAD_THEN_WAIT_THEN_COUNT;
-					}
-				} else {					// Timer stopped, was running
-					if (new_cra & 0x10) {	// Force load
-						ta_state = T_LOAD_THEN_STOP;
-					} else if ((cra & 0x20) == 0) {	// No force load
-						ta_state = T_COUNT_THEN_STOP;
-					} else {
-						ta_state = T_STOP;
-					}
-				}
-				break;
-			case T_LOAD_THEN_COUNT:
-			case T_WAIT_THEN_COUNT:
-				if (new_cra & 1) {
-					if (new_cra & 8) {		// One-shot?
-						new_cra &= 0xfe;	// Yes, stop timer
-						ta_state = T_STOP;
-					} else if (new_cra & 0x10) {	// Force load
-						ta_state = T_LOAD_THEN_WAIT_THEN_COUNT;
-					}
-				} else {
-					ta_state = T_STOP;
-				}
-				break;
-		}
-		cra = new_cra & 0xef;	// Clear force load
-		has_new_cra = false;
-	}
-
-	// Timer B state machine
-	switch (tb_state) {
-		case T_WAIT_THEN_COUNT:
-			tb_state = T_COUNT;		// fall through
-		case T_STOP:
-			goto tb_idle;
-		case T_LOAD_THEN_STOP:
-			tb = latchb;			// Reload timer
-			tb_state = T_STOP;
-			goto tb_idle;
-		case T_LOAD_THEN_COUNT:
-			tb = latchb;			// Reload timer
-			tb_state = T_COUNT;
-			goto tb_idle;
-		case T_LOAD_THEN_WAIT_THEN_COUNT:
-			tb_state = T_WAIT_THEN_COUNT;
-			tb = latchb;			// Reload timer
-			goto tb_idle;
-		case T_COUNT:
-			goto tb_count;
-		case T_COUNT_THEN_STOP:
-			tb_state = T_STOP;
-			goto tb_count;
-	}
-
-	// Count timer B
-tb_count:
-	if (tb_cnt_phi2 || tb_cnt_ta) {
-		if (tb != 0) {	// Decrement timer if != 0
-			if (tb_cnt_phi2 || (ta_output & 4)) {	// Cascaded mode takes two cycles to count
-				--tb;
-			}
-		}
-		if (tb == 0) {	// Timer expired?
-			if (tb_state != T_STOP) {
-tb_interrupt:
-				if (!tb_cnt_ta || (ta_output & 0x0c) == 0) {	// Cascaded mode takes two cycles to reset while tb == 0
-					tb = latchb;			// Reload timer
-					icr |= 2;				// Raise timer B interrupt
-					tb_toggle = !tb_toggle;	// Toggle PB7 output
-
-					if (crb & 8) {			// One-shot?
-						crb &= 0xfe;		// Yes, stop timer
-						new_crb &= 0xfe;
-						tb_state = T_LOAD_THEN_STOP;	// Reload in next cycle
-					} else {
-						tb_state = T_LOAD_THEN_COUNT;	// No, delay one cycle (and reload)
-					}
-				}
-			}
-
-			tb_output |= 1;
-		}
-	}
-
-	// Delayed write to CRB?
-tb_idle:
-	if (has_new_crb) {
-		switch (tb_state) {
-			case T_STOP:
-			case T_LOAD_THEN_STOP:
-				if (new_crb & 1) {			// Timer started, wasn't running
-					tb_toggle = true;		// Starting the timer resets the toggle bit
-					if (new_crb & 0x10) {	// Force load
-						tb_state = T_LOAD_THEN_WAIT_THEN_COUNT;
-					} else {				// No force load
-						tb_state = T_WAIT_THEN_COUNT;
-					}
-				} else {					// Timer stopped, was already stopped
-					if (new_crb & 0x10) {	// Force load
-						tb_state = T_LOAD_THEN_STOP;
-					}
-				}
-				break;
-			case T_COUNT:
-				if (new_crb & 1) {			// Timer started, was already running
-					if (new_crb & 0x10) {	// Force load
-						tb_state = T_LOAD_THEN_WAIT_THEN_COUNT;
-					}
-				} else {					// Timer stopped, was running
-					if (new_crb & 0x10) {	// Force load
-						tb_state = T_LOAD_THEN_STOP;
-					} else if (tb_cnt_phi2) {	// No force load
-						tb_state = T_COUNT_THEN_STOP;
-					} else {
-						tb_state = T_STOP;
-					}
-				}
-				break;
-			case T_LOAD_THEN_COUNT:
-			case T_WAIT_THEN_COUNT:
-				if (new_crb & 1) {
-					if (new_crb & 8) {		// One-shot?
-						new_crb &= 0xfe;	// Yes, stop timer
-						tb_state = T_STOP;
-					} else if (new_crb & 0x10) {	// Force load
-						tb_state = T_LOAD_THEN_WAIT_THEN_COUNT;
-					}
-				} else {
-					tb_state = T_STOP;
-				}
-				break;
-		}
-		crb = new_crb & 0xef;	// Clear force load
-		has_new_crb = false;
-		tb_cnt_phi2 = ((crb & 0x60) == 0x00);
-		tb_cnt_ta = ((crb & 0x40) == 0x40);	// Ignore CNT, which is pulled high
-	}
+	read_icr = false;
 
 	// Update IRQ status
 	if (icr & int_mask) {
