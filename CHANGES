@@ -19,7 +19,7 @@ Changes from V4.2 to V4.3:
    - Removed "Draw every n-th frame" setting
    - Added menu items for loading/saving snapshot files
    - Added menu item for creating a blank D64 image
-   - Added "Next Disk" buttons to the drive paths
+   - Added "Eject" and "Next Disk" buttons to the drive paths
  - SAM is now started from the "Tools" menu in the settings window instead
    of by pressing F9
  - Enabled drag-and-drop of files and folders onto the emulator window to

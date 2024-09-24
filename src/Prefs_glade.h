@@ -447,6 +447,9 @@ static void ghost_widgets()
 	ghost_widget("drive9_path", prefs->Emul1541Proc);
 	ghost_widget("drive10_path", prefs->Emul1541Proc);
 	ghost_widget("drive11_path", prefs->Emul1541Proc);
+	ghost_widget("drive9_eject", prefs->Emul1541Proc);
+	ghost_widget("drive10_eject", prefs->Emul1541Proc);
+	ghost_widget("drive11_eject", prefs->Emul1541Proc);
 	ghost_widget("drive9_next_disk", prefs->Emul1541Proc);
 	ghost_widget("drive10_next_disk", prefs->Emul1541Proc);
 	ghost_widget("drive11_next_disk", prefs->Emul1541Proc);
@@ -731,6 +734,26 @@ extern "C" void on_drive_path_file_set(GtkFileChooserButton *button, gpointer us
 		g_free(dir);
 	}
 	g_free(path);
+}
+
+extern "C" void on_drive8_eject_clicked(GtkButton *button, gpointer user_data)
+{
+	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "drive8_path")), "");
+}
+
+extern "C" void on_drive9_eject_clicked(GtkButton *button, gpointer user_data)
+{
+	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "drive9_path")), "");
+}
+
+extern "C" void on_drive10_eject_clicked(GtkButton *button, gpointer user_data)
+{
+	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "drive10_path")), "");
+}
+
+extern "C" void on_drive11_eject_clicked(GtkButton *button, gpointer user_data)
+{
+	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "drive11_path")), "");
 }
 
 extern "C" void on_drive8_next_disk_clicked(GtkButton *button, gpointer user_data)

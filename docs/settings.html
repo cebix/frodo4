@@ -16,8 +16,9 @@
 
 <P>The box <B>“Drive Paths”</B> has four fields, each corresponding to one
 of four emulated Commodore 1541 floppy disk drives with the drive numbers 8,
-9, 10 and 11 (normally you only need drive 8). For every drive, there is a
-<EM>file selection button</EM> and a <EM>“Next Disk” button</EM>.
+9, 10 and 11 (normally you only need drive 8). For each drive, there is a
+<EM>file selection button</EM>, an <EM>“Eject” button</EM> and a <EM>“Next
+Disk” button</EM>.
 
 <P>Frodo offers three different modes for drive emulation (see <A
 HREF="files.html">here</A> for details):
@@ -39,6 +40,11 @@ file system available to the emulated C64 as a “pseudo disk”.
 .d64/.x64/.t64/LYNX file to mount in the corresponding drive on the emulator.
 To select a directory for Directory Mode, choose any file within the
 directory that is not of one of those image file types.
+
+<P>Clicking on the <B>“Eject” button</B> unmounts the selected file or
+directory from the respective drive. When full 1541 emulation is enabled,
+the drive will behave like it has no disk in it, otherwise the drive will be
+disconnected entirely.
 
 <P>The <B>“Next Disk” button</B> only works in Disk Image Mode and changes
 the mounted .d64 or .x64 disk image file to the next one in a series. Frodo
