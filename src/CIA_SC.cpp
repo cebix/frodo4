@@ -478,10 +478,10 @@ void MOS6526::EmulateCycle()
 		irq_delay |= 1;
 	}
 	if (irq_delay & 2) {	// One cycle of IRQ delay
-		if ((icr & 0x80) == 0) {
-			icr |= 0x80;
-			trigger_irq();
-		}
+		icr |= 0x80;
+	}
+	if (icr & 0x80) {
+		trigger_irq();
 	} else {
 		clear_irq();
 	}
