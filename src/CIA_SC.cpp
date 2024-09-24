@@ -315,7 +315,7 @@ uint8_t MOS6526_2::ReadRegister(uint8_t reg)
 			break;
 		}
 		case 1: {	// Port B: User port
-			SetPBIn(0);
+			SetPBIn(0xff);
 			break;
 		}
 	}
