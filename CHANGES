@@ -22,8 +22,9 @@ Changes from V4.2 to V4.3:
    - Added "Next Disk" buttons to the drive paths
  - SAM is now started from the "Tools" menu in the settings window instead
    of by pressing F9
- - Snapshot files can be loaded and disk image files attached by dragging
-   them onto the emulator window
+ - Enabled drag-and-drop of files and folders onto the emulator window to
+   mount disk image files and directories, load snapshot files, or load
+   BASIC program files
  - Improved sprite display
  - Improved CIA timer emulation
  - Improved 1541 emulation

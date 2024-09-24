@@ -672,6 +672,11 @@ void C64Display::PollKeyboard(uint8_t *key_matrix, uint8_t *rev_matrix, uint8_t 
 
 					// Load snapshot
 					the_c64->RequestLoadSnapshot(filename);
+
+				} else if (IsBASICProgram(filename)) {
+
+					// Load BASIC file directly into RAM
+					the_c64->DMALoad(filename);
 				}
 
 				SDL_free(filename);

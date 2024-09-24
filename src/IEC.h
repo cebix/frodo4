@@ -258,4 +258,7 @@ extern bool IsMountableFile(const std::string & path, int &type);
 // Read directory of mountable disk image or archive file into c64_dir_entry vector
 extern bool ReadDirectory(const std::string & path, int type, std::vector<c64_dir_entry> &vec);
 
+// Check whether file is likely to be a BASIC program
+extern bool IsBASICProgram(const std::string & path);
+
 #endif

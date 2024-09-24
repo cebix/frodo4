@@ -949,7 +949,7 @@ void petscii2ascii(char *dest, const uint8_t *src, int n)
  *  Check whether file is a mountable disk image or archive file, return type
  */
 
-bool IsMountableFile(const std::string & path, int &type)
+bool IsMountableFile(const std::string & path, int & type)
 {
 	// Reject directories
 	if (fs::is_directory(path))
@@ -966,7 +966,10 @@ bool IsMountableFile(const std::string & path, int &type)
 
 	uint8_t header[64];
 	memset(header, 0, sizeof(header));
-	fread(header, 1, sizeof(header), f);
+	if (fread(header, 1, sizeof(header), f) == 0) {
+		fclose(f);
+		return false;
+	}
 
 	fclose(f);
 
@@ -998,4 +1001,37 @@ bool ReadDirectory(const std::string & path, int type, std::vector<c64_dir_entry
 		default:
 			return false;
 	}
+}
+
+
+/*
+ *  Check whether file is a mountable disk image or archive file, return type
+ */
+
+bool IsBASICProgram(const std::string & path)
+{
+	// Reject directories
+	if (fs::is_directory(path))
+		return false;
+
+	// Read header and determine file size
+	FILE *f = fopen(path.c_str(), "rb");
+	if (f == nullptr)
+		return false;
+
+	fseek(f, 0, SEEK_END);
+	long size = ftell(f);
+	fseek(f, 0, SEEK_SET);
+
+	uint8_t header[2];
+	if (fread(header, sizeof(header), 1, f) != 1) {
+		fclose(f);
+		return false;
+	}
+
+	fclose(f);
+
+	// Look for right file size and BASIC load address
+	// (allow files in the address range 0801..cfff)
+	return size <= 0xc800 && header[0] == 0x01 && header[1] == 0x08;
 }

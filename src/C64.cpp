@@ -1037,6 +1037,52 @@ bool C64::LoadSnapshot(const std::string & filename, Prefs * prefs)
 
 
 /*
+ *  Load C64 program directly into RAM
+ */
+
+bool C64::DMALoad(const std::string & filename)
+{
+	// Open file
+	FILE * f = fopen(filename.c_str(), "rb");
+	if (f == nullptr) {
+		ShowRequester("Can't open program file", "OK", nullptr);
+		return false;
+	}
+
+	// Read load address
+	uint8_t header[2];
+	if (fread(header, sizeof(header), 1, f) != 1) {
+		ShowRequester("Error reading program file", "OK", nullptr);
+		return false;
+	}
+
+	// Load up to end of RAM
+	uint16_t load_addr = (header[1] << 8) | header[0];
+	uint16_t num_bytes = fread(RAM + load_addr, 1, C64_RAM_SIZE - load_addr, f);
+	uint16_t end_addr = load_addr + num_bytes;
+
+	// Set Kernal and BASIC pointers to simulate LOAD command
+	// TODO: Set more variables, such as the drive number?
+	RAM[0xae] = end_addr & 0xff;			// EAL/EAH, end address of LOAD
+	RAM[0xaf] = end_addr >> 8;
+	if (load_addr == 0x0801) {
+		RAM[0x2d] = end_addr & 0xff;		// VARTAB, start of variable table (= end of program)
+		RAM[0x2e] = end_addr >> 8;
+		RAM[0x2f] = RAM[0x31] = RAM[0x2d];	// ARYTAB/STREND, start of array storage and free RAM
+		RAM[0x30] = RAM[0x32] = RAM[0x2e];
+		RAM[0x33] = RAM[0x37];				// FRETOP = MEMSIZ, clear string area
+		RAM[0x34] = RAM[0x38];
+		RAM[0x7a] = (load_addr - 1) & 0xff;	// TXTPTR, start of BASIC text
+		RAM[0x7b] = (load_addr - 1) >> 8;
+		RAM[0x41] = RAM[0x7a];				// DATPTR, current DATA item
+		RAM[0x42] = RAM[0x7b];
+	}
+
+	return true;
+}
+
+
+/*
  *  Stop rewind/forward mode and clear rewind buffer
  */
 

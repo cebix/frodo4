@@ -90,6 +90,8 @@ public:
 	bool SaveSnapshot(const std::string & filename);
 	bool LoadSnapshot(const std::string & filename, Prefs * prefs);
 
+	bool DMALoad(const std::string & filename);
+
 	void SetPlayMode(PlayMode mode);
 	PlayMode GetPlayMode() const { return play_mode; }
 
