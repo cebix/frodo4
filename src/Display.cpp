@@ -645,6 +645,10 @@ void C64Display::PollKeyboard(uint8_t *key_matrix, uint8_t *rev_matrix, uint8_t 
 
 			// Key pressed
 			case SDL_KEYDOWN:
+				if (event.key.repeat) {
+					break;
+				}
+
 				switch (event.key.keysym.scancode) {
 
 					case SDL_SCANCODE_F10:	// F10: Prefs/Quit
