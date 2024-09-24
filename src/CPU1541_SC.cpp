@@ -54,12 +54,6 @@
  *  - Only the highest bit of the n_flag variable is used
  *  - The $f2 opcode that would normally crash the 6502 is
  *    used to implement emulator-specific functions
- *
- * Incompatibilities:
- * ------------------
- *
- *  - VIA emulation incomplete (no port latches, no timers on port B,
- *    no CA2/CB2, no shift register)
  */
 
 #include "sysdeps.h"
@@ -144,29 +138,6 @@ void MOS6502_1541::Reset()
 
 
 /*
- *  Reset VIA
- */
-
-void MOS6522::Reset()
-{
-	// Note: 6522 reset doesn't actually touch the timers nor the shift
-	// register, but we want to avoid undefined behavior.
-	pra = ddra = prb = ddrb = 0;
-	t1c = t1l = t2c = t2l = 0xffff;
-	sr = 0;
-	acr = pcr = 0;
-	ifr = ier = 0;
-
-	t1_irq_blocked = false;
-	t2_irq_blocked = false;
-	t1_load_delay = 0;
-	t2_load_delay = 0;
-	t2_input_delay = 0;
-	irq_delay = 0;
-}
-
-
-/*
  *  Get 1541 register state
  */
 
@@ -197,29 +168,6 @@ void MOS6502_1541::GetState(MOS6502State *s) const
 
 	via1->GetState(&(s->via1));
 	via2->GetState(&(s->via2));
-}
-
-
-/*
- *  Get VIA register state
- */
-
-void MOS6522::GetState(MOS6522State * s) const
-{
-	s->pra = pra; s->ddra = ddra;
-	s->prb = prb; s->ddrb = ddrb;
-	s->t1c = t1c; s->t1l  = t1l;
-	s->t2c = t2c; s->t2l  = t2l;
-	s->sr  = sr;
-	s->acr = acr; s->pcr  = pcr;
-	s->ifr = ifr; s->ier  = ier;
-
-	s->t1_irq_blocked = t1_irq_blocked;
-	s->t2_irq_blocked = t2_irq_blocked;
-	s->t1_load_delay = t1_load_delay;
-	s->t2_load_delay = t2_load_delay;
-	s->t2_input_delay = t2_input_delay;
-	s->irq_delay = irq_delay;
 }
 
 
@@ -262,29 +210,6 @@ void MOS6502_1541::SetState(const MOS6502State *s)
 
 
 /*
- *  Set VIA register state
- */
-
-void MOS6522::SetState(const MOS6522State * s)
-{
-	pra = s->pra; ddra = s->ddra;
-	prb = s->prb; ddrb = s->ddrb;
-	t1c = s->t1c; t1l  = s->t1l;
-	t2c = s->t2c; t2l  = s->t2l;
-	sr  = s->sr;
-	acr = s->acr; pcr  = s->pcr;
-	ifr = s->ifr; ier  = s->ier;
-
-	t1_irq_blocked = s->t1_irq_blocked;
-	t2_irq_blocked = s->t2_irq_blocked;
-	t1_load_delay = s->t1_load_delay;
-	t2_load_delay = s->t2_load_delay;
-	t2_input_delay = s->t2_input_delay;
-	irq_delay = s->irq_delay;
-}
-
-
-/*
  *  Return physical state of IEC lines
  */
 
@@ -300,7 +225,7 @@ uint8_t MOS6502_1541::CalcIECLines() const
  *  Trigger VIA interrupt
  */
 
-inline void MOS6502_1541::TriggerInterrupt(unsigned which)
+void MOS6502_1541::TriggerInterrupt(unsigned which)
 {
 	if (!(interrupt.intr[INT_VIA1IRQ] || interrupt.intr[INT_VIA2IRQ])) {
 		first_irq_cycle = cycle_counter;
@@ -311,81 +236,12 @@ inline void MOS6502_1541::TriggerInterrupt(unsigned which)
 	Idle = false;
 }
 
-inline void MOS6522::TriggerCA1Interrupt()
-{
-	if (pcr & 0x01) {		// CA1 positive edge (1541 gets inverted bus signals)
-		ifr |= 0x02;
-	}
-}
-
 // Interrupt by negative edge of ATN on IEC bus
 void MOS6502_1541::TriggerIECInterrupt()
 {
 	via1->TriggerCA1Interrupt();
 }
 
-
-/*
- *  Emulate VIAs for one cycle
- */
-
-void MOS6522::EmulateCycle()
-{
-	// Shift delay lines
-	t1_load_delay <<= 1;
-	t2_load_delay <<= 1;
-	t2_input_delay <<= 1;
-	irq_delay <<= 1;
-
-	// Update timer inputs
-	if ((acr & 0x20) == 0) {		// Don't count PB6 pulses
-		t2_input_delay |= 1;
-	}
-
-	// Reload or count timer 1
-	if (t1_load_delay & 2) {		// One cycle of load delay
-		t1c = t1l;
-	} else {
-		t1c -= 1;
-		if (t1c == 0xffff) {
-			if (!t1_irq_blocked) {
-				ifr |= 0x40;
-			}
-			if ((acr & 0x40) == 0) {	// One-shot mode
-				t1_irq_blocked = true;
-			}
-			t1_load_delay |= 1;		// Reload in next cycle
-		}
-	}
-
-	// Reload or count timer 2
-	if (t2_load_delay & 2) {		// One cycle of load delay
-		t2c = t2l;
-	} else {
-		if (t2_input_delay & 2) {	// One cycle of input delay
-			t2c -= 1;
-			if (t2c == 0xffff) {
-				if (!t2_irq_blocked) {
-					t2_irq_blocked = true;
-					ifr |= 0x20;
-				}
-			}
-		}
-	}
-
-	// Update IRQ status
-	if (ifr & ier) {
-		irq_delay |= 1;
-	}
-	if (irq_delay & 2) {			// One cycle of IRQ delay
-		if ((ifr & 0x80) == 0) {
-			ifr |= 0x80;
-			the_cpu->TriggerInterrupt(irq_type);
-		}
-	} else {
-		the_cpu->ClearInterrupt(irq_type);
-	}
-}
 
 void MOS6502_1541::EmulateVIACycle()
 {

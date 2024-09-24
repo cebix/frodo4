@@ -58,8 +58,6 @@
  * Incompatibilities:
  * ------------------
  *
- *  - VIA emulation incomplete (no port latches, no timers on port B,
- *    no CA2/CB2, no shift register)
  *  - Extra cycles for crossing page boundaries are not accounted for
  */
 
@@ -142,29 +140,6 @@ void MOS6502_1541::Reset()
 
 
 /*
- *  Reset VIA
- */
-
-void MOS6522::Reset()
-{
-	// Note: 6522 reset doesn't actually touch the timers nor the shift
-	// register, but we want to avoid undefined behavior.
-	pra = ddra = prb = ddrb = 0;
-	t1c = t1l = t2c = t2l = 0xffff;
-	sr = 0;
-	acr = pcr = 0;
-	ifr = ier = 0;
-
-	t1_irq_blocked = false;
-	t2_irq_blocked = false;
-	t1_load_delay = 0;
-	t2_load_delay = 0;
-	t2_input_delay = 0;
-	irq_delay = 0;
-}
-
-
-/*
  *  Get 1541 register state
  */
 
@@ -195,29 +170,6 @@ void MOS6502_1541::GetState(MOS6502State *s) const
 
 	via1->GetState(&(s->via1));
 	via2->GetState(&(s->via2));
-}
-
-
-/*
- *  Get VIA register state
- */
-
-void MOS6522::GetState(MOS6522State * s) const
-{
-	s->pra = pra; s->ddra = ddra;
-	s->prb = prb; s->ddrb = ddrb;
-	s->t1c = t1c; s->t1l  = t1l;
-	s->t2c = t2c; s->t2l  = t2l;
-	s->sr  = sr;
-	s->acr = acr; s->pcr  = pcr;
-	s->ifr = ifr; s->ier  = ier;
-
-	s->t1_irq_blocked = t1_irq_blocked;
-	s->t2_irq_blocked = t2_irq_blocked;
-	s->t1_load_delay = 0;
-	s->t2_load_delay = 0;
-	s->t2_input_delay = 0;
-	s->irq_delay = 0;
 }
 
 
@@ -256,25 +208,6 @@ void MOS6502_1541::SetState(const MOS6502State *s)
 
 
 /*
- *  Set VIA register state
- */
-
-void MOS6522::SetState(const MOS6522State * s)
-{
-	pra = s->pra; ddra = s->ddra;
-	prb = s->prb; ddrb = s->ddrb;
-	t1c = s->t1c; t1l  = s->t1l;
-	t2c = s->t2c; t2l  = s->t2l;
-	sr  = s->sr;
-	acr = s->acr; pcr  = s->pcr;
-	ifr = s->ifr; ier  = s->ier;
-
-	t1_irq_blocked = s->t1_irq_blocked;
-	t2_irq_blocked = s->t2_irq_blocked;
-}
-
-
-/*
  *  Return physical state of IEC lines
  */
 
@@ -290,28 +223,12 @@ uint8_t MOS6502_1541::CalcIECLines() const
  *  Trigger VIA interrupt
  */
 
-inline void MOS6522::trigger_irq()
-{
-	ifr |= 0x80;
-	the_cpu->TriggerInterrupt(irq_type);
-}
-
 void MOS6502_1541::TriggerInterrupt(unsigned which)
 {
 	interrupt.intr[which] = true;
 
 	// Wake up 1541
 	Idle = false;
-}
-
-inline void MOS6522::TriggerCA1Interrupt()
-{
-	if (pcr & 0x01) {		// CA1 positive edge (1541 gets inverted bus signals)
-		ifr |= 0x02;
-		if (ier & 0x02) {	// CA1 interrupt enabled?
-			trigger_irq();
-		}
-	}
 }
 
 // Interrupt by negative edge of ATN on IEC bus
@@ -324,38 +241,6 @@ void MOS6502_1541::TriggerIECInterrupt()
 /*
  *  Count VIA timers
  */
-
-void MOS6522::CountTimers(int cycles)
-{
-	unsigned long tmp;
-
-	t1c = tmp = t1c - cycles;
-	if (tmp > 0xffff) {
-		if (!t1_irq_blocked) {
-			ifr |= 0x40;
-			if (ier & 0x40) {
-				trigger_irq();
-			}
-		}
-		if ((acr & 0x40) == 0) {	// One-shot mode
-			t1_irq_blocked = true;
-		}
-		t1c = t1l;					// Reload from latch
-	}
-
-	if ((acr & 0x20) == 0) {		// Only count in one-shot mode
-		t2c = tmp = t2c - cycles;
-		if (tmp > 0xffff) {
-			if (!t2_irq_blocked) {
-				t2_irq_blocked = true;
-				ifr |= 0x20;
-				if (ier & 0x20) {
-					trigger_irq();
-				}
-			}
-		}
-	}
-}
 
 void MOS6502_1541::CountVIATimers(int cycles)
 {

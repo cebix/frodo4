@@ -1,5 +1,5 @@
 /*
- *  VIC.h - 6569R5 emulation (line based)
+ *  VIC.h - 6569R5 emulation
  *
  *  Frodo Copyright (C) Christian Bauer
  *

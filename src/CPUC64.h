@@ -1,5 +1,5 @@
 /*
- *  CPUC64.h - 6510 (C64) emulation (line based)
+ *  CPUC64.h - 6510 (C64) emulation
  *
  *  Frodo Copyright (C) Christian Bauer
  *
