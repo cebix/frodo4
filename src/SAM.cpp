@@ -919,7 +919,11 @@ static void memory_dump()
 			if (address == end_address) done = true;
 
 			uint8_t byte = SAMReadByte(address);
-			output += format(" {:02x}", byte);
+			if (i == MEMDUMP_BPL / 2) {
+				output += format(":{:02x}", byte);
+			} else {
+				output += format(" {:02x}", byte);
+			}
 			if ((byte >= ' ') && (byte <= '~')) {
 				mem += conv_from_64(byte);
 			} else {
