@@ -376,7 +376,7 @@ void C64Display::Update()
 		PlayMode mode = the_c64->GetPlayMode();
 		if (mode != PLAY_MODE_PLAY) {
 			const char * str = (mode == PLAY_MODE_REWIND) ? "<<" : ">>";
-			draw_string(DISPLAY_X - 24, DISPLAY_Y - 8, str, black);
+			draw_string(DISPLAY_X - 23, DISPLAY_Y - 8, str, black);
 			draw_string(DISPLAY_X - 24, DISPLAY_Y - 9, str, shine_gray);
 		}
 	}
@@ -496,8 +496,8 @@ void C64Display::toggle_fullscreen(bool full)
   3     V   U   H   B   8   G   Y   7
   4     N   O   K   M   0   J   I   9
   5     ,   @   :   .   -   L   P   +
-  6     /   ^   =  SHR HOM  ;   *   �
-  7    R/S  Q   C= SPC  2  CTL  <-  1
+  6     /   ↑   =  SHR HOM  ;   *   £
+  7    R/S  Q   C= SPC  2  CTL  ←   1
 */
 
 #define MATRIX(a,b) (((a) << 3) | (b))
