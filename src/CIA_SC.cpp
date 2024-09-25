@@ -73,7 +73,8 @@ void MOS6526::Reset()
 	tod_latched = false;
 	tod_alarm = false;
 
-	irq_delay = 0;
+	set_ir_delay = 0;
+	clear_ir_delay = 0;
 	read_icr = false;
 }
 
@@ -157,7 +158,8 @@ void MOS6526::GetState(MOS6526State * s) const
 	s->ta_oneshot_delay = ta.oneshot_delay;
 	s->tb_oneshot_delay = tb.oneshot_delay;
 
-	s->irq_delay = irq_delay;
+	s->set_ir_delay = set_ir_delay;
+	s->clear_ir_delay = clear_ir_delay;
 	s->read_icr = read_icr;
 }
 
@@ -215,7 +217,8 @@ void MOS6526::SetState(const MOS6526State * s)
 	ta.oneshot_delay = s->ta_oneshot_delay;
 	tb.oneshot_delay = s->tb_oneshot_delay;
 
-	irq_delay = s->irq_delay;
+	set_ir_delay = s->set_ir_delay;
+	clear_ir_delay = s->clear_ir_delay;
 	read_icr = s->read_icr;
 }
 
@@ -439,7 +442,8 @@ void MOS6526::EmulateCycle()
 	tb.load_delay <<= 1;
 	tb.oneshot_delay <<= 1;
 
-	irq_delay <<= 1;
+	set_ir_delay <<= 1;
+	clear_ir_delay <<= 1;
 
 	// Emulate timer A
 	bool ta_input = (cra & 0x20) == 0;	// Count Phi2
@@ -474,16 +478,15 @@ void MOS6526::EmulateCycle()
 	read_icr = false;
 
 	// Update IRQ status
+	if (clear_ir_delay & 2) {	// One cycle delay clearing IR
+		icr &= 0x7f;
+	}
 	if (icr & int_mask) {
-		irq_delay |= 1;
+		set_ir_delay |= 1;
 	}
-	if (irq_delay & 2) {	// One cycle of IRQ delay
+	if (set_ir_delay & 2) {	// One cycle of delay setting IR
 		icr |= 0x80;
-	}
-	if (icr & 0x80) {
 		trigger_irq();
-	} else {
-		clear_irq();
 	}
 }
 

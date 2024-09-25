@@ -144,7 +144,7 @@ void MOS6522::EmulateCycle()
 	if (t1_load_delay & 2) {		// One cycle of load delay
 		t1c = t1l;
 	} else {
-		t1c -= 1;
+		--t1c;
 		if (t1c == 0xffff) {
 			if (!t1_irq_blocked) {
 				ifr |= 0x40;
@@ -161,7 +161,7 @@ void MOS6522::EmulateCycle()
 		t2c = t2l;
 	} else {
 		if (t2_input_delay & 2) {	// One cycle of input delay
-			t2c -= 1;
+			--t2c;
 			if (t2c == 0xffff) {
 				if (!t2_irq_blocked) {
 					t2_irq_blocked = true;

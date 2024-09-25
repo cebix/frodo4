@@ -107,8 +107,9 @@ protected:
 	uint8_t pb_in = 0;
 
 #ifdef FRODO_SC
-	uint8_t irq_delay;		// Delay line for IRQ assertion
-	bool read_icr;			// Flag: ICR read in previous cycle (timer B interrupt bug)
+	uint8_t set_ir_delay;		// Delay line for setting IR bit in ICR
+	uint8_t clear_ir_delay;	// Delay line for clearing IR bit in ICR
+	bool read_icr;				// Flag: ICR read in previous cycle (timer B interrupt bug)
 #endif
 };
 
@@ -215,7 +216,8 @@ struct MOS6526State {
 	uint8_t tb_load_delay;
 	uint8_t ta_oneshot_delay;
 	uint8_t tb_oneshot_delay;
-	uint8_t irq_delay;
+	uint8_t set_ir_delay;
+	uint8_t clear_ir_delay;
 	bool read_icr;
 };
 
@@ -310,11 +312,14 @@ inline uint8_t MOS6526::read_register(uint8_t reg)
 			return sdr;
 
 		case 13: {
-			uint8_t ret = icr; // Read and clear ICR
-			icr = 0;
+			uint8_t ret = icr;
 #ifdef FRODO_SC
-			irq_delay = 0;
-			read_icr = true;
+			icr &= 0x80;
+			clear_ir_delay |= 1;	// One cycle delay clearing IR
+			set_ir_delay = 0;		// But deassert IRQ immediately
+			read_icr = true;		// Timer B bug
+#else
+			icr = 0;
 #endif
 			clear_irq();
 			return ret;
@@ -437,7 +442,12 @@ inline void MOS6526::write_register(uint8_t reg, uint8_t byte)
 			if (byte & 0x80) {
 				int_mask |= byte & 0x1f;
 			} else {
-				int_mask &= ~(byte & 0x1f);
+				int_mask &= ~byte;
+			}
+			if ((icr & int_mask) == 0) {
+				if (clear_ir_delay & 4) {	// Read from ICR in previous cycle?
+					set_ir_delay = 0;		// Cancel pending interrupt
+				}
 			}
 #else
 			if (ThePrefs.CIAIRQHack) {	// Hack for addressing modes that read from the address
@@ -450,7 +460,7 @@ inline void MOS6526::write_register(uint8_t reg, uint8_t byte)
 					trigger_irq();
 				}
 			} else {
-				int_mask &= ~(byte & 0x1f);
+				int_mask &= ~byte;
 			}
 #endif
 			break;
