@@ -177,12 +177,13 @@ inline uint8_t MOS6510::read_byte_io(uint16_t adr)
 						return TheCIA2->ReadRegister(adr & 0x0f);
 					case 0xe:	// REU/Open I/O
 					case 0xf:
-						if ((adr & 0xfff0) == 0xdf00)
+						if ((adr & 0xfff0) == 0xdf00) {
 							return TheREU->ReadRegister(adr & 0x0f);
-						else if (adr < 0xdfa0)
+						} else if (adr < 0xdfa0) {
 							return rand();
-						else
+						} else {
 							return read_emulator_id(adr & 0x7f);
+						}
 				}
 			} else if (char_in) {
 				return char_rom[adr & 0x0fff];
@@ -220,7 +221,7 @@ uint8_t MOS6510::read_byte(uint16_t adr)
  *  $dfa0-$dfff: Emulator identification
  */
 
-const char frodo_id[0x5c] = "FRODO\r(C) 1994-1997 CHRISTIAN BAUER";
+const char frodo_id[0x5c] = "FRODO\r(C) CHRISTIAN BAUER";
 
 uint8_t MOS6510::read_emulator_id(uint16_t adr)
 {
