@@ -121,17 +121,14 @@ private:
 	uint8_t a, x, y, sp;
 	uint16_t pc;
 
-	bool jammed;	// Flag: CPU jammed, user notified
+	bool jammed;			// Flag: CPU jammed, user notified
 
 #ifdef FRODO_SC
-	uint32_t first_irq_cycle;
-	uint32_t first_nmi_cycle;	// Unused
+	void check_interrupts(unsigned delay);
 
-	enum {
-		OPFLAG_IRQ_DISABLED = 0x01,
-		OPFLAG_IRQ_ENABLED = 0x02,
-	};
-	uint8_t opflags;		// Interrupt operation flags
+	bool irq_pending;
+	bool nmi_pending;		// Unused on 1541
+	uint32_t first_irq_cycle;
 
 	uint8_t state, op;		// Current state and opcode
 	uint16_t ar, ar2;		// Address registers
@@ -154,15 +151,16 @@ struct MOS6502State {
 	uint8_t a, x, y;
 	uint8_t p;				// Processor flags
 	uint16_t pc, sp;
-
 	uint8_t intr[4];		// Interrupt state
-
-	bool instruction_complete;
-	bool idle;
-	uint8_t opflags;
 
 	MOS6522State via1;		// VIA 1
 	MOS6522State via2;		// VIA 2
+
+	bool idle;
+							// Frodo SC:
+	bool instruction_complete;
+	bool irq_pending;
+	uint32_t first_irq_cycle;
 };
 
 #endif

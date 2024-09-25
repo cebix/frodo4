@@ -29,7 +29,7 @@
  *    next cycle. Its upper 8 bits contain the current opcode, its lower
  *    8 bits contain the cycle number (0..7) within the opcode.
  *  - Opcodes are fetched in cycle 0 (state = 0)
- *  - The states 0x0010..0x0027 are used for interrupts
+ *  - The states 0x0008..0x0017 are used for interrupts
  *  - There is exactly one memory access in each clock cycle
  *
  * Memory configurations:
@@ -100,8 +100,8 @@ MOS6510::MOS6510(C64 *c64, uint8_t *Ram, uint8_t *Basic, uint8_t *Kernal, uint8_
 	dfff_byte = 0x55;
 	BALow = false;
 
+	irq_pending = nmi_pending = false;
 	first_irq_cycle = first_nmi_cycle = 0;
-	opflags = 0;
 }
 
 
@@ -121,9 +121,7 @@ void MOS6510::AsyncReset()
 
 void MOS6510::AsyncNMI()
 {
-	if (!nmi_state) {
-		interrupt.intr[INT_NMI] = true;
-	}
+	TriggerNMI();
 }
 
 
@@ -155,11 +153,12 @@ void MOS6510::GetState(MOS6510State *s) const
 	s->intr[INT_CIAIRQ] = interrupt.intr[INT_CIAIRQ];
 	s->intr[INT_NMI] = interrupt.intr[INT_NMI];
 	s->intr[INT_RESET] = interrupt.intr[INT_RESET];
-	s->nmi_state = nmi_state;
+	s->nmi_triggered = nmi_triggered;
 	s->dfff_byte = dfff_byte;
 
-	s->instruction_complete = (state == 0);
-	s->opflags = opflags;
+	s->instruction_complete = (state == O_FETCH);
+	s->irq_pending = irq_pending;
+	s->nmi_pending = nmi_pending;
 	s->first_irq_cycle = first_irq_cycle;
 	s->first_nmi_cycle = first_nmi_cycle;
 }
@@ -194,15 +193,18 @@ void MOS6510::SetState(const MOS6510State *s)
 	interrupt.intr[INT_CIAIRQ] = s->intr[INT_CIAIRQ];
 	interrupt.intr[INT_NMI] = s->intr[INT_NMI];
 	interrupt.intr[INT_RESET] = s->intr[INT_RESET];
-	nmi_state = s->nmi_state;
+	nmi_triggered = s->nmi_triggered;
+
+	irq_pending = s->irq_pending;
+	nmi_pending = s->nmi_pending;
+	first_irq_cycle = s->first_irq_cycle;
+	first_nmi_cycle = s->first_nmi_cycle;
+
 	dfff_byte = s->dfff_byte;
 
 	if (s->instruction_complete) {
-		state = 0;
+		state = O_FETCH;
 	}
-	opflags = s->opflags;
-	first_irq_cycle = s->first_irq_cycle;
-	first_nmi_cycle = s->first_nmi_cycle;
 }
 
 
@@ -570,12 +572,12 @@ void MOS6510::Reset()
 
 	// Clear all interrupt lines
 	interrupt.intr_any = 0;
-	nmi_state = false;
-	opflags = 0;
+	irq_pending = nmi_pending = false;
+	nmi_triggered = false;
 
 	// Read reset vector
 	pc = read_word(0xfffc);
-	state = 0;
+	state = O_FETCH;
 	jammed = false;
 }
 
@@ -595,7 +597,7 @@ void MOS6510::illegal_op(uint16_t adr)
 
 	// Keep executing opcode
 	--pc;
-	state = 0;
+	state = O_FETCH;
 }
 
 
@@ -615,30 +617,24 @@ void MOS6510::illegal_op(uint16_t adr)
 		return; \
 	read_byte(adr);
 
+// Check for pending interrupts
+void MOS6510::check_interrupts(unsigned delay)
+{
+	if ((interrupt.intr[INT_VICIRQ] || interrupt.intr[INT_CIAIRQ]) && !i_flag &&
+		(the_c64->CycleCounter() - first_irq_cycle >= delay) && !jammed) {
+		irq_pending = true;
+	}
+
+	if (nmi_triggered &&
+		(the_c64->CycleCounter() - first_nmi_cycle >= delay) && !jammed) {
+		nmi_pending = true;
+		nmi_triggered = false;
+	}
+}
+
 void MOS6510::EmulateCycle()
 {
 	uint8_t data, tmp;
-
-	// Any pending interrupts in state 0 (opcode fetch)?
-	if (state == 0 && interrupt.intr_any) {
-		if (interrupt.intr[INT_RESET]) {
-			Reset();
-
-		} else if (interrupt.intr[INT_NMI] && !jammed) {
-			if (the_c64->CycleCounter() - first_nmi_cycle >= 2) {
-				interrupt.intr[INT_NMI] = false;	// Simulate an edge-triggered input
-				state = 0x0010;
-				opflags = 0;
-			}
-
-		} else if ((interrupt.intr[INT_VICIRQ] || interrupt.intr[INT_CIAIRQ]) && !jammed &&
-				   (!i_flag || (opflags & OPFLAG_IRQ_DISABLED)) && !(opflags & OPFLAG_IRQ_ENABLED)) {
-			if (the_c64->CycleCounter() - first_irq_cycle >= 2) {
-				state = 0x0008;
-				opflags = 0;
-			}
-		}
-	}
 
 #include "CPU_emulcycle.h"
 

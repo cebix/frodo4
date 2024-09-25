@@ -24,8 +24,12 @@
 
 // States for addressing modes/operations (Frodo SC)
 enum {
+	O_FETCH = 0,	// Opcode fetch
+	O_IRQ = 0x09,	// IRQ recognized
+	O_NMI = 0x11,	// NMI recognized
+
 	// Read effective address, no extra cycles
-	A_ZERO=0x18,
+	A_ZERO = 0x18,
 	A_ZEROX, A_ZEROX1,
 	A_ZEROY, A_ZEROY1,
 	A_ABS, A_ABS1,

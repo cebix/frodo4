@@ -126,7 +126,8 @@ private:
 		uint8_t intr[4];	// Index: See definitions above
 		unsigned long intr_any;
 	} interrupt;
-	bool nmi_state;			// State of NMI line
+
+	bool nmi_triggered;		// Flag: NMI triggered by transition
 
 	uint8_t n_flag, z_flag;
 	bool v_flag, d_flag, i_flag, c_flag;
@@ -134,16 +135,15 @@ private:
 
 	uint16_t pc;
 
-	bool jammed;	// Flag: CPU jammed, user notified
+	bool jammed;			// Flag: CPU jammed, user notified
 
 #ifdef FRODO_SC
-	uint32_t first_irq_cycle, first_nmi_cycle;
+	void check_interrupts(unsigned delay = 1);
 
-	enum {
-		OPFLAG_IRQ_DISABLED = 0x01,
-		OPFLAG_IRQ_ENABLED = 0x02,
-	};
-	uint8_t opflags;			// Interrupt operation flags
+	bool irq_pending;
+	bool nmi_pending;
+	uint32_t first_irq_cycle;
+	uint32_t first_nmi_cycle;
 
 	uint8_t state, op;			// Current state and opcode
 	uint16_t ar, ar2;			// Address registers
@@ -164,61 +164,48 @@ struct MOS6510State {
 	uint16_t pc, sp;
 	uint8_t ddr, pr, pr_out;	// Port
 	uint8_t intr[4];			// Interrupt state
-	bool nmi_state;	
+	bool nmi_triggered;	
 	uint8_t dfff_byte;
 								// Frodo SC:
 	bool instruction_complete;
-	uint8_t opflags;
+	bool irq_pending;
+	bool nmi_pending;
 	uint32_t first_irq_cycle;
 	uint32_t first_nmi_cycle;
 };
 
 
 // Interrupt functions
+inline void MOS6510::TriggerVICIRQ()
+{
 #ifdef FRODO_SC
-inline void MOS6510::TriggerVICIRQ()
-{
 	if (!(interrupt.intr[INT_VICIRQ] || interrupt.intr[INT_CIAIRQ])) {
 		first_irq_cycle = the_c64->CycleCounter();
 	}
-	interrupt.intr[INT_VICIRQ] = true;
-}
-
-inline void MOS6510::TriggerCIAIRQ()
-{
-	if (!(interrupt.intr[INT_VICIRQ] || interrupt.intr[INT_CIAIRQ])) {
-		first_irq_cycle = the_c64->CycleCounter();
-	}
-	interrupt.intr[INT_CIAIRQ] = true;
-}
-
-inline void MOS6510::TriggerNMI()
-{
-	if (!nmi_state) {
-		nmi_state = true;
-		interrupt.intr[INT_NMI] = true;
-		first_nmi_cycle = the_c64->CycleCounter();
-	}
-}
-#else
-inline void MOS6510::TriggerVICIRQ()
-{
-	interrupt.intr[INT_VICIRQ] = true;
-}
-
-inline void MOS6510::TriggerCIAIRQ()
-{
-	interrupt.intr[INT_CIAIRQ] = true;
-}
-
-inline void MOS6510::TriggerNMI()
-{
-	if (!nmi_state) {
-		nmi_state = true;
-		interrupt.intr[INT_NMI] = true;
-	}
-}
 #endif
+	interrupt.intr[INT_VICIRQ] = true;
+}
+
+inline void MOS6510::TriggerCIAIRQ()
+{
+#ifdef FRODO_SC
+	if (!(interrupt.intr[INT_VICIRQ] || interrupt.intr[INT_CIAIRQ])) {
+		first_irq_cycle = the_c64->CycleCounter();
+	}
+#endif
+	interrupt.intr[INT_CIAIRQ] = true;
+}
+
+inline void MOS6510::TriggerNMI()
+{
+	if (!interrupt.intr[INT_NMI]) {
+#ifdef FRODO_SC
+		first_nmi_cycle = the_c64->CycleCounter();
+#endif
+		nmi_triggered = true;
+		interrupt.intr[INT_NMI] = true;
+	}
+}
 
 inline void MOS6510::ClearVICIRQ()
 {
@@ -232,7 +219,7 @@ inline void MOS6510::ClearCIAIRQ()
 
 inline void MOS6510::ClearNMI()
 {
-	nmi_state = false;
+	interrupt.intr[INT_NMI] = false;
 }
 
 #endif

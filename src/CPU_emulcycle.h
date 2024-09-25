@@ -67,6 +67,7 @@
 // Branch (cycle 1)
 #define Branch(flag) \
 		read_to(pc++, data);  \
+		check_interrupts(1); \
 		if (flag) { \
 			ar = pc + (int8_t)data; \
 			if ((ar ^ pc) & 0xff00) { \
@@ -79,7 +80,7 @@
 				state = O_BRANCH_NP; \
 			} \
 		} else { \
-			state = 0; \
+			state = O_FETCH; \
 		} \
 		break;
 
@@ -92,8 +93,8 @@
 // Operand fetch done, now execute opcode
 #define Execute state = OpTab[op]; break;
 
-// Last cycle of opcode
-#define Last state = 0; break;
+// Last cycle of opcode, check for pending interrupts
+#define Last check_interrupts(1); state = O_FETCH; break;
 
 
 /*
@@ -103,20 +104,30 @@
 	switch (state) {
 
 
-		// Opcode fetch (cycle 0)
-		case 0:
-			read_to(pc++, op);
-			state = ModeTab[op];
-			opflags = 0;
+		// Opcode fetch
+		case O_FETCH:
+#ifdef IS_CPU_1541
+			if (interrupt.intr[INT_RESET1541]) {
+#else
+			if (interrupt.intr[INT_RESET]) {
+#endif
+				Reset();
+				break;
+			}
+			read_to(pc, op);
+			if (nmi_pending) {
+				state = O_NMI;
+			} else if (irq_pending) {
+				state = O_IRQ;
+			} else {
+				pc++;
+				state = ModeTab[op];
+			}
 			break;
 
 
 		// IRQ
-		case 0x0008:
-			read_idle(pc);
-			state = 0x0009;
-			break;
-		case 0x0009:
+		case O_IRQ:
 			read_idle(pc);
 			state = 0x000a;
 			break;
@@ -126,12 +137,19 @@
 			break;
 		case 0x000b:
 			write_byte(sp-- | 0x100, pc);
+			check_interrupts(0);
 			state = 0x000c;
 			break;
 		case 0x000c:
+			irq_pending = false;
 			push_flags(false);
 			i_flag = true;
-			state = 0x000d;
+			if (nmi_pending) {	// IRQ interrupted by NMI?
+				nmi_pending = false;
+				state = 0x0015;
+			} else {
+				state = 0x000d;
+			}
 			break;
 		case 0x000d:
 			read_to(0xfffe, pc);
@@ -140,15 +158,12 @@
 		case 0x000e:
 			read_to(0xffff, data);
 			pc |= data << 8;
-			Last;
+			state = O_FETCH;
+			break;
 
 
 		// NMI
-		case 0x0010:
-			read_idle(pc);
-			state = 0x0011;
-			break;
-		case 0x0011:
+		case O_NMI:
 			read_idle(pc);
 			state = 0x0012;
 			break;
@@ -161,6 +176,7 @@
 			state = 0x0014;
 			break;
 		case 0x0014:
+			irq_pending = nmi_pending = false;
 			push_flags(false);
 			i_flag = true;
 			state = 0x0015;
@@ -172,7 +188,44 @@
 		case 0x0016:
 			read_to(0xfffb, data);
 			pc |= data << 8;
-			Last;
+			state = O_FETCH;
+			break;
+
+
+		// BRK
+		case O_BRK:
+			read_idle(pc++);
+			state = O_BRK1;
+			break;
+		case O_BRK1:
+			write_byte(sp-- | 0x100, pc >> 8);
+			state = O_BRK2;
+			break;
+		case O_BRK2:
+			write_byte(sp-- | 0x100, pc);
+			check_interrupts(0);
+			state = O_BRK3;
+			break;
+		case O_BRK3:
+			irq_pending = false;
+			push_flags(true);
+			i_flag = true;
+			if (nmi_pending) {	// BRK interrupted by NMI?
+				nmi_pending = false;
+				state = 0x0015;
+			} else {
+				state = O_BRK4;
+			}
+			break;
+		case O_BRK4:
+			read_to(0xfffe, pc);
+			state = O_BRK5;
+			break;
+		case O_BRK5:
+			read_to(0xffff, data);
+			pc |= data << 8;
+			state = O_FETCH;
+			break;
 
 
 		// Addressing modes: Fetch effective address, no extra cycles (-> ar)
@@ -761,16 +814,11 @@
 			read_idle(sp++ | 0x100);
 			state = O_PLP2;
 			break;
-		case O_PLP2: {
-			bool old_i_flag = i_flag;
+		case O_PLP2:
+			check_interrupts(1);	// Flag change is internally delayed, check interrupts first
 			pop_flags();
-			if (!old_i_flag && i_flag) {
-				opflags |= OPFLAG_IRQ_DISABLED;
-			} else if (old_i_flag && !i_flag) {
-				opflags |= OPFLAG_IRQ_ENABLED;
-			}
-			Last;
-		}
+			state = O_FETCH;
+			break;
 
 
 		// Jump/branch group
@@ -856,41 +904,6 @@
 			pc |= data << 8;
 			Last;
 
-		case O_BRK:
-			read_idle(pc++);
-			state = O_BRK1;
-			break;
-		case O_BRK1:
-			write_byte(sp-- | 0x100, pc >> 8);
-			state = O_BRK2;
-			break;
-		case O_BRK2:
-			write_byte(sp-- | 0x100, pc);
-			state = O_BRK3;
-			break;
-		case O_BRK3:
-			push_flags(true);
-			i_flag = true;
-#ifndef IS_CPU_1541
-			if (interrupt.intr[INT_NMI] && (the_c64->CycleCounter() - first_nmi_cycle) >= 1) {  // BRK interrupted by NMI?
-				interrupt.intr[INT_NMI] = false;	// Simulate an edge-triggered input
-				state = 0x0015;						// Jump to NMI sequence
-				break;
-			}
-#endif
-			++first_nmi_cycle;	// Delay pending NMI by one cycle
-			state = O_BRK4;
-			break;
-		case O_BRK4:
-			read_to(0xfffe, pc);
-			++first_nmi_cycle;	// Delay pending NMI by one cycle
-			state = O_BRK5;
-			break;
-		case O_BRK5:
-			read_to(0xffff, data);
-			pc |= data << 8;
-			Last;
-
 		case O_BCS:
 			Branch(c_flag);
 
@@ -925,27 +938,22 @@
 		case O_BPL:
 			Branch(!(n_flag & 0x80));
 
-		case O_BRANCH_NP:	// No page crossed
+		case O_BRANCH_NP:		// No page crossed
 			read_idle(pc);
 			pc = ar;
-			++first_irq_cycle;	// Delay pending interrupts by one cycle
-			++first_nmi_cycle;
-			Last;
-		case O_BRANCH_BP:	// Page crossed, branch backwards
+			state = O_FETCH;	// No interrupt check
+			break;
+		case O_BRANCH_BP:		// Page crossed, branch backwards
 			read_idle(pc);
 			pc = ar;
-			--first_irq_cycle;	// Advance pending interrupts by one cycle
-			--first_nmi_cycle;
 			state = O_BRANCH_BP1;
 			break;
 		case O_BRANCH_BP1:
 			read_idle(pc + 0x100);
 			Last;
-		case O_BRANCH_FP:	// Page crossed, branch forwards
+		case O_BRANCH_FP:		// Page crossed, branch forwards
 			read_idle(pc);
 			pc = ar;
-			--first_irq_cycle;	// Advance pending interrupts by one cycle
-			--first_nmi_cycle;
 			state = O_BRANCH_FP1;
 			break;
 		case O_BRANCH_FP1:
@@ -976,19 +984,17 @@
 
 		case O_SEI:
 			read_idle(pc);
-			if (!i_flag) {
-				opflags |= OPFLAG_IRQ_DISABLED;
-			}
+			check_interrupts(1);	// Flag change is internally delayed, check interrupts first
 			i_flag = true;
-			Last;
+			state = O_FETCH;
+			break;
 
 		case O_CLI:
 			read_idle(pc);
-			if (i_flag) {
-				opflags |= OPFLAG_IRQ_ENABLED;
-			}
+			check_interrupts(1);	// Flag change is internally delayed, check interrupts first
 			i_flag = false;
-			Last;
+			state = O_FETCH;
+			break;
 
 		case O_CLV:
 			read_idle(pc);

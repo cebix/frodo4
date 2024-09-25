@@ -29,7 +29,7 @@
  *    next cycle. Its upper 8 bits contain the current opcode, its lower
  *    8 bits contain the cycle number (0..7) within the opcode.
  *  - Opcodes are fetched in cycle 0 (state = 0)
- *  - The states 0x0010..0x0027 are used for interrupts
+ *  - The states 0x0008..0x0017 are used for interrupts
  *  - There is exactly one memory access in each clock cycle
  *
  * Memory map (from 1541-II):
@@ -82,7 +82,9 @@ MOS6502_1541::MOS6502_1541(C64 * c64, Job1541 * job, uint8_t * Ram, uint8_t * Ro
 	i_flag = true;
 
 	cycle_counter = 0;
-	first_irq_cycle = first_nmi_cycle = 0;
+
+	irq_pending = false;
+	first_irq_cycle = 0;
 
 	via1 = new MOS6522(this, INT_VIA1IRQ);
 	via2 = new MOS6522(this, INT_VIA2IRQ);
@@ -121,11 +123,11 @@ void MOS6502_1541::Reset()
 {
 	// Clear all interrupt lines
 	interrupt.intr_any = 0;
-	opflags = 0;
+	irq_pending = false;
 
 	// Read reset vector
 	pc = read_word(0xfffc);
-	state = 0;
+	state = O_FETCH;
 	jammed = false;
 
 	// IEC lines and VIA registers
@@ -165,9 +167,12 @@ void MOS6502_1541::GetState(MOS6502State *s) const
 	s->intr[INT_VIA1IRQ] = interrupt.intr[INT_VIA1IRQ];
 	s->intr[INT_VIA2IRQ] = interrupt.intr[INT_VIA2IRQ];
 	s->intr[INT_RESET1541] = interrupt.intr[INT_RESET1541];
-	s->instruction_complete = (state == 0);
+	s->irq_pending = irq_pending;
+	s->first_irq_cycle = first_irq_cycle;
+
+	s->instruction_complete = (state == O_FETCH);
+
 	s->idle = Idle;
-	s->opflags = opflags;
 
 	via1->GetState(&(s->via1));
 	via2->GetState(&(s->via2));
@@ -199,11 +204,14 @@ void MOS6502_1541::SetState(const MOS6502State *s)
 	interrupt.intr[INT_VIA1IRQ] = s->intr[INT_VIA1IRQ];
 	interrupt.intr[INT_VIA2IRQ] = s->intr[INT_VIA2IRQ];
 	interrupt.intr[INT_RESET1541] = s->intr[INT_RESET1541];
+	irq_pending = s->irq_pending;
+	first_irq_cycle = s->first_irq_cycle;
+
 	if (s->instruction_complete) {
-		state = 0;
+		state = O_FETCH;
 	}
+
 	Idle = s->idle;
-	opflags = s->opflags;
 
 	via1->SetState(&(s->via1));
 	via2->SetState(&(s->via2));
@@ -507,7 +515,7 @@ void MOS6502_1541::illegal_op(uint16_t adr)
 
 	// Keep executing opcode
 	--pc;
-	state = 0;
+	state = O_FETCH;
 }
 
 
@@ -523,23 +531,18 @@ void MOS6502_1541::illegal_op(uint16_t adr)
 #define read_idle(adr) \
 	read_byte(adr);
 
+// Check for pending interrupts
+void MOS6502_1541::check_interrupts(unsigned delay)
+{
+	if ((interrupt.intr[INT_VIA1IRQ] || interrupt.intr[INT_VIA2IRQ]) && !i_flag &&
+		(cycle_counter - first_irq_cycle >= delay) && !jammed) {
+		irq_pending = true;
+	}
+}
+
 void MOS6502_1541::EmulateCPUCycle()
 {
 	uint8_t data, tmp;
-
-	// Any pending interrupts in state 0 (opcode fetch)?
-	if (state == 0 && interrupt.intr_any) {
-		if (interrupt.intr[INT_RESET1541]) {
-			Reset();
-
-		} else if ((interrupt.intr[INT_VIA1IRQ] || interrupt.intr[INT_VIA2IRQ]) && !jammed &&
-				   (!i_flag || (opflags & OPFLAG_IRQ_DISABLED)) && !(opflags & OPFLAG_IRQ_ENABLED)) {
-			if (cycle_counter - first_irq_cycle >= 2) {
-				state = 0x0008;
-				opflags = 0;
-			}
-		}
-	}
 
 #define IS_CPU_1541
 #include "CPU_emulcycle.h"

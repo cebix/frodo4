@@ -167,9 +167,12 @@ void MOS6502_1541::GetState(MOS6502State *s) const
 	s->intr[INT_VIA1IRQ] = interrupt.intr[INT_VIA1IRQ];
 	s->intr[INT_VIA2IRQ] = interrupt.intr[INT_VIA2IRQ];
 	s->intr[INT_RESET1541] = interrupt.intr[INT_RESET1541];
+	s->irq_pending = false;
+	s->first_irq_cycle = 0;
+
 	s->instruction_complete = true;
+
 	s->idle = Idle;
-	s->opflags = 0;
 
 	via1->GetState(&(s->via1));
 	via2->GetState(&(s->via2));

@@ -118,9 +118,7 @@ void MOS6510::AsyncReset()
 
 void MOS6510::AsyncNMI()
 {
-	if (!nmi_state) {
-		interrupt.intr[INT_NMI] = true;
-	}
+	TriggerNMI();
 }
 
 
@@ -563,11 +561,12 @@ void MOS6510::GetState(MOS6510State *s) const
 	s->intr[INT_CIAIRQ] = interrupt.intr[INT_CIAIRQ];
 	s->intr[INT_NMI] = interrupt.intr[INT_NMI];
 	s->intr[INT_RESET] = interrupt.intr[INT_RESET];
-	s->nmi_state = nmi_state;
+	s->nmi_triggered = nmi_triggered;
 	s->dfff_byte = dfff_byte;
 
 	s->instruction_complete = true;
-	s->opflags = 0;
+	s->irq_pending = false;
+	s->nmi_pending = false;
 	s->first_irq_cycle = 0;
 	s->first_nmi_cycle = 0;
 }
@@ -601,7 +600,7 @@ void MOS6510::SetState(const MOS6510State *s)
 	interrupt.intr[INT_CIAIRQ] = s->intr[INT_CIAIRQ];
 	interrupt.intr[INT_NMI] = s->intr[INT_NMI];
 	interrupt.intr[INT_RESET] = s->intr[INT_RESET];
-	nmi_state = s->nmi_state;
+	nmi_triggered = s->nmi_triggered;
 	dfff_byte = s->dfff_byte;
 }
 
@@ -618,7 +617,7 @@ void MOS6510::Reset()
 
 	// Clear all interrupt lines
 	interrupt.intr_any = 0;
-	nmi_state = false;
+	nmi_triggered = false;
 
 	// Read reset vector
 	jump(read_word(0xfffc));
