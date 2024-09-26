@@ -83,8 +83,15 @@ MOS6502_1541::MOS6502_1541(C64 * c64, Job1541 * job, uint8_t * Ram, uint8_t * Ro
 
 	cycle_counter = 0;
 
+	int_line[INT_VIA1IRQ] = false;
+	int_line[INT_VIA2IRQ] = false;
+	int_line[INT_RESET1541] = false;
+
 	irq_pending = false;
 	first_irq_cycle = 0;
+
+	nmi_triggered = false;
+	nmi_pending = false;
 
 	via1 = new MOS6522(this, INT_VIA1IRQ);
 	via2 = new MOS6522(this, INT_VIA2IRQ);
@@ -110,7 +117,7 @@ MOS6502_1541::~MOS6502_1541()
 
 void MOS6502_1541::AsyncReset()
 {
-	interrupt.intr[INT_RESET1541] = true;
+	int_line[INT_RESET1541] = true;
 	Idle = false;
 }
 
@@ -122,8 +129,14 @@ void MOS6502_1541::AsyncReset()
 void MOS6502_1541::Reset()
 {
 	// Clear all interrupt lines
-	interrupt.intr_any = 0;
+	int_line[INT_VIA1IRQ] = false;
+	int_line[INT_VIA2IRQ] = false;
+	int_line[INT_RESET1541] = false;
+
 	irq_pending = false;
+
+	nmi_triggered = false;
+	nmi_pending = false;
 
 	// Read reset vector
 	pc = read_word(0xfffc);
@@ -164,9 +177,9 @@ void MOS6502_1541::GetState(MOS6502State *s) const
 	s->pc = pc;
 	s->sp = sp | 0x0100;
 
-	s->intr[INT_VIA1IRQ] = interrupt.intr[INT_VIA1IRQ];
-	s->intr[INT_VIA2IRQ] = interrupt.intr[INT_VIA2IRQ];
-	s->intr[INT_RESET1541] = interrupt.intr[INT_RESET1541];
+	s->int_line[INT_VIA1IRQ] = int_line[INT_VIA1IRQ];
+	s->int_line[INT_VIA2IRQ] = int_line[INT_VIA2IRQ];
+
 	s->irq_pending = irq_pending;
 	s->first_irq_cycle = first_irq_cycle;
 
@@ -201,9 +214,9 @@ void MOS6502_1541::SetState(const MOS6502State *s)
 	pc = s->pc;
 	sp = s->sp & 0xff;
 
-	interrupt.intr[INT_VIA1IRQ] = s->intr[INT_VIA1IRQ];
-	interrupt.intr[INT_VIA2IRQ] = s->intr[INT_VIA2IRQ];
-	interrupt.intr[INT_RESET1541] = s->intr[INT_RESET1541];
+	int_line[INT_VIA1IRQ] = s->int_line[INT_VIA1IRQ];
+	int_line[INT_VIA2IRQ] = s->int_line[INT_VIA2IRQ];
+
 	irq_pending = s->irq_pending;
 	first_irq_cycle = s->first_irq_cycle;
 
@@ -238,10 +251,10 @@ uint8_t MOS6502_1541::CalcIECLines() const
 
 void MOS6502_1541::TriggerInterrupt(unsigned which)
 {
-	if (!(interrupt.intr[INT_VIA1IRQ] || interrupt.intr[INT_VIA2IRQ])) {
+	if (!(int_line[INT_VIA1IRQ] || int_line[INT_VIA2IRQ])) {
 		first_irq_cycle = cycle_counter;
 	}
-	interrupt.intr[which] = true;
+	int_line[which] = true;
 
 	// Wake up 1541
 	Idle = false;
@@ -429,7 +442,7 @@ void MOS6502_1541::ExtWriteByte(uint16_t adr, uint8_t byte)
 
 
 /*
- *  Adc instruction
+ *  ADC instruction
  */
 
 inline void MOS6502_1541::do_adc(uint8_t byte)
@@ -465,7 +478,7 @@ inline void MOS6502_1541::do_adc(uint8_t byte)
 
 
 /*
- * Sbc instruction
+ *  SBC instruction
  */
 
 inline void MOS6502_1541::do_sbc(uint8_t byte)
@@ -532,10 +545,10 @@ void MOS6502_1541::illegal_op(uint16_t adr)
 	read_byte(adr);
 
 // Check for pending interrupts
-void MOS6502_1541::check_interrupts(unsigned delay)
+void MOS6502_1541::check_interrupts()
 {
-	if ((interrupt.intr[INT_VIA1IRQ] || interrupt.intr[INT_VIA2IRQ]) && !i_flag &&
-		(cycle_counter - first_irq_cycle >= delay) && !jammed) {
+	if ((int_line[INT_VIA1IRQ] || int_line[INT_VIA2IRQ]) && !i_flag &&
+		(cycle_counter - first_irq_cycle >= 1) && !jammed) {
 		irq_pending = true;
 	}
 }
@@ -544,7 +557,12 @@ void MOS6502_1541::EmulateCPUCycle()
 {
 	uint8_t data, tmp;
 
-#define IS_CPU_1541
+#define RESET_PENDING (int_line[INT_RESET1541])
+#define CHECK_SO \
+	if (set_overflow_enabled() && the_job->ByteReady(cycle_counter)) { \
+		v_flag = true; \
+	}
+
 #include "CPU_emulcycle.h"
 
 		// Extension opcode

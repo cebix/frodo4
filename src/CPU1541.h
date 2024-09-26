@@ -69,7 +69,7 @@ public:
 	void ExtWriteByte(uint16_t adr, uint8_t byte);
 
 	void TriggerInterrupt(unsigned which);
-	void ClearInterrupt(unsigned which) { interrupt.intr[which] = false; }
+	void ClearInterrupt(unsigned which) { int_line[which] = false; }
 
 	void TriggerIECInterrupt();
 	uint8_t CalcIECLines() const;
@@ -111,24 +111,24 @@ private:
 
 	uint32_t cycle_counter;
 
-	union {					// Pending interrupts
-		uint8_t intr[4];	// Index: See definitions above
-		unsigned long intr_any;
-	} interrupt;
+	bool int_line[3];		// Interrupt line state (index: INT_*)
+	bool nmi_triggered;		// Unused on 1541
 
 	uint8_t n_flag, z_flag;
 	bool v_flag, d_flag, i_flag, c_flag;
 	uint8_t a, x, y, sp;
+
 	uint16_t pc;
 
 	bool jammed;			// Flag: CPU jammed, user notified
 
 #ifdef FRODO_SC
-	void check_interrupts(unsigned delay);
+	void check_interrupts();
 
 	bool irq_pending;
-	bool nmi_pending;		// Unused on 1541
 	uint32_t first_irq_cycle;
+
+	bool nmi_pending;		// Unused on 1541
 
 	uint8_t state, op;		// Current state and opcode
 	uint16_t ar, ar2;		// Address registers
@@ -151,12 +151,14 @@ struct MOS6502State {
 	uint8_t a, x, y;
 	uint8_t p;				// Processor flags
 	uint16_t pc, sp;
-	uint8_t intr[4];		// Interrupt state
+
+	bool int_line[3];		// Interrupt line state
+
+	bool idle;
 
 	MOS6522State via1;		// VIA 1
 	MOS6522State via2;		// VIA 2
 
-	bool idle;
 							// Frodo SC:
 	bool instruction_complete;
 	bool irq_pending;

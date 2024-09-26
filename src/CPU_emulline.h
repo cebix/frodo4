@@ -95,17 +95,75 @@
 
 
 /*
- *  Set N and Z flags according to byte
+ *  Stack macros
  */
 
-#define set_nz(x) (z_flag = n_flag = (x))
+// Pop a byte from the stack
+#define pop_byte() ram[(++sp) | 0x0100]
+
+// Push a byte onto the stack
+#define push_byte(byte) (ram[((sp--) & 0xff) | 0x0100] = (byte))
+
+// Pop processor flags from the stack
+#define pop_flags() \
+	n_flag = tmp = pop_byte(); \
+	v_flag = tmp & 0x40; \
+	d_flag = tmp & 0x08; \
+	i_flag = tmp & 0x04; \
+	z_flag = !(tmp & 0x02); \
+	c_flag = tmp & 0x01;
+
+// Push processor flags onto the stack
+#define push_flags(b_flag) \
+	tmp = 0x20 | (n_flag & 0x80); \
+	CHECK_SO; \
+	if (v_flag) tmp |= 0x40; \
+	if (b_flag) tmp |= 0x10; \
+	if (d_flag) tmp |= 0x08; \
+	if (i_flag) tmp |= 0x04; \
+	if (!z_flag) tmp |= 0x02; \
+	if (c_flag) tmp |= 0x01; \
+	push_byte(tmp);
 
 
 /*
- * End of opcode, decrement cycles left
+ *  Other macros
  */
 
+// Set N and Z flags according to byte
+#define set_nz(x) (z_flag = n_flag = (x))
+
+// Jump to address
+#define jump(adr) pc = (adr)
+
+// End of opcode, decrement cycles left
 #define ENDOP(cyc) last_cycles = cyc; break;
+
+
+	// Handle pending interrupts
+handle_int:
+	if (RESET_PENDING) {
+		Reset();
+
+	} else if (nmi_triggered && !jammed) {
+		nmi_triggered = false;
+		push_byte(pc >> 8);
+		push_byte(pc);
+		push_flags(false);
+		i_flag = true;
+		adr = read_word(0xfffa);
+		jump(adr);
+		last_cycles = 7;
+
+	} else if (IRQ_PENDING && !i_flag && !jammed) {
+		push_byte(pc >> 8);
+		push_byte(pc);
+		push_flags(false);
+		i_flag = true;
+		adr = read_word(0xfffe);
+		jump(adr);
+		last_cycles = 7;
+	}
 
 
 	// Main opcode fetch/execute loop
@@ -739,7 +797,7 @@
 
 		case 0x28:	// PLP
 			pop_flags();
-			if (interrupt.intr_any && !i_flag)
+			if (IRQ_PENDING && !i_flag)
 				goto handle_int;
 			ENDOP(4);
 
@@ -774,7 +832,7 @@
 			adr = pop_byte();	// Split because of pop_byte ++sp side-effect
 			adr = adr | (pop_byte() << 8);
 			jump(adr);
-			if (interrupt.intr_any && !i_flag)
+			if (IRQ_PENDING && !i_flag)
 				goto handle_int;
 			ENDOP(6);
 
@@ -814,19 +872,11 @@
 			Branch(z_flag);
 
 		case 0x70:	// BVS rel
-#ifdef IS_CPU_1541
-			if (set_overflow_enabled() && the_job->ByteReady(cycle_counter)) {
-				v_flag = true;
-			}
-#endif
+			CHECK_SO;	// Handle SO (GCR byte ready) input on 1541
 			Branch(v_flag);
 
 		case 0x50:	// BVC rel
-#ifdef IS_CPU_1541
-			if (set_overflow_enabled() && the_job->ByteReady(cycle_counter)) {
-				v_flag = true;
-			}
-#endif
+			CHECK_SO;	// Handle SO (GCR byte ready) input on 1541
 			Branch(!v_flag);
 
 		case 0x30:	// BMI rel
@@ -859,7 +909,7 @@
 
 		case 0x58:	// CLI
 			i_flag = false;
-			if (interrupt.intr_any)
+			if (IRQ_PENDING)
 				goto handle_int;
 			ENDOP(2);
 

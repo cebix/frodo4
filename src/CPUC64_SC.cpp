@@ -26,47 +26,24 @@
  *  - All opcodes are resolved into single clock cycles. There is one
  *    switch case for each cycle.
  *  - The "state" variable specifies the routine to be executed in the
- *    next cycle. Its upper 8 bits contain the current opcode, its lower
- *    8 bits contain the cycle number (0..7) within the opcode.
+ *    next cycle. Its upper 8 bits contain the current opcode, its lower 8
+ *    bits contain the cycle number (0..7) within the opcode.
  *  - Opcodes are fetched in cycle 0 (state = 0)
  *  - The states 0x0008..0x0017 are used for interrupts
  *  - There is exactly one memory access in each clock cycle
- *
- * Memory configurations:
- *
- * $01  $a000-$bfff  $d000-$dfff  $e000-$ffff
- * -----------------------------------------------
- *  0       RAM          RAM          RAM
- *  1       RAM       Char ROM        RAM
- *  2       RAM       Char ROM    Kernal ROM
- *  3    Basic ROM    Char ROM    Kernal ROM
- *  4       RAM          RAM          RAM
- *  5       RAM          I/O          RAM
- *  6       RAM          I/O      Kernal ROM
- *  7    Basic ROM       I/O      Kernal ROM
- *
- *  - All memory accesses are done with the read_byte() and
- *    write_byte() functions which also do the memory address
- *    decoding.
- *  - If a write occurs to addresses 0 or 1, new_config is
- *    called to check whether the memory configuration has
- *    changed
+ *  - All memory accesses are done with the read_byte() and write_byte()
+ *    functions which also do the memory address decoding.
+ *  - If a write occurs to addresses 0 or 1, new_config() is called to check
+ *    whether the memory configuration has changed.
  *  - The possible interrupt sources are:
  *      INT_VICIRQ: I flag is checked, jump to ($fffe)
  *      INT_CIAIRQ: I flag is checked, jump to ($fffe)
  *      INT_NMI: Jump to ($fffa)
  *      INT_RESET: Jump to ($fffc)
- *  - The z_flag variable has the inverse meaning of the
- *    6510 Z flag
- *  - Only the highest bit of the n_flag variable is used
- *  - The $f2 opcode that would normally crash the 6510 is
- *    used to implement emulator-specific functions, mainly
- *    those for the IEC routines
- *
- * Incompatibilities:
- * ------------------
- *
- *  - If BA is low and AEC is high, read accesses should occur
+ *  - The z_flag variable has the inverse meaning of the 6510 Z flag.
+ *  - Only the highest bit of the n_flag variable is used.
+ *  - The $f2 opcode that would normally crash the 6510 is used to implement
+ *    emulator-specific functions, mainly those for the IEC routines.
  */
 
 #include "sysdeps.h"
@@ -97,11 +74,19 @@ MOS6510::MOS6510(C64 *c64, uint8_t *Ram, uint8_t *Basic, uint8_t *Kernal, uint8_
 	v_flag = d_flag = c_flag = false;
 	i_flag = true;
 
-	dfff_byte = 0x55;
 	BALow = false;
 
-	irq_pending = nmi_pending = false;
-	first_irq_cycle = first_nmi_cycle = 0;
+	int_line[INT_VICIRQ] = false;
+	int_line[INT_CIAIRQ] = false;
+	int_line[INT_NMI] = false;
+	int_line[INT_RESET] = false;
+
+	irq_pending = false;
+	first_irq_cycle = 0;
+
+	nmi_triggered = false;
+	nmi_pending = false;
+	first_nmi_cycle = 0;
 }
 
 
@@ -111,7 +96,7 @@ MOS6510::MOS6510(C64 *c64, uint8_t *Ram, uint8_t *Basic, uint8_t *Kernal, uint8_
 
 void MOS6510::AsyncReset()
 {
-	interrupt.intr[INT_RESET] = true;
+	int_line[INT_RESET] = true;
 }
 
 
@@ -122,6 +107,34 @@ void MOS6510::AsyncReset()
 void MOS6510::AsyncNMI()
 {
 	TriggerNMI();
+}
+
+
+/*
+ *  Reset CPU
+ */
+
+void MOS6510::Reset()
+{
+	// Initialize extra 6510 registers and memory configuration
+	ddr = pr = pr_out = 0;
+	new_config();
+
+	// Clear all interrupt lines
+	int_line[INT_VICIRQ] = false;
+	int_line[INT_CIAIRQ] = false;
+	int_line[INT_NMI] = false;
+	int_line[INT_RESET] = false;
+
+	irq_pending = false;
+
+	nmi_triggered = false;
+	nmi_pending = false;
+
+	// Read reset vector
+	pc = read_word(0xfffc);
+	state = O_FETCH;
+	jammed = false;
 }
 
 
@@ -149,18 +162,20 @@ void MOS6510::GetState(MOS6510State *s) const
 	s->pr = pr;
 	s->pr_out = pr_out;
 
-	s->intr[INT_VICIRQ] = interrupt.intr[INT_VICIRQ];
-	s->intr[INT_CIAIRQ] = interrupt.intr[INT_CIAIRQ];
-	s->intr[INT_NMI] = interrupt.intr[INT_NMI];
-	s->intr[INT_RESET] = interrupt.intr[INT_RESET];
+	s->int_line[INT_VICIRQ] = int_line[INT_VICIRQ];
+	s->int_line[INT_CIAIRQ] = int_line[INT_CIAIRQ];
+	s->int_line[INT_NMI] = int_line[INT_NMI];
+
+	s->irq_pending = irq_pending;
+	s->first_irq_cycle = first_irq_cycle;
+
 	s->nmi_triggered = nmi_triggered;
-	s->dfff_byte = dfff_byte;
+	s->nmi_pending = nmi_pending;
+	s->first_nmi_cycle = first_nmi_cycle;
+
+	s->dfff_byte = 0x55;
 
 	s->instruction_complete = (state == O_FETCH);
-	s->irq_pending = irq_pending;
-	s->nmi_pending = nmi_pending;
-	s->first_irq_cycle = first_irq_cycle;
-	s->first_nmi_cycle = first_nmi_cycle;
 }
 
 
@@ -189,18 +204,16 @@ void MOS6510::SetState(const MOS6510State *s)
 	pc = s->pc;
 	sp = s->sp & 0xff;
 
-	interrupt.intr[INT_VICIRQ] = s->intr[INT_VICIRQ];
-	interrupt.intr[INT_CIAIRQ] = s->intr[INT_CIAIRQ];
-	interrupt.intr[INT_NMI] = s->intr[INT_NMI];
-	interrupt.intr[INT_RESET] = s->intr[INT_RESET];
-	nmi_triggered = s->nmi_triggered;
+	int_line[INT_VICIRQ] = s->int_line[INT_VICIRQ];
+	int_line[INT_CIAIRQ] = s->int_line[INT_CIAIRQ];
+	int_line[INT_NMI] = s->int_line[INT_NMI];
 
 	irq_pending = s->irq_pending;
-	nmi_pending = s->nmi_pending;
 	first_irq_cycle = s->first_irq_cycle;
-	first_nmi_cycle = s->first_nmi_cycle;
 
-	dfff_byte = s->dfff_byte;
+	nmi_triggered = s->nmi_triggered;
+	nmi_pending = s->nmi_pending;
+	first_nmi_cycle = s->first_nmi_cycle;
 
 	if (s->instruction_complete) {
 		state = O_FETCH;
@@ -463,7 +476,7 @@ void MOS6510::REUWriteByte(uint16_t adr, uint8_t byte)
 
 
 /*
- *  Adc instruction
+ *  ADC instruction
  */
 
 inline void MOS6510::do_adc(uint8_t byte)
@@ -499,7 +512,7 @@ inline void MOS6510::do_adc(uint8_t byte)
 
 
 /*
- * Sbc instruction
+ *  SBC instruction
  */
 
 inline void MOS6510::do_sbc(uint8_t byte)
@@ -531,28 +544,6 @@ inline void MOS6510::do_sbc(uint8_t byte)
 
 		a = (ah << 4) | (al & 0x0f);							// Compose result
 	}
-}
-
-
-/*
- *  Reset CPU
- */
-
-void MOS6510::Reset()
-{
-	// Initialize extra 6510 registers and memory configuration
-	ddr = pr = pr_out = 0;
-	new_config();
-
-	// Clear all interrupt lines
-	interrupt.intr_any = 0;
-	irq_pending = nmi_pending = false;
-	nmi_triggered = false;
-
-	// Read reset vector
-	pc = read_word(0xfffc);
-	state = O_FETCH;
-	jammed = false;
 }
 
 
@@ -592,15 +583,15 @@ void MOS6510::illegal_op(uint16_t adr)
 	read_byte(adr);
 
 // Check for pending interrupts
-void MOS6510::check_interrupts(unsigned delay)
+void MOS6510::check_interrupts()
 {
-	if ((interrupt.intr[INT_VICIRQ] || interrupt.intr[INT_CIAIRQ]) && !i_flag &&
-		(the_c64->CycleCounter() - first_irq_cycle >= delay) && !jammed) {
+	if ((int_line[INT_VICIRQ] || int_line[INT_CIAIRQ]) && !i_flag &&
+		(the_c64->CycleCounter() - first_irq_cycle >= 1) && !jammed) {
 		irq_pending = true;
 	}
 
 	if (nmi_triggered &&
-		(the_c64->CycleCounter() - first_nmi_cycle >= delay) && !jammed) {
+		(the_c64->CycleCounter() - first_nmi_cycle >= 1) && !jammed) {
 		nmi_pending = true;
 		nmi_triggered = false;
 	}
@@ -609,6 +600,9 @@ void MOS6510::check_interrupts(unsigned delay)
 void MOS6510::EmulateCycle()
 {
 	uint8_t data, tmp;
+
+#define RESET_PENDING (int_line[INT_RESET])
+#define CHECK_SO ;
 
 #include "CPU_emulcycle.h"
 

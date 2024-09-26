@@ -22,10 +22,9 @@
  * Notes:
  * ------
  *
- *  - The EmulateLine() function is called for every emulated
- *    raster line. It has a cycle counter that is decremented
- *    by every executed opcode and if the counter goes below
- *    zero, the function returns.
+ *  - The EmulateLine() function is called for every emulated raster line.
+ *    It has a cycle counter that is decremented by every executed opcode
+ *    and if the counter goes below zero, the function returns.
  *  - Memory map (from 1541-II):
  *      $0000-$07ff RAM (2K)
  *      $0800-$17ff open
@@ -34,31 +33,24 @@
  *      $2000-$7fff mirrors of the above
  *      $8000-$bfff ROM mirror
  *      $c000-$ffff ROM (16K)
- *  - All memory accesses are done with the read_byte() and
- *    write_byte() functions which also do the memory address
- *    decoding. The read_zp() and write_zp() functions allow
- *    faster access to the zero page, the pop_byte() and
- *    push_byte() macros for the stack.
+ *  - All memory accesses are done with the read_byte() and write_byte()
+ *    functions which also do the memory address decoding. The read_zp() and
+ *    write_zp() functions allow faster access to the zero page, the
+ *    pop_byte() and push_byte() macros for the stack.
  *  - The possible interrupt sources are:
  *      INT_VIA1IRQ: I flag is checked, jump to ($fffe)
  *      INT_VIA2IRQ: I flag is checked, jump to ($fffe)
  *      INT_RESET1541: Jump to ($fffc)
- *  - Interrupts are not checked before every opcode but only
- *    at certain times:
+ *  - Interrupts are not checked before every opcode but only at certain
+ *    times:
  *      On entering EmulateLine()
  *      On CLI
  *      On PLP if the I flag was cleared
  *      On RTI if the I flag was cleared
- *  - The z_flag variable has the inverse meaning of the
- *    6502 Z flag
- *  - Only the highest bit of the n_flag variable is used
- *  - The $f2 opcode that would normally crash the 6502 is
- *    used to implement emulator-specific functions
- *
- * Incompatibilities:
- * ------------------
- *
- *  - Extra cycles for crossing page boundaries are not accounted for
+ *  - The z_flag variable has the inverse meaning of the 6502 Z flag.
+ *  - Only the highest bit of the n_flag variable is used.
+ *  - The $f2 opcode that would normally crash the 6502 is used to implement
+ *    emulator-specific functions.
  */
 
 #include "sysdeps.h"
@@ -86,6 +78,11 @@ MOS6502_1541::MOS6502_1541(C64 * c64, Job1541 * job, uint8_t * Ram, uint8_t * Ro
 	i_flag = true;
 
 	cycle_counter = 0;
+
+	int_line[INT_VIA1IRQ] = false;
+	int_line[INT_VIA2IRQ] = false;
+	int_line[INT_RESET1541] = false;
+
 	borrowed_cycles = 0;
 
 	via1 = new MOS6522(this, INT_VIA1IRQ);
@@ -112,7 +109,7 @@ MOS6502_1541::~MOS6502_1541()
 
 void MOS6502_1541::AsyncReset()
 {
-	interrupt.intr[INT_RESET1541] = true;
+	int_line[INT_RESET1541] = true;
 	Idle = false;
 }
 
@@ -124,11 +121,11 @@ void MOS6502_1541::AsyncReset()
 void MOS6502_1541::Reset()
 {
 	// Clear all interrupt lines
-	interrupt.intr_any = 0;
+	int_line[INT_VIA1IRQ] = false;
+	int_line[INT_VIA2IRQ] = false;
+	int_line[INT_RESET1541] = false;
 
-	// Read reset vector
-	jump(read_word(0xfffc));
-	jammed = false;
+	nmi_triggered = false;
 
 	// IEC lines and VIA registers
 	IECLines = 0x38;
@@ -139,6 +136,10 @@ void MOS6502_1541::Reset()
 
 	// Wake up 1541
 	Idle = false;
+
+	// Read reset vector
+	pc = read_word(0xfffc);
+	jammed = false;
 }
 
 
@@ -164,9 +165,9 @@ void MOS6502_1541::GetState(MOS6502State *s) const
 	s->pc = pc;
 	s->sp = sp | 0x0100;
 
-	s->intr[INT_VIA1IRQ] = interrupt.intr[INT_VIA1IRQ];
-	s->intr[INT_VIA2IRQ] = interrupt.intr[INT_VIA2IRQ];
-	s->intr[INT_RESET1541] = interrupt.intr[INT_RESET1541];
+	s->int_line[INT_VIA1IRQ] = int_line[INT_VIA1IRQ];
+	s->int_line[INT_VIA2IRQ] = int_line[INT_VIA2IRQ];
+
 	s->irq_pending = false;
 	s->first_irq_cycle = 0;
 
@@ -198,12 +199,12 @@ void MOS6502_1541::SetState(const MOS6502State *s)
 	z_flag = !(s->p & 0x02);
 	c_flag = s->p & 0x01;
 
-	jump(s->pc);
+	pc = s->pc;
 	sp = s->sp & 0xff;
 
-	interrupt.intr[INT_VIA1IRQ] = s->intr[INT_VIA1IRQ];
-	interrupt.intr[INT_VIA2IRQ] = s->intr[INT_VIA2IRQ];
-	interrupt.intr[INT_RESET1541] = s->intr[INT_RESET1541];
+	int_line[INT_VIA1IRQ] = s->int_line[INT_VIA1IRQ];
+	int_line[INT_VIA2IRQ] = s->int_line[INT_VIA2IRQ];
+
 	Idle = s->idle;
 
 	via1->SetState(&(s->via1));
@@ -231,7 +232,7 @@ uint8_t MOS6502_1541::CalcIECLines() const
 
 void MOS6502_1541::TriggerInterrupt(unsigned which)
 {
-	interrupt.intr[which] = true;
+	int_line[which] = true;
 
 	// Wake up 1541
 	Idle = false;
@@ -451,17 +452,7 @@ void MOS6502_1541::ExtWriteByte(uint16_t adr, uint8_t byte)
 
 
 /*
- *  Jump to address
- */
-
-inline void MOS6502_1541::jump(uint16_t adr)
-{
-	pc = adr;
-}
-
-
-/*
- *  Adc instruction
+ *  ADC instruction
  */
 
 void MOS6502_1541::do_adc(uint8_t byte)
@@ -497,7 +488,7 @@ void MOS6502_1541::do_adc(uint8_t byte)
 
 
 /*
- * Sbc instruction
+ *  SBC instruction
  */
 
 void MOS6502_1541::do_sbc(uint8_t byte)
@@ -551,38 +542,6 @@ void MOS6502_1541::illegal_op(uint16_t adr)
 
 
 /*
- *  Stack macros
- */
-
-// Pop a byte from the stack
-#define pop_byte() ram[(++sp) | 0x0100]
-
-// Push a byte onto the stack
-#define push_byte(byte) (ram[((sp--) & 0xff) | 0x0100] = (byte))
-
-// Pop processor flags from the stack
-#define pop_flags() \
-	n_flag = tmp = pop_byte(); \
-	v_flag = tmp & 0x40; \
-	d_flag = tmp & 0x08; \
-	i_flag = tmp & 0x04; \
-	z_flag = !(tmp & 0x02); \
-	c_flag = tmp & 0x01;
-
-// Push processor flags onto the stack
-#define push_flags(b_flag) \
-	tmp = 0x20 | (n_flag & 0x80); \
-	if (set_overflow_enabled() && the_job->ByteReady(cycle_counter)) v_flag = true; \
-	if (v_flag) tmp |= 0x40; \
-	if (b_flag) tmp |= 0x10; \
-	if (d_flag) tmp |= 0x08; \
-	if (i_flag) tmp |= 0x04; \
-	if (!z_flag) tmp |= 0x02; \
-	if (c_flag) tmp |= 0x01; \
-	push_byte(tmp);
-
-
-/*
  *  Emulate cycles_left worth of 6502 instructions
  *  Returns number of cycles of last instruction
  */
@@ -593,23 +552,14 @@ int MOS6502_1541::EmulateLine(int cycles_left)
 	uint16_t adr;
 	int last_cycles = 0;
 
-	// Any pending interrupts?
-	if (interrupt.intr_any) {
-handle_int:
-		if (interrupt.intr[INT_RESET1541]) {
-			Reset();
-
-		} else if ((interrupt.intr[INT_VIA1IRQ] || interrupt.intr[INT_VIA2IRQ]) && !i_flag && !jammed) {
-			push_byte(pc >> 8);
-			push_byte(pc);
-			push_flags(false);
-			i_flag = true;
-			jump(read_word(0xfffe));
-			last_cycles = 7;
-		}
+#define IS_CPU_1541
+#define RESET_PENDING (int_line[INT_RESET1541])
+#define IRQ_PENDING (int_line[INT_VIA1IRQ] || int_line[INT_VIA2IRQ])
+#define CHECK_SO \
+	if (set_overflow_enabled() && the_job->ByteReady(cycle_counter)) { \
+		v_flag = true; \
 	}
 
-#define IS_CPU_1541
 #include "CPU_emulline.h"
 
 		// Extension opcode

@@ -36,10 +36,9 @@
 	c_flag = data & 0x01;
 
 // Push processor flags onto the stack
-#ifdef IS_CPU_1541
 #define push_flags(b_flag) \
 	data = 0x20 | (n_flag & 0x80); \
-	if (set_overflow_enabled() && the_job->ByteReady(cycle_counter)) v_flag = true; \
+	CHECK_SO; \
 	if (v_flag) data |= 0x40; \
 	if (b_flag) data |= 0x10; \
 	if (d_flag) data |= 0x08; \
@@ -47,17 +46,6 @@
 	if (!z_flag) data |= 0x02; \
 	if (c_flag) data |= 0x01; \
 	write_byte(sp-- | 0x100, data);
-#else
-#define push_flags(b_flag) \
-	data = 0x20 | (n_flag & 0x80); \
-	if (v_flag) data |= 0x40; \
-	if (b_flag) data |= 0x10; \
-	if (d_flag) data |= 0x08; \
-	if (i_flag) data |= 0x04; \
-	if (!z_flag) data |= 0x02; \
-	if (c_flag) data |= 0x01; \
-	write_byte(sp-- | 0x100, data);
-#endif
 
 
 /*
@@ -67,7 +55,7 @@
 // Branch (cycle 1)
 #define Branch(flag) \
 		read_to(pc++, data);  \
-		check_interrupts(1); \
+		check_interrupts(); \
 		if (flag) { \
 			ar = pc + (int8_t)data; \
 			if ((ar ^ pc) & 0xff00) { \
@@ -94,7 +82,7 @@
 #define Execute state = OpTab[op]; break;
 
 // Last cycle of opcode, check for pending interrupts
-#define Last check_interrupts(1); state = O_FETCH; break;
+#define Last check_interrupts(); state = O_FETCH; break;
 
 
 /*
@@ -106,11 +94,7 @@
 
 		// Opcode fetch
 		case O_FETCH:
-#ifdef IS_CPU_1541
-			if (interrupt.intr[INT_RESET1541]) {
-#else
-			if (interrupt.intr[INT_RESET]) {
-#endif
+			if (RESET_PENDING) {
 				Reset();
 				break;
 			}
@@ -137,14 +121,17 @@
 			break;
 		case 0x000b:
 			write_byte(sp-- | 0x100, pc);
-			check_interrupts(0);
+			if (nmi_triggered) {	// Recognize NMI
+				nmi_pending = true;
+				nmi_triggered = false;
+			}
 			state = 0x000c;
 			break;
 		case 0x000c:
 			irq_pending = false;
 			push_flags(false);
 			i_flag = true;
-			if (nmi_pending) {	// IRQ interrupted by NMI?
+			if (nmi_pending) {		// IRQ interrupted by NMI?
 				nmi_pending = false;
 				state = 0x0015;
 			} else {
@@ -203,14 +190,17 @@
 			break;
 		case O_BRK2:
 			write_byte(sp-- | 0x100, pc);
-			check_interrupts(0);
+			if (nmi_triggered) {	// Recognize NMI
+				nmi_pending = true;
+				nmi_triggered = false;
+			}
 			state = O_BRK3;
 			break;
 		case O_BRK3:
 			irq_pending = false;
 			push_flags(true);
 			i_flag = true;
-			if (nmi_pending) {	// BRK interrupted by NMI?
+			if (nmi_pending) {		// BRK interrupted by NMI?
 				nmi_pending = false;
 				state = 0x0015;
 			} else {
@@ -815,7 +805,7 @@
 			state = O_PLP2;
 			break;
 		case O_PLP2:
-			check_interrupts(1);	// Flag change is internally delayed, check interrupts first
+			check_interrupts();	// Flag change is internally delayed, check interrupts first
 			pop_flags();
 			state = O_FETCH;
 			break;
@@ -917,19 +907,11 @@
 			Branch(z_flag);
 
 		case O_BVS:
-#ifdef IS_CPU_1541
-			if (set_overflow_enabled() && the_job->ByteReady(cycle_counter)) {
-				v_flag = true;
-			}
-#endif
+			CHECK_SO;	// Handle SO (GCR byte ready) input on 1541
 			Branch(v_flag);
 
 		case O_BVC:
-#ifdef IS_CPU_1541
-			if (set_overflow_enabled() && the_job->ByteReady(cycle_counter)) {
-				v_flag = true;
-			}
-#endif
+			CHECK_SO;	// Handle SO (GCR byte ready) input on 1541
 			Branch(!v_flag);
 
 		case O_BMI:
@@ -984,14 +966,14 @@
 
 		case O_SEI:
 			read_idle(pc);
-			check_interrupts(1);	// Flag change is internally delayed, check interrupts first
+			check_interrupts();	// Flag change is internally delayed, check interrupts first
 			i_flag = true;
 			state = O_FETCH;
 			break;
 
 		case O_CLI:
 			read_idle(pc);
-			check_interrupts(1);	// Flag change is internally delayed, check interrupts first
+			check_interrupts();	// Flag change is internally delayed, check interrupts first
 			i_flag = false;
 			state = O_FETCH;
 			break;
