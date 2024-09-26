@@ -140,10 +140,10 @@ private:
 	void check_interrupts();
 
 	bool irq_pending;
-	uint32_t first_irq_cycle;
+	uint8_t irq_delay;			// Delay line for IRQ recognition (11→01→00)
 
 	bool nmi_pending;
-	uint32_t first_nmi_cycle;
+	uint8_t nmi_delay;			// Delay line for NMI recognition (11→01→00)
 
 	uint8_t state, op;			// Current state and opcode
 	uint16_t ar, ar2;			// Address registers
@@ -171,10 +171,11 @@ struct MOS6510State {
 	uint8_t dfff_byte;
 								// Frodo SC:
 	bool instruction_complete;
+
 	bool irq_pending;
+	uint8_t irq_delay;
 	bool nmi_pending;
-	uint32_t first_irq_cycle;
-	uint32_t first_nmi_cycle;
+	uint8_t nmi_delay;
 };
 
 
@@ -183,7 +184,7 @@ inline void MOS6510::TriggerVICIRQ()
 {
 #ifdef FRODO_SC
 	if (!(int_line[INT_VICIRQ] || int_line[INT_CIAIRQ])) {
-		first_irq_cycle = the_c64->CycleCounter();
+		irq_delay = 3;	// Two cycles delay until recognition
 	}
 #endif
 	int_line[INT_VICIRQ] = true;
@@ -193,7 +194,7 @@ inline void MOS6510::TriggerCIAIRQ()
 {
 #ifdef FRODO_SC
 	if (!(int_line[INT_VICIRQ] || int_line[INT_CIAIRQ])) {
-		first_irq_cycle = the_c64->CycleCounter();
+		irq_delay = 3;	// Two cycles delay until recognition
 	}
 #endif
 	int_line[INT_CIAIRQ] = true;
@@ -203,7 +204,7 @@ inline void MOS6510::TriggerNMI()
 {
 	if (!int_line[INT_NMI]) {
 #ifdef FRODO_SC
-		first_nmi_cycle = the_c64->CycleCounter();
+		nmi_delay = 3;	// Two cycles delay until recognition
 #endif
 		nmi_triggered = true;
 		int_line[INT_NMI] = true;

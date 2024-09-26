@@ -169,7 +169,7 @@ void MOS6502_1541::GetState(MOS6502State *s) const
 	s->int_line[INT_VIA2IRQ] = int_line[INT_VIA2IRQ];
 
 	s->irq_pending = false;
-	s->first_irq_cycle = 0;
+	s->irq_delay = 0;
 
 	s->instruction_complete = true;
 

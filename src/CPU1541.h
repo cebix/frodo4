@@ -126,7 +126,7 @@ private:
 	void check_interrupts();
 
 	bool irq_pending;
-	uint32_t first_irq_cycle;
+	uint8_t irq_delay;		// Delay line for IRQ recognition (11→01→00)
 
 	bool nmi_pending;		// Unused on 1541
 
@@ -161,8 +161,9 @@ struct MOS6502State {
 
 							// Frodo SC:
 	bool instruction_complete;
+
 	bool irq_pending;
-	uint32_t first_irq_cycle;
+	uint8_t irq_delay;
 };
 
 #endif

@@ -88,7 +88,7 @@ MOS6502_1541::MOS6502_1541(C64 * c64, Job1541 * job, uint8_t * Ram, uint8_t * Ro
 	int_line[INT_RESET1541] = false;
 
 	irq_pending = false;
-	first_irq_cycle = 0;
+	irq_delay = 0;
 
 	nmi_triggered = false;
 	nmi_pending = false;
@@ -181,7 +181,7 @@ void MOS6502_1541::GetState(MOS6502State *s) const
 	s->int_line[INT_VIA2IRQ] = int_line[INT_VIA2IRQ];
 
 	s->irq_pending = irq_pending;
-	s->first_irq_cycle = first_irq_cycle;
+	s->irq_delay = irq_delay;
 
 	s->instruction_complete = (state == O_FETCH);
 
@@ -218,7 +218,7 @@ void MOS6502_1541::SetState(const MOS6502State *s)
 	int_line[INT_VIA2IRQ] = s->int_line[INT_VIA2IRQ];
 
 	irq_pending = s->irq_pending;
-	first_irq_cycle = s->first_irq_cycle;
+	irq_delay = s->irq_delay;
 
 	if (s->instruction_complete) {
 		state = O_FETCH;
@@ -252,7 +252,7 @@ uint8_t MOS6502_1541::CalcIECLines() const
 void MOS6502_1541::TriggerInterrupt(unsigned which)
 {
 	if (!(int_line[INT_VIA1IRQ] || int_line[INT_VIA2IRQ])) {
-		first_irq_cycle = cycle_counter;
+		irq_delay = 3;	// Two cycles delay until recognition
 	}
 	int_line[which] = true;
 
@@ -547,8 +547,7 @@ void MOS6502_1541::illegal_op(uint16_t adr)
 // Check for pending interrupts
 void MOS6502_1541::check_interrupts()
 {
-	if ((int_line[INT_VIA1IRQ] || int_line[INT_VIA2IRQ]) && !i_flag &&
-		(cycle_counter - first_irq_cycle >= 1) && !jammed) {
+	if ((int_line[INT_VIA1IRQ] || int_line[INT_VIA2IRQ]) && !i_flag && irq_delay == 0 && !jammed) {
 		irq_pending = true;
 	}
 }
@@ -556,6 +555,9 @@ void MOS6502_1541::check_interrupts()
 void MOS6502_1541::EmulateCPUCycle()
 {
 	uint8_t data, tmp;
+
+	// Shift delay lines
+	irq_delay >>= 1;
 
 #define RESET_PENDING (int_line[INT_RESET1541])
 #define CHECK_SO \

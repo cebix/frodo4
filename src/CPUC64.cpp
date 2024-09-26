@@ -166,11 +166,11 @@ void MOS6510::GetState(MOS6510State *s) const
 	s->int_line[INT_RESET] = int_line[INT_RESET];
 
 	s->irq_pending = false;
-	s->first_irq_cycle = 0;
+	s->irq_delay = 0;
 
 	s->nmi_triggered = nmi_triggered;
 	s->nmi_pending = false;
-	s->first_nmi_cycle = 0;
+	s->nmi_delay = 0;
 
 	s->dfff_byte = dfff_byte;
 
