@@ -81,18 +81,10 @@ const int ROW25_YSTOP = 0xfb;
 const int ROW24_YSTART = 0x37;
 const int ROW24_YSTOP = 0xf7;
 
-#if defined(SMALL_DISPLAY)
-/* This does not work yet, the sprite code doesn't know about it. */
-const int COL40_XSTART = 0x14;
-const int COL40_XSTOP = 0x154;
-const int COL38_XSTART = 0x1B;
-const int COL38_XSTOP = 0x14B;
-#else
 const int COL40_XSTART = 0x20;
 const int COL40_XSTOP = 0x160;
 const int COL38_XSTART = 0x27;
 const int COL38_XSTOP = 0x157;
-#endif
 
 
 // Tables for sprite X expansion

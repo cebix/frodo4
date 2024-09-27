@@ -28,13 +28,8 @@
 
 
 // Display dimensions
-#if defined(SMALL_DISPLAY)
-constexpr int DISPLAY_X = 0x168;
-constexpr int DISPLAY_Y = 0x110;
-#else
 constexpr int DISPLAY_X = 0x180;
 constexpr int DISPLAY_Y = 0x110;
-#endif
 
 
 class C64;
