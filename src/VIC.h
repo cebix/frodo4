@@ -162,6 +162,8 @@ private:
 	bool vblanking;					// Flag: VBlank in next cycle
 	bool hold_off_raster_irq;		// Flag: No raster IRQ in next line
 
+	uint8_t aec_delay;				// Delay line for AEC after BA (111→011→001→000)
+
 	bool border_on_sample[5];		// Samples of border state at different cycles (1, 17, 18, 56, 57)
 	uint8_t border_color_sample[0x180/8+4]; // Samples of border color at each "displayed" cycle
 											// (plus one extra)
@@ -181,8 +183,6 @@ private:
 	uint8_t gfx_data, char_data, color_data, last_char_data;
 	uint8_t spr_data[8][4];			// Sprite data read
 	uint8_t spr_draw_data[8][4];	// Sprite data for drawing
-
-	uint32_t first_ba_cycle;		// Cycle when BA first went low
 #else
 	uint8_t *get_physical(uint16_t adr);
 	void make_mc_table();

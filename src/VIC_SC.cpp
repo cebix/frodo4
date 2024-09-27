@@ -697,7 +697,7 @@ inline void memset8(uint8_t *p, uint8_t c)
 void MOS6569::matrix_access()
 {
 	if (the_cpu->BALow) {
-		if (the_c64->CycleCounter() - first_ba_cycle < 3) {
+		if (aec_delay) {
 			matrix_line[ml_index] = 0xff;
 			color_line[ml_index] = ram[the_cpu->GetPC()];	// TODO: This may not be entirely correct for cartridges
 		} else {
@@ -1266,7 +1266,7 @@ inline void MOS6569::draw_sprites()
 // Set BA low
 #define SetBALow \
 	if (!the_cpu->BALow) { \
-		first_ba_cycle = the_c64->CycleCounter(); \
+		aec_delay = 7; \
 		the_cpu->BALow = true; \
 	}
 
@@ -1341,6 +1341,9 @@ inline void MOS6569::draw_sprites()
 unsigned MOS6569::EmulateCycle()
 {
 	unsigned retFlags = 0;
+
+	// Shift delay lines
+	aec_delay >>= 1;
 
 	switch (cycle) {
 
