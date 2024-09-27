@@ -232,7 +232,11 @@ void MOS6510::new_config()
 
 	basic_in = (port & 3) == 3;
 	kernal_in = port & 2;
-	char_in = (port & 3) && !(port & 4);
+	if (the_cart->notGAME) {
+		char_in = (port & 3) && !(port & 4);
+	} else {
+		char_in = (port & 2) && !(port & 4);
+	}
 	io_in = (port & 3) && (port & 4);
 }
 
@@ -244,12 +248,19 @@ void MOS6510::new_config()
 inline uint8_t MOS6510::read_byte_io(uint16_t adr)
 {
 	switch (adr >> 12) {
+		case 0x8:
+		case 0x9:
+			if (the_cart->notEXROM) {
+				return ram[adr];
+			} else {
+				return the_cart->ReadROML(adr & 0x1fff, ram[adr], basic_in);
+			}
 		case 0xa:
 		case 0xb:
-			if (basic_in) {
-				return basic_rom[adr & 0x1fff];
+			if (the_cart->notEXROM || the_cart->notGAME) {
+				return basic_in ? basic_rom[adr & 0x1fff] : ram[adr];
 			} else {
-				return ram[adr];
+				return the_cart->ReadROMH(adr & 0x1fff, ram[adr], basic_rom[adr & 0x1fff], basic_in, kernal_in);
 			}
 		case 0xc:
 			return ram[adr];
@@ -260,28 +271,25 @@ inline uint8_t MOS6510::read_byte_io(uint16_t adr)
 					case 0x1:
 					case 0x2:
 					case 0x3:
-						return TheVIC->ReadRegister(adr & 0x3f);
+						return the_vic->ReadRegister(adr & 0x3f);
 					case 0x4:	// SID
 					case 0x5:
 					case 0x6:
 					case 0x7:
-						return TheSID->ReadRegister(adr & 0x1f);
+						return the_sid->ReadRegister(adr & 0x1f);
 					case 0x8:	// Color RAM
 					case 0x9:
 					case 0xa:
 					case 0xb:
-						return (color_ram[adr & 0x03ff] & 0x0f) | (TheVIC->LastVICByte & 0xf0);
+						return (color_ram[adr & 0x03ff] & 0x0f) | (the_vic->LastVICByte & 0xf0);
 					case 0xc:	// CIA 1
-						return TheCIA1->ReadRegister(adr & 0x0f);
+						return the_cia1->ReadRegister(adr & 0x0f);
 					case 0xd:	// CIA 2
-						return TheCIA2->ReadRegister(adr & 0x0f);
-					case 0xe:	// REU/Open I/O
-					case 0xf:
-						if ((adr & 0xfff0) == 0xdf00) {
-							return TheREU->ReadRegister(adr & 0x0f);
-						} else {
-							return TheVIC->LastVICByte;
-						}
+						return the_cia2->ReadRegister(adr & 0x0f);
+					case 0xe:	// Cartridge I/O 1 (or open)
+						return the_cart->ReadIO1(adr & 0xff, the_vic->LastVICByte);
+					case 0xf:	// Cartridge I/O 2 (or open)
+						return the_cart->ReadIO2(adr & 0xff, the_vic->LastVICByte);
 				}
 			} else if (char_in) {
 				return char_rom[adr & 0x0fff];
@@ -307,15 +315,16 @@ inline uint8_t MOS6510::read_byte_io(uint16_t adr)
 
 uint8_t MOS6510::read_byte(uint16_t adr)
 {
-	if (adr < 0xa000) {
+	if (adr < 0x8000) {
 		if (adr >= 2) {
 			return ram[adr];
 		} else if (adr == 0) {
 			return ddr;
 		} else {
 			uint8_t byte = (pr | ~ddr) & (pr_out | 0x17);
-			if (!(ddr & 0x20))
+			if (!(ddr & 0x20)) {
 				byte &= 0xdf;
+			}
 			return byte;
 		}
 	} else {
@@ -343,7 +352,7 @@ inline void MOS6510::write_byte_io(uint16_t adr, uint8_t byte)
 	if (adr >= 0xe000) {
 		ram[adr] = byte;
 		if (adr == 0xff00) {
-			TheREU->FF00Trigger();
+			the_cart->FF00Trigger();
 		}
 	} else if (io_in) {
 		switch ((adr >> 8) & 0x0f) {
@@ -351,13 +360,13 @@ inline void MOS6510::write_byte_io(uint16_t adr, uint8_t byte)
 			case 0x1:
 			case 0x2:
 			case 0x3:
-				TheVIC->WriteRegister(adr & 0x3f, byte);
+				the_vic->WriteRegister(adr & 0x3f, byte);
 				return;
 			case 0x4:	// SID
 			case 0x5:
 			case 0x6:
 			case 0x7:
-				TheSID->WriteRegister(adr & 0x1f, byte);
+				the_sid->WriteRegister(adr & 0x1f, byte);
 				return;
 			case 0x8:	// Color RAM
 			case 0x9:
@@ -366,16 +375,16 @@ inline void MOS6510::write_byte_io(uint16_t adr, uint8_t byte)
 				color_ram[adr & 0x03ff] = byte & 0x0f;
 				return;
 			case 0xc:	// CIA 1
-				TheCIA1->WriteRegister(adr & 0x0f, byte);
+				the_cia1->WriteRegister(adr & 0x0f, byte);
 				return;
 			case 0xd:	// CIA 2
-				TheCIA2->WriteRegister(adr & 0x0f, byte);
+				the_cia2->WriteRegister(adr & 0x0f, byte);
 				return;
-			case 0xe:	// REU/Open I/O
-			case 0xf:
-				if ((adr & 0xfff0) == 0xdf00) {
-					TheREU->WriteRegister(adr & 0x0f, byte);
-				}
+			case 0xe:	// Cartridge I/O 1 (or open)
+				the_cart->WriteIO1(adr & 0xff, byte);
+				return;
+			case 0xf:	// Cartridge I/O 2 (or open)
+				the_cart->WriteIO2(adr & 0xff, byte);
 				return;
 		}
 	} else {
@@ -395,15 +404,16 @@ void MOS6510::write_byte(uint16_t adr, uint8_t byte)
 			ram[adr] = byte;
 		} else if (adr == 0) {
 			ddr = byte;
-			ram[0] = TheVIC->LastVICByte;
+			ram[0] = the_vic->LastVICByte;
 			new_config();
 		} else {
 			pr = byte;
-			ram[1] = TheVIC->LastVICByte;
+			ram[1] = the_vic->LastVICByte;
 			new_config();
 		}
-	} else
+	} else {
 		write_byte_io(adr, byte);
+	}
 }
 
 
@@ -616,40 +626,40 @@ void MOS6510::EmulateCycle()
 			}
 			switch (read_byte(pc++)) {
 				case 0x00:
-					ram[0x90] |= TheIEC->Out(ram[0x95], ram[0xa3] & 0x80);
+					ram[0x90] |= the_iec->Out(ram[0x95], ram[0xa3] & 0x80);
 					c_flag = false;
 					pc = 0xedac;
 					Last;
 				case 0x01:
-					ram[0x90] |= TheIEC->OutATN(ram[0x95]);
+					ram[0x90] |= the_iec->OutATN(ram[0x95]);
 					c_flag = false;
 					pc = 0xedac;
 					Last;
 				case 0x02:
-					ram[0x90] |= TheIEC->OutSec(ram[0x95]);
+					ram[0x90] |= the_iec->OutSec(ram[0x95]);
 					c_flag = false;
 					pc = 0xedac;
 					Last;
 				case 0x03:
-					ram[0x90] |= TheIEC->In(a);
+					ram[0x90] |= the_iec->In(a);
 					set_nz(a);
 					c_flag = false;
 					pc = 0xedac;
 					Last;
 				case 0x04:
-					TheIEC->SetATN();
+					the_iec->SetATN();
 					pc = 0xedfb;
 					Last;
 				case 0x05:
-					TheIEC->RelATN();
+					the_iec->RelATN();
 					pc = 0xedac;
 					Last;
 				case 0x06:
-					TheIEC->Turnaround();
+					the_iec->Turnaround();
 					pc = 0xedac;
 					Last;
 				case 0x07:
-					TheIEC->Release();
+					the_iec->Release();
 					pc = 0xedac;
 					Last;
 				default:

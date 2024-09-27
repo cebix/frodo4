@@ -135,12 +135,16 @@ C64::C64() : quit_requested(false), prefs_editor_requested(false), load_snapshot
 	TheCPU1541 = new MOS6502_1541(this, TheJob1541, RAM1541, ROM1541);
 	TheJob1541->SetCPU(TheCPU1541);
 
-	TheVIC = TheCPU->TheVIC = new MOS6569(this, TheDisplay, TheCPU, RAM, Char, Color);
-	TheSID = TheCPU->TheSID = new MOS6581;
-	TheCIA1 = TheCPU->TheCIA1 = new MOS6526_1(TheCPU, TheVIC);
-	TheCIA2 = TheCPU->TheCIA2 = TheCPU1541->TheCIA2 = new MOS6526_2(TheCPU, TheVIC, TheCPU1541);
-	TheIEC = TheCPU->TheIEC = new IEC(this);
-	TheREU = TheCPU->TheREU = new REU(TheCPU);
+	TheVIC = new MOS6569(this, TheDisplay, TheCPU, RAM, Char, Color);
+	TheSID = new MOS6581;
+	TheCIA1 = new MOS6526_1(TheCPU, TheVIC);
+	TheCIA2 = TheCPU1541->TheCIA2 = new MOS6526_2(TheCPU, TheVIC, TheCPU1541);
+	TheIEC = new IEC(this);
+
+	TheCart = new NoCartridge;
+	swap_cartridge(REU_NONE, ThePrefs.REUSize);
+
+	TheCPU->SetChips(TheVIC, TheSID, TheCIA1, TheCIA2, TheCart, TheIEC);
 
 	// Initialize joystick variables
 	joy_minx[0] = joy_miny[0] = -JOYSTICK_DEAD_ZONE;
@@ -171,7 +175,7 @@ C64::~C64()
 	open_close_joysticks(ThePrefs.Joystick1Port, ThePrefs.Joystick2Port, 0, 0);
 
 	delete TheJob1541;
-	delete TheREU;
+	delete TheCart;
 	delete TheIEC;
 	delete TheCIA2;
 	delete TheCIA1;
@@ -332,6 +336,8 @@ void C64::Reset(bool clear_memory)
 	TheCIA1->Reset();
 	TheCIA2->Reset();
 	TheIEC->Reset();
+	TheCart->Reset();
+	// Note: VIC has no reset input
 
 	if (clear_memory) {
 		init_memory();
@@ -359,6 +365,7 @@ void C64::NMI()
 void C64::NewPrefs(const Prefs *prefs)
 {
 	open_close_joysticks(ThePrefs.Joystick1Port, ThePrefs.Joystick2Port, prefs->Joystick1Port, prefs->Joystick2Port);
+
 	patch_kernal(prefs->FastReset, prefs->Emul1541Proc);
 
 	TheDisplay->NewPrefs(prefs);
@@ -366,8 +373,10 @@ void C64::NewPrefs(const Prefs *prefs)
 	TheIEC->NewPrefs(prefs);
 	TheJob1541->NewPrefs(prefs);
 
-	TheREU->NewPrefs(prefs);
 	TheSID->NewPrefs(prefs);
+
+	swap_cartridge(ThePrefs.REUSize, prefs->REUSize);
+	TheCPU->SetChips(TheVIC, TheSID, TheCIA1, TheCIA2, TheCart, TheIEC);
 
 	// Reset 1541 processor if turned on or off (to bring IEC lines back to sane state)
 	if (ThePrefs.Emul1541Proc != prefs->Emul1541Proc) {
@@ -458,6 +467,26 @@ void C64::patch_kernal(bool fast_reset, bool emul_1541_proc)
 	ROM1541[0x3598] = 0x01;
 	ROM1541[0x3b0c] = 0xf2;		// Format track
 	ROM1541[0x3b0d] = 0x02;
+}
+
+
+/*
+ *  Change attached cartridge according to old and new preferences
+ */
+
+void C64::swap_cartridge(int oldreu, int newreu)
+{
+	if (oldreu == newreu)
+		return;
+
+	// Attach new cartridge
+	delete TheCart;
+
+	if (newreu == REU_NONE) {
+		TheCart = new NoCartridge;
+	} else {
+		TheCart = new REU(TheCPU, newreu);
+	}
 }
 
 

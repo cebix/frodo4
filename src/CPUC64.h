@@ -48,7 +48,7 @@ class MOS6569;
 class MOS6581;
 class MOS6526_1;
 class MOS6526_2;
-class REU;
+class Cartridge;
 class IEC;
 struct MOS6510State;
 
@@ -56,7 +56,18 @@ struct MOS6510State;
 // 6510 emulation (C64)
 class MOS6510 {
 public:
-	MOS6510(C64 *c64, uint8_t *Ram, uint8_t *Basic, uint8_t *Kernal, uint8_t *Char, uint8_t *Color);
+	MOS6510(C64 * c64, uint8_t * Ram, uint8_t * Basic, uint8_t * Kernal, uint8_t * Char, uint8_t * Color);
+
+	// Set pointers to other objects
+	void SetChips(MOS6569 * vic, MOS6581 * sid, MOS6526_1 * cia1, MOS6526_2 * cia2, Cartridge * cart, IEC * iec)
+	{
+		the_vic = vic;
+		the_sid = sid;
+		the_cia1 = cia1;
+		the_cia2 = cia2;
+		the_cart = cart;
+		the_iec = iec;
+	}
 
 #ifdef FRODO_SC
 	void EmulateCycle();				// Emulate one clock cycle
@@ -85,17 +96,10 @@ public:
 
 	uint16_t GetPC() const { return pc; }
 
-	int ExtConfig;		// Memory configuration for ExtRead/WriteByte (0..7)
-
-	MOS6569 *TheVIC;	// Pointer to VIC
-	MOS6581 *TheSID;	// Pointer to SID
-	MOS6526_1 *TheCIA1;	// Pointer to CIA 1
-	MOS6526_2 *TheCIA2;	// Pointer to CIA 2
-	REU *TheREU;		// Pointer to REU
-	IEC *TheIEC;		// Pointer to drive array
+	int ExtConfig;			// Memory configuration for ExtRead/WriteByte (0..7)
 
 #ifdef FRODO_SC
-	bool BALow;			// BA line for Frodo SC
+	bool BALow;				// BA line for Frodo SC
 #endif
 
 private:
@@ -118,6 +122,13 @@ private:
 	uint8_t read_emulator_id(uint16_t adr);
 
 	C64 * the_c64;			// Pointer to C64 object
+
+	MOS6569 * the_vic;		// Pointer to VIC object
+	MOS6581 * the_sid;		// Pointer to SID object
+	MOS6526_1 * the_cia1;	// Pointer to CIA 1 object
+	MOS6526_2 * the_cia2;	// Pointer to CIA 2 object
+	Cartridge * the_cart;	// Pointer to cartridge object
+	IEC * the_iec;			// Pointer to drive array
 
 	uint8_t * ram;			// Pointer to main RAM
 	uint8_t * basic_rom;	// Pointers to ROMs
@@ -156,6 +167,7 @@ private:
 
 	bool basic_in, kernal_in, char_in, io_in;
 };
+
 
 // 6510 state
 struct MOS6510State {

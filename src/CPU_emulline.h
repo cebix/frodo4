@@ -176,8 +176,8 @@ handle_int:
 			last_cycles += page_cycles;
 			page_cycles = 0;
 #if PRECISE_CIA_CYCLES && !defined(IS_CPU_1541)
-			TheCIA1->EmulateLine(last_cycles);
-			TheCIA2->EmulateLine(last_cycles);
+			the_cia1->EmulateLine(last_cycles);
+			the_cia2->EmulateLine(last_cycles);
 #endif
 		}
 		if ((cycles_left -= last_cycles) < 0) {

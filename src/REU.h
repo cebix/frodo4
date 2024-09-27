@@ -21,33 +21,43 @@
 #ifndef _REU_H
 #define _REU_H
 
+#include "Cartridge.h"
+
 
 class MOS6510;
 class Prefs;
 
-class REU {
+class REU : public Cartridge {
 public:
-	REU(MOS6510 *CPU);
+	REU(MOS6510 * cpu, int prefs_reu_size);
 	~REU();
 
-	void NewPrefs(const Prefs *prefs);
-	void Reset();
-	uint8_t ReadRegister(uint16_t adr);
-	void WriteRegister(uint16_t adr, uint8_t byte);
-	void FF00Trigger();
+	void Reset() override;
+
+	uint8_t ReadIO2(uint16_t adr, uint8_t bus_byte) override;
+	void WriteIO2(uint16_t adr, uint8_t byte) override;
+
+	void FF00Trigger() override;
 
 private:
-	void open_close_reu(int old_size, int new_size);
 	void execute_dma();
 
-	MOS6510 *the_cpu;	// Pointer to 6510
+	MOS6510 * the_cpu;	// Pointer to 6510 object
 
-	uint8_t *ex_ram;	// REU expansion RAM
+	uint8_t * ex_ram;	// REU expansion RAM
 
 	uint32_t ram_size;	// Size of expansion RAM
 	uint32_t ram_mask;	// Expansion RAM address bit mask
 
 	uint8_t regs[16];	// REU registers
+
+	uint8_t autoload_c64_adr_lo;	// Autoload registers
+	uint8_t autoload_c64_adr_hi;
+	uint8_t autoload_reu_adr_lo;
+	uint8_t autoload_reu_adr_hi;
+	uint8_t autoload_reu_adr_bank;
+	uint8_t autoload_length_lo;
+	uint8_t autoload_length_hi;
 };
 
 #endif

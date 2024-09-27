@@ -60,7 +60,7 @@ class MOS6581;
 class MOS6526_1;
 class MOS6526_2;
 class IEC;
-class REU;
+class Cartridge;
 class MOS6502_1541;
 class Job1541;
 struct Snapshot;
@@ -113,13 +113,13 @@ public:
 
 	C64Display * TheDisplay;	// Display object
 
-	MOS6510 * TheCPU;			// C64 objects
+	MOS6510 * TheCPU;			// C64 chip objects
 	MOS6569 * TheVIC;
 	MOS6581 * TheSID;
 	MOS6526_1 * TheCIA1;
 	MOS6526_2 * TheCIA2;
 	IEC * TheIEC;
-	REU * TheREU;
+	Cartridge * TheCart;		// Inserted cartridge
 
 	MOS6502_1541 * TheCPU1541;	// 1541 objects
 	Job1541 * TheJob1541;
@@ -138,6 +138,8 @@ private:
 	bool emulate_c64_cycle();
 	void emulate_1541_cycle();
 #endif
+
+	void swap_cartridge(int oldreu, int newreu);
 
 	void open_close_joystick(int port, int oldjoy, int newjoy);
 	void open_close_joysticks(int oldjoy1, int oldjoy2, int newjoy1, int newjoy2);
