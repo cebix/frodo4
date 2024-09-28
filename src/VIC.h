@@ -94,15 +94,6 @@ private:
 	C64Display *the_display;		// Pointer to C64Display
 	MOS6510 *the_cpu;				// Pointer to 6510
 
-	uint8_t colors[256];			// Indices of the 16 C64 colors (16 times mirrored to avoid "& 0x0f")
-
-	uint8_t ec_color, b0c_color, b1c_color,
-	        b2c_color, b3c_color;	// Indices for exterior/background colors
-	uint8_t mm0_color, mm1_color;	// Indices for MOB multicolors
-	uint8_t spr_color[8];			// Indices for MOB colors
-
-	uint32_t ec_color_long;			// ec_color expanded to 32 bits
-
 	uint8_t matrix_line[40];		// Buffer for video line, read in Bad Lines
 	uint8_t color_line[40];			// Buffer for color line, read in Bad Lines
 
@@ -116,8 +107,8 @@ private:
 	uint16_t rc;					// Row counter
 	uint16_t vc;					// Video counter
 	uint16_t vc_base;				// Video counter base
-	uint16_t x_scroll;				// X scroll value
-	uint16_t y_scroll;				// Y scroll value
+	uint8_t x_scroll;				// X scroll value
+	uint8_t y_scroll;				// Y scroll value
 	uint16_t cia_vabase;			// CIA VA14/15 video base
 
 	uint16_t mc[8];					// Sprite data counters
@@ -142,6 +133,7 @@ private:
 	uint8_t read_byte(uint16_t adr);
 	void matrix_access();
 	void graphics_access();
+	void load_pixel_shifter(uint8_t gfx_data, uint8_t char_data, uint8_t color_data);
 	void draw_graphics();
 	void draw_sprites();
 	void draw_background();
@@ -169,7 +161,7 @@ private:
 											// (plus one extra)
 
 	uint8_t ref_cnt;				// Refresh counter
-	uint8_t spr_exp_y;				// 8 sprite y expansion flipflops
+	uint8_t spr_adv_y;				// 8 sprite advance line flip-flops
 	uint8_t spr_dma_on;				// 8 flags: Sprite DMA active
 	uint8_t spr_disp_on;			// 8 flags: Sprite display active
 	uint8_t spr_draw;				// 8 flags: Draw sprite in this line
@@ -177,10 +169,16 @@ private:
 	uint16_t mc_base[8];			// Sprite data counter bases
 
 	uint16_t raster_x;				// Current raster x position
-	uint16_t prev_x_scroll;			// Previous XSCROLL value
+	uint8_t new_x_scroll;			// Delay for XSCROLL value
 
 	unsigned ml_index;				// Index in matrix/color_line[]
-	uint8_t gfx_data, char_data, color_data, last_char_data;
+
+	uint16_t gfx_delay;				// Lower 8 bits: newly read data, shifted 8 bits up each cycle
+	uint16_t char_delay;
+	uint16_t color_delay;
+	uint32_t pixel_shifter;			// Output color values (4-bit) for next 8 pixels (note: lower 4 bits = leftmost pixel)
+	uint8_t fore_mask_shifter;		// Foreground mask for next 8 pixel values
+
 	uint8_t spr_data[8][4];			// Sprite data read
 	uint8_t spr_draw_data[8][4];	// Sprite data for drawing
 #else
@@ -195,6 +193,15 @@ private:
 	void el_mc_idle(uint8_t *p, uint8_t *r);
 	void el_sprites(uint8_t *chunky_ptr);
 	int el_update_mc(int raster);
+
+	uint8_t colors[256];			// Indices of the 16 C64 colors (16 times mirrored to avoid "& 0x0f")
+
+	uint8_t ec_color, b0c_color, b1c_color,
+	        b2c_color, b3c_color;	// Indices for exterior/background colors
+	uint8_t mm0_color, mm1_color;	// Indices for MOB multicolors
+	uint8_t spr_color[8];			// Indices for MOB colors
+
+	uint32_t ec_color_long;			// ec_color expanded to 32 bits
 
 	uint16_t mc_color_lookup[4];
 

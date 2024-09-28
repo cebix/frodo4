@@ -22,12 +22,13 @@
  * Incompatibilities:
  * ------------------
  *
- *  - Sprite data access doesn't respect BA
- *  - Changes to background color are visible 7 pixels too late
+ *  - Sprite data access doesn't respect AEC.
+ *  - Changes to color registers are visible 1 pixel too early.
+ *  - Changes to display mode are visible 4 pixels too early.
  *  - Sprites are effectively drawn in a line-based fashion in cycle 60,
  *    so changes to sprite registers (except for Y position) within the
  *    line are not displayed properly, and sprite collisions are detected
- *    too late
+ *    too late.
  */
 
 #include "sysdeps.h"
@@ -163,7 +164,7 @@ MOS6569::MOS6569(C64 *c64, C64Display *disp, MOS6510 *CPU, uint8_t *RAM, uint8_t
 	// Initialize other variables
 	raster_y = TOTAL_RASTERS - 1;
 	rc = 7;
-	irq_raster = vc = vc_base = x_scroll = prev_x_scroll = y_scroll = 0;
+	irq_raster = vc = vc_base = x_scroll = new_x_scroll = y_scroll = 0;
 	dy_start = ROW24_YSTART;
 	dy_stop = ROW24_YSTOP;
 	ml_index = 0;
@@ -177,7 +178,7 @@ MOS6569::MOS6569(C64 *c64, C64Display *disp, MOS6510 *CPU, uint8_t *RAM, uint8_t
 	lp_triggered = draw_this_line = false;
 	is_bad_line = false;
 
-    spr_exp_y = 0xff;
+    spr_adv_y = 0xff;
     spr_dma_on = spr_disp_on = 0;
 	for (unsigned i = 0; i < 8; ++i) {
 		mc[i] = 63;
@@ -187,19 +188,6 @@ MOS6569::MOS6569(C64 *c64, C64Display *disp, MOS6510 *CPU, uint8_t *RAM, uint8_t
 
 	memset(spr_coll_buf, 0, sizeof(spr_coll_buf));
 	memset(fore_mask_buf, 0, sizeof(fore_mask_buf));
-
-	// Set one-to-one palette for VIC
-	// TODO: This is obsolete code for direct access to indexed frame
-	// buffers and should probably be removed
-	for (unsigned i = 0; i < 256; ++i) {
-		colors[i] = i & 0x0f;
-	}
-
-	// Preset colors to black
-	ec_color = b0c_color = b1c_color = b2c_color = b3c_color = mm0_color = mm1_color = colors[0];
-	for (unsigned i = 0; i < 8; ++i) {
-		spr_color[i] = colors[0];
-	}
 }
 
 
@@ -305,8 +293,7 @@ void MOS6569::SetState(const MOS6569State *vd)
 
 	ctrl1 = vd->ctrl1;
 	ctrl2 = vd->ctrl2;
-	x_scroll = ctrl2 & 7;
-	prev_x_scroll = x_scroll;
+	x_scroll = new_x_scroll = ctrl2 & 7;
 	y_scroll = ctrl1 & 7;
 	if (ctrl1 & 8) {
 		dy_start = ROW25_YSTART;
@@ -333,25 +320,18 @@ void MOS6569::SetState(const MOS6569State *vd)
 	clx_spr = vd->mm; clx_bgr = vd->md;
 
 	ec = vd->ec;
-	ec_color = colors[ec];
+	b0c = vd->b0c;
+	b1c = vd->b1c;
+	b2c = vd->b2c;
+	b3c = vd->b3c;
 
-	b0c = vd->b0c; b1c = vd->b1c; b2c = vd->b2c; b3c = vd->b3c;
-	b0c_color = colors[b0c];
-	b1c_color = colors[b1c];
-	b2c_color = colors[b2c];
-	b3c_color = colors[b3c];
-
-	mm0 = vd->mm0; mm1 = vd->mm1;
-	mm0_color = colors[mm0];
-	mm1_color = colors[mm1];
+	mm0 = vd->mm0;
+	mm1 = vd->mm1;
 
 	sc[0] = vd->m0c; sc[1] = vd->m1c;
 	sc[2] = vd->m2c; sc[3] = vd->m3c;
 	sc[4] = vd->m4c; sc[5] = vd->m5c;
 	sc[6] = vd->m6c; sc[7] = vd->m7c;
-	for (unsigned i = 0; i < 8; ++i) {
-		spr_color[i] = colors[sc[i]];
-	}
 
 	irq_raster = vd->irq_raster;
 	vc = vd->vc;
@@ -558,8 +538,7 @@ void MOS6569::WriteRegister(uint16_t adr, uint8_t byte)
 
 		case 0x16:	// Control register 2
 			ctrl2 = byte;
-			prev_x_scroll = x_scroll;
-			x_scroll = byte & 7;
+			new_x_scroll = byte & 7;
 			display_idx = ((ctrl1 & 0x60) | (ctrl2 & 0x10)) >> 4;
 			break;
 
@@ -567,8 +546,8 @@ void MOS6569::WriteRegister(uint16_t adr, uint8_t byte)
 			mye = byte;
 			for (unsigned i = 0; i < 8; ++i) {
 				uint8_t mask = 1 << i;
-				if (!(mye & mask) && !(spr_exp_y & mask)) {
-					spr_exp_y |= mask;
+				if (!(mye & mask) && !(spr_adv_y & mask)) {
+					spr_adv_y |= mask;
 
 					// Handle sprite crunch
 					if (cycle == 16) {
@@ -617,17 +596,17 @@ void MOS6569::WriteRegister(uint16_t adr, uint8_t byte)
 			mxe = byte;
 			break;
 
-		case 0x20: ec_color = colors[ec = byte]; break;
-		case 0x21: b0c_color = colors[b0c = byte]; break;
-		case 0x22: b1c_color = colors[b1c = byte]; break;
-		case 0x23: b2c_color = colors[b2c = byte]; break;
-		case 0x24: b3c_color = colors[b3c = byte]; break;
-		case 0x25: mm0_color = colors[mm0 = byte]; break;
-		case 0x26: mm1_color = colors[mm1 = byte]; break;
+		case 0x20: ec = byte & 0xf; break;
+		case 0x21: b0c = byte & 0xf; break;
+		case 0x22: b1c = byte & 0xf; break;
+		case 0x23: b2c = byte & 0xf; break;
+		case 0x24: b3c = byte & 0xf; break;
+		case 0x25: mm0 = byte & 0xf; break;
+		case 0x26: mm1 = byte & 0xf; break;
 
 		case 0x27: case 0x28: case 0x29: case 0x2a:
 		case 0x2b: case 0x2c: case 0x2d: case 0x2e:
-			spr_color[adr - 0x27] = colors[sc[adr - 0x27] = byte];
+			sc[adr - 0x27] = byte & 0xf;
 			break;
 	}
 }
@@ -699,7 +678,7 @@ void MOS6569::matrix_access()
 	if (the_cpu->BALow) {
 		if (aec_delay) {
 			matrix_line[ml_index] = 0xff;
-			color_line[ml_index] = ram[the_cpu->GetPC()];	// TODO: This may not be entirely correct for cartridges
+			color_line[ml_index] = ram[the_cpu->GetPC()] & 0xf;	// TODO: This may not be entirely correct for cartridges
 		} else {
 			uint16_t adr = (vc & 0x03ff) | matrix_base;
 			matrix_line[ml_index] = read_byte(adr);
@@ -726,74 +705,190 @@ void MOS6569::graphics_access()
 		if (ctrl1 & 0x40) {	// ECM
 			adr &= 0xf9ff;
 		}
-		gfx_data = read_byte(adr);
-		char_data = matrix_line[ml_index];
-		color_data = color_line[ml_index];
+		gfx_delay = (gfx_delay << 8) | read_byte(adr);
+		char_delay = (char_delay << 8) | matrix_line[ml_index];
+		color_delay = (color_delay << 8) | color_line[ml_index];
 		ml_index++;
 		vc++;
 
 	} else {
 
 		// Display is off
-		gfx_data = read_byte(ctrl1 & 0x40 ? 0x39ff : 0x3fff);
-		char_data = color_data = 0;
+		gfx_delay = (gfx_delay << 8) | read_byte(ctrl1 & 0x40 ? 0x39ff : 0x3fff);
+		char_delay <<= 8;
+		color_delay <<= 8;
 	}
 }
 
 
 /*
- *  Background display (8 pixels)
+ *  Display 8 pixels of background
  */
 
 void MOS6569::draw_background()
 {
-	uint8_t *p = chunky_ptr;
-	uint8_t c;
-
 	if (!draw_this_line)
 		return;
+
+	uint8_t *p = chunky_ptr;
+	chunky_ptr += 8;
+
+	uint8_t char_data = char_delay >> 8;
+
+	uint8_t c;
 
 	switch (display_idx) {
 		case 0:		// Standard text
 		case 1:		// Multicolor text
 		case 3:		// Multicolor bitmap
-			c = b0c_color;
+			c = b0c;
 			break;
 		case 2:		// Standard bitmap
-			c = colors[last_char_data];
+			c = char_data & 0xf;
 			break;
 		case 4:		// ECM text
-			if (last_char_data & 0x80) {
-				if (last_char_data & 0x40) {
-					c = b3c_color;
+			if (char_data & 0x80) {
+				if (char_data & 0x40) {
+					c = b3c;
 				} else {
-					c = b2c_color;
+					c = b2c;
 				}
 			} else {
-				if (last_char_data & 0x40) {
-					c = b1c_color;
+				if (char_data & 0x40) {
+					c = b1c;
 				} else {
-					c = b0c_color;
+					c = b0c;
 				}
 			}
 			break;
 		default:
-			c = colors[0];
+			c = 0;	// Black
 			break;
 	}
+
 	memset8(p, c);
+
+	pixel_shifter = c * 0x11111111;
+	fore_mask_shifter = 0;
 }
 
 
 /*
- *  Graphics display (8 pixels)
+ *  Display 8 pixels of graphics
  */
+
+// Load pixel output shift registers with 8 new pixels according to current
+// display mode
+void MOS6569::load_pixel_shifter(uint8_t gfx_data, uint8_t char_data, uint8_t color_data)
+{
+	uint8_t c[4];
+	uint32_t s;
+
+	switch (display_idx) {
+
+		case 0:		// Standard text
+			c[0] = b0c;
+			c[1] = color_data;
+			goto draw_std;
+
+		case 1:		// Multicolor text
+			if (color_data & 8) {
+				c[0] = b0c;
+				c[1] = b1c;
+				c[2] = b2c;
+				c[3] = color_data & 7;
+				goto draw_multi;
+			} else {
+				c[0] = b0c;
+				c[1] = color_data;
+				goto draw_std;
+			}
+
+		case 2:		// Standard bitmap
+			c[0] = char_data & 0xf;
+			c[1] = char_data >> 4;
+			goto draw_std;
+
+		case 3:		// Multicolor bitmap
+			c[0] = b0c;
+			c[1] = char_data >> 4;
+			c[2] = char_data & 0xf;
+			c[3] = color_data;
+			goto draw_multi;
+
+		case 4:		// ECM text
+			if (char_data & 0x80) {
+				if (char_data & 0x40) {
+					c[0] = b3c;
+				} else {
+					c[0] = b2c;
+				}
+			} else {
+				if (char_data & 0x40) {
+					c[0] = b1c;
+				} else {
+					c[0] = b0c;
+				}
+			}
+			c[1] = color_data;
+			goto draw_std;
+
+		case 5:		// Invalid multicolor text
+			pixel_shifter = 0;
+			if (color_data & 8) {
+				fore_mask_shifter = (gfx_data & 0xaa) | ((gfx_data & 0xaa) >> 1);
+			} else {
+				fore_mask_shifter = gfx_data;
+			}
+			return;
+
+		case 6:		// Invalid standard bitmap
+			pixel_shifter = 0;
+			fore_mask_shifter = gfx_data;
+			return;
+
+		case 7:		// Invalid multicolor bitmap
+			pixel_shifter = 0;
+			fore_mask_shifter = (gfx_data & 0xaa) | ((gfx_data & 0xaa) >> 1);
+			return;
+
+		default:	// Can't happen
+			return;
+	}
+
+draw_std:
+	fore_mask_shifter = gfx_data;
+
+	s =            c[gfx_data & 1]; gfx_data >>= 1;
+	s = (s << 4) | c[gfx_data & 1]; gfx_data >>= 1;
+	s = (s << 4) | c[gfx_data & 1]; gfx_data >>= 1;
+	s = (s << 4) | c[gfx_data & 1]; gfx_data >>= 1;
+	s = (s << 4) | c[gfx_data & 1]; gfx_data >>= 1;
+	s = (s << 4) | c[gfx_data & 1]; gfx_data >>= 1;
+	s = (s << 4) | c[gfx_data & 1]; gfx_data >>= 1;
+	s = (s << 4) | c[gfx_data & 1];
+
+	pixel_shifter = s;
+	return;
+
+draw_multi:
+	fore_mask_shifter = (gfx_data & 0xaa) | ((gfx_data & 0xaa) >> 1);
+
+	s =            c[gfx_data & 3];
+	s = (s << 4) | c[gfx_data & 3]; gfx_data >>= 2;
+	s = (s << 4) | c[gfx_data & 3];
+	s = (s << 4) | c[gfx_data & 3]; gfx_data >>= 2;
+	s = (s << 4) | c[gfx_data & 3];
+	s = (s << 4) | c[gfx_data & 3]; gfx_data >>= 2;
+	s = (s << 4) | c[gfx_data & 3];
+	s = (s << 4) | c[gfx_data & 3];
+
+	pixel_shifter = s;
+	return;
+}
 
 void MOS6569::draw_graphics()
 {
-	uint8_t *p = chunky_ptr + x_scroll;
-	uint8_t c[4], data;
-
 	if (!draw_this_line)
 		return;
 
@@ -802,141 +897,61 @@ void MOS6569::draw_graphics()
 		return;
 	}
 
-	switch (display_idx) {
+	uint8_t * p = chunky_ptr;
+	uint8_t * f = fore_mask_ptr;
 
-		case 0:		// Standard text
-			c[0] = b0c_color;
-			c[1] = colors[color_data];
-			goto draw_std;
+	// Get new graphics data
+	uint8_t gfx_data = gfx_delay >> 8;
+	uint8_t char_data = char_delay >> 8;
+	uint8_t color_data = color_delay >> 8;
 
-		case 1:		// Multicolor text
-			if (color_data & 8) {
-				c[0] = b0c_color;
-				c[1] = b1c_color;
-				c[2] = b2c_color;
-				c[3] = colors[color_data & 7];
-				goto draw_multi;
-			} else {
-				c[0] = b0c_color;
-				c[1] = colors[color_data];
-				goto draw_std;
-			}
+	if (x_scroll == 0) {
 
-		case 2:		// Standard bitmap
-			c[0] = colors[char_data];
-			c[1] = colors[char_data >> 4];
-			goto draw_std;
+		// Load next 8 pixels into shifter
+		load_pixel_shifter(gfx_data, char_data, color_data);
 
-		case 3:		// Multicolor bitmap
-			c[0] = b0c_color;
-			c[1] = colors[char_data >> 4];
-			c[2] = colors[char_data];
-			c[3] = colors[color_data];
-			goto draw_multi;
+		// Draw pixels to output buffer
+		uint32_t s = pixel_shifter;
+		for (unsigned i = 0; i < 8; ++i) {
+			*p++ = s & 0xf;
+			s >>= 4;
+		}
+		pixel_shifter = s;	// == 0
 
-		case 4:		// ECM text
-			if (char_data & 0x80) {
-				if (char_data & 0x40) {
-					c[0] = b3c_color;
-				} else {
-					c[0] = b2c_color;
-				}
-			} else {
-				if (char_data & 0x40) {
-					c[0] = b1c_color;
-				} else {
-					c[0] = b0c_color;
-				}
-			}
-			c[1] = colors[color_data];
-			goto draw_std;
+		// Set foreground mask
+		f[0] = fore_mask_shifter;
 
-		case 5:		// Invalid multicolor text
-			memset8(p, colors[0]);
+	} else {
 
-			for (unsigned i = prev_x_scroll; i < x_scroll; ++i) {
-				chunky_ptr[i] = colors[0];
-			}
-			prev_x_scroll = x_scroll;
+		// Draw remaining pixels from shifter to output buffer
+		uint32_t s = pixel_shifter;
+		for (unsigned i = 0; i < x_scroll; ++i) {
+			*p++ = s & 0xf;
+			s >>= 4;
+		}
 
-			if (color_data & 8) {
-				fore_mask_ptr[0] |= ((gfx_data & 0xaa) | ((gfx_data & 0xaa) >> 1)) >> x_scroll;
-				fore_mask_ptr[1] |= ((gfx_data & 0xaa) | ((gfx_data & 0xaa) >> 1)) << (8-x_scroll);
-			} else {
-				fore_mask_ptr[0] |= gfx_data >> x_scroll;
-				fore_mask_ptr[1] |= gfx_data << (8-x_scroll);
-			}
-			return;
+		uint8_t m0 = fore_mask_shifter << (8 - x_scroll);
 
-		case 6:		// Invalid standard bitmap
-			memset8(p, colors[0]);
+		// Load next 8 pixels into shifter
+		// (logically when XSCROLL == lower 3 bits of raster X position)
+		load_pixel_shifter(gfx_data, char_data, color_data);
 
-			for (unsigned i = prev_x_scroll; i < x_scroll; ++i) {
-				chunky_ptr[i] = colors[0];
-			}
-			prev_x_scroll = x_scroll;
+		// Draw new pixels
+		s = pixel_shifter;
+		for (unsigned i = 0; i < 8 - x_scroll; ++i) {
+			*p++ = s & 0xf;
+			s >>= 4;
+		}
+		pixel_shifter = s;
 
-			fore_mask_ptr[0] |= gfx_data >> x_scroll;
-			fore_mask_ptr[1] |= gfx_data << (8-x_scroll);
-			return;
+		uint8_t m1 = fore_mask_shifter >> x_scroll;
 
-		case 7:		// Invalid multicolor bitmap
-			memset8(p, colors[0]);
-
-			for (unsigned i = prev_x_scroll; i < x_scroll; ++i) {
-				chunky_ptr[i] = colors[0];
-			}
-			prev_x_scroll = x_scroll;
-
-			fore_mask_ptr[0] |= ((gfx_data & 0xaa) | ((gfx_data & 0xaa) >> 1)) >> x_scroll;
-			fore_mask_ptr[1] |= ((gfx_data & 0xaa) | ((gfx_data & 0xaa) >> 1)) << (8-x_scroll);
-			return;
-
-		default:	// Can't happen
-			return;
+		// Set foreground mask
+		f[0] = m0 | m1;
 	}
 
-draw_std:
-
-	fore_mask_ptr[0] |= gfx_data >> x_scroll;
-	fore_mask_ptr[1] |= gfx_data << (8-x_scroll);
-
-	data = gfx_data;
-	p[7] = c[data & 1]; data >>= 1;
-	p[6] = c[data & 1]; data >>= 1;
-	p[5] = c[data & 1]; data >>= 1;
-	p[4] = c[data & 1]; data >>= 1;
-	p[3] = c[data & 1]; data >>= 1;
-	p[2] = c[data & 1]; data >>= 1;
-	p[1] = c[data & 1]; data >>= 1;
-	p[0] = c[data];
-
-	// Insert some background pixels if XSCROLL has increased
-	for (unsigned i = prev_x_scroll; i < x_scroll; ++i) {
-		chunky_ptr[i] = c[0];
-	}
-
-	prev_x_scroll = x_scroll;
-	return;
-
-draw_multi:
-
-	fore_mask_ptr[0] |= ((gfx_data & 0xaa) | ((gfx_data & 0xaa) >> 1)) >> x_scroll;
-	fore_mask_ptr[1] |= ((gfx_data & 0xaa) | ((gfx_data & 0xaa) >> 1)) << (8-x_scroll);
-
-	data = gfx_data;
-	p[7] = p[6] = c[data & 3]; data >>= 2;
-	p[5] = p[4] = c[data & 3]; data >>= 2;
-	p[3] = p[2] = c[data & 3]; data >>= 2;
-	p[1] = p[0] = c[data];
-
-	// Insert some background pixels if XSCROLL has increased
-	for (unsigned i = prev_x_scroll; i < x_scroll; ++i) {
-		chunky_ptr[i] = c[0];
-	}
-
-	prev_x_scroll = x_scroll;
-	return;
+	chunky_ptr += 8;
+	fore_mask_ptr++;
 }
 
 
@@ -965,7 +980,7 @@ inline void MOS6569::draw_sprites()
 			}
 			uint8_t *q = spr_coll_buf;
 
-			uint8_t color = spr_color[snum];
+			uint8_t color = sc[snum];
 
 			// Fetch sprite data and mask
 			uint32_t sdata = (spr_draw_data[snum][0] << 24) | (spr_draw_data[snum][1] << 16) | (spr_draw_data[snum][2] << 8);
@@ -1028,13 +1043,13 @@ inline void MOS6569::draw_sprites()
 						uint8_t col;
 						if (plane1_l & 0x80000000) {
 							if (plane0_l & 0x80000000) {
-								col = mm1_color;
+								col = mm1;
 							} else {
 								col = color;
 							}
 						} else {
 							if (plane0_l & 0x80000000) {
-								col = mm0_color;
+								col = mm0;
 							} else {
 								continue;
 							}
@@ -1056,13 +1071,13 @@ inline void MOS6569::draw_sprites()
 						uint8_t col;
 						if (plane1_r & 0x80000000) {
 							if (plane0_r & 0x80000000) {
-								col = mm1_color;
+								col = mm1;
 							} else {
 								col = color;
 							}
 						} else {
 							if (plane0_r & 0x80000000) {
-								col = mm0_color;
+								col = mm0;
 							} else {
 								continue;
 							}
@@ -1170,13 +1185,13 @@ inline void MOS6569::draw_sprites()
 						uint8_t col;
 						if (plane1 & 0x80000000) {
 							if (plane0 & 0x80000000) {
-								col = mm1_color;
+								col = mm1;
 							} else {
 								col = color;
 							}
 						} else {
 							if (plane0 & 0x80000000) {
-								col = mm0_color;
+								col = mm0;
 							} else {
 								continue;
 							}
@@ -1312,7 +1327,7 @@ inline void MOS6569::draw_sprites()
 		if ((me & mask) && (raster_y & 0xff) == my[i] && !(spr_dma_on & mask)) { \
 			spr_dma_on |= mask; \
 			mc_base[i] = 0; \
-			spr_exp_y |= mask; \
+			spr_adv_y |= mask; \
 		} \
 	}
 
@@ -1329,12 +1344,10 @@ inline void MOS6569::draw_sprites()
 		IdleAccess; \
 	}
 
-// Sample border color and increment chunky_ptr and fore_mask_ptr
-#define SampleBorder \
+// Sample border color for deferred drawing at end of line
+#define SampleBorderColor \
 	if (draw_this_line) { \
-		border_color_sample[cycle-13] = ec_color; \
-		chunky_ptr += 8; \
-		fore_mask_ptr++; \
+		border_color_sample[cycle-13] = ec; \
 	}
 
 
@@ -1415,7 +1428,7 @@ unsigned MOS6569::EmulateCycle()
 
 			// Clear foreground mask
 			memset(fore_mask_buf, 0, sizeof(fore_mask_buf));
-			fore_mask_ptr = fore_mask_buf;
+			fore_mask_ptr = fore_mask_buf + 4;	// Offset because of gfx delay
 
 			SprDataAccess(3, 1);
 			SprDataAccess(3, 2);
@@ -1512,19 +1525,17 @@ unsigned MOS6569::EmulateCycle()
 			FetchIfBadLine;
 			break;
 
-		// Refresh, turn on matrix access if Bad Line, reset raster_x, graphics display starts here
+		// Refresh, turn on matrix access if Bad Line, reset raster_x
 		case 13:
-			draw_background();
-			SampleBorder;
 			RefreshAccess;
 			FetchIfBadLine;
-			raster_x = 0xfffc;
+			raster_x = 0xfffc;	// Wrap-around at end of function
 			break;
 
-		// Refresh, VCBASE->VCCOUNT, turn on matrix access and reset RC if Bad Line
+		// Refresh, VCBASE->VCCOUNT, turn on matrix access and reset RC if Bad Line, graphics display starts here
 		case 14:
 			draw_background();
-			SampleBorder;
+			SampleBorderColor;
 			RefreshAccess;
 			RCIfBadLine;
 			vc = vc_base;
@@ -1533,7 +1544,7 @@ unsigned MOS6569::EmulateCycle()
 		// Refresh and matrix access
 		case 15:
 			draw_background();
-			SampleBorder;
+			SampleBorderColor;
 			RefreshAccess;
 			FetchIfBadLine;
 			ml_index = 0;
@@ -1544,13 +1555,14 @@ unsigned MOS6569::EmulateCycle()
 		// turned off
 		case 16:
 			draw_background();
-			SampleBorder;
+			SampleBorderColor;
+			char_delay |= (char_delay >> 8);	// Keep last character for next draw_background()
 			graphics_access();
 			FetchIfBadLine;
 
 			for (unsigned i = 0; i < 8; ++i) {
 				uint8_t mask = 1 << i;
-				if (spr_exp_y & mask) {
+				if (spr_adv_y & mask) {
 					mc_base[i] = mc[i] & 0x3f;
 					if (mc_base[i] == 0x3f) {
 						spr_dma_on &= ~mask;
@@ -1577,8 +1589,7 @@ unsigned MOS6569::EmulateCycle()
 			border_on_sample[1] = border_on;
 
 			draw_background();
-			draw_graphics();
-			SampleBorder;
+			SampleBorderColor;
 			graphics_access();
 			FetchIfBadLine;
 			matrix_access();
@@ -1609,18 +1620,17 @@ unsigned MOS6569::EmulateCycle()
 		case 43: case 44: case 45: case 46: case 47: case 48:
 		case 49: case 50: case 51: case 52: case 53: case 54:	// Gnagna...
 			draw_graphics();
-			SampleBorder;
+			SampleBorderColor;
 			graphics_access();
 			FetchIfBadLine;
 			matrix_access();
-			last_char_data = char_data;
 			break;
 
 		// Last graphics access, turn off matrix access, turn on sprite DMA if Y coordinate is
 		// right and sprite is enabled, set BA for sprite 0
 		case 55:
 			draw_graphics();
-			SampleBorder;
+			SampleBorderColor;
 			graphics_access();
 			DisplayIfBadLine;
 			CheckSpriteDMA;
@@ -1644,16 +1654,19 @@ unsigned MOS6569::EmulateCycle()
 			border_on_sample[3] = border_on;
 
 			draw_graphics();
-			SampleBorder;
+			SampleBorderColor;
+			gfx_delay <<= 8;	// No graphics_access(), but still shift delay lines along
+			char_delay <<= 8;
+			color_delay <<= 8;
 			IdleAccess;
 			DisplayIfBadLine;
 			CheckSpriteDMA;
 
-			// Invert y expansion flipflop if bit in MYE is set
+			// Invert advance line flip-flop if bit in MYE is set
 			for (unsigned i = 0; i < 8; ++i) {
 				uint8_t mask = 1 << i;
 				if ((spr_dma_on & mask) && (mye & mask)) {
-					spr_exp_y ^= mask;
+					spr_adv_y ^= mask;
 				}
 			}
 
@@ -1671,8 +1684,9 @@ unsigned MOS6569::EmulateCycle()
 			// Fifth sample of border state
 			border_on_sample[4] = border_on;
 
-			draw_background();
-			SampleBorder;
+			draw_graphics();
+			SampleBorderColor;
+			gfx_delay <<= 8;	// No graphics_access(), but still shift gfx delay line along for remaining pixels
 			IdleAccess;
 			DisplayIfBadLine;
 			if (spr_dma_on & 0x02) {
@@ -1683,8 +1697,13 @@ unsigned MOS6569::EmulateCycle()
 		// Fetch sprite pointer 0, MCBASE->MC, turn sprite display on/off,
 		// reset BA if sprites 0 and 1 off, turn off display and load VCCOUNT->VCBASE if RC=7
 		case 58:
-			draw_background();
-			SampleBorder;
+			if (x_scroll > 0) {
+				draw_graphics();	// Final call to drain remaining pixels from delay line
+				gfx_delay = 0;
+			} else {
+				draw_background();
+			}
+			SampleBorderColor;
 
 			// Sample spr_disp_on and spr_data for sprite drawing
 			if ((spr_draw = spr_disp_on) != 0) {
@@ -1722,7 +1741,8 @@ unsigned MOS6569::EmulateCycle()
 		// Set BA for sprite 2, read data of sprite 0
 		case 59:
 			draw_background();
-			SampleBorder;
+			SampleBorderColor;
+
 			SprDataAccess(0, 1);
 			SprDataAccess(0, 2);
 			DisplayIfBadLine;
@@ -1731,10 +1751,10 @@ unsigned MOS6569::EmulateCycle()
 			}
 			break;
 
-		// Fetch sprite pointer 1, reset BA if sprites 1 and 2 off, graphics display ends here
+		// Fetch sprite pointer 1, reset BA if sprites 1 and 2 off
 		case 60:
 			draw_background();
-			SampleBorder;
+			SampleBorderColor;
 
 			SprPtrAccess(1);
 			SprDataAccess(1, 0);
@@ -1744,9 +1764,10 @@ unsigned MOS6569::EmulateCycle()
 			}
 			break;
 
-		// Set BA for sprite 3, read data of sprite 1
+		// Set BA for sprite 3, read data of sprite 1, graphics display ends here
 		case 61:
-			border_color_sample[cycle-13] = ec_color;
+			draw_background();
+			SampleBorderColor;
 
 			if (draw_this_line) {
 
@@ -1829,8 +1850,10 @@ unsigned MOS6569::EmulateCycle()
 			ud_border_on = ud_border_set;
 
 			// Last cycle
+			x_scroll = new_x_scroll;
 			raster_x += 8;
 			cycle = 1;
+
 			return VIC_HBLANK;
 	}
 
@@ -1842,7 +1865,11 @@ unsigned MOS6569::EmulateCycle()
 	}
 
 	// Next cycle
+	if (cycle != 57) {	// Keep current XSCROLL for final 0..7 pixels drawn in cycle 58
+		x_scroll = new_x_scroll;
+	}
 	raster_x += 8;
 	cycle++;
+
 	return retFlags;
 }
