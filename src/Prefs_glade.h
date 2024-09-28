@@ -736,12 +736,15 @@ extern "C" void on_emul1541_proc_toggled(GtkToggleButton *button, gpointer user_
 
 extern "C" void on_drive_path_file_set(GtkFileChooserButton *button, gpointer user_data)
 {
-	gchar *path = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(button));
+	gchar * path = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(button));
+	if (path == nullptr)
+		return;
+
 	int type;
 	if (! IsMountableFile(path, type)) {
 
 		// Not a disk image file, mount the parent directory instead
-		gchar *dir = g_path_get_dirname(path);
+		gchar * dir = g_path_get_dirname(path);
 		gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(button), dir);
 		g_free(dir);
 	}
