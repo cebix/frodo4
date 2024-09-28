@@ -82,14 +82,14 @@ private:
 	size_t gcr_offset;			// Offset of GCR data byte under R/W head, relative to gcr_track_start
 								// Note: This is never 0, so we can access the previous GCR byte for sync detection
 
-	uint32_t disk_change_cycle;	// Cycle of last disk change
+	uint32_t disk_change_cycle;	// Cycle of last disk change sequence step
+	unsigned disk_change_seq;	// Disk change WP sensor sequence step (counts down to 0)
 
 	uint32_t last_byte_cycle;	// Cycle when last byte was available
 	uint8_t byte_latch;			// Latch for read GCR byte
 
 	bool motor_on;				// Flag: Spindle motor on
 	bool write_protected;		// Flag: Disk write-protected
-	bool disk_changed;			// Flag: Disk changed (WP sensor strobe control)
 	bool byte_ready;			// Flag: GCR byte ready for reading
 };
 
@@ -101,10 +101,10 @@ struct Job1541State {
 	uint32_t disk_change_cycle;
 
 	uint8_t byte_latch;
+	uint8_t disk_change_seq;
 
 	bool motor_on;
 	bool write_protected;
-	bool disk_changed;
 	bool byte_ready;
 };
 

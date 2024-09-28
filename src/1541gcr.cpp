@@ -57,8 +57,8 @@ constexpr unsigned GCR_DISK_SIZE = GCR_TRACK_SIZE * NUM_TRACKS;
 // TODO: handle speed selection
 constexpr unsigned CYCLES_PER_BYTE = 30;
 
-// Length of disk change WP strobe in cycles
-constexpr unsigned DISK_CHANGE_STROBE = 100000;	// 100 ms
+// Duration of disk change sequence step in cycles
+constexpr unsigned DISK_CHANGE_SEQ_CYCLES = 500000;	// 0.5 s
 
 
 // Number of sectors of each track
@@ -96,13 +96,13 @@ Job1541::Job1541(uint8_t *ram1541) : ram(ram1541), the_file(nullptr)
 	gcr_offset = 1;
 
 	disk_change_cycle = 0;
+	disk_change_seq = 0;
 
 	last_byte_cycle = 0;
 	byte_latch = 0;
 
 	motor_on = false;
 	write_protected = false;
-	disk_changed = true;
 	byte_ready = false;
 
 	if (ThePrefs.Emul1541Proc) {
@@ -142,8 +142,9 @@ void Job1541::NewPrefs(const Prefs *prefs)
 		close_d64_file();
 		open_d64_file(prefs->DrivePath[0]);
 
-		disk_changed = true;
 		disk_change_cycle = the_cpu_1541->CycleCounter();
+		disk_change_seq = 3;		// Start disk change WP sensor sequence
+
 		the_cpu_1541->Idle = false;	// Wake up CPU
 	}
 }
@@ -515,11 +516,12 @@ void Job1541::GetState(Job1541State *state) const
 	state->gcr_offset = gcr_offset;
 	state->disk_change_cycle = disk_change_cycle;
 	state->last_byte_cycle = last_byte_cycle;
+
 	state->byte_latch = byte_latch;
+	state->disk_change_seq = disk_change_seq;
 
 	state->motor_on = motor_on;
 	state->write_protected = write_protected;
-	state->disk_changed = disk_changed;
 	state->byte_ready = byte_ready;
 }
 
@@ -535,11 +537,12 @@ void Job1541::SetState(const Job1541State *state)
 	gcr_offset = state->gcr_offset;
 	disk_change_cycle = state->disk_change_cycle;
 	last_byte_cycle = state->last_byte_cycle;
+
 	byte_latch = state->byte_latch;
+	disk_change_seq = state->disk_change_seq;
 
 	motor_on = state->motor_on;
 	write_protected = state->write_protected;
-	disk_changed = state->disk_changed;
 	byte_ready = state->byte_ready;
 }
 
@@ -628,14 +631,25 @@ uint8_t Job1541::ReadGCRByte(uint32_t cycle_counter)
 
 bool Job1541::WPSensorClosed()
 {
-	if (disk_changed) {
+	if (disk_change_seq > 0) {
 
-		// WP sensor strobe on disk change
-		uint32_t elapsed = the_cpu_1541->CycleCounter() - disk_change_cycle;
-		if (elapsed < DISK_CHANGE_STROBE) {
-			return !write_protected;
-		} else {
-			disk_changed = false;
+		// Time for next step in sequence?
+		uint32_t now = the_cpu_1541->CycleCounter();
+		uint32_t elapsed = now - disk_change_cycle;
+		if (elapsed >= DISK_CHANGE_SEQ_CYCLES) {
+			--disk_change_seq;
+			disk_change_cycle = now;
+		}
+
+		// The sequence is:
+		// 3) force sensor closed (disk being pulled out)
+		// 2) force sensor open (drive empty)
+		// 1) force sensor closed (new disk sliding in)
+		// 0) reflect actual write protection notch
+		if (disk_change_seq == 3 || disk_change_seq == 1) {
+			return true;
+		} else if (disk_change_seq == 2) {
+			return false;
 		}
 	}
 
