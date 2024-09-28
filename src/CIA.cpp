@@ -152,7 +152,7 @@ void MOS6526::GetState(MOS6526State * s) const
 
 	s->set_ir_delay = 0;
 	s->clear_ir_delay = 0;
-	s->read_icr = false;
+	s->irq_delay = 0;
 }
 
 

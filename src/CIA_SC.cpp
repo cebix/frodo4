@@ -75,7 +75,7 @@ void MOS6526::Reset()
 
 	set_ir_delay = 0;
 	clear_ir_delay = 0;
-	read_icr = false;
+	irq_delay = 0;
 }
 
 void MOS6526_1::Reset()
@@ -160,7 +160,7 @@ void MOS6526::GetState(MOS6526State * s) const
 
 	s->set_ir_delay = set_ir_delay;
 	s->clear_ir_delay = clear_ir_delay;
-	s->read_icr = read_icr;
+	s->irq_delay = irq_delay;
 }
 
 
@@ -219,7 +219,7 @@ void MOS6526::SetState(const MOS6526State * s)
 
 	set_ir_delay = s->set_ir_delay;
 	clear_ir_delay = s->clear_ir_delay;
-	read_icr = s->read_icr;
+	irq_delay = s->irq_delay;
 }
 
 void MOS6526_2::SetState(const MOS6526State * s)
@@ -442,9 +442,6 @@ void MOS6526::EmulateCycle()
 	tb.load_delay <<= 1;
 	tb.oneshot_delay <<= 1;
 
-	set_ir_delay <<= 1;
-	clear_ir_delay <<= 1;
-
 	// Emulate timer A
 	bool ta_input = (cra & 0x20) == 0;	// Count Phi2
 	emulate_timer(ta, cra, ta_input);
@@ -470,24 +467,29 @@ void MOS6526::EmulateCycle()
 	emulate_timer(tb, crb, tb_input);
 
 	if (tb.output) {
-		if (! read_icr) {	// Timer B does not raise interrupt if ICR was read in previous cycle (HW bug)
+		if ((clear_ir_delay & 1) == 0) {	// Timer B does not raise interrupt if ICR was read in previous cycle (HW bug)
 			set_int_flag(2);
 		}
 	}
 
-	read_icr = false;
-
 	// Update IRQ status
+	if (icr & int_mask) {
+		set_ir_delay |= 1;
+		irq_delay |= 1;
+	}
 	if (clear_ir_delay & 2) {	// One cycle delay clearing IR
 		icr &= 0x7f;
 	}
-	if (icr & int_mask) {
-		set_ir_delay |= 1;
-	}
-	if (set_ir_delay & 2) {	// One cycle of delay setting IR
+	if (set_ir_delay & 2) {		// One cycle of delay setting IR
 		icr |= 0x80;
+	}
+	if (irq_delay & 2) {		// One cycle delay asserting IRQ line
 		trigger_irq();
 	}
+
+	set_ir_delay <<= 1;
+	clear_ir_delay <<= 1;
+	irq_delay <<= 1;
 }
 
 
