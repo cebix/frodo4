@@ -22,7 +22,6 @@
  * Incompatibilities:
  * ------------------
  *
- *  - Sprite data access doesn't respect AEC.
  *  - Changes to color registers are visible 1 pixel too early.
  *  - Changes to display mode are visible 4 pixels too early.
  *  - Sprites are effectively drawn in a line-based fashion in cycle 60,
@@ -1338,8 +1337,12 @@ inline void MOS6569::draw_sprites()
 // Fetch sprite data, increment data counter
 #define SprDataAccess(num, bytenum) \
 	if (spr_dma_on & (1 << num)) { \
-		spr_data[num][bytenum] = read_byte((mc[num] & 0x3f) | spr_ptr[num]); \
-		mc[num]++; \
+		if (aec_delay && (bytenum == 0 || bytenum == 2)) { \
+			spr_data[num][bytenum] = 0xff; \
+		} else { \
+			spr_data[num][bytenum] = read_byte(mc[num] | spr_ptr[num]); \
+		} \
+		mc[num] = (mc[num] + 1) & 0x3f; \
 	} else if (bytenum == 1) { \
 		IdleAccess; \
 	}
