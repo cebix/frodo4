@@ -357,29 +357,49 @@ inline void MOS6526::write_register(uint8_t reg, uint8_t byte)
 
 		case 4:
 			ta.latch = (ta.latch & 0xff00) | byte;
+#ifdef FRODO_SC
+			if (ta.load_delay & 4) {
+				ta.counter = ta.latch;	// Cut-through if timer is just being loaded
+			}
+#endif
 			break;
 		case 5:
 			ta.latch = (ta.latch & 0xff) | (byte << 8);
 			if (!(cra & 1)) {			// Timer stopped?
 #ifdef FRODO_SC
-				ta.load_delay |= 1;		// Load timer in next cycle
+				ta.load_delay |= 1;		// Load timer in two cycles
 #else
 				ta.counter = ta.latch;	// Load timer immediately
 #endif
 			}
+#ifdef FRODO_SC
+			if (ta.load_delay & 4) {
+				ta.counter = ta.latch;	// Cut-through if timer is just being loaded
+			}
+#endif
 			break;
 		case 6:
 			tb.latch = (tb.latch & 0xff00) | byte;
+#ifdef FRODO_SC
+			if (tb.load_delay & 4) {
+				tb.counter = tb.latch;	// Cut-through if timer is just being loaded
+			}
+#endif
 			break;
 		case 7:
 			tb.latch = (tb.latch & 0xff) | (byte << 8);
 			if (!(crb & 1)) {			// Timer stopped?
 #ifdef FRODO_SC
-				tb.load_delay |= 1;		// Load timer in next cycle
+				tb.load_delay |= 1;		// Load timer in two cycles
 #else
 				tb.counter = tb.latch;	// Load timer immediately
 #endif
 			}
+#ifdef FRODO_SC
+			if (tb.load_delay & 4) {
+				tb.counter = tb.latch;	// Cut-through if timer is just being loaded
+			}
+#endif
 			break;
 
 		case 8:
@@ -470,12 +490,14 @@ inline void MOS6526::write_register(uint8_t reg, uint8_t byte)
 				ta.pb_toggle = true;	// Starting timer A resets PB toggle state
 			}
 			cra = byte;
-#ifndef FRODO_SC
 			if (cra & 0x10) {			// Timer A force load
 				cra &= ~0x10;
-				ta.counter = ta.latch;
-			}
+#ifdef FRODO_SC
+				ta.load_delay |= 1;		// Load timer in two cycles
+#else
+				ta.counter = ta.latch;	// Load timer immediately
 #endif
+			}
 			break;
 
 		case 15:
@@ -483,12 +505,14 @@ inline void MOS6526::write_register(uint8_t reg, uint8_t byte)
 				tb.pb_toggle = true;	// Starting timer B resets PB toggle state
 			}
 			crb = byte;
-#ifndef FRODO_SC
 			if (crb & 0x10) {			// Timer B force load
 				crb &= ~0x10;
-				tb.counter = tb.latch;
-			}
+#ifdef FRODO_SC
+				tb.load_delay |= 1;		// Load timer in two cycles
+#else
+				tb.counter = tb.latch;	// Load timer immediately
 #endif
+			}
 			break;
 	}
 }

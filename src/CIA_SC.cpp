@@ -399,10 +399,6 @@ void MOS6526::emulate_timer(Timer & t, uint8_t & cr, bool input)
 	if (cr & 8) {				// One-shot
 		t.oneshot_delay |= 1;
 	}
-	if (cr & 0x10) {			// Force load
-		t.load_delay |= 1;
-		cr &= ~0x10;
-	}
 
 	// Count timer
 	if (t.count_delay & 4) {	// Two cycles delay
@@ -421,11 +417,11 @@ void MOS6526::emulate_timer(Timer & t, uint8_t & cr, bool input)
 			t.count_delay &= ~1;		// For at least two cycles
 		}
 
-		t.load_delay |= 2;				// Reload timer immediately
+		t.load_delay |= 4;				// Reload timer immediately
 	}
 
 	// Load timer
-	if (t.load_delay & 2) {		// One cycle delay
+	if (t.load_delay & 4) {		// Two cycles delay
 		t.counter = t.latch;
 		t.count_delay &= ~2;	// Skip counting in next cycle
 	}

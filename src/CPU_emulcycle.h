@@ -991,7 +991,7 @@
 
 
 /*
- * Undocumented opcodes start here
+ *  Undocumented opcodes start here
  */
 
 		// NOP group
