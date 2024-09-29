@@ -559,6 +559,7 @@ void MOS6502_1541::EmulateCPUCycle()
 	// Shift delay lines
 	irq_delay >>= 1;
 
+#define IS_CPU_1541
 #define RESET_PENDING (int_line[INT_RESET1541])
 #define CHECK_SO \
 	if (set_overflow_enabled() && the_job->ByteReady(cycle_counter)) { \

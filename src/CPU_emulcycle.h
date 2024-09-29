@@ -965,6 +965,11 @@
 			Last;
 
 		case O_SEI:
+#ifndef IS_CPU_1541
+			if (BALow && irq_delay) {
+				i_flag = true;	// Waiting for BA cancels the flag change delay
+			}
+#endif
 			read_idle(pc);
 			check_interrupts();	// Flag change is internally delayed, check interrupts first
 			i_flag = true;
@@ -972,6 +977,11 @@
 			break;
 
 		case O_CLI:
+#ifndef IS_CPU_1541
+			if (BALow) {
+				i_flag = false;	// Waiting for BA cancels the flag change delay
+			}
+#endif
 			read_idle(pc);
 			check_interrupts();	// Flag change is internally delayed, check interrupts first
 			i_flag = false;
