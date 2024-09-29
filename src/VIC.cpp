@@ -569,11 +569,15 @@ void MOS6569::WriteRegister(uint16_t adr, uint8_t byte)
 			my[adr >> 1] = byte;
 			break;
 
-		case 0x11:{	// Control register 1
+		case 0x11: {	// Control register 1
 			ctrl1 = byte;
 			y_scroll = byte & 7;
 
-			irq_raster = (irq_raster & 0xff) | ((byte & 0x80) << 1);
+			uint16_t new_irq_raster = (irq_raster & 0xff) | ((byte & 0x80) << 1);
+			if (irq_raster != new_irq_raster && raster_y == new_irq_raster) {
+				raster_irq();
+			}
+			irq_raster = new_irq_raster;
 
 			if (byte & 8) {
 				dy_start = ROW25_YSTART;
@@ -587,8 +591,12 @@ void MOS6569::WriteRegister(uint16_t adr, uint8_t byte)
 			break;
 		}
 
-		case 0x12:{	// Raster counter
-			irq_raster = (irq_raster & 0xff00) | byte;
+		case 0x12: {	// Raster counter
+			uint16_t new_irq_raster = (irq_raster & 0xff00) | byte;
+			if (irq_raster != new_irq_raster && raster_y == new_irq_raster) {
+				raster_irq();
+			}
+			irq_raster = new_irq_raster;
 			break;
 		}
 

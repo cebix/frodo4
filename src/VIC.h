@@ -74,8 +74,8 @@ public:
 #endif
 
 private:
-	void vblank();
 	void raster_irq();
+	void check_raster_irq();
 
 	uint16_t mx[8];					// VIC registers
 	uint8_t my[8];
@@ -152,6 +152,7 @@ private:
 	bool ud_border_on;				// Flag: Upper/lower border on
 	bool ud_border_set;				// Flag: Set ud_border_on when checking for left/right border
 	bool vblanking;					// Flag: VBlank in next cycle
+	bool raster_irq_triggered;		// Flag: Raster IRQ triggered in this line
 	bool hold_off_raster_irq;		// Flag: No raster IRQ in next line
 
 	uint8_t aec_delay;				// Delay line for AEC after BA (111→011→001→000)
@@ -296,6 +297,7 @@ struct MOS6569State {
 	uint8_t last_vic_byte;		// Last byte read by VIC
 	bool ud_border_on;			// Flag: Upper/lower border on
 	bool ud_border_set;			// Flag: Set ud_border_on when checking for left/right border
+	bool raster_irq_triggered;	// Flag: Raster IRQ triggered in this line
 	bool hold_off_raster_irq;	// Flag: No raster IRQ in next line
 };
 

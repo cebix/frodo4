@@ -168,11 +168,11 @@ MOS6569::MOS6569(C64 *c64, C64Display *disp, MOS6510 *CPU, uint8_t *RAM, uint8_t
 	dy_stop = ROW24_YSTOP;
 	ml_index = 0;
 
-	cycle = 1;
+	cycle = 0;
 	display_idx = 0;
 	display_state = false;
 	border_on = ud_border_on = ud_border_set = true;
-	vblanking = hold_off_raster_irq = false;
+	vblanking = raster_irq_triggered = hold_off_raster_irq = false;
 	bad_lines_enabled = false;
 	lp_triggered = draw_this_line = false;
 	is_bad_line = false;
@@ -261,6 +261,7 @@ void MOS6569::GetState(MOS6569State *vd) const
 	vd->last_vic_byte = LastVICByte;
 	vd->ud_border_on = ud_border_on;
 	vd->ud_border_set = ud_border_set;
+	vd->raster_irq_triggered = raster_irq_triggered;
 	vd->hold_off_raster_irq = hold_off_raster_irq;
 }
 
@@ -355,6 +356,7 @@ void MOS6569::SetState(const MOS6569State *vd)
 	LastVICByte = vd->last_vic_byte;
 	ud_border_on = vd->ud_border_on;
 	ud_border_set = vd->ud_border_set;
+	raster_irq_triggered = vd->raster_irq_triggered;
 	hold_off_raster_irq = vd->hold_off_raster_irq;
 }
 
@@ -365,10 +367,37 @@ void MOS6569::SetState(const MOS6569State *vd)
 
 inline void MOS6569::raster_irq()
 {
+	raster_irq_triggered = true;
 	irq_flag |= 0x01;
 	if (irq_mask & 0x01) {
 		irq_flag |= 0x80;
 		the_cpu->TriggerVICIRQ();
+	}
+}
+
+
+/*
+ *  Check if raster IRQ line is reached
+ */
+
+inline void MOS6569::check_raster_irq()
+{
+	// Setting raster IRQ in last cycle of line doesn't trigger it in the next line
+	if (raster_y == TOTAL_RASTERS - 1) {
+		if (cycle == 1) {	// Last line is effectively one cycle longer
+			hold_off_raster_irq = true;
+			return;
+		}
+	} else {
+		if (cycle == 63) {
+			hold_off_raster_irq = true;
+			return;
+		}
+	}
+
+	// Trigger raster IRQ unless already triggered in this line
+	if (raster_y == irq_raster && !raster_irq_triggered) {
+		raster_irq();
 	}
 }
 
@@ -490,16 +519,14 @@ void MOS6569::WriteRegister(uint16_t adr, uint8_t byte)
 			my[adr >> 1] = byte;
 			break;
 
-		case 0x11:	// Control register 1
+		case 0x11: {	// Control register 1
 			ctrl1 = byte;
 			y_scroll = byte & 7;
 
-			irq_raster = (irq_raster & 0xff) | ((byte & 0x80) << 1);
-
-			// Don't trigger raster IRQ in next line if set during last cycle of line
-			// (note that 'cycle' is one cycle ahead)
-			if (cycle == 1) {
-				hold_off_raster_irq = true;
+			uint16_t new_irq_raster = (irq_raster & 0xff) | ((byte & 0x80) << 1);
+			if (irq_raster != new_irq_raster) {
+				irq_raster = new_irq_raster;
+				check_raster_irq();
 			}
 
 			if (byte & 8) {
@@ -520,16 +547,16 @@ void MOS6569::WriteRegister(uint16_t adr, uint8_t byte)
 
 			display_idx = ((ctrl1 & 0x60) | (ctrl2 & 0x10)) >> 4;
 			break;
+		}
 
-		case 0x12:	// Raster counter
-			irq_raster = (irq_raster & 0xff00) | byte;
-
-			// Don't trigger raster IRQ in next line if set during last cycle of line
-			// (note that 'cycle' is one cycle ahead)
-			if (cycle == 1) {
-				hold_off_raster_irq = true;
+		case 0x12: {	// Raster counter
+			uint16_t new_irq_raster = (irq_raster & 0xff00) | byte;
+			if (irq_raster != new_irq_raster) {
+				irq_raster = new_irq_raster;
+				check_raster_irq();
 			}
 			break;
+		}
 
 		case 0x15:	// Sprite enable
 			me = byte;
@@ -549,7 +576,7 @@ void MOS6569::WriteRegister(uint16_t adr, uint8_t byte)
 					spr_adv_y |= mask;
 
 					// Handle sprite crunch
-					if (cycle == 16) {
+					if (cycle == 15) {
 						mc[i] = (mc_base[i] & mc[i] & 0x2a) | ((mc_base[i] | mc[i]) & 0x15);
 					}
 				}
@@ -1361,12 +1388,18 @@ unsigned MOS6569::EmulateCycle()
 	// Shift delay lines
 	aec_delay >>= 1;
 
+	// Increment cycle counter
+	++cycle;
+	if (cycle > 63) {
+		cycle = 1;
+	}
+
 	switch (cycle) {
 
 		// Fetch sprite pointer 3, increment raster counter, trigger raster IRQ,
 		// test for Bad Line, reset BA if sprites 3 and 4 off
 		case 1:
-			if (raster_y == TOTAL_RASTERS-1) {
+			if (raster_y == TOTAL_RASTERS - 1) {
 
 				// Trigger VBlank in cycle 2
 				vblanking = true;
@@ -1379,6 +1412,8 @@ unsigned MOS6569::EmulateCycle()
 				// Trigger raster IRQ if IRQ line reached
 				if (raster_y == irq_raster && !hold_off_raster_irq) {
 					raster_irq();
+				} else {
+					raster_irq_triggered = false;
 				}
 				hold_off_raster_irq = false;
 
@@ -1420,8 +1455,10 @@ unsigned MOS6569::EmulateCycle()
 				xmod = the_display->BitmapXMod();
 
 				// Trigger raster IRQ if IRQ in line 0
-				if (irq_raster == 0) {
+				if (irq_raster == 0 && !hold_off_raster_irq) {
 					raster_irq();
+				} else {
+					raster_irq_triggered = false;
 				}
 				hold_off_raster_irq = false;
 			}
@@ -1852,12 +1889,8 @@ unsigned MOS6569::EmulateCycle()
 
 			ud_border_on = ud_border_set;
 
-			// Last cycle
-			x_scroll = new_x_scroll;
-			raster_x += 8;
-			cycle = 1;
-
-			return VIC_HBLANK;
+			retFlags = VIC_HBLANK;
+			break;
 	}
 
 	// Handle vertical border for next line
@@ -1872,7 +1905,6 @@ unsigned MOS6569::EmulateCycle()
 		x_scroll = new_x_scroll;
 	}
 	raster_x += 8;
-	cycle++;
 
 	return retFlags;
 }
