@@ -28,8 +28,12 @@
 
 
 // Display dimensions
-constexpr int DISPLAY_X = 0x180;
-constexpr int DISPLAY_Y = 0x110;
+constexpr unsigned DISPLAY_X = 0x180;
+constexpr unsigned DISPLAY_Y = 0x110;
+
+// On-screen notifications
+constexpr unsigned NUM_NOTIFICATIONS = 3;
+constexpr unsigned NOTIFICATION_LENGTH = 46;
 
 
 class C64;
@@ -85,8 +89,15 @@ private:
 	uint32_t palette[256];				// Mapping of VIC color values to native ARGB
 
 	char speedometer_string[16];		// Speedometer text (screen code)
-	char notification[46];				// Notification text (screen code)
-	std::chrono::time_point<std::chrono::steady_clock> notification_time;	// Time of notification
+
+	struct Notification {
+		char text[NOTIFICATION_LENGTH];	// Notification text in C64 screen code
+		std::chrono::time_point<std::chrono::steady_clock> time;	// Time of notification
+		bool active;
+	};
+
+	Notification notes[NUM_NOTIFICATIONS];	// On-screen notifications
+	unsigned next_note;					// Index of next free notification
 
 	bool num_locked = false;			// For keyboard joystick swap
 };

@@ -100,7 +100,6 @@ enum {
 C64Display::C64Display(C64 * c64) : the_c64(c64)
 {
 	speedometer_string[0] = 0;
-	notification[0] = 0;
 
 	// Create window and renderer
 	uint32_t flags;
@@ -146,7 +145,7 @@ C64Display::C64Display(C64 * c64) : the_c64(c64)
 	}
 
 	// LEDs off
-	for (int i=0; i<4; i++) {
+	for (unsigned i = 0; i < 4; ++i) {
 		led_state[i] = old_led_state[i] = LED_OFF;
 	}
 
@@ -155,6 +154,12 @@ C64Display::C64Display(C64 * c64) : the_c64(c64)
 	if (pulse_timer == 0) {
 		error_and_quit(std::format("Couldn't create SDL pulse timer ({})\n", SDL_GetError()));
 	}
+
+	// Clear notifications
+	for (unsigned i = 0; i < NUM_NOTIFICATIONS; ++i) {
+		notes[i].active = false;
+	}
+	next_note = 0;
 
 	// Show greeting
 	ShowNotification("Welcome to Frodo, press F10 for settings");
@@ -251,8 +256,8 @@ void C64Display::ShowNotification(std::string s)
 {
 	// Convert message to screen codes
 	unsigned size = s.length();
-	if (size >= sizeof(notification)) {
-		size = sizeof(notification) - 1;
+	if (size >= sizeof(Notification::text)) {
+		size = sizeof(Notification::text) - 1;
 	}
 	for (unsigned i = 0; i < size; ++i) {
 		char c = s[i];
@@ -261,12 +266,16 @@ void C64Display::ShowNotification(std::string s)
 		} else if ((c >= 'a') && (c <= 'z')) {
 			c ^= 0x60;
 		}
-		notification[i] = c;
+		notes[next_note].text[i] = c;
 	}
-	notification[size] = '\0';
+	notes[next_note].text[size] = '\0';
 
 	// Remember notification time
-	notification_time = chrono::steady_clock::now();
+	notes[next_note].time = chrono::steady_clock::now();
+
+	// Make notification active
+	notes[next_note].active = true;
+	next_note = (next_note + 1) % NUM_NOTIFICATIONS;
 }
 
 
@@ -318,21 +327,29 @@ void C64Display::SetSpeedometer(int speed)
 
 
 /*
- *  Redraw bitmap
+ *  Show VIC bitmap and user interface elements on the display
  */
 
 void C64Display::Update()
 {
-	// Draw notification
-	if (notification[0]) {
-		int elapsed_ms = chrono::duration_cast<chrono::milliseconds>(chrono::steady_clock::now() - notification_time).count();
-		if (elapsed_ms > NOTIFICATION_TIMEOUT_ms) {
-			notification[0] = 0;
-		} else {
-			draw_string(5, 5, notification, black);
-			draw_string(4, 4, notification, shine_gray);
+	// Update and draw notifications
+	auto now = chrono::steady_clock::now();
+
+	unsigned i = next_note;
+	unsigned y_pos = 4;
+	do {
+		if (notes[i].active) {
+			int elapsed_ms = chrono::duration_cast<chrono::milliseconds>(now - notes[i].time).count();
+			if (elapsed_ms > NOTIFICATION_TIMEOUT_ms) {
+				notes[i].active = false;
+			} else {
+				draw_string(5, y_pos + 1, notes[i].text, black);
+				draw_string(4, y_pos    , notes[i].text, shine_gray);
+				y_pos += 8;
+			}
 		}
-	}
+		i = (i + 1) % NUM_NOTIFICATIONS;
+	} while (i != next_note);
 
 	if (ThePrefs.ShowLEDs) {
 
