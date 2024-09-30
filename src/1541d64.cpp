@@ -1,8 +1,7 @@
 /*
- *  1541d64.cpp - 1541 emulation in disk image files (.d64/.x64/zipcode)
+ *  1541d64.cpp - 1541 emulation in disk image files (.d64/.x64)
  *
  *  Frodo Copyright (C) Christian Bauer
- *  zipcode decoding routines (C) 1993-1997 Marko Mäkelä, Paul David Doherty
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -1846,175 +1845,15 @@ static bool is_d64_file(const uint8_t *header, long size)
 	    || size == NUM_SECTORS_40 * 256 || size == NUM_SECTORS_40 * 257;
 }
 
-static bool is_ed64_file(const uint8_t *header, long size)
-{
-	// 35-track d64 file with header ID at the end (only used internally for
-	// converted zipcode files)
-	return size == NUM_SECTORS_35 * 256 + 2;
-}
-
 static bool is_x64_file(const uint8_t *header, long size)
 {
 	return memcmp(header, "C\x15\x41\x64\x01\x02", 6) == 0;
 }
 
-static bool is_zipcode_file(const std::string & path)
-{
-#if 0
-	string base, part;
-	SplitPath(path, base, part);
-	return part.length() > 2 && part[0] >= '1' && part[0] <= '4' && part[1] == '!';
-#else
-	return false;
-#endif
-}
-
 bool IsImageFile(const std::string & path, const uint8_t *header, long size)
 {
-	return is_d64_file(header, size) || is_x64_file(header, size) || is_zipcode_file(path);
+	return is_d64_file(header, size) || is_x64_file(header, size);
 }
-
-
-#if 0
-/*
- *  Convert zipcode file to extended d64 file (d64 file with header ID)
- */
-
-static FILE *open_zipcode_file(FILE *old, int num, const string &base, string &part, uint8_t &id1, uint8_t &id2)
-{
-	if (old) {
-		fclose(old);
-	}
-	part[0] = num + '1';
-	FILE *f = fopen(AddToPath(base, part).c_str(), "rb");
-	if (f == nullptr)
-		return nullptr;
-	if (fseek(f, 2, SEEK_SET) < 0) {
-		fclose(f);
-		return nullptr;
-	}
-	if (num == 0) {
-		id1 = getc(f);
-		id2 = getc(f);
-	}
-	return f;
-}
-
-static FILE *convert_zipcode_to_ed64(const std::string & path)
-{
-	FILE *in = nullptr, *out = nullptr;
-	uint8_t id1, id2;
-
-	// Split input file name
-	string base, part;
-	SplitPath(path, base, part);
-
-	// Open output file
-	out = tmpfile();
-	if (out == nullptr)
-		goto error;
-
-	// Decode all tracks
-	for (int track=1; track<=35; track++) {
-		int max_sect = 17 + ((track < 31) ? 1 : 0) + ((track < 25) ? 1 : 0) + ((track < 18) ? 2 : 0);
-
-		// Select appropriate input file
-		switch (track) {
-			case 1:
-				if ((in = open_zipcode_file(nullptr, 0, base, part, id1, id2)) == nullptr)
-					goto error;
-				break;
-			case 9:
-				if ((in = open_zipcode_file(in, 1, base, part, id1, id2)) == nullptr)
-					goto error;
-				break;
-			case 17:
-				if ((in = open_zipcode_file(in, 2, base, part, id1, id2)) == nullptr)
-					goto error;
-				break;
-			case 26:
-				if ((in = open_zipcode_file(in, 3, base, part, id1, id2)) == nullptr)
-					goto error;
-				break;
-		}
-
-		// Clear "sector read" flags
-		bool sect_flag[21];
-		for (int i=0; i<max_sect; i++) {
-			sect_flag[i] = false;
-		}
-
-		// Read track
-		uint8_t act_track[21 * 256];
-		for (int i=0; i<max_sect; i++) {
-
-			// Read and verify track/sector number
-			uint8_t t = getc(in);
-			uint8_t s = getc(in);
-			if ((t & 0x3f) != track || s >= max_sect || sect_flag[s] || feof(in))
-				goto error;
-			sect_flag[s] = true;
-			uint8_t *p = act_track + s * 256;
-
-			// Uncompress sector
-			if (t & 0x80) {
-				// Run-length encoded sector
-				uint8_t len = getc(in);
-				uint8_t rep = getc(in);
-				int count = 0;
-				for (int j=0; j<len; j++) {
-					if (feof(in))
-						goto error;
-					uint8_t c = getc(in);
-					if (c != rep) {
-						p[count++] = c;
-					} else {
-						uint8_t repnum = getc(in);
-						if (feof(in))
-							goto error;
-						c = getc(in);
-						j += 2;
-						for (int k=0; k<repnum; k++)
-							p[count++] = c;
-					}
-				}
-			} else if (t & 0x40) {
-				// Sector filled with constant byte
-				if (feof(in))
-					goto error;
-				uint8_t c = getc(in);
-				memset(p, c, 256);
-			} else {
-				// Plain sector
-				if (fread(p, 1, 256, in) != 256)
-					goto error;
-			}
-		}
-
-		// Write track
-		if (fwrite(act_track, 256, max_sect, out) != (size_t)max_sect)
-			goto error;
-	}
-
-	// Write header ID
-	putc(id1, out);
-	putc(id2, out);
-
-	// Done
-	fclose(in);
-	fseek(out, 0, SEEK_SET);
-	return out;
-
-error:
-	if (in) {
-		fclose(in);
-	}
-	if (out) {
-		fclose(out);
-	}
-	return nullptr;
-}
-#endif
 
 
 /*
@@ -2023,16 +1862,7 @@ error:
 
 static FILE *open_image_file(const std::string & path, bool write_mode)
 {
-#if 0
-	if (is_zipcode_file(path)) {
-		if (write_mode) {
-			return nullptr;
-		} else {
-			return convert_zipcode_to_ed64(path);
-		}
-	} else
-#endif
-		return fopen(path.c_str(), write_mode ? "r+b" : "rb");
+	return fopen(path.c_str(), write_mode ? "r+b" : "rb");
 }
 
 
@@ -2040,10 +1870,10 @@ static FILE *open_image_file(const std::string & path, bool write_mode)
  *  Parse image file and fill in image_file_desc structure
  */
 
-static bool parse_d64_file(FILE *f, image_file_desc &desc, bool has_header_id)
+static bool parse_d64_file(FILE *f, image_file_desc &desc)
 {
 	// .d64 files have no header
-	desc.type = has_header_id ? TYPE_ED64 : TYPE_D64;
+	desc.type = TYPE_D64;
 	desc.header_size = 0;
 
 	// Determine number of tracks
@@ -2055,18 +1885,11 @@ static bool parse_d64_file(FILE *f, image_file_desc &desc, bool has_header_id)
 		desc.num_tracks = 35;
 	}
 
-	if (has_header_id) {
-		// Read header ID from image file (last 2 bytes)
-		fseek(f, -2, SEEK_END);
-		desc.id1 = getc(f);
-		desc.id2 = getc(f);
-	} else {
-		// Read header ID from BAM (use error_info as buffer)
-		fseek(f, accum_num_sectors[18] * 256, SEEK_SET);
-		fread(desc.error_info, 1, 256, f);
-		desc.id1 = desc.error_info[BAM_DISK_ID];
-		desc.id2 = desc.error_info[BAM_DISK_ID + 1];
-	}
+	// Read header ID from BAM (use error_info as buffer)
+	fseek(f, accum_num_sectors[18] * 256, SEEK_SET);
+	fread(desc.error_info, 1, 256, f);
+	desc.id1 = desc.error_info[BAM_DISK_ID];
+	desc.id2 = desc.error_info[BAM_DISK_ID + 1];
 
 	// Read error info
 	memset(desc.error_info, 1, sizeof(desc.error_info));
@@ -2122,9 +1945,7 @@ static bool parse_image_file(FILE *f, image_file_desc &desc)
 	if (is_x64_file(header, size)) {
 		return parse_x64_file(f, desc);
 	} else if (is_d64_file(header, size)) {
-		return parse_d64_file(f, desc, false);
-	} else if (is_ed64_file(header, size)) {
-		return parse_d64_file(f, desc, true);
+		return parse_d64_file(f, desc);
 	} else {
 		return false;
 	}

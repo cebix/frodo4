@@ -1,5 +1,5 @@
 /*
- *  1541d64.h - 1541 emulation in disk image files (.d64/.x64/zipcode)
+ *  1541d64.h - 1541 emulation in disk image files (.d64/.x64)
  *
  *  Frodo Copyright (C) Christian Bauer
  *
@@ -38,7 +38,6 @@ const int NUM_SECTORS_40 = 768;	// Number of sectors in a 40-track image
 // Disk image types
 enum {
 	TYPE_D64,			// D64 file
-	TYPE_ED64,			// Converted zipcode file (D64 with header ID)
 	TYPE_X64			// x64 file
 };
 
