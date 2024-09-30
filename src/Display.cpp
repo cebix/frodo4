@@ -343,7 +343,7 @@ void C64Display::Update()
 			if (elapsed_ms > NOTIFICATION_TIMEOUT_ms) {
 				notes[i].active = false;
 			} else {
-				draw_string(5, y_pos + 1, notes[i].text, black);
+				draw_string(5, y_pos + 1, notes[i].text, shadow_gray);
 				draw_string(4, y_pos    , notes[i].text, shine_gray);
 				y_pos += 8;
 			}
@@ -354,7 +354,7 @@ void C64Display::Update()
 	if (ThePrefs.ShowLEDs) {
 
 		// Draw speedometer/LEDs
-		draw_string(9, DISPLAY_Y - 8, speedometer_string, black);
+		draw_string(9, DISPLAY_Y - 8, speedometer_string, shadow_gray);
 		draw_string(8, DISPLAY_Y - 9, speedometer_string, shine_gray);
 
 		for (unsigned i = 0; i < 4; ++i) {
@@ -363,13 +363,13 @@ void C64Display::Update()
 					"D\x12 8", "D\x12 9", "D\x12 10", "D\x12 11"	// \x12 = "r"
 				};
 
-				draw_string(DISPLAY_X * (i+1) / 6 + 8, DISPLAY_Y - 8, drive_str[i], black);
+				draw_string(DISPLAY_X * (i+1) / 6 + 8, DISPLAY_Y - 8, drive_str[i], shadow_gray);
 				draw_string(DISPLAY_X * (i+1) / 6 + 7, DISPLAY_Y - 9, drive_str[i], shine_gray);
 
 				SDL_Rect r = {(int)(DISPLAY_X * (i+2) / 6 - 16), DISPLAY_Y - 8, 14, 6};
 				fill_rect(r, shadow_gray);
 				r.x += 1; r.y += 1; r.w -=1; r.h -= 1;
-				fill_rect(r, shine_gray);
+				fill_rect(r, fill_gray);
 
 				uint8_t c;
 				switch (led_state[i]) {
@@ -393,7 +393,7 @@ void C64Display::Update()
 		PlayMode mode = the_c64->GetPlayMode();
 		if (mode != PLAY_MODE_PLAY) {
 			const char * str = (mode == PLAY_MODE_REWIND) ? "<<" : ">>";
-			draw_string(DISPLAY_X - 23, DISPLAY_Y - 8, str, black);
+			draw_string(DISPLAY_X - 23, DISPLAY_Y - 8, str, shadow_gray);
 			draw_string(DISPLAY_X - 24, DISPLAY_Y - 9, str, shine_gray);
 		}
 	}
@@ -819,7 +819,7 @@ void C64Display::init_colors(int palette_prefs)
 	// Extra colors for UI elements
 	palette[fill_gray]   = (0xd0 << 16) | (0xd0 << 8) | (0xd0 << 0);
 	palette[shine_gray]  = (0xf0 << 16) | (0xf0 << 8) | (0xf0 << 0);
-	palette[shadow_gray] = (0x80 << 16) | (0x80 << 8) | (0x80 << 0);
+	palette[shadow_gray] = (0x40 << 16) | (0x40 << 8) | (0x40 << 0);
 	palette[red]         = (0xf0 << 16) | (0x00 << 8) | (0x00 << 0);
 	palette[green]       = (0x00 << 16) | (0xf0 << 8) | (0x00 << 0);
 }
