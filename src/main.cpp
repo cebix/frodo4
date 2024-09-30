@@ -98,7 +98,11 @@ void Frodo::ReadyToRun()
 	TheC64 = new C64;
 	TheC64->Run();
 
+	// Shutdown
 	delete TheC64;
+
+	// Save preferences
+	ThePrefs.Save(prefs_path);
 }
 
 
