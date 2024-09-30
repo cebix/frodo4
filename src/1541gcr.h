@@ -46,7 +46,7 @@ public:
 	bool SyncFound(uint32_t cycle_counter);
 	bool ByteReady(uint32_t cycle_counter);
 	uint8_t ReadGCRByte(uint32_t cycle_counter);
-	bool WPSensorClosed();
+	bool WPSensorClosed(uint32_t cycle_counter);
 
 	void WriteSector();
 	void FormatTrack();
@@ -54,15 +54,20 @@ public:
 private:
 	void open_d64_file(const std::string & filepath);
 	void close_d64_file();
+
 	bool read_sector(unsigned track, unsigned sector, uint8_t *buffer);
 	bool write_sector(unsigned track, unsigned sector, const uint8_t *buffer);
 	void format_disk();
+
 	unsigned secnum_from_ts(unsigned track, unsigned sector);
 	int offset_from_ts(unsigned track, unsigned sector);
+
 	void gcr_conv4(const uint8_t *from, uint8_t *to);
 	void sector2gcr(unsigned track, unsigned sector);
 	void disk2gcr();
 	void set_gcr_ptr();
+
+	void advance_disk_change_seq(uint32_t cycle_counter);
 	void rotate_disk(uint32_t cycle_counter);
 
 	uint8_t *ram;				// Pointer to 1541 RAM

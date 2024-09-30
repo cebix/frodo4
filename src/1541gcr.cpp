@@ -548,11 +548,31 @@ void Job1541::SetState(const Job1541State *state)
 
 
 /*
+ *  Advance disk change sequence state
+ */
+
+void Job1541::advance_disk_change_seq(uint32_t cycle_counter)
+{
+	if (disk_change_seq > 0) {
+
+		// Time for next step in sequence?
+		uint32_t elapsed = cycle_counter - disk_change_cycle;
+		if (elapsed >= DISK_CHANGE_SEQ_CYCLES) {
+			--disk_change_seq;
+			disk_change_cycle = cycle_counter;
+		}
+	}
+}
+
+
+/*
  *  Rotate disk (virtually)
  */
 
 void Job1541::rotate_disk(uint32_t cycle_counter)
 {
+	advance_disk_change_seq(cycle_counter);
+
 	if (motor_on && disk_change_seq == 0) {
 
 		uint32_t elapsed = cycle_counter - last_byte_cycle;
@@ -629,28 +649,14 @@ uint8_t Job1541::ReadGCRByte(uint32_t cycle_counter)
  *  Return state of write protect sensor
  */
 
-bool Job1541::WPSensorClosed()
+bool Job1541::WPSensorClosed(uint32_t cycle_counter)
 {
-	if (disk_change_seq > 0) {
+	advance_disk_change_seq(cycle_counter);
 
-		// Time for next step in sequence?
-		uint32_t now = the_cpu_1541->CycleCounter();
-		uint32_t elapsed = now - disk_change_cycle;
-		if (elapsed >= DISK_CHANGE_SEQ_CYCLES) {
-			--disk_change_seq;
-			disk_change_cycle = now;
-		}
-
-		// The sequence is:
-		// 3) force sensor closed (disk being pulled out)
-		// 2) force sensor open (drive empty)
-		// 1) force sensor closed (new disk sliding in)
-		// 0) reflect actual write protection notch
-		if (disk_change_seq == 3 || disk_change_seq == 1) {
-			return true;
-		} else if (disk_change_seq == 2) {
-			return false;
-		}
+	if (disk_change_seq == 3 || disk_change_seq == 1) {
+		return true;
+	} else if (disk_change_seq == 2) {
+		return false;
 	}
 
 	// Default behavior

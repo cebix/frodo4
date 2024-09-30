@@ -297,7 +297,7 @@ uint8_t MOS6502_1541::read_byte(uint16_t adr)
 		// VIA 2
 		switch (adr & 0xf) {
 			case 0: {	// Port B
-				uint8_t in = the_job->WPSensorClosed() ? 0 : 0x10;
+				uint8_t in = the_job->WPSensorClosed(cycle_counter) ? 0 : 0x10;
 				if (!the_job->SyncFound(cycle_counter)) {
 					in |= 0x80;
 				}
