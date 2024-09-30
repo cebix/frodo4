@@ -162,10 +162,10 @@ private:
 											// (plus one extra)
 
 	uint8_t ref_cnt;				// Refresh counter
+
 	uint8_t spr_adv_y;				// 8 sprite advance line flip-flops
 	uint8_t spr_dma_on;				// 8 flags: Sprite DMA active
-	uint8_t spr_disp_on;			// 8 flags: Sprite display active
-	uint8_t spr_draw;				// 8 flags: Draw sprite in this line
+	uint8_t spr_disp_on;			// 8 flags: Sprite armed for display
 	uint16_t spr_ptr[8];			// Sprite data pointers
 	uint16_t mc_base[8];			// Sprite data counter bases
 
@@ -180,8 +180,18 @@ private:
 	uint32_t pixel_shifter;			// Output color values (4-bit) for next 8 pixels (note: lower 4 bits = leftmost pixel)
 	uint8_t fore_mask_shifter;		// Foreground mask for next 8 pixel values
 
-	uint8_t spr_data[8][4];			// Sprite data read
-	uint8_t spr_draw_data[8][4];	// Sprite data for drawing
+	uint8_t spr_data[8][4];			// Sprite data read from memory
+
+	struct SprLatch {
+		bool disp_on;				// Sprite display on
+		bool mxe;					// X expansion flag
+		bool mdp;					// Foreground priority flag
+		bool mmc;					// Multicolor flag
+		uint32_t data;				// Sprite data
+		uint16_t mx;				// X position
+		uint8_t sc;					// Sprite color
+	};
+	SprLatch spr_latch[8];			// Latched sprite data for drawing
 #else
 	uint8_t *get_physical(uint16_t adr);
 	void make_mc_table();

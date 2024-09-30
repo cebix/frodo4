@@ -169,6 +169,7 @@ MOS6569::MOS6569(C64 *c64, C64Display *disp, MOS6510 *CPU, uint8_t *RAM, uint8_t
 	ml_index = 0;
 
 	cycle = 0;
+	raster_x = 0x190;
 	display_idx = 0;
 	display_state = false;
 	border_on = ud_border_on = ud_border_set = true;
@@ -185,6 +186,7 @@ MOS6569::MOS6569(C64 *c64, C64Display *disp, MOS6510 *CPU, uint8_t *RAM, uint8_t
 		spr_ptr[i] = 0;
 	}
 
+	memset(spr_latch, 0, sizeof(spr_latch));
 	memset(spr_coll_buf, 0, sizeof(spr_coll_buf));
 	memset(fore_mask_buf, 0, sizeof(fore_mask_buf));
 }
@@ -389,7 +391,7 @@ inline void MOS6569::check_raster_irq()
 			return;
 		}
 	} else {
-		if (cycle == 63) {
+		if (cycle == CYCLES_PER_LINE) {
 			hold_off_raster_irq = true;
 			return;
 		}
@@ -658,7 +660,11 @@ void MOS6569::TriggerLightpen()
 	if (!lp_triggered) {		// Lightpen triggers only once per frame
 		lp_triggered = true;
 
-		lpx = raster_x >> 1;	// Latch current coordinates
+		unsigned x = raster_x + 4;
+		if (x >= 0x1f8) {
+			x -= 0x1f8;
+		}
+		lpx = x >> 1;			// Latch current coordinates
 		lpy = raster_y;
 
 		irq_flag |= 0x08;		// Trigger IRQ
@@ -989,16 +995,28 @@ inline void MOS6569::draw_sprites()
 {
 	unsigned spr_coll = 0, gfx_coll = 0;
 
+	// Any sprite ready to be drawn?
+	bool draw_any_sprite = false;
+	for (unsigned snum = 0; snum < 8; ++snum) {
+		if (spr_latch[snum].disp_on) {
+			draw_any_sprite = true;
+			break;
+		}
+	}
+	if (! draw_any_sprite)
+		return;
+
 	// Clear sprite collision/priority buffer
 	memset(spr_coll_buf, 0, sizeof(spr_coll_buf));
 
 	// Loop for all sprites in descending order of priority
 	for (unsigned snum = 0; snum < 8; ++snum) {
 		uint8_t sbit = 1 << snum;
+		SprLatch * latch = &spr_latch[snum];
 
 		// Is sprite visible?
-		if ((spr_draw & sbit) && mx[snum] < 0x1f8) {
-			unsigned x = mx[snum];
+		if (latch->disp_on) {
+			unsigned x = latch->mx;
 
 			uint8_t *p = chunky_line_start + 8 + x;	// Start of sprite in pixel buffer
 			if (x >= DISPLAY_X - 8) {
@@ -1006,10 +1024,11 @@ inline void MOS6569::draw_sprites()
 			}
 			uint8_t *q = spr_coll_buf;
 
-			uint8_t color = sc[snum];
+			uint8_t color = latch->sc;
 
 			// Fetch sprite data and mask
-			uint32_t sdata = (spr_draw_data[snum][0] << 24) | (spr_draw_data[snum][1] << 16) | (spr_draw_data[snum][2] << 8);
+			uint32_t sdata = latch->data;
+			latch->data = 0;
 
 			unsigned spr_mask_pos = x + 8;	// Sprite bit position in fore_mask_buf
 			unsigned sshift = spr_mask_pos & 7;
@@ -1018,7 +1037,7 @@ inline void MOS6569::draw_sprites()
 			uint32_t fore_mask = (fmbp[0] << 24) | (fmbp[1] << 16) | (fmbp[2] << 8) | (fmbp[3] << 0);
 			fore_mask = (fore_mask << sshift) | (fmbp[4] >> (8-sshift));
 
-			if (mxe & sbit) {		// X-expanded
+			if (latch->mxe) {		// X-expanded
 
 				// Perform clipping
 				unsigned first_pix = 0;
@@ -1030,7 +1049,7 @@ inline void MOS6569::draw_sprites()
 				if (x > (DISPLAY_X - 8 - 48)) {
 					if (x < (DISPLAY_X - 8)) {	// Clipped on the right
 						last_pix = DISPLAY_X - 8 - x;
-					} else if (x <= 0x1c0) {		// Too far to the left to be visible
+					} else if (x <= 0x1c0) {	// Too far to the left to be visible
 						last_pix = 0;
 					}
 				}
@@ -1040,7 +1059,7 @@ inline void MOS6569::draw_sprites()
 				uint32_t fore_mask_r = (fmbp[4] << 24) | (fmbp[5] << 16) | (fmbp[6] << 8);
 				fore_mask_r <<= sshift;
 
-				if (mmc & sbit) {	// X-expanded multicolor mode
+				if (latch->mmc) {	// X-expanded multicolor mode
 					uint32_t plane0_l, plane0_r, plane1_l, plane1_r;
 
 					// Expand sprite data
@@ -1059,7 +1078,7 @@ inline void MOS6569::draw_sprites()
 					}
 
 					// Mask sprite if in background
-					if ((mdp & sbit) == 0) {
+					if (!latch->mdp) {
 						fore_mask = 0;
 						fore_mask_r = 0;
 					}
@@ -1134,7 +1153,7 @@ inline void MOS6569::draw_sprites()
 					}
 
 					// Mask sprite if in background
-					if ((mdp & sbit) == 0) {
+					if (!latch->mdp) {
 						fore_mask = 0;
 						fore_mask_r = 0;
 					}
@@ -1184,12 +1203,12 @@ inline void MOS6569::draw_sprites()
 				if (x > (DISPLAY_X - 8 - 24)) {
 					if (x < (DISPLAY_X - 8)) {	// Clipped on the right
 						last_pix = DISPLAY_X - 8 - x;
-					} else if (x <= 0x1d8) {		// Too far to the left to be visible
+					} else if (x <= 0x1d8) {	// Too far to the left to be visible
 						last_pix = 0;
 					}
 				}
 
-				if (mmc & sbit) {	// Unexpanded multicolor mode
+				if (latch->mmc) {	// Unexpanded multicolor mode
 					uint32_t plane0, plane1;
 
 					// Convert sprite chunky pixels to bitplanes
@@ -1202,7 +1221,7 @@ inline void MOS6569::draw_sprites()
 					}
 
 					// Mask sprite if in background
-					if ((mdp & sbit) == 0) {
+					if (!latch->mdp) {
 						fore_mask = 0;
 					}
 
@@ -1244,7 +1263,7 @@ inline void MOS6569::draw_sprites()
 					}
 
 					// Mask sprite if in background
-					if ((mdp & sbit) == 0) {
+					if (!latch->mdp) {
 						fore_mask = 0;
 					}
 
@@ -1392,8 +1411,28 @@ unsigned MOS6569::EmulateCycle()
 
 	// Increment cycle counter
 	++cycle;
-	if (cycle > 63) {
+	if (cycle > CYCLES_PER_LINE) {
 		cycle = 1;
+	}
+
+	// Latch sprite data on X position match for display at end of line
+	if (spr_disp_on) {
+		unsigned cx = raster_x & 0x1f8;	// Mask out lower 3 bits for comparison
+
+		for (unsigned i = 0; i < 8; ++i) {
+			unsigned mask = 1 << i;
+			SprLatch * latch = &spr_latch[i];
+
+			if (!latch->disp_on && (spr_disp_on & mask) && (mx[i] & 0x1f8) == cx) {
+				latch->disp_on = true;
+				latch->mxe = mxe & mask;
+				latch->mdp = mdp & mask;
+				latch->mmc = mmc & mask;
+				latch->sc = sc[i];
+				latch->mx = mx[i];
+				latch->data = (spr_data[i][0] << 24) | (spr_data[i][1] << 16) | (spr_data[i][2] << 8);
+			}
+		}
 	}
 
 	switch (cycle) {
@@ -1571,7 +1610,7 @@ unsigned MOS6569::EmulateCycle()
 		case 13:
 			RefreshAccess;
 			FetchIfBadLine;
-			raster_x = 0xfffc;	// Wrap-around at end of function
+			raster_x = 0xfff8;	// Wrap-around at end of function
 			break;
 
 		// Refresh, VCBASE->VCCOUNT, turn on matrix access and reset RC if Bad Line, graphics display starts here
@@ -1747,11 +1786,6 @@ unsigned MOS6569::EmulateCycle()
 			}
 			SampleBorderColor;
 
-			// Sample spr_disp_on and spr_data for sprite drawing
-			if ((spr_draw = spr_disp_on) != 0) {
-				memcpy(spr_draw_data, spr_data, 8*4);
-			}
-
 			for (unsigned i = 0; i < 8; ++i) {
 				uint8_t mask = 1 << i;
 				mc[i] = mc_base[i];
@@ -1821,7 +1855,7 @@ unsigned MOS6569::EmulateCycle()
 				fore_mask_buf[0x218 / 8 + 2] = fore_mask_buf[COL40_XSTART / 8 + 2];
 
 				// Draw sprites
-				if (spr_draw && ThePrefs.SpritesOn) {
+				if (ThePrefs.SpritesOn) {
 					draw_sprites();
 				}
 
@@ -1860,6 +1894,13 @@ unsigned MOS6569::EmulateCycle()
 
 				// Increment pointer in chunky buffer
 				chunky_line_start += xmod;
+			}
+
+			// Clear sprite latches
+			if (draw_this_line || raster_y == FIRST_DISP_LINE - 1) {
+				for (unsigned i = 0; i < 8; ++i) {
+					spr_latch[i].disp_on = false;
+				}
 			}
 
 			SprDataAccess(1, 1);
