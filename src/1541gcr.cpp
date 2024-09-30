@@ -553,7 +553,7 @@ void Job1541::SetState(const Job1541State *state)
 
 void Job1541::rotate_disk(uint32_t cycle_counter)
 {
-	if (motor_on) {
+	if (motor_on && disk_change_seq == 0) {
 
 		uint32_t elapsed = cycle_counter - last_byte_cycle;
 		uint32_t advance = elapsed / CYCLES_PER_BYTE;
