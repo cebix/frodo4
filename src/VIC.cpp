@@ -883,7 +883,7 @@ inline void MOS6569::el_mc_idle(uint8_t *p, uint8_t *r)
 
 inline void MOS6569::el_sprites(uint8_t *chunky_ptr)
 {
-	unsigned spr_coll=0, gfx_coll=0;
+	unsigned spr_coll = 0, gfx_coll = 0;
 
 	// Draw each active sprite
 	for (unsigned snum = 0; snum < 8; ++snum) {
@@ -1100,26 +1100,28 @@ inline void MOS6569::el_sprites(uint8_t *chunky_ptr)
 	if (ThePrefs.SpriteCollisions) {
 
 		// Check sprite-sprite collisions
-		if (clx_spr) {
+		if (spr_coll) {
+			uint8_t old_clx_spr = clx_spr;
 			clx_spr |= spr_coll;
-		} else {
-			clx_spr |= spr_coll;
-			irq_flag |= 0x04;
-			if (irq_mask & 0x04) {
-				irq_flag |= 0x80;
-				the_cpu->TriggerVICIRQ();
+			if (old_clx_spr == 0) {	// Interrupt on first detected collision
+				irq_flag |= 0x04;
+				if (irq_mask & 0x04) {
+					irq_flag |= 0x80;
+					the_cpu->TriggerVICIRQ();
+				}
 			}
 		}
 
 		// Check sprite-background collisions
-		if (clx_bgr) {
+		if (gfx_coll) {
+			uint8_t old_clx_bgr = clx_bgr;
 			clx_bgr |= gfx_coll;
-		} else {
-			clx_bgr |= gfx_coll;
-			irq_flag |= 0x02;
-			if (irq_mask & 0x02) {
-				irq_flag |= 0x80;
-				the_cpu->TriggerVICIRQ();
+			if (old_clx_bgr == 0) {	// Interrupt on first detected collision
+				irq_flag |= 0x02;
+				if (irq_mask & 0x02) {
+					irq_flag |= 0x80;
+					the_cpu->TriggerVICIRQ();
+				}
 			}
 		}
 	}
