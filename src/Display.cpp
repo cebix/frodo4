@@ -50,6 +50,18 @@ constexpr uint32_t PULSE_ms = 400;
 // Notification timeout
 constexpr uint32_t NOTIFICATION_TIMEOUT_ms = 4000;
 
+// Drive LED image
+static const char * led_image[8] = {
+    "  XXXX  ",
+    " X.O..X ",
+    "X.O....X",
+    "X.O....X",
+    "X......X",
+    "X......X",
+    " X....X ",
+    "  XXXX  ",
+};
+
 
 // C64 color palettes based on measurements by Philip "Pepto" Timmermann <pepto@pepto.de>
 // (see http://www.pepto.de/projects/colorvic/)
@@ -89,7 +101,8 @@ enum {
 	shine_gray = 17,
 	shadow_gray = 18,
 	red = 19,
-	green = 20,
+	dark_red = 20,
+	green = 21,
 };
 
 
@@ -147,6 +160,28 @@ C64Display::C64Display(C64 * c64) : the_c64(c64)
 	// LEDs off
 	for (unsigned i = 0; i < 4; ++i) {
 		led_state[i] = old_led_state[i] = LED_OFF;
+	}
+
+	// Create LED images
+	for (unsigned type = 0; type < 3; ++type) {
+		unsigned color;
+		switch (type) {
+			case 0:  color = green; break;		// LED_ON
+			case 1:  color = red; break;		// LED_ERROR_ON
+			default: color = dark_red; break;	// LED_ERROR_OFF
+		}
+		uint8_t * p = led_pixmap[type];
+		for (unsigned y = 0; y < 8; ++y) {
+			for (unsigned x = 0; x < 8; ++x) {
+				switch (led_image[y][x]) {
+					case '.': p[x] = color; break;
+					case 'X': p[x] = shadow_gray; break;
+					case 'O': p[x] = shine_gray; break;
+					default:  p[x] = 0; break;
+				}
+			}
+			p += 8;
+		}
 	}
 
 	// Start timer for LED error blinking
@@ -366,26 +401,25 @@ void C64Display::Update()
 				draw_string(DISPLAY_X * (i+1) / 6 + 8, DISPLAY_Y - 8, drive_str[i], shadow_gray);
 				draw_string(DISPLAY_X * (i+1) / 6 + 7, DISPLAY_Y - 9, drive_str[i], shine_gray);
 
-				SDL_Rect r = {(int)(DISPLAY_X * (i+2) / 6 - 16), DISPLAY_Y - 8, 14, 6};
-				fill_rect(r, shadow_gray);
-				r.x += 1; r.y += 1; r.w -=1; r.h -= 1;
-				fill_rect(r, fill_gray);
+				uint8_t * p = pixel_buffer + (DISPLAY_X * (i+2) / 6 - 16) + DISPLAY_X * (DISPLAY_Y - 9);
 
-				uint8_t c;
+				const uint8_t * q;
 				switch (led_state[i]) {
-					case LED_ON:
-						c = green;
-						break;
-					case LED_ERROR_ON:
-						c = red;
-						break;
-					default:
-						c = black;
-						break;
+					case LED_ON:        q = led_pixmap[0]; break;
+					case LED_ERROR_ON:  q = led_pixmap[1]; break;
+					case LED_ERROR_OFF: q = led_pixmap[2]; break;
 				}
 
-				r.w -= 1; r.h -= 1;
-				fill_rect(r, c);
+				for (unsigned y = 0; y < 8; ++y) {
+					for (unsigned x = 0; x < 8; ++x) {
+						uint8_t c = q[x];
+						if (c) {	// 0 = transparent
+							p[x] = c;
+						}
+					}
+					p += DISPLAY_X;
+					q += 8;
+				}
 			}
 		}
 
@@ -423,21 +457,6 @@ void C64Display::Update()
 	SDL_RenderPresent(the_renderer);
 }
 
-
-/*
- *  Fill rectangle in pixel buffer
- */
-
-void C64Display::fill_rect(const SDL_Rect & r, uint8_t color) const
-{
-	uint8_t * p = pixel_buffer + DISPLAY_X*r.y + r.x;
-	for (int y = 0; y < r.h; ++y) {
-		for (int x = 0; x < r.w; ++x) {
-			p[x] = color;
-		}
-		p += DISPLAY_X;
-	}
-}
 
 /*
  *  Draw string into pixel buffer using the C64 lower-case ROM font
@@ -821,5 +840,6 @@ void C64Display::init_colors(int palette_prefs)
 	palette[shine_gray]  = (0xf0 << 16) | (0xf0 << 8) | (0xf0 << 0);
 	palette[shadow_gray] = (0x40 << 16) | (0x40 << 8) | (0x40 << 0);
 	palette[red]         = (0xf0 << 16) | (0x00 << 8) | (0x00 << 0);
-	palette[green]       = (0x00 << 16) | (0xf0 << 8) | (0x00 << 0);
+	palette[dark_red]    = (0x30 << 16) | (0x00 << 8) | (0x00 << 0);
+	palette[green]       = (0x00 << 16) | (0xc0 << 8) | (0x00 << 0);
 }

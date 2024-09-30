@@ -67,7 +67,6 @@ private:
 
 	void error_and_quit(const std::string & msg) const;
 
-	void fill_rect(const SDL_Rect & r, uint8_t color) const;
 	void draw_string(unsigned x, unsigned y, const char *str, uint8_t front_color) const;
 
 	static uint32_t pulse_handler_static(uint32_t interval, void * arg);
@@ -80,6 +79,8 @@ private:
 	int led_state[4];
 	int old_led_state[4];
 	SDL_TimerID pulse_timer = 0;		// Timer for LED error blinking
+
+	uint8_t led_pixmap[3][64];			// LED pixmaps
 
 	SDL_Window * the_window = nullptr;
 	SDL_Renderer * the_renderer = nullptr;
