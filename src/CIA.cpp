@@ -150,6 +150,7 @@ void MOS6526::GetState(MOS6526State * s) const
 	s->ta_oneshot_delay = 0;
 	s->tb_oneshot_delay = 0;
 
+	s->sdr_shift_counter = 0;
 	s->set_ir_delay = 0;
 	s->clear_ir_delay = 0;
 	s->irq_delay = 0;

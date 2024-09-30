@@ -73,6 +73,7 @@ void MOS6526::Reset()
 	tod_latched = false;
 	tod_alarm = false;
 
+	sdr_shift_counter = 0;
 	set_ir_delay = 0;
 	clear_ir_delay = 0;
 	irq_delay = 0;
@@ -158,6 +159,7 @@ void MOS6526::GetState(MOS6526State * s) const
 	s->ta_oneshot_delay = ta.oneshot_delay;
 	s->tb_oneshot_delay = tb.oneshot_delay;
 
+	s->sdr_shift_counter = sdr_shift_counter;
 	s->set_ir_delay = set_ir_delay;
 	s->clear_ir_delay = clear_ir_delay;
 	s->irq_delay = irq_delay;
@@ -217,6 +219,7 @@ void MOS6526::SetState(const MOS6526State * s)
 	ta.oneshot_delay = s->ta_oneshot_delay;
 	tb.oneshot_delay = s->tb_oneshot_delay;
 
+	sdr_shift_counter = s->sdr_shift_counter;
 	set_ir_delay = s->set_ir_delay;
 	clear_ir_delay = s->clear_ir_delay;
 	irq_delay = s->irq_delay;
@@ -444,6 +447,15 @@ void MOS6526::EmulateCycle()
 
 	if (ta.output) {
 		set_int_flag(1);
+
+		if (cra & 0x40) {	// Serial port in output mode?
+			if (sdr_shift_counter > 0) {
+				--sdr_shift_counter;
+				if (sdr_shift_counter == 0) {
+					set_int_flag(8);
+				}
+			}
+		}
 	}
 
 	// Emulate timer B

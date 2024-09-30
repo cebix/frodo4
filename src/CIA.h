@@ -107,6 +107,8 @@ protected:
 	uint8_t pb_in = 0;
 
 #ifdef FRODO_SC
+	unsigned sdr_shift_counter;	// Phase counter for SDR output
+
 	uint8_t set_ir_delay;	// Delay line for setting IR bit in ICR
 	uint8_t clear_ir_delay;	// Delay line for clearing IR bit in ICR
 	uint8_t irq_delay;		// Delay line for asserting IRQ
@@ -216,6 +218,7 @@ struct MOS6526State {
 	uint8_t tb_load_delay;
 	uint8_t ta_oneshot_delay;
 	uint8_t tb_oneshot_delay;
+	uint8_t sdr_shift_counter;
 	uint8_t set_ir_delay;
 	uint8_t clear_ir_delay;
 	uint8_t irq_delay;
@@ -453,7 +456,15 @@ inline void MOS6526::write_register(uint8_t reg, uint8_t byte)
 
 		case 12:
 			sdr = byte;
+#ifdef FRODO_SC
+			if (cra & 0x40) {	// Serial port in output mode?
+				if (sdr_shift_counter == 0) {
+					sdr_shift_counter = 15;
+				}
+			}
+#else
 			set_int_flag(8);	// Fake SDR interrupt for programs that need it
+#endif
 			break;
 
 		case 13:
@@ -498,6 +509,11 @@ inline void MOS6526::write_register(uint8_t reg, uint8_t byte)
 				ta.counter = ta.latch;	// Load timer immediately
 #endif
 			}
+#ifdef FRODO_SC
+			if ((cra & 0x40) == 0) {	// Serial port in input mode?
+				sdr_shift_counter = 0;
+			}
+#endif
 			break;
 
 		case 15:
