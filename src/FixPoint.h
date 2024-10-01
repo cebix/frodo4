@@ -27,6 +27,9 @@
  *  Requires at least 32bit ints!
  */
 
+#ifndef FIX_POINT_H
+#define FIX_POINT_H
+
 
 #define FIXPOINT_BITS	32
 // Sign-bit
@@ -431,3 +434,6 @@ static inline void InitFixSinTab(void)
     SinTable[i] = FixNo(sin(M_PI * step));
   }
 }
+
+
+#endif // ndef FIX_POINT_H

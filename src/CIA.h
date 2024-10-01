@@ -18,8 +18,8 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef _CIA_H
-#define _CIA_H
+#ifndef CIA_H
+#define CIA_H
 
 #include "Prefs.h"
 
@@ -30,6 +30,7 @@ class MOS6569;
 struct MOS6526State;
 
 
+// 6526 emulation (CIA) base class
 class MOS6526 {
 public:
 	MOS6526(MOS6510 * cpu) : the_cpu(cpu) { }
@@ -116,6 +117,7 @@ protected:
 };
 
 
+// First CIA of C64 ($dcxx)
 class MOS6526_1 : public MOS6526 {
 public:
 	MOS6526_1(MOS6510 * cpu, MOS6569 * vic) : MOS6526(cpu), the_vic(vic) { }
@@ -143,6 +145,7 @@ private:
 };
 
 
+// Second CIA of C64 ($ddxx)
 class MOS6526_2 : public MOS6526{
 public:
 	MOS6526_2(MOS6510 * cpu, MOS6569 * vic, MOS6502_1541 * cpu_1541) : MOS6526(cpu), the_vic(vic), the_cpu_1541(cpu_1541) { }
@@ -533,4 +536,5 @@ inline void MOS6526::write_register(uint8_t reg, uint8_t byte)
 	}
 }
 
-#endif
+
+#endif // ndef CIA_H

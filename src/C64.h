@@ -18,8 +18,8 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef _C64_H
-#define _C64_H
+#ifndef C64_H
+#define C64_H
 
 #include <SDL_joystick.h>
 #include <SDL_gamecontroller.h>
@@ -66,6 +66,7 @@ class Job1541;
 struct Snapshot;
 
 
+// Main C64 emulator object
 class C64 {
 public:
 	C64();
@@ -187,4 +188,5 @@ private:
 // Check whether file is a snapshot file
 extern bool IsSnapshotFile(const char * filename);
 
-#endif
+
+#endif // ndef C64_H

@@ -30,4 +30,4 @@
 #define D(x) ;
 #endif
 
-#endif
+#endif // ndef DEBUG_H

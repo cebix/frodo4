@@ -18,8 +18,8 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef _1541FS_H
-#define _1541FS_H
+#ifndef C1541FS_H
+#define C1541FS_H
 
 #include "IEC.h"
 
@@ -56,4 +56,5 @@ private:
 	uint8_t read_char[16];	// Buffers for one-byte read-ahead
 };
 
-#endif
+
+#endif // ndef C1541FS_H

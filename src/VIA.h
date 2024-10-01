@@ -18,8 +18,8 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef _VIA_H
-#define _VIA_H
+#ifndef VIA_H
+#define VIA_H
 
 
 class MOS6502_1541;
@@ -250,4 +250,5 @@ inline void MOS6522::WriteRegister(uint16_t adr, uint8_t byte)
 	}
 }
 
-#endif
+
+#endif // ndef VIA_H

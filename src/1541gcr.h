@@ -18,8 +18,8 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef _1541GCR_H
-#define _1541GCR_H
+#ifndef C1541GCR_H
+#define C1541GCR_H
 
 #include <string>
 
@@ -113,4 +113,5 @@ struct Job1541State {
 	bool byte_ready;
 };
 
-#endif
+
+#endif // ndef C1541GCR_H

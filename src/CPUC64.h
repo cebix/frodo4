@@ -18,8 +18,8 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef _CPU_C64_H
-#define _CPU_C64_H
+#ifndef CPU_C64_H
+#define CPU_C64_H
 
 #include "C64.h"
 
@@ -238,4 +238,5 @@ inline void MOS6510::ClearNMI()
 	int_line[INT_NMI] = false;
 }
 
-#endif
+
+#endif // ndef CPU_C64_H

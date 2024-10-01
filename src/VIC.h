@@ -18,8 +18,8 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef _VIC_H
-#define _VIC_H
+#ifndef VIC_H
+#define VIC_H
 
 
 // Define this if you have a processor that can do unaligned accesses quickly
@@ -47,6 +47,7 @@ class C64;
 struct MOS6569State;
 
 
+// 6569 emulation (VIC)
 class MOS6569 {
 public:
 	MOS6569(C64 *c64, C64Display *disp, MOS6510 *CPU, uint8_t *RAM, uint8_t *Char, uint8_t *Color);
@@ -311,4 +312,5 @@ struct MOS6569State {
 	bool hold_off_raster_irq;	// Flag: No raster IRQ in next line
 };
 
-#endif
+
+#endif // ndef VIC_H

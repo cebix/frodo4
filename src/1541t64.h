@@ -18,8 +18,8 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef _1541T64_H
-#define _1541T64_H
+#ifndef C1541T64_H
+#define C1541T64_H
 
 #include "IEC.h"
 
@@ -84,4 +84,5 @@ extern bool IsArchFile(const std::string & path, const uint8_t *header, long siz
 // Read directory of archive file into (empty) c64_dir_entry vector
 extern bool ReadArchDirectory(const std::string & path, std::vector<c64_dir_entry> &vec);
 
-#endif
+
+#endif // ndef C1541T64_H

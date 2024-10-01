@@ -18,8 +18,8 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef _DISPLAY_H
-#define _DISPLAY_H
+#ifndef DISPLAY_H
+#define DISPLAY_H
 
 #include <SDL.h>
 
@@ -38,6 +38,7 @@ constexpr unsigned NOTIFICATION_LENGTH = 46;
 
 class C64;
 class Prefs;
+
 
 // Class for C64 graphics display
 class C64Display {
@@ -103,4 +104,5 @@ private:
 	bool num_locked = false;			// For keyboard joystick swap
 };
 
-#endif
+
+#endif // ndef DISPLAY_H

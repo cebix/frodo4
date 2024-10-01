@@ -18,8 +18,8 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef _REU_H
-#define _REU_H
+#ifndef REU_H
+#define REU_H
 
 #include "Cartridge.h"
 
@@ -27,6 +27,8 @@
 class MOS6510;
 class Prefs;
 
+
+// REU cartridge object
 class REU : public Cartridge {
 public:
 	REU(MOS6510 * cpu, int prefs_reu_size);
@@ -60,4 +62,5 @@ private:
 	uint8_t autoload_length_hi;
 };
 
-#endif
+
+#endif // ndef REU_H

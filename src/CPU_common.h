@@ -18,8 +18,8 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef _CPU_COMMON_H_
-#define _CPU_COMMON_H_
+#ifndef CPU_COMMON_H
+#define CPU_COMMON_H
 
 
 // States for addressing modes/operations (Frodo SC)
@@ -91,4 +91,5 @@ extern const uint8_t ModeTab[256];
 // Operation for each opcode (second part of execution) (Frodo SC)
 extern const uint8_t OpTab[256];
 
-#endif
+
+#endif // ndef CPU_COMMON_H

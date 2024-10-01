@@ -18,8 +18,8 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef _VERSION_H
-#define _VERSION_H
+#ifndef VERSION_H
+#define VERSION_H
 
 // Version/revision
 constexpr int FRODO_VERSION = 4;
@@ -33,4 +33,4 @@ const char VERSION_STRING[] = "Frodo Lite V4.3";
 
 #define DRIVE_ID_STRING "FRODO V4.3"
 
-#endif
+#endif // ndef VERSION_H

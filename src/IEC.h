@@ -18,8 +18,8 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef _IEC_H
-#define _IEC_H
+#ifndef IEC_H
+#define IEC_H
 
 #include <string>
 #include <vector>
@@ -262,4 +262,5 @@ extern bool ReadDirectory(const std::string & path, int type, std::vector<c64_di
 // Check whether file is likely to be a BASIC program
 extern bool IsBASICProgram(const std::string & path);
 
-#endif
+
+#endif // ndef IEC_H

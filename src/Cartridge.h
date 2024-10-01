@@ -18,8 +18,8 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef _CARTRIDGE_H
-#define _CARTRIDGE_H
+#ifndef CARTRIDGE_H
+#define CARTRIDGE_H
 
 #include "sysdeps.h"
 
@@ -96,4 +96,4 @@ public:
 };
 
 
-#endif // ndef _CARTRIDGE_H
+#endif // ndef CARTRIDGE_H

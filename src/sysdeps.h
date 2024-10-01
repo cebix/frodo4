@@ -19,6 +19,9 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#ifndef SYSDEPS_H
+#define SYSDEPS_H
+
 #include "sysconfig.h"
 
 #include <stdio.h>
@@ -26,3 +29,5 @@
 #include <string.h>
 
 #include <cstdint>
+
+#endif // ndef SYSDEPS_H

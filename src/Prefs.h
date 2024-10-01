@@ -18,8 +18,8 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef _PREFS_H
-#define _PREFS_H
+#ifndef PREFS_H
+#define PREFS_H
 
 #include <filesystem>
 #include <string>
@@ -104,4 +104,5 @@ public:
 // These are the active preferences
 extern Prefs ThePrefs;
 
-#endif
+
+#endif // ndef PREFS_H

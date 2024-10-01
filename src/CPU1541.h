@@ -18,8 +18,8 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef _CPU_1541_H
-#define _CPU_1541_H
+#ifndef CPU_1541_H
+#define CPU_1541_H
 
 #include "VIA.h"
 
@@ -166,4 +166,5 @@ struct MOS6502State {
 	uint8_t irq_delay;
 };
 
-#endif
+
+#endif // ndef CPU_1541_H

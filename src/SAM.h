@@ -18,8 +18,8 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef _SAM_H
-#define _SAM_H
+#ifndef SAM_H
+#define SAM_H
 
 #include <string>
 
@@ -36,4 +36,5 @@ extern void SAM_Exec(std::string line, std::string & retOutput, std::string & re
 
 extern void SAM(C64 *the_c64);
 
-#endif
+
+#endif // ndef SAM_H

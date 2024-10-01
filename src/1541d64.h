@@ -18,8 +18,8 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef _1541D64_H
-#define _1541D64_H
+#ifndef C1541D64_H
+#define C1541D64_H
 
 #include "IEC.h"
 
@@ -154,4 +154,5 @@ extern bool CreateImageFile(const std::string & path);
 // Determine the name of the possible "next" disk image file in a series
 extern std::string NextImageFile(const std::string & path);
 
-#endif
+
+#endif // ndef C1541D64_H

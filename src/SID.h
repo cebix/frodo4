@@ -18,8 +18,8 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef _SID_H
-#define _SID_H
+#ifndef SID_H
+#define SID_H
 
 #include <stdlib.h>
 
@@ -236,4 +236,5 @@ inline void MOS6581::WriteRegister(uint16_t adr, uint8_t byte)
 	}
 }
 
-#endif
+
+#endif // ndef SID_H
