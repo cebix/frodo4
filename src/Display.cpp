@@ -110,7 +110,7 @@ enum {
  *  Display constructor
  */
 
-C64Display::C64Display(C64 * c64) : the_c64(c64)
+Display::Display(C64 * c64) : the_c64(c64)
 {
 	speedometer_string[0] = 0;
 
@@ -146,8 +146,8 @@ C64Display::C64Display(C64 * c64) : the_c64(c64)
 	}
 
 	// Create 8-bit indexed pixel buffer for VIC to draw into
-	pixel_buffer = new uint8_t[DISPLAY_X * DISPLAY_Y];
-	memset(pixel_buffer, 0, DISPLAY_X * DISPLAY_Y);
+	vic_pixels = new uint8_t[DISPLAY_X * DISPLAY_Y];
+	memset(vic_pixels, 0, DISPLAY_X * DISPLAY_Y);
 
 	// Init color palette for pixel buffer
 	init_colors(ThePrefs.Palette);
@@ -205,13 +205,13 @@ C64Display::C64Display(C64 * c64) : the_c64(c64)
  *  Display destructor
  */
 
-C64Display::~C64Display()
+Display::~Display()
 {
 	if (pulse_timer) {
 		SDL_RemoveTimer(pulse_timer);
 	}
 
-	delete[] pixel_buffer;
+	delete[] vic_pixels;
 
 	if (the_renderer) {
 		SDL_DestroyRenderer(the_renderer);
@@ -226,7 +226,7 @@ C64Display::~C64Display()
  *  Show an error message and quit
  */
 
-void C64Display::error_and_quit(const std::string & msg) const
+void Display::error_and_quit(const std::string & msg) const
 {
 	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, VERSION_STRING, msg.c_str(), the_window);
 	SDL_Quit();
@@ -238,7 +238,7 @@ void C64Display::error_and_quit(const std::string & msg) const
  *  Pause display: Exit fullscreen mode
  */
 
-void C64Display::Pause()
+void Display::Pause()
 {
 	if (ThePrefs.DisplayType == DISPTYPE_SCREEN) {
 		toggle_fullscreen(false);
@@ -250,7 +250,7 @@ void C64Display::Pause()
  *  Resume display: Re-enter fullscreen mode
  */
 
-void C64Display::Resume()
+void Display::Resume()
 {
 	if (ThePrefs.DisplayType == DISPTYPE_SCREEN) {
 		toggle_fullscreen(true);
@@ -262,7 +262,7 @@ void C64Display::Resume()
  *  Prefs may have changed, recalculate palette
  */
 
-void C64Display::NewPrefs(const Prefs *prefs)
+void Display::NewPrefs(const Prefs *prefs)
 {
 	if (prefs->Palette != ThePrefs.Palette) {
 		init_colors(prefs->Palette);
@@ -274,7 +274,7 @@ void C64Display::NewPrefs(const Prefs *prefs)
  *  Set drive LED display (display is deferred until Update())
  */
 
-void C64Display::SetLEDs(int l0, int l1, int l2, int l3)
+void Display::SetLEDs(int l0, int l1, int l2, int l3)
 {
 	led_state[0] = l0;
 	led_state[1] = l1;
@@ -287,7 +287,7 @@ void C64Display::SetLEDs(int l0, int l1, int l2, int l3)
  *  Show notification to user (display is deferred until Update())
  */
 
-void C64Display::ShowNotification(std::string s)
+void Display::ShowNotification(std::string s)
 {
 	// Convert message to screen codes
 	unsigned size = s.length();
@@ -318,14 +318,14 @@ void C64Display::ShowNotification(std::string s)
  *  LED error blink
  */
 
-uint32_t C64Display::pulse_handler_static(uint32_t interval, void * arg)
+uint32_t Display::pulse_handler_static(uint32_t interval, void * arg)
 {
-	C64Display * disp = static_cast<C64Display *>(arg);
+	Display * disp = static_cast<Display *>(arg);
 	disp->pulse_handler();
 	return interval;
 }
 
-void C64Display::pulse_handler()
+void Display::pulse_handler()
 {
 	for (int i = 0; i < 4; ++i) {
 		switch (led_state[i]) {
@@ -344,7 +344,7 @@ void C64Display::pulse_handler()
  *  Set speedometer display (deferred until Update())
  */
 
-void C64Display::SetSpeedometer(int speed)
+void Display::SetSpeedometer(int speed)
 {
 	static int delay = 0;
 
@@ -365,7 +365,7 @@ void C64Display::SetSpeedometer(int speed)
  *  Show VIC bitmap and user interface elements on the display
  */
 
-void C64Display::Update()
+void Display::Update()
 {
 	// Update and draw notifications
 	auto now = chrono::steady_clock::now();
@@ -401,7 +401,7 @@ void C64Display::Update()
 				draw_string(DISPLAY_X * (i+1) / 6 + 8, DISPLAY_Y - 8, drive_str[i], shadow_gray);
 				draw_string(DISPLAY_X * (i+1) / 6 + 7, DISPLAY_Y - 9, drive_str[i], shine_gray);
 
-				uint8_t * p = pixel_buffer + (DISPLAY_X * (i+2) / 6 - 16) + DISPLAY_X * (DISPLAY_Y - 9);
+				uint8_t * p = vic_pixels + (DISPLAY_X * (i+2) / 6 - 16) + DISPLAY_X * (DISPLAY_Y - 9);
 
 				const uint8_t * q;
 				switch (led_state[i]) {
@@ -438,7 +438,7 @@ void C64Display::Update()
 
 	SDL_LockTexture(the_texture, nullptr, (void **) &texture_buffer, &texture_pitch);
 
-	uint8_t  * inPixel  = pixel_buffer;
+	uint8_t  * inPixel  = vic_pixels;
 	uint32_t * outPixel = texture_buffer;
 
 	for (unsigned y = 0; y < DISPLAY_Y; ++y) {
@@ -462,9 +462,9 @@ void C64Display::Update()
  *  Draw string into pixel buffer using the C64 lower-case ROM font
  */
 
-void C64Display::draw_string(unsigned x, unsigned y, const char *str, uint8_t front_color) const
+void Display::draw_string(unsigned x, unsigned y, const char *str, uint8_t front_color) const
 {
-	uint8_t *pb = pixel_buffer + DISPLAY_X*y + x;
+	uint8_t *pb = vic_pixels + DISPLAY_X*y + x;
 	char c;
 	while ((c = *str++) != 0) {
 		const uint8_t * q = the_c64->BuiltinChar + c*8 + 0x800;
@@ -486,9 +486,9 @@ void C64Display::draw_string(unsigned x, unsigned y, const char *str, uint8_t fr
  *  Return pointer to VIC bitmap data
  */
 
-uint8_t *C64Display::BitmapBase()
+uint8_t * Display::BitmapBase()
 {
-	return pixel_buffer;
+	return vic_pixels;
 }
 
 
@@ -496,7 +496,7 @@ uint8_t *C64Display::BitmapBase()
  *  Return number of VIC bitmap bytes per row
  */
 
-int C64Display::BitmapXMod()
+int Display::BitmapXMod()
 {
 	return DISPLAY_X;
 }
@@ -506,7 +506,7 @@ int C64Display::BitmapXMod()
  *  Toggle fullscreen mode
  */
 
-void C64Display::toggle_fullscreen(bool full)
+void Display::toggle_fullscreen(bool full)
 {
 	if (full) {
 		SDL_SetWindowFullscreen(the_window, SDL_WINDOW_FULLSCREEN_DESKTOP);
@@ -673,7 +673,7 @@ static void translate_key(SDL_Scancode key, bool key_up, uint8_t *key_matrix, ui
 	}
 }
 
-void C64Display::PollKeyboard(uint8_t *key_matrix, uint8_t *rev_matrix, uint8_t *joystick)
+void Display::PollKeyboard(uint8_t *key_matrix, uint8_t *rev_matrix, uint8_t *joystick)
 {
 	SDL_Event event;
 	while (SDL_PollEvent(&event)) {
@@ -804,7 +804,7 @@ void C64Display::PollKeyboard(uint8_t *key_matrix, uint8_t *rev_matrix, uint8_t 
  *  Check if NumLock is down (for switching the joystick keyboard emulation)
  */
 
-bool C64Display::NumLock()
+bool Display::NumLock()
 {
 	return num_locked;
 }
@@ -814,7 +814,7 @@ bool C64Display::NumLock()
  *  Set VIC color palette
  */
 
-void C64Display::init_colors(int palette_prefs)
+void Display::init_colors(int palette_prefs)
 {
 	// Create palette for indexed-to-ARGB conversion
 	memset(palette, 0, sizeof(palette));

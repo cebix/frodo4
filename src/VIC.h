@@ -42,7 +42,7 @@ enum {
 
 
 class MOS6510;
-class C64Display;
+class Display;
 class C64;
 struct MOS6569State;
 
@@ -50,7 +50,7 @@ struct MOS6569State;
 // 6569 emulation (VIC)
 class MOS6569 {
 public:
-	MOS6569(C64 *c64, C64Display *disp, MOS6510 *CPU, uint8_t *RAM, uint8_t *Char, uint8_t *Color);
+	MOS6569(C64 *c64, Display *disp, MOS6510 *CPU, uint8_t *RAM, uint8_t *Char, uint8_t *Color);
 
 	uint8_t ReadRegister(uint16_t adr);
 	void WriteRegister(uint16_t adr, uint8_t byte);
@@ -91,9 +91,9 @@ private:
 	uint8_t sc[8];
 
 	uint8_t *ram, *char_rom, *color_ram; // Pointers to RAM and ROM
-	C64 *the_c64;					// Pointer to C64
-	C64Display *the_display;		// Pointer to C64Display
-	MOS6510 *the_cpu;				// Pointer to 6510
+	C64 *the_c64;					// Pointer to C64 object
+	Display *the_display;			// Pointer to Display object
+	MOS6510 *the_cpu;				// Pointer to 6510 object
 
 	uint8_t matrix_line[40];		// Buffer for video line, read in Bad Lines
 	uint8_t color_line[40];			// Buffer for color line, read in Bad Lines

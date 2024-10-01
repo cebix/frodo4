@@ -188,7 +188,7 @@ static void init_text_color_table(uint8_t *colors)
 	}
 }
 
-MOS6569::MOS6569(C64 *c64, C64Display *disp, MOS6510 *CPU, uint8_t *RAM, uint8_t *Char, uint8_t *Color)
+MOS6569::MOS6569(C64 *c64, Display *disp, MOS6510 *CPU, uint8_t *RAM, uint8_t *Char, uint8_t *Color)
 	: ram(RAM), char_rom(Char), color_ram(Color), the_c64(c64), the_display(disp), the_cpu(CPU)
 {
 	// Set pointers

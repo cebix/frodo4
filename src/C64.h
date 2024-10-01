@@ -53,7 +53,7 @@ enum PlayMode {
 
 
 class Prefs;
-class C64Display;
+class Display;
 class MOS6510;
 class MOS6569;
 class MOS6581;
@@ -112,7 +112,7 @@ public:
 	uint8_t * RAM1541;			// 1541 memories
 	uint8_t * ROM1541;
 
-	C64Display * TheDisplay;	// Display object
+	Display * TheDisplay;		// Display object
 
 	MOS6510 * TheCPU;			// C64 chip objects
 	MOS6569 * TheVIC;

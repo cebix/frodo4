@@ -120,7 +120,7 @@ C64::C64() : quit_requested(false), prefs_editor_requested(false), load_snapshot
 	ROM1541 = new uint8_t[DRIVE_ROM_SIZE];
 
 	// Open display
-	TheDisplay = new C64Display(this);
+	TheDisplay = new Display(this);
 
 	// Initialize memory
 	init_memory();

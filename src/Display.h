@@ -41,10 +41,10 @@ class Prefs;
 
 
 // Class for C64 graphics display
-class C64Display {
+class Display {
 public:
-	C64Display(C64 * c64);
-	~C64Display();
+	Display(C64 * c64);
+	~Display();
 
 	void Pause();
 	void Resume();
@@ -57,7 +57,7 @@ public:
 	void SetSpeedometer(int speed);
 	void ShowNotification(std::string s);
 
-	uint8_t *BitmapBase();
+	uint8_t * BitmapBase();
 	int BitmapXMod();
 
 	void PollKeyboard(uint8_t *key_matrix, uint8_t *rev_matrix, uint8_t *joystick);
@@ -87,7 +87,7 @@ private:
 	SDL_Renderer * the_renderer = nullptr;
 	SDL_Texture * the_texture = nullptr;
 
-	uint8_t * pixel_buffer = nullptr;	// Buffer for VIC to draw into
+	uint8_t * vic_pixels = nullptr;		// Buffer for VIC to draw into
 	uint32_t palette[256];				// Mapping of VIC color values to native ARGB
 
 	char speedometer_string[16];		// Speedometer text (screen code)
