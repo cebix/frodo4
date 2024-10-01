@@ -43,8 +43,8 @@
 // Multiplies two fixpoint numbers, result is a fixpoint number.
 static inline int fixmult(int x, int y)
 {
-  register unsigned int a,b;
-  register bool sign;
+  unsigned int a,b;
+  bool sign;
 
   sign = (x ^ y) < 0;
   if (x < 0) {x = -x;}
@@ -67,8 +67,8 @@ static inline int fixmult(int x, int y)
 // valid bits.
 static inline int intmult(int x, int y)	// x is fixpoint, y integer
 {
-  register unsigned int i,j;
-  register bool sign;
+  unsigned int i,j;
+  bool sign;
 
   sign = (x ^ y) < 0;
   if (x < 0) {x = -x;}
@@ -81,7 +81,7 @@ static inline int intmult(int x, int y)	// x is fixpoint, y integer
       ((unsigned int)(x*y + (1 << (FIXPOINT_PREC - 1))) >> FIXPOINT_PREC);
 #else
   {
-    register unsigned int h;
+    unsigned int h;
 
     h = (i*y + j*x);
     i = ((i*j) << (32 - FIXPOINT_PREC)) + (h >> (FIXPOINT_PREC - 16));
@@ -101,7 +101,7 @@ static inline int intmult(int x, int y)	// x is fixpoint, y integer
 // Computes the product of a fixpoint number with itself.
 static inline int fixsquare(int x)
 {
-  register unsigned int a;
+  unsigned int a;
 
   if (x < 0) {x = -x;}
   a = (((unsigned int)x) >> FIXPOINT_PREC); x &= ~(a << FIXPOINT_PREC);
@@ -117,14 +117,14 @@ static inline int fixsquare(int x)
 // Computes the square root of a fixpoint number.
 static inline int fixsqrt(int x)
 {
-  register int test, step;
+  int test, step;
 
   if (x < 0) return(-1); if (x == 0) return(0);
   step = (x <= (1<<FIXPOINT_PREC)) ? (1<<FIXPOINT_PREC) : (1<<((FIXPOINT_BITS - 2 + FIXPOINT_PREC)>>1));
   test = 0;
   while (step != 0)
   {
-    register int h;
+    int h;
 
     h = fixsquare(test + step);
     if (h <= x) {test += step;}
@@ -138,8 +138,8 @@ static inline int fixsqrt(int x)
 // Divides a fixpoint number by another fixpoint number, yielding a fixpoint result.
 static inline int fixdiv(int x, int y)
 {
-  register int res, mask;
-  register bool sign;
+  int res, mask;
+  bool sign;
 
   sign = (x ^ y) < 0;
   if (x < 0) {x = -x;}
@@ -176,6 +176,7 @@ private:
 public:
   FixPoint(void);
   FixPoint(int y);
+  explicit FixPoint(double f);
   ~FixPoint(void);
 
   // conversions
@@ -245,6 +246,8 @@ public:
 FixPoint::FixPoint(void) {x = 0;}
 
 FixPoint::FixPoint(int y) {x = y;}
+
+FixPoint::FixPoint(double f) {x = (int)(f * (1 << FIXPOINT_PREC));}
 
 FixPoint::~FixPoint(void) {;}
 
@@ -377,18 +380,7 @@ inline bool operator>=(int x, FixPoint y) {return(x >= y.Value());}
 
 
 /*
- *  For more convenient creation of constant fixpoint numbers from constant floats.
- */
-
-#define FixNo(n)	(FixPoint)((int)(n*(1<<FIXPOINT_PREC)))
-
-
-
-
-
-
-/*
- *  Stuff re. the sinus table used with fixpoint arithmetic
+ *  Stuff re. the sine table used with fixpoint arithmetic
  */
 
 
@@ -431,7 +423,7 @@ static inline void InitFixSinTab(void)
 
   for (i=0, step=0; i<(1<<ldSINTAB); i++, step+=0.5/(1<<ldSINTAB))
   {
-    SinTable[i] = FixNo(sin(M_PI * step));
+    SinTable[i] = FixPoint(sin(M_PI * step));
   }
 }
 

@@ -16,6 +16,7 @@ Changes from V4.2 to V4.3:
    - Added setting for status overlay display (ShowLEDs)
    - Added setting for initial window size (ScalingNumerator)
    - Added setting for color palette (Palette)
+   - Added setting for SID type (6581 or 8580)
    - Removed "Draw every n-th frame" setting
    - Added menu items for loading/saving snapshot files
    - Added menu item for creating a blank D64 image

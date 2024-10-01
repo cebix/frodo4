@@ -38,37 +38,43 @@
 #include <math.h>
 
 
+// Define to use fixed-point arithmetic for filter calculations
 #undef USE_FIXPOINT_MATHS
 
 #ifdef USE_FIXPOINT_MATHS
-#define FIXPOINT_PREC 16      // number of fractional bits used in fixpoint representation
-#define PRECOMPUTE_RESONANCE
-#define ldSINTAB 9            // size of sinus table (0 to 90 degrees)
+
+#define FIXPOINT_PREC 16	// Number of fractional bits used in fixpoint representation
+#define ldSINTAB 9			// Size of sine table (0 to 90 degrees)
 #include "FixPoint.h"
+
+using filter_t = FixPoint;
+
+#else
+
+using filter_t = float;
+
 #endif
 
 
 /*
- *  Resonance frequency polynomials
+ *  Resonance frequency polynomials (6581)
  */
 
-#define CALC_RESONANCE_LP(f) (227.755\
-				- 1.7635 * f\
-				- 0.0176385 * f * f\
-				+ 0.00333484 * f * f * f\
-				- 9.05683E-6 * f * f * f * f)
+static inline float resonance_freq_lp(float f)
+{
+	return 227.755 - 1.7635 * f - 0.0176385 * f * f + 0.00333484 * f * f * f;
+}
 
-#define CALC_RESONANCE_HP(f) (366.374\
-				- 14.0052 * f\
-				+ 0.603212 * f * f\
-				- 0.000880196 * f * f * f)
+static inline float resonance_freq_hp(float f)
+{
+	return 366.374 - 14.0052 * f + 0.603212 * f * f - 0.000880196 * f * f * f;
+}
 
 
 /*
  *  Random number generator for noise waveform
  */
 
-static uint8_t sid_random();
 static uint8_t sid_random()
 {
 	static uint32_t seed = 1;
@@ -195,7 +201,7 @@ uint8_t MOS6581::read_osc3()
 
 	uint8_t v3_ctrl = regs[0x12];   // Voice 3 control register
 	if (v3_ctrl & 0x10) {			// Triangle wave
-		// TODO: ring modulation from voice 2
+		// TODO: Ring modulation from voice 2
 		if (fake_v3_count & 0x800000) {
 			return (fake_v3_count >> 15) ^ 0xff;
 		} else {
@@ -213,7 +219,7 @@ uint8_t MOS6581::read_osc3()
 	} else if (v3_ctrl & 0x80) {	// Noise wave
 		return sid_random();
 	} else {
-		// TODO: combined waveforms
+		// TODO: Combined waveforms
 		return 0;
 	}
 }
@@ -332,6 +338,7 @@ constexpr uint32_t SID_FREQ = 985248;		// SID frequency in Hz
 constexpr uint32_t CALC_FREQ = 50;			// Frequency at which calc_buffer is called in Hz (should be 50Hz)
 constexpr size_t SAMPLE_BUF_SIZE = TOTAL_RASTERS * 2;	// Size of buffer for sampled voice (double buffered)
 
+
 // SID waveforms (some of them :-)
 enum {
 	WAVE_NONE,
@@ -356,6 +363,7 @@ enum {
 	FILT_HPBP,
 	FILT_ALL
 };
+
 
 // Structure for one voice
 struct DRVoice {
@@ -389,6 +397,7 @@ struct DRVoice {
 	bool mute;			// Voice muted (voice 3 only)
 };
 
+
 // Renderer class
 class DigitalRenderer : public SIDRenderer {
 public:
@@ -404,6 +413,8 @@ public:
 
 private:
 	void set_wave_table(int sid_type);
+	void set_ffreq_table(int sid_type);
+
 	void calc_filter();
 	void calc_buffer(int16_t *buf, long count);
 
@@ -411,6 +422,9 @@ private:
 	uint8_t volume;					// Master volume
 
 	uint32_t sid_cycles_frac;		// Number of SID cycles per output sample frame (16.16)
+#ifdef USE_FIXPOINT_MATHS
+	filter_t sidquot;
+#endif
 
 	const uint16_t * TriSawTable = nullptr;
 	const uint16_t * TriRectTable = nullptr;
@@ -434,13 +448,14 @@ private:
 	uint8_t f_type;					// Filter type
 	uint8_t f_freq;					// SID filter frequency (upper 8 bits)
 	uint8_t f_res;					// Filter resonance (0..15)
-	float f_ampl;					// IIR filter input attenuation
-	float d1, d2, g1, g2;			// IIR filter coefficients
-	float xn1, xn2, yn1, yn2;		// IIR filter previous input/output signal
-#ifdef PRECOMPUTE_RESONANCE
-	float resonanceLP[256];			// shortcut for calc_filter
-	float resonanceHP[256];
-#endif
+	filter_t f_ampl;				// IIR filter input attenuation
+	filter_t d1, d2, g1, g2;		// IIR filter coefficients
+	filter_t f_ampl_eff;			// Smoothed filter parameters
+	filter_t d1_eff, d2_eff;
+	filter_t g1_eff, g2_eff;
+	filter_t xn1, xn2, yn1, yn2;	// IIR filter previous input/output signal
+	filter_t ffreq_LP[256];			// Precomputed filter resonance frequencies
+	filter_t ffreq_HP[256];
 
 	uint8_t sample_buf[SAMPLE_BUF_SIZE]; // Buffer for sampled voice
 	unsigned sample_in_ptr;			// Index in sample_buf for writing
@@ -755,6 +770,29 @@ void DigitalRenderer::set_wave_table(int sid_type)
 }
 
 
+/*
+ *  Compute filter resonance frequencies according to SID type
+ */
+
+void DigitalRenderer::set_ffreq_table(int sid_type)
+{
+	// Not actually a function of SID type per se, but the 8580 is usually
+	// used with 2200 pF filter caps (vs. 470 pF on the 6581), so the
+	// resonance frequencies of the 8580 are lower
+	float c;
+	if (sid_type == SIDTYPE_DIGITAL_6581) {
+		c = 1.0;
+	} else {
+		c = 470.0 / 2200.0;
+	}
+
+	for (unsigned f = 0; f < 256; ++f) {
+		ffreq_LP[f] = filter_t(resonance_freq_lp(f) * c);
+		ffreq_HP[f] = filter_t(resonance_freq_hp(f) * c);
+	}
+}
+
+
 const int16_t MOS6581::EGDivTable[16] = {
 	9, 32,
 	63, 95,
@@ -798,6 +836,10 @@ const int16_t DigitalRenderer::SampleTab[16] = {
 
 DigitalRenderer::DigitalRenderer()
 {
+#ifdef USE_FIXPOINT_MATHS
+	InitFixSinTab();
+#endif
+
 	// Link voices together
 	voice[0].mod_by = &voice[2];
 	voice[1].mod_by = &voice[0];
@@ -806,18 +848,14 @@ DigitalRenderer::DigitalRenderer()
 	voice[1].mod_to = &voice[2];
 	voice[2].mod_to = &voice[0];
 
-#ifdef PRECOMPUTE_RESONANCE
-	for (unsigned i = 0; i < 256; ++i) {
-		resonanceLP[i] = CALC_RESONANCE_LP(i);
-		resonanceHP[i] = CALC_RESONANCE_HP(i);
-	}
-#endif
+	// Set waveform tables
+	set_wave_table(ThePrefs.SIDType);
+
+	// Precompute filter resonance frequencies
+	set_ffreq_table(ThePrefs.SIDType);
 
 	// Reset SID
 	Reset();
-
-	// Set waveform tables
-	set_wave_table(ThePrefs.SIDType);
 
 	SDL_AudioSpec desired;
 	SDL_zero(desired);
@@ -882,9 +920,10 @@ void DigitalRenderer::Reset()
 
 	f_type = FILT_NONE;
 	f_freq = f_res = 0;
-	f_ampl = 1.0;
-	d1 = d2 = g1 = g2 = 0.0;
-	xn1 = xn2 = yn1 = yn2 = 0.0;
+	f_ampl = f_ampl_eff = filter_t(0.5);
+	d1 = d2 = g1 = g2 = filter_t(0.0);
+	d1_eff = d2_eff = g1_eff = g2_eff = filter_t(0.0);
+	xn1 = xn2 = yn1 = yn2 = filter_t(0.0);
 
 	sample_in_ptr = 0;
 	memset(sample_buf, 0, SAMPLE_BUF_SIZE);
@@ -944,7 +983,7 @@ void DigitalRenderer::WriteRegister(uint16_t adr, uint8_t byte)
 		case 14:
 			voice[v].freq = (voice[v].freq & 0xff00) | byte;
 #ifdef USE_FIXPOINT_MATHS
-			voice[v].add = sidquot.imul((int)voice[v].freq);
+			voice[v].add = intmult(sid_cycles_frac, voice[v].freq);
 #else
 			voice[v].add = (uint32_t)(float(voice[v].freq) / obtained.freq * SID_FREQ);
 #endif
@@ -955,7 +994,7 @@ void DigitalRenderer::WriteRegister(uint16_t adr, uint8_t byte)
 		case 15:
 			voice[v].freq = (voice[v].freq & 0xff) | (byte << 8);
 #ifdef USE_FIXPOINT_MATHS
-			voice[v].add = sidquot.imul((int)voice[v].freq);
+			voice[v].add = intmult(sid_cycles_frac, voice[v].freq);
 #else
 			voice[v].add = (uint32_t)(float(voice[v].freq) / obtained.freq * SID_FREQ);
 #endif
@@ -1007,40 +1046,22 @@ void DigitalRenderer::WriteRegister(uint16_t adr, uint8_t byte)
 			break;
 
 		case 22:
-			if (byte != f_freq) {
-				f_freq = byte;
-				if (ThePrefs.SIDFilters) {
-					calc_filter();
-				}
-			}
+			f_freq = byte;
 			break;
 
 		case 23:
 			voice[0].filter = byte & 1;
 			voice[1].filter = byte & 2;
 			voice[2].filter = byte & 4;
-			if ((byte >> 4) != f_res) {
-				f_res = byte >> 4;
-				if (ThePrefs.SIDFilters) {
-					calc_filter();
-				}
-			}
+
+			f_res = byte >> 4;
 			break;
 
 		case 24:
 			volume = byte & 0xf;
 			voice[2].mute = byte & 0x80;
-			if (((byte >> 4) & 7) != f_type) {
-				f_type = (byte >> 4) & 7;
-#ifdef USE_FIXPOINT_MATHS
-				xn1 = xn2 = yn1 = yn2 = 0;
-#else
-				xn1 = xn2 = yn1 = yn2 = 0.0;
-#endif
-				if (ThePrefs.SIDFilters) {
-					calc_filter();
-				}
-			}
+
+			f_type = (byte >> 4) & 7;
 			break;
 	}
 }
@@ -1053,6 +1074,7 @@ void DigitalRenderer::WriteRegister(uint16_t adr, uint8_t byte)
 void DigitalRenderer::NewPrefs(const Prefs *prefs)
 {
 	set_wave_table(prefs->SIDType);
+	set_ffreq_table(prefs->SIDType);
 	calc_filter();
 }
 
@@ -1063,158 +1085,136 @@ void DigitalRenderer::NewPrefs(const Prefs *prefs)
 
 void DigitalRenderer::calc_filter()
 {
-#ifdef USE_FIXPOINT_MATHS
-	FixPoint fr, arg;
-
-	if (f_type == FILT_ALL) {
-		d1 = 0; d2 = 0;
-		g1 = 0; g2 = 0;
-		f_ampl = FixNo(1);
+	if (! ThePrefs.SIDFilters)
 		return;
-	} else if (f_type == FILT_NONE) {
-		d1 = 0; d2 = 0;
-		g1 = 0; g2 = 0;
-		f_ampl = 0;
+
+	// Filter off? Then reset all coefficients
+	if (f_type == FILT_NONE) {
+		d1 = filter_t(0.0); d2 = filter_t(0.0);
+		g1 = filter_t(0.0); g2 = filter_t(0.0);
+		f_ampl = filter_t(0.0);
 		return;
 	}
-#else
-	float fr, arg;
 
-	// Check for some trivial cases
-	if (f_type == FILT_ALL) {
-		d1 = 0.0; d2 = 0.0;
-		g1 = 0.0; g2 = 0.0;
-		f_ampl = 1.0;
-		return;
-	} else if (f_type == FILT_NONE) {
-		d1 = 0.0; d2 = 0.0;
-		g1 = 0.0; g2 = 0.0;
-		f_ampl = 0.0;
-		return;
-	}
-#endif
+	filter_t fr, arg;
 
 	// Calculate resonance frequency
 	if (f_type == FILT_LP || f_type == FILT_LPBP) {
-#ifdef PRECOMPUTE_RESONANCE
-		fr = resonanceLP[f_freq];
-#else
-		fr = CALC_RESONANCE_LP(f_freq);
-#endif
+		fr = ffreq_LP[f_freq];
 	} else {
-#ifdef PRECOMPUTE_RESONANCE
-		fr = resonanceHP[f_freq];
-#else
-		fr = CALC_RESONANCE_HP(f_freq);
-#endif
+		fr = ffreq_HP[f_freq];
 	}
 
+	// Limit to <1/2 sample frequency, avoid div by 0 in case FILT_BP/FILT_NOTCH below
 #ifdef USE_FIXPOINT_MATHS
-	// explanations see below.
 	arg = fr / (obtained.freq >> 1);
-	if (arg > FixNo(0.99)) {arg = FixNo(0.99);}
-	if (arg < FixNo(0.01)) {arg = FixNo(0.01);}
-
-	g2 = FixNo(0.55) + FixNo(1.2) * arg * (arg - 1) + FixNo(0.0133333333) * f_res;
-	g1 = FixNo(-2) * g2.sqrt() * fixcos(arg);
-
-	if (f_type == FILT_LPBP || f_type == FILT_HPBP) {
-		g2 += FixNo(0.1);
-	}
-
-	if (g1.abs() >= g2 + 1) {
-		if (g1 > 0) {
-			g1 = g2 + FixNo(0.99);
-		} else {
-			g1 = -(g2 + FixNo(0.99));
-		}
-	}
-
-	switch (f_type) {
-		case FILT_LPBP:
-		case FILT_LP:
-			d1 = FixNo(2); d2 = FixNo(1);
-			f_ampl = FixNo(0.25) * (1 + g1 + g2);
-			break;
-
-		case FILT_HPBP:
-		case FILT_HP:
-			d1 = FixNo(-2); d2 = FixNo(1);
-			f_ampl = FixNo(0.25) * (1 - g1 + g2);
-			break;
-
-		case FILT_BP:
-			d1 = 0; d2 = FixNo(-1);
-			f_ampl = FixNo(0.25) * (1 + g1 + g2) * (1 + fixcos(arg)) / fixsin(arg);
-			break;
-
-		case FILT_NOTCH:
-			d1 = FixNo(-2) * fixcos(arg); d2 = FixNo(1);
-			f_ampl = FixNo(0.25) * (1 + g1 + g2) * (1 + fixcos(arg)) / fixsin(arg);
-			break;
-
-		default:
-			break;
-	}
-
 #else
-
-	// Limit to <1/2 sample frequency, avoid div by 0 in case FILT_BP below
 	arg = fr / (float(obtained.freq) * 0.5);
-	if (arg > 0.99) {
-		arg = 0.99;
+#endif
+
+	if (arg > filter_t(0.99)) {
+		arg = filter_t(0.99);
 	}
-	if (arg < 0.01) {
-		arg = 0.01;
+	if (arg < filter_t(0.01)) {
+		arg = filter_t(0.01);
 	}
 
 	// Calculate poles (resonance frequency and resonance)
-	g2 = 0.55 + 1.2 * arg * arg - 1.2 * arg + (float)f_res * 0.0133333333;
-	g1 = -2.0 * sqrt(g2) * cos(M_PI * arg);
+	//
+	// The (complex) poles are at
+	//   zp_1/2 = (-g1 +/- sqrt(g1^2 - 4*g2)) / 2
+	g2 = filter_t(0.55) + filter_t(1.2) * arg * (arg - 1) + filter_t(f_res) * filter_t(0.0133333333);
+#ifdef USE_FIXPOINT_MATHS
+	g1 = filter_t(-2) * fixsqrt(g2) * fixcos(arg);
+#else
+	g1 = filter_t(-2.0) * sqrt(g2) * cos(M_PI * arg);
+#endif
 
 	// Increase resonance if LP/HP combined with BP
 	if (f_type == FILT_LPBP || f_type == FILT_HPBP) {
-		g2 += 0.1;
+		g2 += filter_t(0.1);
 	}
 
 	// Stabilize filter
-	if (fabs(g1) >= g2 + 1.0) {
-		if (g1 > 0.0) {
-			g1 = g2 + 0.99;
+#ifdef USE_FIXPOINT_MATHS
+	if (g1.abs() >= g2 + filter_t(1.0)) {
+#else
+	if (fabs(g1) >= g2 + filter_t(1.0)) {
+#endif
+		if (g1 > 0) {
+			g1 = g2 + filter_t(0.99);
 		} else {
-			g1 = -(g2 + 0.99);
+			g1 = -(g2 + filter_t(0.99));
 		}
 	}
 
 	// Calculate roots (filter characteristic) and input attenuation
+	//
+	// The (complex) roots are at
+	//   z0_1/2 = (-d1 +/- sqrt(d1^2 - 4*d2)) / 2
 	switch (f_type) {
 
 		case FILT_LPBP:
-		case FILT_LP:
-			d1 = 2.0; d2 = 1.0;
-			f_ampl = 0.25 * (1.0 + g1 + g2);
+		case FILT_LP:		// Both roots at -1, H(1)=1
+			d1 = filter_t(2.0); d2 = filter_t(1.0);
+			f_ampl = filter_t(0.25) * (filter_t(1.0) + g1 + g2);
 			break;
 
 		case FILT_HPBP:
-		case FILT_HP:
-			d1 = -2.0; d2 = 1.0;
-			f_ampl = 0.25 * (1.0 - g1 + g2);
+		case FILT_HP:		// Both roots at 1, H(-1)=1
+			d1 = filter_t(-2.0); d2 = filter_t(1.0);
+			f_ampl = filter_t(0.25) * (filter_t(1.0) - g1 + g2);
 			break;
 
-		case FILT_BP:
-			d1 = 0.0; d2 = -1.0;
-			f_ampl = 0.25 * (1.0 + g1 + g2) * (1 + cos(M_PI * arg)) / sin(M_PI * arg);
+		case FILT_BP: {		// Roots at +1 and -1, H_max=1
+			d1 = filter_t(0.0); d2 = filter_t(-1.0);
+#ifdef USE_FIXPOINT_MATHS
+			filter_t ca = fixcos(arg);
+			filter_t sa = fixsin(arg);
+			filter_t c = fixsqrt(g2 * g2 + filter_t(2.0) * g2 - g1 * g1 + filter_t(1.0));
+#else
+			filter_t ca = cos(M_PI * arg);
+			filter_t sa = sin(M_PI * arg);
+			filter_t c = sqrt(g2 * g2 + filter_t(2.0) * g2 - g1 * g1 + filter_t(1.0));
+#endif
+			f_ampl = filter_t(0.25) * (filter_t(1.0) + g1 + g2) * (filter_t(1.0) + ca) / sa;
 			break;
+		}
 
-		case FILT_NOTCH:
-			d1 = -2.0 * cos(M_PI * arg); d2 = 1.0;
-			f_ampl = 0.25 * (1.0 + g1 + g2) * (1 + cos(M_PI * arg)) / (sin(M_PI * arg));
+		case FILT_NOTCH: {	// Roots at exp(i*pi*arg) and exp(-i*pi*arg), H(1)=1 (arg>=0.5) or H(-1)=1 (arg<0.5)
+#ifdef USE_FIXPOINT_MATHS
+			filter_t ca = fixcos(arg);
+#else
+			filter_t ca = cos(M_PI * arg);
+#endif
+			d1 = filter_t(-2.0) * ca; d2 = filter_t(1.0);
+			if (arg >= filter_t(0.5)) {
+				f_ampl = filter_t(0.5) * (filter_t(1.0) + g1 + g2) / (filter_t(1.0) - ca);
+			} else {
+				f_ampl = filter_t(0.5) * (filter_t(1.0) - g1 + g2) / (filter_t(1.0) + ca);
+			}
 			break;
+		}
+
+		// TODO: This is pure guesswork...
+		case FILT_ALL: {	// Roots at 2*exp(i*pi*arg) and 2*exp(-i*pi*arg), H(-1)=1 (arg>=0.5) or H(1)=1 (arg<0.5)
+#ifdef USE_FIXPOINT_MATHS
+			filter_t ca = fixcos(arg);
+#else
+			filter_t ca = cos(M_PI * arg);
+#endif
+			d1 = filter_t(-4.0) * ca; d2 = filter_t(4.0);
+			if (arg >= filter_t(0.5)) {
+				f_ampl = (filter_t(1.0) - g1 + g2) / (filter_t(5.0) + filter_t(4.0) * ca);
+			} else {
+				f_ampl = (filter_t(1.0) + g1 + g2) / (filter_t(5.0) - filter_t(4.0) * ca);
+			}
+			break;
+		}
 
 		default:
 			break;
 	}
-#endif
 }
 
 
@@ -1224,16 +1224,6 @@ void DigitalRenderer::calc_filter()
 
 void DigitalRenderer::calc_buffer(int16_t *buf, long count)
 {
-	// Get filter coefficients, so the emulator won't change
-	// them in the middle of our calculations
-#ifdef USE_FIXPOINT_MATHS
-	FixPoint cf_ampl = f_ampl;
-	FixPoint cd1 = d1, cd2 = d2, cg1 = g1, cg2 = g2;
-#else
-	float cf_ampl = f_ampl;
-	float cd1 = d1, cd2 = d2, cg1 = g1, cg2 = g2;
-#endif
-
 	// Index in sample_buf for reading, 16.16 fixed
 	uint32_t sample_count = (sample_in_ptr + SAMPLE_BUF_SIZE/2) << 16;
 
@@ -1357,21 +1347,36 @@ void DigitalRenderer::calc_buffer(int16_t *buf, long count)
 
 		// Filter
 		if (ThePrefs.SIDFilters) {
+			f_ampl_eff = f_ampl_eff * filter_t(0.98) + f_ampl * filter_t(0.02);	// Smooth out filter parameter transitions
+			d1_eff     = d1_eff     * filter_t(0.98) + d1     * filter_t(0.02);
+			d2_eff     = d2_eff     * filter_t(0.98) + d2     * filter_t(0.02);
+			g1_eff     = g1_eff     * filter_t(0.98) + g1     * filter_t(0.02);
+			g2_eff     = g2_eff     * filter_t(0.98) + g2     * filter_t(0.02);
+
 #ifdef USE_FIXPOINT_MATHS
-			int32_t xn = cf_ampl.imul(sum_output_filter);
-			int32_t yn = xn+cd1.imul(xn1)+cd2.imul(xn2)-cg1.imul(yn1)-cg2.imul(yn2);
+			int32_t xn = f_ampl_eff.imul(sum_output_filter);
+			int32_t yn = xn + d1_eff.imul(xn1) + d2_eff.imul(xn2) - g1_eff.imul(yn1) - g2_eff.imul(yn2);
 			yn2 = yn1; yn1 = yn; xn2 = xn1; xn1 = xn;
 			sum_output_filter = yn;
 #else
-			float xn = (float)sum_output_filter * cf_ampl;
-			float yn = xn + cd1 * xn1 + cd2 * xn2 - cg1 * yn1 - cg2 * yn2;
+			filter_t xn = filter_t(sum_output_filter) * f_ampl_eff;
+			filter_t yn = xn + d1_eff * xn1 + d2_eff * xn2 - g1_eff * yn1 - g2_eff * yn2;
 			yn2 = yn1; yn1 = yn; xn2 = xn1; xn1 = xn;
-			sum_output_filter = (int32_t)yn;
+			sum_output_filter = (int32_t) yn;
 #endif
 		}
 
+		// TODO: Real C64 has a 16 kHz (10 kΩ, 1 nF) first-order RC filter
+		// at the SID's AUDIO OUT pin
+
 		// Write to buffer
-		*buf++ = (sum_output - sum_output_filter) >> 10;
+		int32_t output = (sum_output + sum_output_filter) >> 10;
+		if (output > 0x7fff) {	// Using filters can cause minor clipping
+			output = 0x7fff;
+		} else if (output < -0x8000) {
+			output = -0x8000;
+		}
+		*buf++ = output;
 	}
 }
 
@@ -1383,6 +1388,8 @@ void DigitalRenderer::calc_buffer(int16_t *buf, long count)
 void DigitalRenderer::buffer_proc(void * userdata, uint8_t * buffer, int size)
 {
 	DigitalRenderer * renderer = (DigitalRenderer *) userdata;
+
+	renderer->calc_filter();
 	renderer->calc_buffer((int16_t *) buffer, size);
 }
 
