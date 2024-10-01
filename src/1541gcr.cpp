@@ -85,7 +85,7 @@ const unsigned sector_offset[36] = {
  *   emulation is enabled
  */
 
-Job1541::Job1541(uint8_t *ram1541) : ram(ram1541), the_file(nullptr)
+GCRDisk::GCRDisk(uint8_t *ram1541) : ram(ram1541), the_file(nullptr)
 {
 	current_halftrack = 2;	// Track 1
 
@@ -115,7 +115,7 @@ Job1541::Job1541(uint8_t *ram1541) : ram(ram1541), the_file(nullptr)
  *  Destructor: Close .d64 file
  */
 
-Job1541::~Job1541()
+GCRDisk::~GCRDisk()
 {
 	close_d64_file();
 
@@ -127,7 +127,7 @@ Job1541::~Job1541()
  *  Preferences may have changed
  */
 
-void Job1541::NewPrefs(const Prefs *prefs)
+void GCRDisk::NewPrefs(const Prefs * prefs)
 {
 	// 1541 emulation turned off?
 	if (!prefs->Emul1541Proc) {
@@ -142,10 +142,10 @@ void Job1541::NewPrefs(const Prefs *prefs)
 		close_d64_file();
 		open_d64_file(prefs->DrivePath[0]);
 
-		disk_change_cycle = the_cpu_1541->CycleCounter();
-		disk_change_seq = 3;		// Start disk change WP sensor sequence
+		disk_change_cycle = the_cpu->CycleCounter();
+		disk_change_seq = 3;	// Start disk change WP sensor sequence
 
-		the_cpu_1541->Idle = false;	// Wake up CPU
+		the_cpu->Idle = false;	// Wake up CPU
 	}
 }
 
@@ -154,7 +154,7 @@ void Job1541::NewPrefs(const Prefs *prefs)
  *  Open .d64 file
  */
 
-void Job1541::open_d64_file(const std::string & filepath)
+void GCRDisk::open_d64_file(const std::string & filepath)
 {
 	long size;
 	uint8_t magic[4];
@@ -225,7 +225,7 @@ void Job1541::open_d64_file(const std::string & filepath)
  *  Close .d64 file
  */
 
-void Job1541::close_d64_file()
+void GCRDisk::close_d64_file()
 {
 	// Blank out GCR data
 	memset(gcr_data, 0x55, GCR_DISK_SIZE);
@@ -245,7 +245,7 @@ void Job1541::close_d64_file()
  *  Write sector to disk (1541 ROM patch)
  */
 
-void Job1541::WriteSector()
+void GCRDisk::WriteSector()
 {
 	unsigned track = ram[0x18];
 	unsigned sector = ram[0x19];
@@ -263,7 +263,7 @@ void Job1541::WriteSector()
  *  Format one track (1541 ROM patch)
  */
 
-void Job1541::FormatTrack()
+void GCRDisk::FormatTrack()
 {
 	unsigned track = ram[0x51];
 
@@ -296,7 +296,7 @@ void Job1541::FormatTrack()
  *  true: success, false: error
  */
 
-bool Job1541::read_sector(unsigned track, unsigned sector, uint8_t *buffer)
+bool GCRDisk::read_sector(unsigned track, unsigned sector, uint8_t *buffer)
 {
 	if (the_file == nullptr)
 		return false;
@@ -317,7 +317,7 @@ bool Job1541::read_sector(unsigned track, unsigned sector, uint8_t *buffer)
  *  true: success, false: error
  */
 
-bool Job1541::write_sector(unsigned track, unsigned sector, const uint8_t *buffer)
+bool GCRDisk::write_sector(unsigned track, unsigned sector, const uint8_t *buffer)
 {
 	if (the_file == nullptr)
 		return false;
@@ -337,12 +337,12 @@ bool Job1541::write_sector(unsigned track, unsigned sector, const uint8_t *buffe
  *  Convert track/sector to offset
  */
 
-unsigned Job1541::secnum_from_ts(unsigned track, unsigned sector)
+unsigned GCRDisk::secnum_from_ts(unsigned track, unsigned sector)
 {
 	return sector_offset[track] + sector;
 }
 
-int Job1541::offset_from_ts(unsigned track, unsigned sector)
+int GCRDisk::offset_from_ts(unsigned track, unsigned sector)
 {
 	if ((track < 1) || (track > NUM_TRACKS) ||
 		(sector < 0) || (sector >= num_sectors[track]))
@@ -361,7 +361,7 @@ const uint16_t gcr_table[16] = {
 	0x09, 0x19, 0x1a, 0x1b, 0x0d, 0x1d, 0x1e, 0x15
 };
 
-void Job1541::gcr_conv4(const uint8_t *from, uint8_t *to)
+void GCRDisk::gcr_conv4(const uint8_t *from, uint8_t *to)
 {
 	uint16_t g;
 
@@ -390,7 +390,7 @@ void Job1541::gcr_conv4(const uint8_t *from, uint8_t *to)
  *  Create GCR encoded disk data from image
  */
 
-void Job1541::sector2gcr(unsigned track, unsigned sector)
+void GCRDisk::sector2gcr(unsigned track, unsigned sector)
 {
 	uint8_t block[256];
 	uint8_t buf[4];
@@ -445,7 +445,7 @@ void Job1541::sector2gcr(unsigned track, unsigned sector)
 	memset(p, 0x55, 12);					// Gap
 }
 
-void Job1541::disk2gcr()
+void GCRDisk::disk2gcr()
 {
 	// Convert all tracks and sectors
 	for (unsigned track = 1; track <= NUM_TRACKS; ++track) {
@@ -460,7 +460,7 @@ void Job1541::disk2gcr()
  *  Reset GCR pointers for current halftrack
  */
 
-void Job1541::set_gcr_ptr()
+void GCRDisk::set_gcr_ptr()
 {
 	gcr_track_start = gcr_data + ((current_halftrack >> 1) - 1) * GCR_TRACK_SIZE;
 	gcr_track_end = gcr_track_start + num_sectors[current_halftrack >> 1] * GCR_SECTOR_SIZE;
@@ -472,7 +472,7 @@ void Job1541::set_gcr_ptr()
  *  Move R/W head out (lower track numbers)
  */
 
-void Job1541::MoveHeadOut(uint32_t cycle_counter)
+void GCRDisk::MoveHeadOut(uint32_t cycle_counter)
 {
 	if (current_halftrack == 2)
 		return;
@@ -491,7 +491,7 @@ void Job1541::MoveHeadOut(uint32_t cycle_counter)
  *  Move R/W head in (higher track numbers)
  */
 
-void Job1541::MoveHeadIn(uint32_t cycle_counter)
+void GCRDisk::MoveHeadIn(uint32_t cycle_counter)
 {
 	if (current_halftrack == NUM_TRACKS*2)
 		return;
@@ -510,19 +510,19 @@ void Job1541::MoveHeadIn(uint32_t cycle_counter)
  *  Get state
  */
 
-void Job1541::GetState(Job1541State *state) const
+void GCRDisk::GetState(GCRDiskState * s) const
 {
-	state->current_halftrack = current_halftrack;
-	state->gcr_offset = gcr_offset;
-	state->disk_change_cycle = disk_change_cycle;
-	state->last_byte_cycle = last_byte_cycle;
+	s->current_halftrack = current_halftrack;
+	s->gcr_offset = gcr_offset;
+	s->disk_change_cycle = disk_change_cycle;
+	s->last_byte_cycle = last_byte_cycle;
 
-	state->byte_latch = byte_latch;
-	state->disk_change_seq = disk_change_seq;
+	s->byte_latch = byte_latch;
+	s->disk_change_seq = disk_change_seq;
 
-	state->motor_on = motor_on;
-	state->write_protected = write_protected;
-	state->byte_ready = byte_ready;
+	s->motor_on = motor_on;
+	s->write_protected = write_protected;
+	s->byte_ready = byte_ready;
 }
 
 
@@ -530,20 +530,20 @@ void Job1541::GetState(Job1541State *state) const
  *  Set state
  */
 
-void Job1541::SetState(const Job1541State *state)
+void GCRDisk::SetState(const GCRDiskState * s)
 {
-	current_halftrack = state->current_halftrack;
+	current_halftrack = s->current_halftrack;
 	set_gcr_ptr();
-	gcr_offset = state->gcr_offset;
-	disk_change_cycle = state->disk_change_cycle;
-	last_byte_cycle = state->last_byte_cycle;
+	gcr_offset = s->gcr_offset;
+	disk_change_cycle = s->disk_change_cycle;
+	last_byte_cycle = s->last_byte_cycle;
 
-	byte_latch = state->byte_latch;
-	disk_change_seq = state->disk_change_seq;
+	byte_latch = s->byte_latch;
+	disk_change_seq = s->disk_change_seq;
 
-	motor_on = state->motor_on;
-	write_protected = state->write_protected;
-	byte_ready = state->byte_ready;
+	motor_on = s->motor_on;
+	write_protected = s->write_protected;
+	byte_ready = s->byte_ready;
 }
 
 
@@ -551,7 +551,7 @@ void Job1541::SetState(const Job1541State *state)
  *  Advance disk change sequence state
  */
 
-void Job1541::advance_disk_change_seq(uint32_t cycle_counter)
+void GCRDisk::advance_disk_change_seq(uint32_t cycle_counter)
 {
 	if (disk_change_seq > 0) {
 
@@ -569,7 +569,7 @@ void Job1541::advance_disk_change_seq(uint32_t cycle_counter)
  *  Rotate disk (virtually)
  */
 
-void Job1541::rotate_disk(uint32_t cycle_counter)
+void GCRDisk::rotate_disk(uint32_t cycle_counter)
 {
 	advance_disk_change_seq(cycle_counter);
 
@@ -610,7 +610,7 @@ void Job1541::rotate_disk(uint32_t cycle_counter)
  *  Check if R/W head is over SYNC
  */
 
-bool Job1541::SyncFound(uint32_t cycle_counter)
+bool GCRDisk::SyncFound(uint32_t cycle_counter)
 {
 	rotate_disk(cycle_counter);
 
@@ -624,7 +624,7 @@ bool Job1541::SyncFound(uint32_t cycle_counter)
  *  Check if GCR byte is available for reading
  */
 
-bool Job1541::ByteReady(uint32_t cycle_counter)
+bool GCRDisk::ByteReady(uint32_t cycle_counter)
 {
 	rotate_disk(cycle_counter);
 
@@ -636,7 +636,7 @@ bool Job1541::ByteReady(uint32_t cycle_counter)
  *  Read one GCR byte from disk
  */
 
-uint8_t Job1541::ReadGCRByte(uint32_t cycle_counter)
+uint8_t GCRDisk::ReadGCRByte(uint32_t cycle_counter)
 {
 	rotate_disk(cycle_counter);
 
@@ -649,7 +649,7 @@ uint8_t Job1541::ReadGCRByte(uint32_t cycle_counter)
  *  Return state of write protect sensor
  */
 
-bool Job1541::WPSensorClosed(uint32_t cycle_counter)
+bool GCRDisk::WPSensorClosed(uint32_t cycle_counter)
 {
 	advance_disk_change_seq(cycle_counter);
 

@@ -62,7 +62,7 @@ class MOS6526_2;
 class IEC;
 class Cartridge;
 class MOS6502_1541;
-class Job1541;
+class GCRDisk;
 struct Snapshot;
 
 
@@ -123,7 +123,7 @@ public:
 	Cartridge * TheCart;		// Inserted cartridge
 
 	MOS6502_1541 * TheCPU1541;	// 1541 objects
-	Job1541 * TheJob1541;
+	GCRDisk * TheGCRDisk;
 
 private:
 	void load_rom(const std::string & which, const std::string & path, uint8_t * where, size_t size, const uint8_t * builtin);

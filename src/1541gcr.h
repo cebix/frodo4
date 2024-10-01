@@ -26,18 +26,20 @@
 
 class MOS6502_1541;
 class Prefs;
-struct Job1541State;
+struct GCRDiskState;
 
-class Job1541 {
+
+// 1541 GCR-level disk emulation
+class GCRDisk {
 public:
-	Job1541(uint8_t *ram1541);
-	~Job1541();
+	GCRDisk(uint8_t *ram1541);
+	~GCRDisk();
 
-	void SetCPU(MOS6502_1541 * cpu) { the_cpu_1541 = cpu; }
+	void SetCPU(MOS6502_1541 * cpu) { the_cpu = cpu; }
 
-	void GetState(Job1541State *state) const;
-	void SetState(const Job1541State *state);
-	void NewPrefs(const Prefs *prefs);
+	void GetState(GCRDiskState * s) const;
+	void SetState(const GCRDiskState * s);
+	void NewPrefs(const Prefs * prefs);
 
 	void SetMotor(bool on) { motor_on = on; }
 	void MoveHeadOut(uint32_t cycle_counter);
@@ -70,9 +72,9 @@ private:
 	void advance_disk_change_seq(uint32_t cycle_counter);
 	void rotate_disk(uint32_t cycle_counter);
 
-	uint8_t *ram;				// Pointer to 1541 RAM
-	MOS6502_1541 *the_cpu_1541;	// Pointer to 1541 CPU object
-	FILE *the_file;				// File pointer for .d64 file
+	uint8_t * ram;				// Pointer to 1541 RAM
+	MOS6502_1541 * the_cpu;		// Pointer to 1541 CPU object
+	FILE * the_file;			// File pointer for .d64 file
 	unsigned image_header;		// Length of .d64/.x64 file header
 
 	uint8_t id1, id2;			// ID of disk
@@ -80,9 +82,9 @@ private:
 
 	unsigned current_halftrack;	// Current halftrack number (2..70)
 
-	uint8_t *gcr_data;			// Pointer to GCR encoded disk data
-	uint8_t *gcr_track_start;	// Pointer to start of GCR data of current track
-	uint8_t *gcr_track_end;		// Pointer to end of GCR data of current track
+	uint8_t * gcr_data;			// Pointer to GCR encoded disk data
+	uint8_t * gcr_track_start;	// Pointer to start of GCR data of current track
+	uint8_t * gcr_track_end;	// Pointer to end of GCR data of current track
 	size_t gcr_track_length;	// Number of GCR bytes in current track
 	size_t gcr_offset;			// Offset of GCR data byte under R/W head, relative to gcr_track_start
 								// Note: This is never 0, so we can access the previous GCR byte for sync detection
@@ -98,8 +100,9 @@ private:
 	bool byte_ready;			// Flag: GCR byte ready for reading
 };
 
+
 // 1541 GCR state
-struct Job1541State {
+struct GCRDiskState {
 	uint32_t current_halftrack;
 	uint32_t gcr_offset;
 	uint32_t last_byte_cycle;

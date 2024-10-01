@@ -68,8 +68,8 @@
  *  6502 constructor: Initialize registers
  */
 
-MOS6502_1541::MOS6502_1541(C64 * c64, Job1541 * job, uint8_t * Ram, uint8_t * Rom)
- : ram(Ram), rom(Rom), the_c64(c64), the_job(job)
+MOS6502_1541::MOS6502_1541(C64 * c64, GCRDisk * gcr, uint8_t * Ram, uint8_t * Rom)
+ : ram(Ram), rom(Rom), the_c64(c64), the_gcr_disk(gcr)
 {
 	a = x = y = 0;
 	sp = 0xff;
@@ -297,8 +297,8 @@ uint8_t MOS6502_1541::read_byte(uint16_t adr)
 		// VIA 2
 		switch (adr & 0xf) {
 			case 0: {	// Port B
-				uint8_t in = the_job->WPSensorClosed(cycle_counter) ? 0 : 0x10;
-				if (!the_job->SyncFound(cycle_counter)) {
+				uint8_t in = the_gcr_disk->WPSensorClosed(cycle_counter) ? 0 : 0x10;
+				if (!the_gcr_disk->SyncFound(cycle_counter)) {
 					in |= 0x80;
 				}
 				via2->SetPBIn(in);
@@ -306,7 +306,7 @@ uint8_t MOS6502_1541::read_byte(uint16_t adr)
 			}
 			case 1:		// Port A
 			case 15:	// Port A (no handshake)
-				uint8_t in = the_job->ReadGCRByte(cycle_counter);
+				uint8_t in = the_gcr_disk->ReadGCRByte(cycle_counter);
 				via2->SetPAIn(in);
 				break;
 		}
@@ -384,13 +384,13 @@ inline void MOS6502_1541::write_byte(uint16_t adr, uint8_t byte)
 				uint8_t pb_out = via2->PBOut();
 				if ((old_pb_out ^ pb_out) & 0x03) {	// Bits 0/1: Stepper motor
 					if ((old_pb_out & 3) == ((pb_out + 1) & 3)) {
-						the_job->MoveHeadOut(cycle_counter);
+						the_gcr_disk->MoveHeadOut(cycle_counter);
 					} else if ((old_pb_out & 3) == ((pb_out - 1) & 3)) {
-						the_job->MoveHeadIn(cycle_counter);
+						the_gcr_disk->MoveHeadIn(cycle_counter);
 					}
 				}
 				if ((old_pb_out ^ pb_out) & 0x04) {	// Bit 2: Spindle motor
-					the_job->SetMotor(pb_out & 0x04);
+					the_gcr_disk->SetMotor(pb_out & 0x04);
 				}
 				if ((old_pb_out ^ pb_out) & 0x08) {	// Bit 3: Drive LED
 					the_c64->SetDriveLEDs((pb_out & 8) ? DRVLED_ON : DRVLED_OFF, DRVLED_OFF, DRVLED_OFF, DRVLED_OFF);
@@ -556,7 +556,7 @@ int MOS6502_1541::EmulateLine(int cycles_left)
 #define RESET_PENDING (int_line[INT_RESET1541])
 #define IRQ_PENDING (int_line[INT_VIA1IRQ] || int_line[INT_VIA2IRQ])
 #define CHECK_SO \
-	if (set_overflow_enabled() && the_job->ByteReady(cycle_counter)) { \
+	if (set_overflow_enabled() && the_gcr_disk->ByteReady(cycle_counter)) { \
 		v_flag = true; \
 	}
 
@@ -572,11 +572,11 @@ int MOS6502_1541::EmulateLine(int cycles_left)
 					jump(0xebff);
 					break;
 				case 0x01:	// Write sector
-					the_job->WriteSector();
+					the_gcr_disk->WriteSector();
 					jump(0xf5dc);
 					break;
 				case 0x02:	// Format track
-					the_job->FormatTrack();
+					the_gcr_disk->FormatTrack();
 					jump(0xfd8b);
 					break;
 				default:

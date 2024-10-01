@@ -82,8 +82,8 @@ struct Snapshot {
 	MOS6526State cia1;
 	MOS6526State cia2;
 
-	MOS6502State driveCpu;
-	Job1541State driveJob;
+	MOS6502State driveCPU;
+	GCRDiskState driveGCR;
 
 	// TODO: REU state is not saved
 };
@@ -131,9 +131,9 @@ C64::C64() : quit_requested(false), prefs_editor_requested(false), load_snapshot
 	// Create the chips
 	TheCPU = new MOS6510(this, RAM, Basic, Kernal, Char, Color);
 
-	TheJob1541 = new Job1541(RAM1541);
-	TheCPU1541 = new MOS6502_1541(this, TheJob1541, RAM1541, ROM1541);
-	TheJob1541->SetCPU(TheCPU1541);
+	TheGCRDisk = new GCRDisk(RAM1541);
+	TheCPU1541 = new MOS6502_1541(this, TheGCRDisk, RAM1541, ROM1541);
+	TheGCRDisk->SetCPU(TheCPU1541);
 
 	TheVIC = new MOS6569(this, TheDisplay, TheCPU, RAM, Char, Color);
 	TheSID = new MOS6581;
@@ -174,7 +174,7 @@ C64::~C64()
 {
 	open_close_joysticks(ThePrefs.Joystick1Port, ThePrefs.Joystick2Port, 0, 0);
 
-	delete TheJob1541;
+	delete TheGCRDisk;
 	delete TheCart;
 	delete TheIEC;
 	delete TheCIA2;
@@ -371,7 +371,7 @@ void C64::NewPrefs(const Prefs *prefs)
 	TheDisplay->NewPrefs(prefs);
 
 	TheIEC->NewPrefs(prefs);
-	TheJob1541->NewPrefs(prefs);
+	TheGCRDisk->NewPrefs(prefs);
 
 	TheSID->NewPrefs(prefs);
 
@@ -998,20 +998,20 @@ void C64::MakeSnapshot(Snapshot * s)
 
 #ifdef FRODO_SC
 		while (true) {
-			TheCPU1541->GetState(&(s->driveCpu));
+			TheCPU1541->GetState(&(s->driveCPU));
 
-			if (s->driveCpu.idle || s->driveCpu.instruction_complete)
+			if (s->driveCPU.idle || s->driveCPU.instruction_complete)
 				break;
 
 			// Advance 1541 state by one cycle
 			emulate_1541_cycle();
 		}
 #else
-		TheCPU1541->GetState(&(s->driveCpu));
+		TheCPU1541->GetState(&(s->driveCPU));
 #endif
 	}
 
-	TheJob1541->GetState(&(s->driveJob));
+	TheGCRDisk->GetState(&(s->driveGCR));
 
 	memcpy(s->driveRam, RAM1541, DRIVE_RAM_SIZE);
 }
@@ -1042,8 +1042,8 @@ void C64::RestoreSnapshot(const Snapshot * s)
 
 		memcpy(RAM1541, s->driveRam, DRIVE_RAM_SIZE);
 
-		TheCPU1541->SetState(&(s->driveCpu));
-		TheJob1541->SetState(&(s->driveJob));
+		TheCPU1541->SetState(&(s->driveCPU));
+		TheGCRDisk->SetState(&(s->driveGCR));
 	}
 }
 

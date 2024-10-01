@@ -39,7 +39,7 @@ enum {
 
 
 class C64;
-class Job1541;
+class GCRDisk;
 class MOS6526_2;
 struct MOS6502State;
 
@@ -47,7 +47,7 @@ struct MOS6502State;
 // 6502 emulation (1541)
 class MOS6502_1541 {
 public:
-	MOS6502_1541(C64 * c64, Job1541 * job, uint8_t * Ram, uint8_t * Rom);
+	MOS6502_1541(C64 * c64, GCRDisk * gcr, uint8_t * Ram, uint8_t * Rom);
 	~MOS6502_1541();
 
 #ifdef FRODO_SC
@@ -107,7 +107,7 @@ private:
 	uint8_t * ram;			// Pointer to main RAM
 	uint8_t * rom;			// Pointer to ROM
 	C64 * the_c64;			// Pointer to C64 object
-	Job1541 * the_job;		// Pointer to 1541 job object
+	GCRDisk * the_gcr_disk;	// Pointer to GCR disk object
 
 	uint32_t cycle_counter;
 
