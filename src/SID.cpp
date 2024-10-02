@@ -457,6 +457,12 @@ private:
 	filter_t ffreq_LP[256];			// Precomputed filter resonance frequencies
 	filter_t ffreq_HP[256];
 
+	filter_t out_lp_g;				// IIR filter coefficients for external output
+	filter_t out_hp_d, out_hp_g;
+	filter_t audio_out_lp;			// IIR filter previous output signals
+	filter_t audio_out_lp1;
+	filter_t audio_out_hp;
+
 	uint8_t sample_buf[SAMPLE_BUF_SIZE]; // Buffer for sampled voice
 	unsigned sample_in_ptr;			// Index in sample_buf for writing
 
@@ -879,6 +885,15 @@ DigitalRenderer::DigitalRenderer()
 	// Calculate number of SID cycles per sample frame
 	sid_cycles_frac = uint32_t(float(SID_FREQ) / obtained.freq * 65536.0);
 
+	// AUDIO OUT of SID is connected to 16 kHz (R = 10 kΩ, C = 1 nF)
+	// low-pass and 16 Hz (R = 1 kΩ, C = 10 µF) high-pass RC filters
+	float wc_lp = 1.0 / (obtained.freq * 10000.0 * 1.0E-9);
+	float wc_hp = 1.0 / (obtained.freq * 1000.0 * 10.0E-6);
+
+	out_lp_g = filter_t(1 / (1 + wc_lp));
+	out_hp_g = filter_t(1 - wc_hp);				// Approximation of (1-sin(wc))/cos(wc) for small wc
+	out_hp_d = filter_t((1 + out_hp_g) / 2);
+
 	// Start sound output
 	Resume();
 
@@ -924,6 +939,8 @@ void DigitalRenderer::Reset()
 	d1 = d2 = g1 = g2 = filter_t(0.0);
 	d1_eff = d2_eff = g1_eff = g2_eff = filter_t(0.0);
 	xn1 = xn2 = yn1 = yn2 = filter_t(0.0);
+
+	audio_out_lp = audio_out_lp1 = audio_out_hp = filter_t(0.0);
 
 	sample_in_ptr = 0;
 	memset(sample_buf, 0, SAMPLE_BUF_SIZE);
@@ -1345,13 +1362,13 @@ void DigitalRenderer::calc_buffer(int16_t *buf, long count)
 			}
 		}
 
-		// Filter
+		// SID-internal filters
 		if (ThePrefs.SIDFilters) {
-			f_ampl_eff = f_ampl_eff * filter_t(0.98) + f_ampl * filter_t(0.02);	// Smooth out filter parameter transitions
-			d1_eff     = d1_eff     * filter_t(0.98) + d1     * filter_t(0.02);
-			d2_eff     = d2_eff     * filter_t(0.98) + d2     * filter_t(0.02);
-			g1_eff     = g1_eff     * filter_t(0.98) + g1     * filter_t(0.02);
-			g2_eff     = g2_eff     * filter_t(0.98) + g2     * filter_t(0.02);
+			f_ampl_eff = f_ampl_eff * filter_t(0.8) + f_ampl * filter_t(0.2);	// Smooth out filter parameter transitions
+			d1_eff     = d1_eff     * filter_t(0.8) + d1     * filter_t(0.2);
+			d2_eff     = d2_eff     * filter_t(0.8) + d2     * filter_t(0.2);
+			g1_eff     = g1_eff     * filter_t(0.8) + g1     * filter_t(0.2);
+			g2_eff     = g2_eff     * filter_t(0.8) + g2     * filter_t(0.2);
 
 #ifdef USE_FIXPOINT_MATHS
 			int32_t xn = f_ampl_eff.imul(sum_output_filter);
@@ -1366,17 +1383,29 @@ void DigitalRenderer::calc_buffer(int16_t *buf, long count)
 #endif
 		}
 
-		// TODO: Real C64 has a 16 kHz (10 kΩ, 1 nF) first-order RC filter
-		// at the SID's AUDIO OUT pin
+		// External filter on AUDIO OUT
+		int32_t ext_output;
+#ifdef USE_FIXPOINT_MATHS
+		ext_output = (sum_output + sum_output_filter) >> 10;
+#else
+		if (ThePrefs.SIDFilters) {
+			filter_t audio_out = filter_t(sum_output + sum_output_filter) / (1 << 10);
+			audio_out_lp = out_lp_g * audio_out_lp + (1 - out_lp_g) * audio_out;
+			audio_out_hp = out_hp_g * audio_out_hp + out_hp_d * (audio_out_lp - audio_out_lp1);
+			audio_out_lp1 = audio_out_lp;
+			ext_output = (int32_t) audio_out_hp;
+		} else {
+			ext_output = (sum_output + sum_output_filter) >> 10;
+		}
+#endif
 
 		// Write to buffer
-		int32_t output = (sum_output + sum_output_filter) >> 10;
-		if (output > 0x7fff) {	// Using filters can cause minor clipping
-			output = 0x7fff;
-		} else if (output < -0x8000) {
-			output = -0x8000;
+		if (ext_output > 0x7fff) {	// Using filters can cause minor clipping
+			ext_output = 0x7fff;
+		} else if (ext_output < -0x8000) {
+			ext_output = -0x8000;
 		}
-		*buf++ = output;
+		*buf++ = ext_output;
 	}
 }
 
