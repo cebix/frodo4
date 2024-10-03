@@ -1156,7 +1156,7 @@ Lutz Vieweg</property>
                               <object class="GtkLabel">
                                 <property name="visible">True</property>
                                 <property name="can-focus">False</property>
-                                <property name="label" translatable="yes">REU Size:</property>
+                                <property name="label" translatable="yes">Type:</property>
                               </object>
                               <packing>
                                 <property name="expand">False</property>
@@ -1165,15 +1165,16 @@ Lutz Vieweg</property>
                               </packing>
                             </child>
                             <child>
-                              <object class="GtkComboBoxText" id="reu_size">
+                              <object class="GtkComboBoxText" id="reu_type">
                                 <property name="visible">True</property>
                                 <property name="can-focus">False</property>
                                 <property name="active">0</property>
                                 <items>
                                   <item id="0" translatable="yes">Off</item>
-                                  <item id="1" translatable="yes">128K (Commodore 1700)</item>
-                                  <item id="2" translatable="yes">256K (Commodore 1764)</item>
-                                  <item id="3" translatable="yes">512K (Commodore 1750)</item>
+                                  <item id="1" translatable="yes">Commodore 1700 REU (128K)</item>
+                                  <item id="2" translatable="yes">Commodore 1764 REU (256K)</item>
+                                  <item id="3" translatable="yes">Commodore 1750 REU (512K)</item>
+                                  <item translatable="yes">GeoRAM (512K)</item>
                                 </items>
                               </object>
                               <packing>

@@ -34,12 +34,13 @@ enum {
 };
 
 
-// REU sizes
+// RAM expansion types
 enum {
 	REU_NONE,		// No REU
-	REU_128K,		// 128K
-	REU_256K,		// 256K
-	REU_512K		// 512K
+	REU_128K,		// 128K REU
+	REU_256K,		// 256K REU
+	REU_512K,		// 512K REU
+	REU_GEORAM		// 512K GeoRAM
 };
 
 
@@ -75,7 +76,7 @@ public:
 	std::string DrivePath[4];	// Path for drive 8..11
 
 	int SIDType;			// SID emulation type
-	int REUSize;			// Size of REU
+	int REUType;			// Type of RAM expansion
 	int DisplayType;		// Display type (windowed or full-screen)
 	int Palette;			// Color palette to use
 	int Joystick1Port;		// Port that joystick 1 is connected to (0 = no joystick, all other values are system dependant)

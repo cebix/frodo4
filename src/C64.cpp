@@ -142,7 +142,7 @@ C64::C64() : quit_requested(false), prefs_editor_requested(false), load_snapshot
 	TheIEC = new IEC(this);
 
 	TheCart = new NoCartridge;
-	swap_cartridge(REU_NONE, ThePrefs.REUSize);
+	swap_cartridge(REU_NONE, ThePrefs.REUType);
 
 	TheCPU->SetChips(TheVIC, TheSID, TheCIA1, TheCIA2, TheCart, TheIEC);
 
@@ -375,7 +375,7 @@ void C64::NewPrefs(const Prefs *prefs)
 
 	TheSID->NewPrefs(prefs);
 
-	swap_cartridge(ThePrefs.REUSize, prefs->REUSize);
+	swap_cartridge(ThePrefs.REUType, prefs->REUType);
 	TheCPU->SetChips(TheVIC, TheSID, TheCIA1, TheCIA2, TheCart, TheIEC);
 
 	// Reset 1541 processor if turned on or off (to bring IEC lines back to sane state)
@@ -484,6 +484,8 @@ void C64::swap_cartridge(int oldreu, int newreu)
 
 	if (newreu == REU_NONE) {
 		TheCart = new NoCartridge;
+	} else if (newreu == REU_GEORAM) {
+		TheCart = new GeoRAM;
 	} else {
 		TheCart = new REU(TheCPU, newreu);
 	}

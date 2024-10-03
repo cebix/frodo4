@@ -1,5 +1,5 @@
 /*
- *  REU.cpp - 17xx REU emulation
+ *  REU.cpp - 17xx REU and GeoRAM emulation
  *
  *  Frodo Copyright (C) Christian Bauer
  *
@@ -34,7 +34,7 @@
 
 
 /*
- *  Constructor
+ *  REU constructor
  */
 
 REU::REU(MOS6510 * cpu, int prefs_reu_size) : the_cpu(cpu)
@@ -59,18 +59,21 @@ REU::REU(MOS6510 * cpu, int prefs_reu_size) : the_cpu(cpu)
 		ex_ram = nullptr;
 	}
 
+	// Clear expansion RAM
+	memset(ex_ram, 0, ram_size);
+
 	// Reset registers
 	Reset();
 }
 
 
 /*
- *  Destructor
+ *  REU destructor
  */
 
 REU::~REU()
 {
-	// Free RAM
+	// Free expansion RAM
 	delete[] ex_ram;
 }
 
@@ -292,5 +295,90 @@ void REU::execute_dma()
 		regs[6] = (reu_adr >> 16) & 0xff;
 		regs[7] = length & 0xff;
 		regs[8] = (length >> 8) & 0xff;
+	}
+}
+
+
+/*
+ *  GeoRAM constructor
+ */
+
+GeoRAM::GeoRAM()
+{
+	// Allocate expansion RAM (512K)
+	ram_size = 0x80000;
+	ex_ram = new uint8_t[ram_size];
+
+	// Clear expansion RAM
+	memset(ex_ram, 0, ram_size);
+
+	// Reset registers
+	Reset();
+}
+
+
+/*
+ *  GeoRAM destructor
+ */
+
+GeoRAM::~GeoRAM()
+{
+	// Free expansion RAM
+	delete[] ex_ram;
+}
+
+
+/*
+ *  Reset GeoRAM
+ */
+
+void GeoRAM::Reset()
+{
+	// Reset registers
+	track = sector = 0;
+}
+
+
+/*
+ *  Read from GeoRAM expansion RAM
+ */
+
+uint8_t GeoRAM::ReadIO1(uint16_t adr, uint8_t bus_byte)
+{
+	return ex_ram[(track << 13) + (sector << 8) + adr];
+}
+
+
+/*
+ *  Write to GeoRAM expansion RAM
+ */
+
+void GeoRAM::WriteIO1(uint16_t adr, uint8_t byte)
+{
+	ex_ram[(track << 13) + (sector << 8) + adr] = byte;
+}
+
+
+/*
+ *  Read from GeoRAM register
+ */
+
+uint8_t GeoRAM::ReadIO2(uint16_t adr, uint8_t bus_byte)
+{
+	// Registers are write-only
+	return bus_byte;
+}
+
+
+/*
+ *  Write to GeoRAM register
+ */
+
+void GeoRAM::WriteIO2(uint16_t adr, uint8_t byte)
+{
+	if ((adr & 0xc1) == 0xc0) {
+		track = byte & 0x3f;
+	} else if ((adr & 0xc1) == 0xc1) {
+		sector = byte & 0x1f;
 	}
 }

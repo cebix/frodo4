@@ -8,14 +8,14 @@ Changes from V4.2 to V4.3:
    - Enter key toggles fullscreen mode
    - Minus key (or left game controller trigger) for instant rewind
    - Plus key (or right game controller trigger) to fast-forward
- - Holding down Shift while pressing F12 clears all RAM memory
+ - Holding down Shift while pressing F12 clears all RAM memory during reset
  - Game controllers are automatically detected and used
  - D-pad on game controllers now works
  - Replaced status bar with overlay
  - Settings window changes:
-   - Added setting for status overlay display (ShowLEDs)
-   - Added setting for initial window size (ScalingNumerator)
-   - Added setting for color palette (Palette)
+   - Added setting for status overlay display
+   - Added setting for initial window size
+   - Added setting for color palette
    - Added setting for SID type (6581 or 8580)
    - Removed "Draw every n-th frame" setting
    - Added menu items for loading/saving snapshot files
@@ -29,7 +29,8 @@ Changes from V4.2 to V4.3:
  - Improved sprite display
  - Improved CIA timer emulation
  - Improved 1541 emulation
- - Added simulation of SID registers 27 and 28 (voice 3 read-back)
+ - Added GeoRAM emulation
+ - Added emulation of SID registers 27 and 28 (voice 3 read-back)
  - Made the MapSlash setting functional again
 
 Changes from V4.1b to V4.2:

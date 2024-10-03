@@ -1,5 +1,5 @@
 /*
- *  REU.h - 17xx REU emulation
+ *  REU.h - 17xx REU and GeoRAM emulation
  *
  *  Frodo Copyright (C) Christian Bauer
  *
@@ -46,7 +46,7 @@ private:
 
 	MOS6510 * the_cpu;	// Pointer to 6510 object
 
-	uint8_t * ex_ram;	// REU expansion RAM
+	uint8_t * ex_ram;	// Expansion RAM
 
 	uint32_t ram_size;	// Size of expansion RAM
 	uint32_t ram_mask;	// Expansion RAM address bit mask
@@ -60,6 +60,30 @@ private:
 	uint8_t autoload_reu_adr_bank;
 	uint8_t autoload_length_lo;
 	uint8_t autoload_length_hi;
+};
+
+
+// GeoRAM cartridge object
+class GeoRAM : public Cartridge {
+public:
+	GeoRAM();
+	~GeoRAM();
+
+	void Reset() override;
+
+	uint8_t ReadIO1(uint16_t adr, uint8_t bus_byte) override;
+	void WriteIO1(uint16_t adr, uint8_t byte) override;
+
+	uint8_t ReadIO2(uint16_t adr, uint8_t bus_byte) override;
+	void WriteIO2(uint16_t adr, uint8_t byte) override;
+
+private:
+	uint8_t * ex_ram;	// Expansion RAM
+
+	uint32_t ram_size;	// Size of expansion RAM
+
+	uint32_t track;		// Selected expansion RAM "track"
+	uint32_t sector;	// Selected expansion RAM "sector"
 };
 
 

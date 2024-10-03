@@ -46,7 +46,7 @@ Prefs::Prefs()
 	ScalingDenominator = 1;
 
 	SIDType = SIDTYPE_DIGITAL_6581;
-	REUSize = REU_NONE;
+	REUType = REU_NONE;
 	DisplayType = DISPTYPE_WINDOW;
 	Palette = PALETTE_PEPTO;
 	Joystick1Port = 0;
@@ -83,8 +83,8 @@ void Prefs::Check()
 		SIDType = SIDTYPE_NONE;
 	}
 
-	if (REUSize < REU_NONE || REUSize > REU_512K) {
-		REUSize = REU_NONE;
+	if (REUType < REU_NONE || REUType > REU_GEORAM) {
+		REUType = REU_NONE;
 	}
 
 	if (DisplayType < DISPTYPE_WINDOW || DisplayType > DISPTYPE_SCREEN) {
@@ -156,15 +156,17 @@ void Prefs::Load(fs::path prefs_path)
 				} else {
 					SIDType = SIDTYPE_NONE;
 				}
-			} else if (keyword == "REUSize") {
+			} else if (keyword == "REUType") {
 				if (value == "128K") {
-					REUSize = REU_128K;
+					REUType = REU_128K;
 				} else if (value == "256K") {
-					REUSize = REU_256K;
+					REUType = REU_256K;
 				} else if (value == "512K") {
-					REUSize = REU_512K;
+					REUType = REU_512K;
+				} else if (value == "GEORAM") {
+					REUType = REU_GEORAM;
 				} else {
-					REUSize = REU_NONE;
+					REUType = REU_NONE;
 				}
 			} else if (keyword == "DisplayType") {
 				DisplayType = (value == "SCREEN") ? DISPTYPE_SCREEN : DISPTYPE_WINDOW;
@@ -244,12 +246,13 @@ bool Prefs::Save(fs::path prefs_path)
 		case SIDTYPE_DIGITAL_8580: file << "8580\n"; break;
 		case SIDTYPE_SIDCARD:      file << "SIDCARD\n"; break;
 	}
-	file << "REUSize = ";
-	switch (REUSize) {
-		case REU_NONE: file << "NONE\n"; break;
-		case REU_128K: file << "128K\n"; break;
-		case REU_256K: file << "256K\n"; break;
-		case REU_512K: file << "512K\n"; break;
+	file << "REUType = ";
+	switch (REUType) {
+		case REU_NONE:   file << "NONE\n"; break;
+		case REU_128K:   file << "128K\n"; break;
+		case REU_256K:   file << "256K\n"; break;
+		case REU_512K:   file << "512K\n"; break;
+		case REU_GEORAM: file << "GEORAM\n"; break;
 	};
 	file << "DisplayType = " << (DisplayType == DISPTYPE_WINDOW ? "WINDOW\n" : "SCREEN\n");
 	file << "Palette = " << (Palette == PALETTE_COLODORE ? "COLODORE\n" : "PEPTO\n");
