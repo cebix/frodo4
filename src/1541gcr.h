@@ -26,6 +26,10 @@
 #include "1541d64.h"
 
 
+// Number of supported half-tracks
+constexpr unsigned NUM_HALFTRACKS = 84;
+
+
 class MOS6502_1541;
 class Prefs;
 struct GCRDiskState;
@@ -39,13 +43,15 @@ public:
 
 	void SetCPU(MOS6502_1541 * cpu) { the_cpu = cpu; }
 
+	void Reset();
+
 	void GetState(GCRDiskState * s) const;
 	void SetState(const GCRDiskState * s);
 	void NewPrefs(const Prefs * prefs);
 
 	void SetMotor(bool on) { motor_on = on; }
-	void MoveHeadOut(uint32_t cycle_counter);
-	void MoveHeadIn(uint32_t cycle_counter);
+	void MoveHeadOut();
+	void MoveHeadIn();
 
 	bool SyncFound(uint32_t cycle_counter);
 	bool ByteReady(uint32_t cycle_counter);
@@ -66,10 +72,9 @@ private:
 	unsigned secnum_from_ts(unsigned track, unsigned sector);
 	int offset_from_ts(unsigned track, unsigned sector);
 
-	void gcr_conv4(const uint8_t *from, uint8_t *to);
-	void sector2gcr(unsigned track, unsigned sector);
+	void gcr_conv4(const uint8_t * from, uint8_t * to);
+	void sector2gcr(unsigned track, unsigned sector, uint8_t * gcr);
 	void disk2gcr();
-	void set_gcr_ptr();
 
 	void advance_disk_change_seq(uint32_t cycle_counter);
 	void rotate_disk(uint32_t cycle_counter);
@@ -82,14 +87,12 @@ private:
 	uint8_t disk_id1, disk_id2;			// ID of disk
 	uint8_t error_info[NUM_SECTORS_40];	// Sector error information (1 byte/sector)
 
-	unsigned current_halftrack;	// Current halftrack number (2..70)
+	uint8_t * gcr_data[NUM_HALFTRACKS];			// GCR data for each half-track (nullptr = not present)
+	size_t gcr_track_length[NUM_HALFTRACKS];	// Number of GCR bytes for each half-track (nullptr = not present)
 
-	uint8_t * gcr_data;			// Pointer to GCR encoded disk data
-	uint8_t * gcr_track_start;	// Pointer to start of GCR data of current track
-	uint8_t * gcr_track_end;	// Pointer to end of GCR data of current track
-	size_t gcr_track_length;	// Number of GCR bytes in current track
-	size_t gcr_offset;			// Offset of GCR data byte under R/W head, relative to gcr_track_start
-								// Note: This is never 0, so we can access the previous GCR byte for sync detection
+	unsigned current_halftrack;		// Current halftrack number (0..NUM_HALFTRACKS-1)
+	size_t gcr_offset;				// Offset of GCR data byte under R/W head, relative to gcr_data[current_halftrack]
+									// Note: This is never 0, so we can access the previous GCR byte for sync detection
 
 	uint32_t disk_change_cycle;	// Cycle of last disk change sequence step
 	unsigned disk_change_seq;	// Disk change WP sensor sequence step (counts down to 0)
@@ -99,6 +102,7 @@ private:
 
 	bool motor_on;				// Flag: Spindle motor on
 	bool write_protected;		// Flag: Disk write-protected
+	bool on_sync;				// Flag: Sync detected
 	bool byte_ready;			// Flag: GCR byte ready for reading
 };
 
@@ -107,6 +111,7 @@ private:
 struct GCRDiskState {
 	uint32_t current_halftrack;
 	uint32_t gcr_offset;
+
 	uint32_t last_byte_cycle;
 	uint32_t disk_change_cycle;
 
@@ -115,6 +120,7 @@ struct GCRDiskState {
 
 	bool motor_on;
 	bool write_protected;
+	bool on_sync;
 	bool byte_ready;
 };
 

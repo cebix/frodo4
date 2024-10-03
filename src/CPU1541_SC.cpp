@@ -404,9 +404,9 @@ inline void MOS6502_1541::write_byte(uint16_t adr, uint8_t byte)
 				uint8_t pb_out = via2->PBOut();
 				if ((old_pb_out ^ pb_out) & 0x03) {	// Bits 0/1: Stepper motor
 					if ((old_pb_out & 3) == ((pb_out + 1) & 3)) {
-						the_gcr_disk->MoveHeadOut(cycle_counter);
+						the_gcr_disk->MoveHeadOut();
 					} else if ((old_pb_out & 3) == ((pb_out - 1) & 3)) {
-						the_gcr_disk->MoveHeadIn(cycle_counter);
+						the_gcr_disk->MoveHeadIn();
 					}
 				}
 				if ((old_pb_out ^ pb_out) & 0x04) {	// Bit 2: Spindle motor

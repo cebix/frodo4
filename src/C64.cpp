@@ -274,6 +274,7 @@ void C64::Run()
 	TheCIA1->Reset();
 	TheCIA2->Reset();
 	TheCPU1541->Reset();
+	TheGCRDisk->Reset();
 
 	// Patch Kernal ROM for IEC routines and fast reset
 	patch_kernal(ThePrefs.FastReset, ThePrefs.Emul1541Proc);
@@ -329,6 +330,7 @@ void C64::Reset(bool clear_memory)
 {
 	TheCPU->AsyncReset();
 	TheCPU1541->AsyncReset();
+	TheGCRDisk->Reset();
 	TheSID->Reset();
 	TheCIA1->Reset();
 	TheCIA2->Reset();
