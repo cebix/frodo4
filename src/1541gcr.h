@@ -23,6 +23,8 @@
 
 #include <string>
 
+#include "1541d64.h"
+
 
 class MOS6502_1541;
 class Prefs;
@@ -57,7 +59,7 @@ private:
 	void open_d64_file(const std::string & filepath);
 	void close_d64_file();
 
-	bool read_sector(unsigned track, unsigned sector, uint8_t *buffer);
+	int read_sector(unsigned track, unsigned sector, uint8_t *buffer);
 	bool write_sector(unsigned track, unsigned sector, const uint8_t *buffer);
 	void format_disk();
 
@@ -77,8 +79,8 @@ private:
 	FILE * the_file;			// File pointer for .d64 file
 	unsigned image_header;		// Length of .d64/.x64 file header
 
-	uint8_t id1, id2;			// ID of disk
-	uint8_t error_info[683];	// Sector error information (1 byte/sector)
+	uint8_t disk_id1, disk_id2;			// ID of disk
+	uint8_t error_info[NUM_SECTORS_40];	// Sector error information (1 byte/sector)
 
 	unsigned current_halftrack;	// Current halftrack number (2..70)
 

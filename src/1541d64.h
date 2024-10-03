@@ -32,8 +32,8 @@
  */
 
 // Constants
-const int NUM_SECTORS_35 = 683;	// Number of sectors in a 35-track image
-const int NUM_SECTORS_40 = 768;	// Number of sectors in a 40-track image
+constexpr unsigned NUM_SECTORS_35 = 683;	// Number of sectors in a 35-track image
+constexpr unsigned NUM_SECTORS_40 = 768;	// Number of sectors in a 40-track image
 
 // Disk image types
 enum {
@@ -77,6 +77,8 @@ public:
 	virtual uint8_t Read(int channel, uint8_t &byte);
 	virtual uint8_t Write(int channel, uint8_t byte, bool eoi);
 	virtual void Reset();
+
+	static int ConvErrorInfo(uint8_t error);
 
 private:
 	void close_image();

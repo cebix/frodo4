@@ -46,7 +46,6 @@
 
 // Number of tracks/sectors
 constexpr unsigned NUM_TRACKS = 35;
-constexpr unsigned NUM_SECTORS = 683;
 
 // Size of GCR encoded data
 constexpr unsigned GCR_SECTOR_SIZE = 5 + 10 + 9 + 5 + 325 + 12;	// SYNC + Header + Gap + SYNC + Data + Gap
@@ -62,21 +61,23 @@ constexpr unsigned DISK_CHANGE_SEQ_CYCLES = 500000;	// 0.5 s
 
 
 // Number of sectors of each track
-const unsigned num_sectors[36] = {
+const unsigned num_sectors[41] = {
 	0,
 	21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,
 	19,19,19,19,19,19,19,
 	18,18,18,18,18,18,
-	17,17,17,17,17
+	17,17,17,17,17,
+	17,17,17,17,17		// Tracks 36..40
 };
 
 // Sector offset of start of track in .d64 file
-const unsigned sector_offset[36] = {
+const unsigned sector_offset[41] = {
 	0,
 	0,21,42,63,84,105,126,147,168,189,210,231,252,273,294,315,336,
 	357,376,395,414,433,452,471,
 	490,508,526,544,562,580,
-	598,615,632,649,666
+	598,615,632,649,666,
+	683,700,717,734,751	// Tracks 36..40
 };
 
 
@@ -184,7 +185,7 @@ void GCRDisk::open_d64_file(const std::string & filepath)
 
 	// Check length
 	fseek(the_file, 0, SEEK_END);
-	if ((size = ftell(the_file)) < NUM_SECTORS * 256) {
+	if ((size = ftell(the_file)) < NUM_SECTORS_35 * 256) {
 		fclose(the_file);
 		the_file = nullptr;
 		return;
@@ -200,18 +201,18 @@ void GCRDisk::open_d64_file(const std::string & filepath)
 	}
 
 	// Preset error info (all sectors no error)
-	memset(error_info, 1, NUM_SECTORS);
+	memset(error_info, 1, sizeof(error_info));
 
 	// Load sector error info from .d64 file, if present
-	if (!image_header && size == NUM_SECTORS * 257) {
-		fseek(the_file, NUM_SECTORS * 256, SEEK_SET);
-		fread(&error_info, NUM_SECTORS, 1, the_file);
+	if (!image_header && size == NUM_SECTORS_35 * 257) {
+		fseek(the_file, NUM_SECTORS_35 * 256, SEEK_SET);
+		fread(&error_info, NUM_SECTORS_35, 1, the_file);
 	};
 
 	// Read BAM and get ID
 	read_sector(18, 0, bam);
-	id1 = bam[162];
-	id2 = bam[163];
+	disk_id1 = bam[162];
+	disk_id2 = bam[163];
 
 	// Create GCR encoded disk data from image
 	disk2gcr();
@@ -269,8 +270,8 @@ void GCRDisk::FormatTrack()
 
 	// Get new ID
 	uint8_t bufnum = ram[0x3d];
-	id1 = ram[0x12 + bufnum];
-	id2 = ram[0x13 + bufnum];
+	disk_id1 = ram[0x12 + bufnum];
+	disk_id2 = ram[0x13 + bufnum];
 
 	// Create empty block
 	uint8_t buf[256];
@@ -285,30 +286,33 @@ void GCRDisk::FormatTrack()
 
 	// Clear error info (all sectors no error)
 	if (track == 35) {
-		memset(error_info, 1, NUM_SECTORS);
+		memset(error_info, 1, sizeof(error_info));
 		// Write error_info to disk?
 	}
 }
 
 
 /*
- *  Read sector (256 bytes) from image file
- *  true: success, false: error
+ *  Read sector (256 bytes) from image file, return DOS error code (ERR_*)
  */
 
-bool GCRDisk::read_sector(unsigned track, unsigned sector, uint8_t *buffer)
+int GCRDisk::read_sector(unsigned track, unsigned sector, uint8_t *buffer)
 {
 	if (the_file == nullptr)
-		return false;
+		return ERR_NOTREADY;
 
 	// Convert track/sector to byte offset in file
 	int offset = offset_from_ts(track, sector);
 	if (offset < 0)
-		return false;
+		return ERR_ILLEGALTS;
 
 	fseek(the_file, offset + image_header, SEEK_SET);
-	fread(buffer, 256, 1, the_file);
-	return true;
+	if (fread(buffer, 1, 256, the_file) != 256) {
+		return ERR_READ22;
+	} else {
+		uint8_t error = error_info[sector_offset[track] + sector];
+		return ImageDrive::ConvErrorInfo(error);
+	}
 }
 
 
@@ -328,7 +332,7 @@ bool GCRDisk::write_sector(unsigned track, unsigned sector, const uint8_t *buffe
 		return false;
 
 	fseek(the_file, offset + image_header, SEEK_SET);
-	fwrite(buffer, 256, 1, the_file);
+	fwrite(buffer, 1, 256, the_file);
 	return true;
 }
 
@@ -396,17 +400,32 @@ void GCRDisk::sector2gcr(unsigned track, unsigned sector)
 	uint8_t buf[4];
 	uint8_t *p = gcr_data + (track-1) * GCR_TRACK_SIZE + sector * GCR_SECTOR_SIZE;
 
-	read_sector(track, sector, block);
+	int error = read_sector(track, sector, block);
+
+	uint8_t id1 = disk_id1;
+	uint8_t id2 = disk_id2;
+	if (error == ERR_DISKID) {		// Disk ID mismatch
+		id1 ^= 0xff;
+		id2 ^= 0xff;
+	}
 
 	// Create GCR header
 	memset(p, 0xff, 5);						// SYNC
 	p += 5;
+
 	buf[0] = 0x08;							// Header mark
 	buf[1] = sector ^ track ^ id2 ^ id1;	// Checksum
 	buf[2] = sector;
 	buf[3] = track;
+	if (error == ERR_READ20) {		// Block header not found
+		buf[0] ^= 0xff;
+	}
+	if (error == ERR_READ27) {		// Checksum error in header
+		buf[1] ^= 0xff;
+	}
 	gcr_conv4(buf, p);
 	p += 5;
+
 	buf[0] = id2;
 	buf[1] = id1;
 	buf[2] = 0x0f;
@@ -420,13 +439,18 @@ void GCRDisk::sector2gcr(unsigned track, unsigned sector)
 	// Create GCR data
 	memset(p, 0xff, 5);						// SYNC
 	p += 5;
+
 	uint8_t sum;
 	buf[0] = 0x07;							// Data mark
 	sum =  buf[1] = block[0];
 	sum ^= buf[2] = block[1];
 	sum ^= buf[3] = block[2];
+	if (error == ERR_READ22) {		// Data block not present
+		buf[0] ^= 0xff;
+	}
 	gcr_conv4(buf, p);
 	p += 5;
+
 	for (unsigned i = 3; i < 255; i += 4) {
 		sum ^= buf[0] = block[i];
 		sum ^= buf[1] = block[i+1];
@@ -435,10 +459,14 @@ void GCRDisk::sector2gcr(unsigned track, unsigned sector)
 		gcr_conv4(buf, p);
 		p += 5;
 	}
+
 	sum ^= buf[0] = block[255];
 	buf[1] = sum;							// Checksum
 	buf[2] = 0;
 	buf[3] = 0;
+	if (error == ERR_READ23) {		// Checksum error in data block
+		buf[1] ^= 0xff;
+	}
 	gcr_conv4(buf, p);
 	p += 5;
 

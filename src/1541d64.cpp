@@ -54,7 +54,7 @@ enum {
 };
 
 // Directory track
-const int DIR_TRACK = 18;
+constexpr unsigned DIR_TRACK = 18;
 
 // BAM structure
 enum {
@@ -89,11 +89,11 @@ enum {
 };
 
 // Interleave of directory and data blocks
-const int DIR_INTERLEAVE = 3;
-const int DATA_INTERLEAVE = 10;
+constexpr unsigned DIR_INTERLEAVE = 3;
+constexpr unsigned DATA_INTERLEAVE = 10;
 
 // Number of sectors per track, for all tracks
-const int num_sectors[41] = {
+static const unsigned num_sectors[41] = {
 	0,
 	21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,
 	19,19,19,19,19,19,19,
@@ -103,7 +103,7 @@ const int num_sectors[41] = {
 };
 
 // Accumulated number of sectors
-const int accum_num_sectors[41] = {
+static const unsigned accum_num_sectors[41] = {
 	0,
 	0,21,42,63,84,105,126,147,168,189,210,231,252,273,294,315,336,
 	357,376,395,414,433,452,471,
@@ -1323,7 +1323,7 @@ static inline const uint8_t &error_info_for_sector(const image_file_desc &desc, 
 	return desc.error_info[accum_num_sectors[track] + sector];
 }
 
-const int conv_job_error[16] = {
+static const int conv_job_error[16] = {
 	ERR_OK,				// 0 -> 00 OK
 	ERR_OK,				// 1 -> 00 OK
 	ERR_READ20,			// 2 -> 20 READ ERROR
@@ -1342,6 +1342,12 @@ const int conv_job_error[16] = {
 	ERR_NOTREADY		// 15 -> 74 DRIVE NOT READY
 };
 
+// Convert D64 error info (job error) to ERR_* code
+int ImageDrive::ConvErrorInfo(uint8_t error)
+{
+	return conv_job_error[error & 0x0f];
+}
+
 // Read sector, return error code
 static int read_sector(FILE *f, const image_file_desc &desc, int track, int sector, uint8_t *buffer)
 {
@@ -1357,8 +1363,8 @@ static int read_sector(FILE *f, const image_file_desc &desc, int track, int sect
 	if (fread(buffer, 1, 256, f) != 256) {
 		return ERR_READ22;
 	} else {
-		unsigned int error = error_info_for_sector(desc, track, sector);
-		return conv_job_error[error & 0x0f];
+		uint8_t error = error_info_for_sector(desc, track, sector);
+		return ImageDrive::ConvErrorInfo(error);
 	}
 }
 
