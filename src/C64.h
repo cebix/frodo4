@@ -106,7 +106,6 @@ public:
 	uint8_t * Basic;
 	uint8_t * Kernal;
 	uint8_t * Char;
-	const uint8_t * BuiltinChar;
 	uint8_t * Color;
 
 	uint8_t * RAM1541;			// 1541 memories
@@ -124,6 +123,12 @@ public:
 
 	MOS6502_1541 * TheCPU1541;	// 1541 objects
 	GCRDisk * TheGCRDisk;
+
+	// Builtin ROM data
+	static const uint8_t BuiltinBasicROM[BASIC_ROM_SIZE];
+	static const uint8_t BuiltinKernalROM[KERNAL_ROM_SIZE];
+	static const uint8_t BuiltinCharROM[CHAR_ROM_SIZE];
+	static const uint8_t BuiltinDriveROM[DRIVE_ROM_SIZE];
 
 private:
 	void load_rom(const std::string & which, const std::string & path, uint8_t * where, size_t size, const uint8_t * builtin);
@@ -166,9 +171,6 @@ private:
 	int joy_maxtrigl[2], joy_maxtrigr[2];
 	bool joy_trigl_on[2], joy_trigr_on[2];
 	uint8_t joykey;				// Joystick keyboard emulation mask value
-
-	uint8_t orig_kernal_1d84,	// Original contents of kernal locations $1d84 and $1d85
-	        orig_kernal_1d85;	// (for undoing the Fast Reset patch)
 
 	std::chrono::time_point<std::chrono::steady_clock> frame_start;	// Start time of last frame (for speed control)
 	unsigned frame_skip_factor;				// For display update limiting

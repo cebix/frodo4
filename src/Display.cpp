@@ -467,7 +467,7 @@ void Display::draw_string(unsigned x, unsigned y, const char *str, uint8_t front
 	uint8_t *pb = vic_pixels + DISPLAY_X*y + x;
 	char c;
 	while ((c = *str++) != 0) {
-		const uint8_t * q = the_c64->BuiltinChar + c*8 + 0x800;
+		const uint8_t * q = the_c64->BuiltinCharROM + c*8 + 0x800;
 		uint8_t * p = pb;
 		for (unsigned y = 0; y < 8; y++) {
 			uint8_t v = *q++;

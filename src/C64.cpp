@@ -114,7 +114,6 @@ C64::C64() : quit_requested(false), prefs_editor_requested(false), load_snapshot
 	Basic = new uint8_t[BASIC_ROM_SIZE];
 	Kernal = new uint8_t[KERNAL_ROM_SIZE];
 	Char = new uint8_t[CHAR_ROM_SIZE];
-	BuiltinChar = builtin_char_rom;
 	Color = new uint8_t[COLOR_RAM_SIZE];
 	RAM1541 = new uint8_t[DRIVE_RAM_SIZE];
 	ROM1541 = new uint8_t[DRIVE_ROM_SIZE];
@@ -228,10 +227,10 @@ void C64::load_rom(const std::string & which, const std::string & path, uint8_t 
 
 void C64::load_rom_files()
 {
-	load_rom("Basic", ThePrefs.BasicROMPath, Basic, BASIC_ROM_SIZE, builtin_basic_rom);
-	load_rom("Kernal", ThePrefs.KernalROMPath, Kernal, KERNAL_ROM_SIZE, builtin_kernal_rom);
-	load_rom("Char", ThePrefs.CharROMPath, Char, CHAR_ROM_SIZE, builtin_char_rom);
-	load_rom("1541", ThePrefs.DriveROMPath, ROM1541, DRIVE_ROM_SIZE, builtin_drive_rom);
+	load_rom("Basic", ThePrefs.BasicROMPath, Basic, BASIC_ROM_SIZE, BuiltinBasicROM);
+	load_rom("Kernal", ThePrefs.KernalROMPath, Kernal, KERNAL_ROM_SIZE, BuiltinKernalROM);
+	load_rom("Char", ThePrefs.CharROMPath, Char, CHAR_ROM_SIZE, BuiltinCharROM);
+	load_rom("1541", ThePrefs.DriveROMPath, ROM1541, DRIVE_ROM_SIZE, BuiltinDriveROM);
 }
 
 
@@ -276,9 +275,7 @@ void C64::Run()
 	TheCIA2->Reset();
 	TheCPU1541->Reset();
 
-	// Patch kernal IEC routines
-	orig_kernal_1d84 = Kernal[0x1d84];
-	orig_kernal_1d85 = Kernal[0x1d85];
+	// Patch Kernal ROM for IEC routines and fast reset
 	patch_kernal(ThePrefs.FastReset, ThePrefs.Emul1541Proc);
 
 	// Remember start time of first frame
@@ -407,66 +404,60 @@ void C64::SetEmul1541Proc(bool on, const char * path)
  *  Patch kernal reset and IEC routines
  */
 
+static void apply_patch(bool apply, uint8_t * rom, const uint8_t * builtin, uint16_t offset, unsigned size, const uint8_t * patch)
+{
+	if (apply) {
+
+		// Only apply patch if original data is present
+		if (memcmp(rom + offset, builtin + offset, size) == 0) {
+			memcpy(rom + offset, patch, size);
+		}
+
+	} else {
+
+		// Only undo patch if patched data is present
+		if (memcmp(rom + offset, patch, size) == 0) {
+			memcpy(rom + offset, builtin + offset, size);
+		}
+	}
+}
+
 void C64::patch_kernal(bool fast_reset, bool emul_1541_proc)
 {
-	if (fast_reset) {
-		Kernal[0x1d84] = 0xa0;
-		Kernal[0x1d85] = 0x00;
-	} else {
-		Kernal[0x1d84] = orig_kernal_1d84;
-		Kernal[0x1d85] = orig_kernal_1d85;
-	}
+	// Fast reset
+	static const uint8_t fast_reset_patch[] = { 0xa0, 0x00 };
 
-	if (emul_1541_proc) {
-		Kernal[0x0d40] = 0x78;
-		Kernal[0x0d41] = 0x20;
-		Kernal[0x0d23] = 0x78;
-		Kernal[0x0d24] = 0x20;
-		Kernal[0x0d36] = 0x78;
-		Kernal[0x0d37] = 0x20;
-		Kernal[0x0e13] = 0x78;
-		Kernal[0x0e14] = 0xa9;
-		Kernal[0x0def] = 0x78;
-		Kernal[0x0df0] = 0x20;
-		Kernal[0x0dbe] = 0xad;
-		Kernal[0x0dbf] = 0x00;
-		Kernal[0x0dcc] = 0x78;
-		Kernal[0x0dcd] = 0x20;
-		Kernal[0x0e03] = 0x20;
-		Kernal[0x0e04] = 0xbe;
-	} else {
-		Kernal[0x0d40] = 0xf2;	// IECOut
-		Kernal[0x0d41] = 0x00;
-		Kernal[0x0d23] = 0xf2;	// IECOutATN
-		Kernal[0x0d24] = 0x01;
-		Kernal[0x0d36] = 0xf2;	// IECOutSec
-		Kernal[0x0d37] = 0x02;
-		Kernal[0x0e13] = 0xf2;	// IECIn
-		Kernal[0x0e14] = 0x03;
-		Kernal[0x0def] = 0xf2;	// IECSetATN
-		Kernal[0x0df0] = 0x04;
-		Kernal[0x0dbe] = 0xf2;	// IECRelATN
-		Kernal[0x0dbf] = 0x05;
-		Kernal[0x0dcc] = 0xf2;	// IECTurnaround
-		Kernal[0x0dcd] = 0x06;
-		Kernal[0x0e03] = 0xf2;	// IECRelease
-		Kernal[0x0e04] = 0x07;
-	}
+	apply_patch(fast_reset, Kernal, BuiltinKernalROM, 0x1d84, sizeof(fast_reset_patch), fast_reset_patch);
+
+	// IEC
+	static const uint8_t iec_patch_1[] = { 0xf2, 0x00 };	// IECOut
+	static const uint8_t iec_patch_2[] = { 0xf2, 0x01 };	// IECOutATN
+	static const uint8_t iec_patch_3[] = { 0xf2, 0x02 };	// IECOutSec
+	static const uint8_t iec_patch_4[] = { 0xf2, 0x03 };	// IECIn
+	static const uint8_t iec_patch_5[] = { 0xf2, 0x04 };	// IECSetATN
+	static const uint8_t iec_patch_6[] = { 0xf2, 0x05 };	// IECRelATN
+	static const uint8_t iec_patch_7[] = { 0xf2, 0x06 };	// IECTurnaround
+	static const uint8_t iec_patch_8[] = { 0xf2, 0x07 };	// IECRelease
+
+	apply_patch(!emul_1541_proc, Kernal, BuiltinKernalROM, 0x0d40, sizeof(iec_patch_1), iec_patch_1);
+	apply_patch(!emul_1541_proc, Kernal, BuiltinKernalROM, 0x0d23, sizeof(iec_patch_2), iec_patch_2);
+	apply_patch(!emul_1541_proc, Kernal, BuiltinKernalROM, 0x0d36, sizeof(iec_patch_3), iec_patch_3);
+	apply_patch(!emul_1541_proc, Kernal, BuiltinKernalROM, 0x0e13, sizeof(iec_patch_4), iec_patch_4);
+	apply_patch(!emul_1541_proc, Kernal, BuiltinKernalROM, 0x0def, sizeof(iec_patch_5), iec_patch_5);
+	apply_patch(!emul_1541_proc, Kernal, BuiltinKernalROM, 0x0dbe, sizeof(iec_patch_6), iec_patch_6);
+	apply_patch(!emul_1541_proc, Kernal, BuiltinKernalROM, 0x0dcc, sizeof(iec_patch_7), iec_patch_7);
+	apply_patch(!emul_1541_proc, Kernal, BuiltinKernalROM, 0x0e03, sizeof(iec_patch_8), iec_patch_8);
 
 	// 1541
-	ROM1541[0x2ae4] = 0xea;		// Don't check ROM checksum
-	ROM1541[0x2ae5] = 0xea;
-	ROM1541[0x2ae8] = 0xea;
-	ROM1541[0x2ae9] = 0xea;
-	ROM1541[0x2c9b] = 0xf2;		// DOS idle loop
-	ROM1541[0x2c9c] = 0x00;
-	ROM1541[0x3594] = 0x20;		// Write sector
-	ROM1541[0x3595] = 0xf2;
-	ROM1541[0x3596] = 0xf5;
-	ROM1541[0x3597] = 0xf2;
-	ROM1541[0x3598] = 0x01;
-	ROM1541[0x3b0c] = 0xf2;		// Format track
-	ROM1541[0x3b0d] = 0x02;
+	static const uint8_t drive_patch_1[] = { 0xea, 0xea, 0xea, 0xea };			// Don't check ROM checksum
+	static const uint8_t drive_patch_2[] = { 0xf2, 0x00 };						// DOS idle loop
+	static const uint8_t drive_patch_3[] = { 0x20, 0xf2, 0xf5, 0xf2, 0x01 };	// Write sector
+	static const uint8_t drive_patch_4[] = { 0xf2, 0x02 };						// Format track
+
+	apply_patch(true, ROM1541, BuiltinDriveROM, 0x2ae4, sizeof(drive_patch_1), drive_patch_1);
+	apply_patch(true, ROM1541, BuiltinDriveROM, 0x2c9b, sizeof(drive_patch_2), drive_patch_2);
+	apply_patch(true, ROM1541, BuiltinDriveROM, 0x3594, sizeof(drive_patch_3), drive_patch_3);
+	apply_patch(true, ROM1541, BuiltinDriveROM, 0x3b0c, sizeof(drive_patch_4), drive_patch_4);
 }
 
 
