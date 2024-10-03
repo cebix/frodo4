@@ -449,12 +449,13 @@ void C64::patch_kernal(bool fast_reset, bool emul_1541_proc)
 	apply_patch(!emul_1541_proc, Kernal, BuiltinKernalROM, 0x0e03, sizeof(iec_patch_8), iec_patch_8);
 
 	// 1541
-	static const uint8_t drive_patch_1[] = { 0xea, 0xea, 0xea, 0xea };			// Don't check ROM checksum
+	static const uint8_t drive_patch_1[] = { 0xea, 0xea };						// Don't check ROM checksum
 	static const uint8_t drive_patch_2[] = { 0xf2, 0x00 };						// DOS idle loop
 	static const uint8_t drive_patch_3[] = { 0x20, 0xf2, 0xf5, 0xf2, 0x01 };	// Write sector
 	static const uint8_t drive_patch_4[] = { 0xf2, 0x02 };						// Format track
 
 	apply_patch(true, ROM1541, BuiltinDriveROM, 0x2ae4, sizeof(drive_patch_1), drive_patch_1);
+	apply_patch(true, ROM1541, BuiltinDriveROM, 0x2ae8, sizeof(drive_patch_1), drive_patch_1);
 	apply_patch(true, ROM1541, BuiltinDriveROM, 0x2c9b, sizeof(drive_patch_2), drive_patch_2);
 	apply_patch(true, ROM1541, BuiltinDriveROM, 0x3594, sizeof(drive_patch_3), drive_patch_3);
 	apply_patch(true, ROM1541, BuiltinDriveROM, 0x3b0c, sizeof(drive_patch_4), drive_patch_4);
