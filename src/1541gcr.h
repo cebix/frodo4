@@ -50,6 +50,7 @@ public:
 	void NewPrefs(const Prefs * prefs);
 
 	void SetMotor(bool on) { motor_on = on; }
+	void SetBitRate(uint8_t rate);
 	void MoveHeadOut();
 	void MoveHeadIn();
 
@@ -97,6 +98,7 @@ private:
 	uint32_t disk_change_cycle;	// Cycle of last disk change sequence step
 	unsigned disk_change_seq;	// Disk change WP sensor sequence step (counts down to 0)
 
+	unsigned cycles_per_byte;	// Clock cycles per GCR byte
 	uint32_t last_byte_cycle;	// Cycle when last byte was available
 	uint8_t byte_latch;			// Latch for read GCR byte
 
@@ -109,9 +111,10 @@ private:
 
 // 1541 GCR state
 struct GCRDiskState {
-	uint32_t current_halftrack;
-	uint32_t gcr_offset;
+	uint16_t current_halftrack;
+	uint16_t gcr_offset;
 
+	uint32_t cycles_per_byte;
 	uint32_t last_byte_cycle;
 	uint32_t disk_change_cycle;
 

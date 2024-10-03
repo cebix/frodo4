@@ -402,18 +402,22 @@ inline void MOS6502_1541::write_byte(uint16_t adr, uint8_t byte)
 			case 0:	// Port B
 			case 2:	// DDR B
 				uint8_t pb_out = via2->PBOut();
-				if ((old_pb_out ^ pb_out) & 0x03) {	// Bits 0/1: Stepper motor
+				uint8_t changed = old_pb_out ^ pb_out;
+				if (changed & 0x03) {	// Bits 0/1: Stepper motor
 					if ((old_pb_out & 3) == ((pb_out + 1) & 3)) {
 						the_gcr_disk->MoveHeadOut();
 					} else if ((old_pb_out & 3) == ((pb_out - 1) & 3)) {
 						the_gcr_disk->MoveHeadIn();
 					}
 				}
-				if ((old_pb_out ^ pb_out) & 0x04) {	// Bit 2: Spindle motor
+				if (changed & 0x04) {	// Bit 2: Spindle motor
 					the_gcr_disk->SetMotor(pb_out & 0x04);
 				}
-				if ((old_pb_out ^ pb_out) & 0x08) {	// Bit 3: Drive LED
+				if (changed & 0x08) {	// Bit 3: Drive LED
 					the_c64->SetDriveLEDs((pb_out & 8) ? DRVLED_ON : DRVLED_OFF, DRVLED_OFF, DRVLED_OFF, DRVLED_OFF);
+				}
+				if (changed & 0x60) {	// Bits 5/6: GCR bit rate
+					the_gcr_disk->SetBitRate((pb_out >> 5) & 0x03);
 				}
 				break;
 		}

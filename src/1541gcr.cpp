@@ -47,10 +47,6 @@ constexpr unsigned NUM_TRACKS = 35;
 // Size of standard GCR sector encoded from D64 image
 constexpr unsigned GCR_SECTOR_SIZE = 5 + 10 + 9 + 5 + 325 + 12;	// SYNC + Header + Gap + SYNC + Data + Gap
 
-// Clock cycles per GCR byte
-// TODO: handle speed selection
-constexpr unsigned CYCLES_PER_BYTE = 30;
-
 // Duration of disk change sequence step in cycles
 constexpr unsigned DISK_CHANGE_SEQ_CYCLES = 500000;	// 0.5 s
 
@@ -89,6 +85,7 @@ GCRDisk::GCRDisk(uint8_t *ram1541) : ram(ram1541), the_file(nullptr)
 	disk_change_cycle = 0;
 	disk_change_seq = 0;
 
+	cycles_per_byte = 30;
 	last_byte_cycle = 0;
 	byte_latch = 0;
 
@@ -500,6 +497,17 @@ void GCRDisk::disk2gcr()
 
 
 /*
+ *  Set read/write bit rate
+ */
+
+void GCRDisk::SetBitRate(uint8_t rate)
+{
+	static const unsigned cpb[4] = { 32, 30, 28, 26 };
+	cycles_per_byte = cpb[rate];
+}
+
+
+/*
  *  Move R/W head out (lower track numbers)
  */
 
@@ -538,8 +546,9 @@ void GCRDisk::GetState(GCRDiskState * s) const
 	s->current_halftrack = current_halftrack;
 	s->gcr_offset = gcr_offset;
 
-	s->disk_change_cycle = disk_change_cycle;
+	s->cycles_per_byte = cycles_per_byte;
 	s->last_byte_cycle = last_byte_cycle;
+	s->disk_change_cycle = disk_change_cycle;
 
 	s->byte_latch = byte_latch;
 	s->disk_change_seq = disk_change_seq;
@@ -560,8 +569,9 @@ void GCRDisk::SetState(const GCRDiskState * s)
 	current_halftrack = s->current_halftrack;
 	gcr_offset = s->gcr_offset;
 
-	disk_change_cycle = s->disk_change_cycle;
+	cycles_per_byte = s->cycles_per_byte;
 	last_byte_cycle = s->last_byte_cycle;
+	disk_change_cycle = s->disk_change_cycle;
 
 	byte_latch = s->byte_latch;
 	disk_change_seq = s->disk_change_seq;
@@ -602,7 +612,7 @@ void GCRDisk::rotate_disk(uint32_t cycle_counter)
 	if (motor_on && disk_change_seq == 0 && the_file != nullptr && gcr_data[current_halftrack] != nullptr) {
 
 		uint32_t elapsed = cycle_counter - last_byte_cycle;
-		uint32_t advance = elapsed / CYCLES_PER_BYTE;
+		uint32_t advance = elapsed / cycles_per_byte;
 
 		if (advance > 0) {
 			size_t track_length = gcr_track_length[current_halftrack];
@@ -630,7 +640,7 @@ void GCRDisk::rotate_disk(uint32_t cycle_counter)
 				byte_ready = false;
 			}
 
-			last_byte_cycle += advance * CYCLES_PER_BYTE;
+			last_byte_cycle += advance * cycles_per_byte;
 		}
 
 	} else {
