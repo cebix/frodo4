@@ -27,7 +27,7 @@
 
 
 // Number of supported half-tracks
-constexpr unsigned NUM_HALFTRACKS = 84;
+constexpr unsigned MAX_NUM_HALFTRACKS = 84;
 
 
 class MOS6502_1541;
@@ -63,35 +63,37 @@ public:
 	void FormatTrack();
 
 private:
-	void open_d64_file(const std::string & filepath);
-	void close_d64_file();
+	void open_image_file(const std::string & filepath);
+	void close_image_file();
+	bool load_image_file();
+	bool load_gcr_file();
 
 	int read_sector(unsigned track, unsigned sector, uint8_t *buffer);
 	bool write_sector(unsigned track, unsigned sector, const uint8_t *buffer);
 	void format_disk();
 
-	unsigned secnum_from_ts(unsigned track, unsigned sector);
 	int offset_from_ts(unsigned track, unsigned sector);
 
 	void gcr_conv4(const uint8_t * from, uint8_t * to);
 	void sector2gcr(unsigned track, unsigned sector, uint8_t * gcr);
-	void disk2gcr();
 
 	void advance_disk_change_seq(uint32_t cycle_counter);
 	void rotate_disk(uint32_t cycle_counter);
 
 	uint8_t * ram;				// Pointer to 1541 RAM
 	MOS6502_1541 * the_cpu;		// Pointer to 1541 CPU object
-	FILE * the_file;			// File pointer for .d64 file
-	unsigned image_header;		// Length of .d64/.x64 file header
+
+	FILE * the_file;			// File pointer for image file
+	unsigned header_size;		// Size of image file header
+	unsigned num_tracks;		// Number of tracks in image file
 
 	uint8_t disk_id1, disk_id2;			// ID of disk
 	uint8_t error_info[NUM_SECTORS_40];	// Sector error information (1 byte/sector)
 
-	uint8_t * gcr_data[NUM_HALFTRACKS];			// GCR data for each half-track (nullptr = not present)
-	size_t gcr_track_length[NUM_HALFTRACKS];	// Number of GCR bytes for each half-track (nullptr = not present)
+	uint8_t * gcr_data[MAX_NUM_HALFTRACKS];			// GCR data for each half-track (nullptr = not present)
+	size_t gcr_track_length[MAX_NUM_HALFTRACKS];	// Number of GCR bytes for each half-track (nullptr = not present)
 
-	unsigned current_halftrack;		// Current halftrack number (0..NUM_HALFTRACKS-1)
+	unsigned current_halftrack;		// Current halftrack number (0..MAX_NUM_HALFTRACKS-1)
 	size_t gcr_offset;				// Offset of GCR data byte under R/W head, relative to gcr_data[current_halftrack]
 									// Note: This is never 0, so we can access the previous GCR byte for sync detection
 
@@ -126,6 +128,11 @@ struct GCRDiskState {
 	bool on_sync;
 	bool byte_ready;
 };
+
+
+// Check whether file with given header (64 bytes) and size looks like a GCR
+// disk image file
+extern bool IsGCRImageFile(const std::string & path, const uint8_t *header, long size);
 
 
 #endif // ndef C1541GCR_H

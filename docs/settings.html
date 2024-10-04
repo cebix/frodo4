@@ -47,16 +47,16 @@ the drive will behave like it has no disk in it, otherwise the drive will be
 disconnected entirely.
 
 <P>The <B>“Next Disk” button</B> only works in Disk Image Mode and changes
-the mounted .d64 or .x64 disk image file to the next one in a series. Frodo
-tries to be a bit clever about figuring out what that “next disk” actually
-is. If the image files have names ending with patterns like “Disk 1”/“Disk
-2”, “Side A”/“Side B”, “(1)”/“(2)”, etc. it is usually successful.
+the mounted .d64/.x64/.g64 disk image file to the next one in a series.
+Frodo tries to be a bit clever about figuring out what that “next disk”
+actually is. If the image files have names ending with patterns like “Disk
+1”/“Disk 2”, “Side A”/“Side B”, “(1)”/“(2)”, etc. it is usually successful.
 
 <P>If <B>“Enable Full 1541 Emulation”</B> is turned on, the four emulated
 1541s are disabled and replaced by a single 1541 emulation (drive 8) that
-only operates on .d64/.x64 files, but emulates the entire 1541 hardware and
-is compatible with most fast loaders and some forms of copy protection, at
-the expense of considerably slower disk access. If you have a .d64 with a
+only operates on .d64/.x64/.g64 files, but emulates the entire 1541 hardware
+and is compatible with most fast loaders and some forms of copy protection,
+at the expense of considerably slower disk access. If you have a .d64 with a
 program that doesn't load with the normal emulation (see above), you may
 have better luck with the full 1541 processor emulation instead.
 

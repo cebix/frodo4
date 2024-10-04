@@ -44,10 +44,12 @@
 #include "sysdeps.h"
 
 #include "IEC.h"
-#include "C64.h"
 #include "1541fs.h"
 #include "1541d64.h"
 #include "1541t64.h"
+#include "1541gcr.h"
+#include "C64.h"
+#include "main.h"
 #include "Prefs.h"
 #include "Version.h"
 
@@ -75,28 +77,31 @@ enum {
  *  Constructor: Initialize variables
  */
 
-Drive *IEC::create_drive(const std::string & path)
+Drive *IEC::create_drive(unsigned num, const std::string & path)
 {
+	if (path.empty())
+		return nullptr;
+
 	if (fs::is_directory(path)) {
 		// Mount host directory
 		return new FSDrive(this, path);
-	} else {
-		// Not a directory, check for mountable file type
-		int type;
-		if (IsMountableFile(path, type)) {
-			if (type == FILE_IMAGE) {
-				// Mount disk image
-				return new ImageDrive(this, path);
-			} else {
-				// Mount archive type file
-				return new ArchDrive(this, path);
-			}
-		} else {
-			// Unknown file type
-			// TODO: print error?
-			return nullptr;
+	}
+
+	// Not a directory, check for mountable file type
+	int type;
+	if (IsMountableFile(path, type)) {
+		if (type == FILE_IMAGE) {
+			// Mount disk image
+			return new ImageDrive(this, path);
+		} else if (type == FILE_ARCH) {
+			// Mount archive type file
+			return new ArchDrive(this, path);
 		}
 	}
+
+	// Unsupported file type
+	the_c64->ShowNotification(std::format("Unsupported file type for drive {}", num));
+	return nullptr;
 }
 
 IEC::IEC(C64 * c64) : the_c64(c64)
@@ -108,7 +113,7 @@ IEC::IEC(C64 * c64) : the_c64(c64)
 
 	if (!ThePrefs.Emul1541Proc) {
 		for (unsigned i = 0; i < 4; ++i) {
-			drive[i] = create_drive(ThePrefs.DrivePath[i]);
+			drive[i] = create_drive(i + 8, ThePrefs.DrivePath[i]);
 		}
 	}
 
@@ -159,7 +164,7 @@ void IEC::NewPrefs(const Prefs *prefs)
 			delete drive[i];
 			drive[i] = nullptr;	// Important because UpdateLEDs is called from drive constructors (via set_error())
 			if (!prefs->Emul1541Proc) {
-				drive[i] = create_drive(prefs->DrivePath[i]);
+				drive[i] = create_drive(i + 8, prefs->DrivePath[i]);
 			}
 		}
 	}
@@ -784,6 +789,7 @@ void Drive::execute_cmd(const uint8_t *cmd, int cmd_len)
 					Reset();
 					break;
 				default:
+					unsupp_cmd();
 					set_error(ERR_UNIMPLEMENTED);
 					break;
 			}
@@ -798,36 +804,42 @@ void Drive::execute_cmd(const uint8_t *cmd, int cmd_len)
 // BLOCK-READ:channel,0,track,sector
 void Drive::block_read_cmd(int channel, int track, int sector, bool user_cmd)
 {
+	unsupp_cmd();
 	set_error(ERR_UNIMPLEMENTED);
 }
 
 // BLOCK-WRITE:channel,0,track,sector
 void Drive::block_write_cmd(int channel, int track, int sector, bool user_cmd)
 {
+	unsupp_cmd();
 	set_error(ERR_UNIMPLEMENTED);
 }
 
 // BLOCK-EXECUTE:channel,0,track,sector
 void Drive::block_execute_cmd(int channel, int track, int sector)
 {
+	unsupp_cmd();
 	set_error(ERR_UNIMPLEMENTED);
 }
 
 // BLOCK-ALLOCATE:0,track,sector
 void Drive::block_allocate_cmd(int track, int sector)
 {
+	unsupp_cmd();
 	set_error(ERR_UNIMPLEMENTED);
 }
 
 // BLOCK-FREE:0,track,sector
 void Drive::block_free_cmd(int track, int sector)
 {
+	unsupp_cmd();
 	set_error(ERR_UNIMPLEMENTED);
 }
 
 // BUFFER-POINTER:channel,pos
 void Drive::buffer_pointer_cmd(int channel, int pos)
 {
+	unsupp_cmd();
 	set_error(ERR_UNIMPLEMENTED);
 }
 
@@ -835,21 +847,20 @@ void Drive::buffer_pointer_cmd(int channel, int pos)
 void Drive::mem_read_cmd(uint16_t adr, uint8_t len)
 {
 	unsupp_cmd();
-	error_ptr = error_buf;
-	error_buf[0] = 0;
-	error_len = 0;
-	set_error(ERR_OK);
+	set_error(ERR_UNIMPLEMENTED);
 }
 
 // M-W<adr low><adr high><number><data...>
 void Drive::mem_write_cmd(uint16_t adr, uint8_t len, uint8_t *p)
 {
+	unsupp_cmd();
 	set_error(ERR_UNIMPLEMENTED);
 }
 
 // M-E<adr low><adr high>
 void Drive::mem_execute_cmd(uint16_t adr)
 {
+	unsupp_cmd();
 	set_error(ERR_UNIMPLEMENTED);
 }
 
@@ -858,6 +869,7 @@ void Drive::mem_execute_cmd(uint16_t adr)
 // new_file   old_files
 void Drive::copy_cmd(const uint8_t *new_file, int new_file_len, const uint8_t *old_files, int old_files_len)
 {
+	unsupp_cmd();
 	set_error(ERR_UNIMPLEMENTED);
 }
 
@@ -866,6 +878,7 @@ void Drive::copy_cmd(const uint8_t *new_file, int new_file_len, const uint8_t *o
 // new_file   old_file
 void Drive::rename_cmd(const uint8_t *new_file, int new_file_len, const uint8_t *old_file, int old_file_len)
 {
+	unsupp_cmd();
 	set_error(ERR_UNIMPLEMENTED);
 }
 
@@ -874,6 +887,7 @@ void Drive::rename_cmd(const uint8_t *new_file, int new_file_len, const uint8_t 
 //         files
 void Drive::scratch_cmd(const uint8_t *files, int files_len)
 {
+	unsupp_cmd();
 	set_error(ERR_UNIMPLEMENTED);
 }
 
@@ -882,12 +896,14 @@ void Drive::scratch_cmd(const uint8_t *files, int files_len)
 //  cmd
 void Drive::position_cmd(const uint8_t *cmd, int cmd_len)
 {
+	unsupp_cmd();
 	set_error(ERR_UNIMPLEMENTED);
 }
 
 // INITIALIZE
 void Drive::initialize_cmd()
 {
+	unsupp_cmd();
 	set_error(ERR_UNIMPLEMENTED);
 }
 
@@ -896,22 +912,35 @@ void Drive::initialize_cmd()
 //  name   comma (or NULL)
 void Drive::new_cmd(const uint8_t *name, int name_len, const uint8_t *comma)
 {
+	unsupp_cmd();
 	set_error(ERR_UNIMPLEMENTED);
 }
 
 // VALIDATE
 void Drive::validate_cmd()
 {
+	unsupp_cmd();
 	set_error(ERR_UNIMPLEMENTED);
 }
 
 
 /*
- *  Notice user of unsupported drive command
+ *  Notify user of unsupported drive command
  */
 
 void Drive::unsupp_cmd()
 {
+	std::string command;
+	command += cmd_buf[0];
+	if (cmd_len > 1 && cmd_buf[1] != ':') {
+		command += cmd_buf[1];
+		if (cmd_len > 2 && cmd_buf[2] != ':') {
+			command += cmd_buf[2];
+		}
+	}
+
+	std::string s = std::format("Unsupported drive command '{}'", command);
+	TheC64->ShowNotification(s);
 }
 
 
@@ -974,7 +1003,10 @@ bool IsMountableFile(const std::string & path, int & ret_type)
 
 	fclose(f);
 
-	if (IsImageFile(path, header, size)) {
+	if (IsGCRImageFile(path, header, size)) {
+		ret_type = FILE_GCR_IMAGE;
+		return true;
+	} else if (IsImageFile(path, header, size)) {
 		ret_type = FILE_IMAGE;
 		return true;
 	} else if (IsArchFile(path, header, size)) {

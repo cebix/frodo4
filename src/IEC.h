@@ -77,7 +77,8 @@ enum {
 
 // Mountable file types
 enum {
-	FILE_IMAGE,			// Disk image, handled by ImageDrive
+	FILE_IMAGE,			// Disk image file, handled by ImageDrive
+	FILE_GCR_IMAGE,		// GCR disk image file,  requires full 1541 emulation
 	FILE_ARCH			// Archive file, handled by ArchDrive
 };
 
@@ -154,7 +155,7 @@ public:
 	void Release();
 
 private:
-	Drive *create_drive(const std::string & path);
+	Drive *create_drive(unsigned num, const std::string & path);
 
 	uint8_t listen(int device);
 	uint8_t talk(int device);

@@ -24,13 +24,16 @@
  *
  *  - This is only used for processor-level 1541 emulation. It simulates the
  *    1541 disk controller hardware (R/W head, GCR reading/writing).
- *  - The preferences settings for drive 8 are used to specify the .d64 file
+ *  - The preferences settings for drive 8 are used to specify the disk
+ *    image file.
  *
  * Incompatibilities:
  * ------------------
  *
  *  - No GCR writing implemented (WriteSector is a ROM patch).
- *  - Programs depending on the exact timing of head movement don't work.
+ *  - GCR disk images must be byte-aligned.
+ *  - Programs depending on the exact timing of head movement or doing
+ *    bit rate and motor speed tricks don't work.
  */
 
 #include "sysdeps.h"
@@ -40,9 +43,6 @@
 #include "IEC.h"
 #include "Prefs.h"
 
-
-// Number of tracks in D64 image
-constexpr unsigned NUM_TRACKS = 35;
 
 // Size of standard GCR sector encoded from D64 image
 constexpr unsigned GCR_SECTOR_SIZE = 5 + 10 + 9 + 5 + 325 + 12;	// SYNC + Header + Gap + SYNC + Data + Gap
@@ -61,7 +61,7 @@ const unsigned num_sectors[41] = {
 	17,17,17,17,17		// Tracks 36..40
 };
 
-// Sector offset of start of track in .d64 file
+// Sector offset of start of track in D64 file
 const unsigned sector_offset[41] = {
 	0,
 	0,21,42,63,84,105,126,147,168,189,210,231,252,273,294,315,336,
@@ -73,13 +73,14 @@ const unsigned sector_offset[41] = {
 
 
 /*
- *  Constructor: Open .d64 file if processor-level 1541
- *   emulation is enabled
+ *  Constructor: Open image file if processor-level 1541 emulation is enabled
  */
 
 GCRDisk::GCRDisk(uint8_t *ram1541) : ram(ram1541), the_file(nullptr)
 {
-	current_halftrack = 0;	// Track 1
+	num_tracks = 0;
+	header_size = 0;
+	current_halftrack = 0;
 	gcr_offset = 1;
 
 	disk_change_cycle = 0;
@@ -94,19 +95,24 @@ GCRDisk::GCRDisk(uint8_t *ram1541) : ram(ram1541), the_file(nullptr)
 	on_sync = false;
 	byte_ready = false;
 
+	for (unsigned i = 0; i < MAX_NUM_HALFTRACKS; ++i) {
+		gcr_data[i] = nullptr;
+		gcr_track_length[i] = 0;
+	}
+
 	if (ThePrefs.Emul1541Proc) {
-		open_d64_file(ThePrefs.DrivePath[0]);
+		open_image_file(ThePrefs.DrivePath[0]);
 	}
 }
 
 
 /*
- *  Destructor: Close .d64 file
+ *  Destructor: Close disk image file
  */
 
 GCRDisk::~GCRDisk()
 {
-	close_d64_file();
+	close_image_file();
 }
 
 
@@ -134,16 +140,16 @@ void GCRDisk::NewPrefs(const Prefs * prefs)
 {
 	// 1541 emulation turned off?
 	if (!prefs->Emul1541Proc) {
-		close_d64_file();
+		close_image_file();
 
 	// 1541 emulation turned on?
 	} else if (!ThePrefs.Emul1541Proc && prefs->Emul1541Proc) {
-		open_d64_file(prefs->DrivePath[0]);
+		open_image_file(prefs->DrivePath[0]);
 
-	// .d64 file name changed?
+	// Image file name changed?
 	} else if (ThePrefs.DrivePath[0] != prefs->DrivePath[0]) {
-		close_d64_file();
-		open_d64_file(prefs->DrivePath[0]);
+		close_image_file();
+		open_image_file(prefs->DrivePath[0]);
 
 		disk_change_cycle = the_cpu->CycleCounter();
 		disk_change_seq = 3;	// Start disk change WP sensor sequence
@@ -154,21 +160,30 @@ void GCRDisk::NewPrefs(const Prefs * prefs)
 
 
 /*
- *  Open .d64 file
+ *  Check whether file with given header (64 bytes) and size looks like a GCR
+ *  disk image file
  */
 
-void GCRDisk::open_d64_file(const std::string & filepath)
+bool IsGCRImageFile(const std::string & path, const uint8_t *header, long size)
 {
-	long size;
-	uint8_t magic[4];
-	uint8_t bam[256];
+	return memcmp(header, "GCR-1541\0", 9) == 0;
+}
 
+
+/*
+ *  Open disk image file
+ */
+
+void GCRDisk::open_image_file(const std::string & filepath)
+{
 	// WP sensor open
 	write_protected = false;
 
 	// Check file type
 	int type;
-	if (!IsMountableFile(filepath, type) || type != FILE_IMAGE)
+	if (!IsMountableFile(filepath, type))
+		return;
+	if (type != FILE_IMAGE && type != FILE_GCR_IMAGE)
 		return;
 
 	// Try opening the file for reading/writing first, then for reading only
@@ -182,53 +197,33 @@ void GCRDisk::open_d64_file(const std::string & filepath)
 	if (the_file == nullptr)
 		return;
 
-	// Check length
-	fseek(the_file, 0, SEEK_END);
-	if ((size = ftell(the_file)) < NUM_SECTORS_35 * 256) {
+	// Load image file
+	bool ok = false;
+	if (type == FILE_GCR_IMAGE) {
+		ok = load_gcr_file();
+		read_only = true;	// No GCR write support for now
+	} else {
+		ok = load_image_file();
+	}
+
+	if (ok) {
+		// Set write protect status
+		write_protected = read_only;
+	} else {
 		fclose(the_file);
 		the_file = nullptr;
-		return;
 	}
-
-	// x64 image?
-	fseek(the_file, 0, SEEK_SET);
-	fread(&magic, 4, 1, the_file);
-	if (magic[0] == 0x43 && magic[1] == 0x15 && magic[2] == 0x41 && magic[3] == 0x64) {
-		image_header = 64;
-	} else {
-		image_header = 0;
-	}
-
-	// Preset error info (all sectors no error)
-	memset(error_info, 1, sizeof(error_info));
-
-	// Load sector error info from .d64 file, if present
-	if (!image_header && size == NUM_SECTORS_35 * 257) {
-		fseek(the_file, NUM_SECTORS_35 * 256, SEEK_SET);
-		fread(&error_info, NUM_SECTORS_35, 1, the_file);
-	};
-
-	// Read BAM and get ID
-	read_sector(18, 0, bam);
-	disk_id1 = bam[162];
-	disk_id2 = bam[163];
-
-	// Create GCR encoded disk data from image
-	disk2gcr();
-
-	// Set write protect status
-	write_protected = read_only;
 }
 
 
 /*
- *  Close .d64 file
+ *  Close disk image file
  */
 
-void GCRDisk::close_d64_file()
+void GCRDisk::close_image_file()
 {
 	// Deallocate GCR data
-	for (unsigned i = 0; i < NUM_HALFTRACKS; ++i) {
+	for (unsigned i = 0; i < MAX_NUM_HALFTRACKS; ++i) {
 		delete[] gcr_data[i];
 		gcr_data[i] = nullptr;
 		gcr_track_length[i] = 0;
@@ -242,6 +237,148 @@ void GCRDisk::close_d64_file()
 
 	// WP sensor open
 	write_protected = false;
+}
+
+
+/*
+ *  Load D64/x64 disk image file
+ */
+
+bool GCRDisk::load_image_file()
+{
+	bool has_error_info = false;
+
+	// Check length
+	fseek(the_file, 0, SEEK_END);
+	size_t size = ftell(the_file);
+	fseek(the_file, 0, SEEK_SET);
+
+	if (size == NUM_SECTORS_35 * 256) {
+
+		// 35-track D64
+		num_tracks = 35;
+		header_size = 0;
+
+	} else if (size == NUM_SECTORS_35 * 257) {
+
+		// 35-track D64 with error info
+		num_tracks = 35;
+		header_size = 0;
+		has_error_info = true;
+
+	} else if (size == NUM_SECTORS_40 * 256) {
+
+		// 40-track D64
+		num_tracks = 40;
+		header_size = 0;
+
+	} else if (size == NUM_SECTORS_40 * 257) {
+
+		// 40-track D64 with error info
+		num_tracks = 40;
+		header_size = 0;
+		has_error_info = true;
+
+	} else {
+
+		// Check for x64 header
+		uint8_t header[64];
+		memset(header, 0, sizeof(header));
+		fread(header, sizeof(header), 1, the_file);
+
+		if (memcmp(header, "C\x15\x41\x64\x01\x02", 6) == 0) {
+			num_tracks = header[7];
+			header_size = 64;
+
+			if (num_tracks > 40) {
+				num_tracks = 0;
+			}
+		}
+	}
+
+	if (num_tracks == 0) {
+		return false;
+	}
+
+	// Preset error info (all sectors no error)
+	memset(error_info, 1, sizeof(error_info));
+
+	// Load sector error info from D64 file, if present
+	if (has_error_info) {
+		unsigned num_sectors = (num_tracks == 40) ? NUM_SECTORS_40 : NUM_SECTORS_35;
+		fseek(the_file, num_sectors * 256, SEEK_SET);
+		fread(&error_info, num_sectors, 1, the_file);
+	};
+
+	// Read BAM and get disk ID
+	uint8_t bam[256];
+	read_sector(18, 0, bam);
+	disk_id1 = bam[162];
+	disk_id2 = bam[163];
+
+	// Create GCR encoded disk data from image
+	for (unsigned track = 1; track <= num_tracks; ++track) {
+
+		// Allocate GCR data
+		unsigned halftrack = (track - 1) * 2;
+
+		gcr_track_length[halftrack] = GCR_SECTOR_SIZE * num_sectors[track];
+		gcr_data[halftrack] = new uint8_t[gcr_track_length[halftrack]];
+
+		// Convert track
+		for (unsigned sector = 0; sector < num_sectors[track]; ++sector) {
+			sector2gcr(track, sector, gcr_data[halftrack] + GCR_SECTOR_SIZE * sector);
+		}
+	}
+
+	return true;
+}
+
+
+/*
+ *  Load G64 disk image file
+ */
+
+bool GCRDisk::load_gcr_file()
+{
+	// Read header
+	uint8_t header[12];
+	fread(header, sizeof(header), 1, the_file);
+
+	unsigned num_halftracks = header[9];
+	if (num_halftracks > MAX_NUM_HALFTRACKS)
+		return false;
+
+	num_tracks = num_halftracks / 2;
+	header_size = 0;	// Not relevant for GCR image
+
+	// Read track offset table
+	uint8_t track_offsets[MAX_NUM_HALFTRACKS * 4];
+	memset(track_offsets, 0, sizeof(track_offsets));
+	fread(track_offsets, num_halftracks * 4, 1, the_file);
+
+	// Read GCR data from file
+	for (unsigned halftrack = 0; halftrack < num_halftracks; ++halftrack) {
+		uint32_t offset = ((uint32_t) track_offsets[halftrack * 4 + 0] <<  0)
+		                | ((uint32_t) track_offsets[halftrack * 4 + 1] <<  8)
+		                | ((uint32_t) track_offsets[halftrack * 4 + 2] << 16)
+		                | ((uint32_t) track_offsets[halftrack * 4 + 3] << 24);
+
+		if (offset == 0)
+			continue;
+
+		uint8_t len[2] = { 0, 0 };
+		fseek(the_file, offset, SEEK_SET);
+		fread(len, sizeof(len), 1, the_file);
+
+		uint16_t length = len[0] | (len[1] << 8);
+
+		gcr_track_length[halftrack] = length;
+		gcr_data[halftrack] = new uint8_t[length];
+		fread(gcr_data[halftrack], length, 1, the_file);
+	}
+
+	return true;
 }
 
 
@@ -312,7 +449,7 @@ int GCRDisk::read_sector(unsigned track, unsigned sector, uint8_t *buffer)
 	if (offset < 0)
 		return ERR_ILLEGALTS;
 
-	fseek(the_file, offset + image_header, SEEK_SET);
+	fseek(the_file, offset + header_size, SEEK_SET);
 	if (fread(buffer, 1, 256, the_file) != 256) {
 		return ERR_READ22;
 	} else {
@@ -329,15 +466,15 @@ int GCRDisk::read_sector(unsigned track, unsigned sector, uint8_t *buffer)
 
 bool GCRDisk::write_sector(unsigned track, unsigned sector, const uint8_t *buffer)
 {
-	if (the_file == nullptr)
+	if (the_file == nullptr || write_protected)
 		return false;
 
-	// Convert track/sector to byte offset in file
+	// Convert track/sector to byte offset in image file
 	int offset = offset_from_ts(track, sector);
 	if (offset < 0)
 		return false;
 
-	fseek(the_file, offset + image_header, SEEK_SET);
+	fseek(the_file, offset + header_size, SEEK_SET);
 	fwrite(buffer, 1, 256, the_file);
 	return true;
 }
@@ -347,14 +484,9 @@ bool GCRDisk::write_sector(unsigned track, unsigned sector, const uint8_t *buffe
  *  Convert track/sector to offset
  */
 
-unsigned GCRDisk::secnum_from_ts(unsigned track, unsigned sector)
-{
-	return sector_offset[track] + sector;
-}
-
 int GCRDisk::offset_from_ts(unsigned track, unsigned sector)
 {
-	if ((track < 1) || (track > NUM_TRACKS) ||
+	if ((track < 1) || (track > num_tracks) ||
 		(sector < 0) || (sector >= num_sectors[track]))
 		return -1;
 
@@ -478,23 +610,6 @@ void GCRDisk::sector2gcr(unsigned track, unsigned sector, uint8_t * gcr)
 	memset(gcr, 0x55, 12);					// Gap
 }
 
-void GCRDisk::disk2gcr()
-{
-	// Convert all tracks and sectors
-	for (unsigned track = 1; track <= NUM_TRACKS; ++track) {
-
-		// Allocate GCR data
-		unsigned halftrack = (track - 1) * 2;
-
-		gcr_track_length[halftrack] = GCR_SECTOR_SIZE * num_sectors[track];
-		gcr_data[halftrack] = new uint8_t[gcr_track_length[halftrack]];
-
-		for (unsigned sector = 0; sector < num_sectors[track]; ++sector) {
-			sector2gcr(track, sector, gcr_data[halftrack] + GCR_SECTOR_SIZE * sector);
-		}
-	}
-}
-
 
 /*
  *  Set read/write bit rate
@@ -530,7 +645,7 @@ void GCRDisk::MoveHeadIn()
 {
 	if (!motor_on)	// Stepper is inhibited if spindle motor is off
 		return;
-	if (current_halftrack >= NUM_HALFTRACKS - 1)
+	if (current_halftrack >= MAX_NUM_HALFTRACKS - 1)
 		return;
 
 	++current_halftrack;
@@ -609,7 +724,7 @@ void GCRDisk::rotate_disk(uint32_t cycle_counter)
 {
 	advance_disk_change_seq(cycle_counter);
 
-	if (motor_on && disk_change_seq == 0 && the_file != nullptr && gcr_data[current_halftrack] != nullptr) {
+	if (motor_on && disk_change_seq == 0 && gcr_data[current_halftrack] != nullptr) {
 
 		uint32_t elapsed = cycle_counter - last_byte_cycle;
 		uint32_t advance = elapsed / cycles_per_byte;

@@ -755,13 +755,21 @@ void Display::PollKeyboard(uint8_t *key_matrix, uint8_t *rev_matrix, uint8_t *jo
 
 					// Turn off 1541 processor emulation and mount directory
 					the_c64->SetEmul1541Proc(false, filename);
-					ShowNotification("Directory mounted");
+					ShowNotification("Directory mounted in drive 8");
 
 				} else if (IsMountableFile(filename, type)) {
 
 					// Mount disk image file
-					the_c64->SetEmul1541Proc(ThePrefs.Emul1541Proc, filename);
-					ShowNotification("Disk image file mounted");
+					if (type == FILE_IMAGE) {
+						the_c64->SetEmul1541Proc(ThePrefs.Emul1541Proc, filename);
+						ShowNotification("Disk image file mounted in drive 8");
+					} else if (type == FILE_GCR_IMAGE) {
+						the_c64->SetEmul1541Proc(true, filename);
+						ShowNotification("Disk image file mounted in drive 8");
+					} else if (type == FILE_ARCH) {
+						the_c64->SetEmul1541Proc(false, filename);
+						ShowNotification("Archive file mounted in drive 8");
+					}
 
 				} else if (IsSnapshotFile(filename)) {
 

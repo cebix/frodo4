@@ -29,6 +29,7 @@ Changes from V4.2 to V4.3:
  - Improved sprite display
  - Improved CIA timer emulation
  - Improved 1541 emulation
+ - Added read-only support for G64 files
  - Added GeoRAM emulation
  - Added emulation of SID registers 27 and 28 (voice 3 read-back)
  - Made the MapSlash setting functional again

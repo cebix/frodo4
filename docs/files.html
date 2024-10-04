@@ -54,8 +54,8 @@ also sometimes found on the internet and on software collections; LYNX is a
 native C64 archiver. Frodo's .t64 support is a bit special in that it
 doesn't treat the .t64 file like a tape image (that's what the .t64 format
 was designed for), but rather like a disk image file. Frodo doesn't
-implement any tape drive emulation, so .t64's are not accessed with device
-number 1 but with numbers 8..11 like a disk drive.
+implement any cassette drive emulation, so .t64's are not accessed with
+device number 1 but with numbers 8..11 like a disk drive.
 
 <P>When loading the directory with <KBD>LOAD"$",8</KBD>, Frodo creates a
 listing of all files within the archive. You cannot write to .t64 or LYNX
@@ -71,8 +71,8 @@ slows down all disk accesses, the 1541 processor emulation can be turned on
 and off from the settings.
 
 <P>If the 1541 processor emulation is turned on, only drive number 8 in Disk
-Image Mode is available. The .d64/.x64 file to be used must be selected in
-the drive path field of drive 8.
+Image Mode is available. The .d64/.x64/.g64 file to be used must be selected
+in the drive path field of drive 8.
 
 </BODY>
 </HTML>
