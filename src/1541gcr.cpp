@@ -80,6 +80,7 @@ GCRDisk::GCRDisk(uint8_t *ram1541) : ram(ram1541), the_file(nullptr)
 {
 	num_tracks = 0;
 	header_size = 0;
+
 	current_halftrack = 0;
 	gcr_offset = 0;
 
@@ -122,6 +123,7 @@ GCRDisk::~GCRDisk()
 
 void GCRDisk::Reset()
 {
+	current_halftrack = 0;
 	gcr_offset = 0;
 
 	disk_change_seq = 0;
