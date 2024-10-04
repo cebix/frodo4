@@ -81,7 +81,7 @@ GCRDisk::GCRDisk(uint8_t *ram1541) : ram(ram1541), the_file(nullptr)
 	num_tracks = 0;
 	header_size = 0;
 	current_halftrack = 0;
-	gcr_offset = 1;
+	gcr_offset = 0;
 
 	disk_change_cycle = 0;
 	disk_change_seq = 0;
@@ -122,7 +122,7 @@ GCRDisk::~GCRDisk()
 
 void GCRDisk::Reset()
 {
-	gcr_offset = 1;
+	gcr_offset = 0;
 
 	disk_change_seq = 0;
 
@@ -736,14 +736,15 @@ void GCRDisk::rotate_disk(uint32_t cycle_counter)
 			while (gcr_offset >= track_length) {
 				gcr_offset -= track_length;
 			}
-			if (gcr_offset == 0) {	// Always keep >0 so we can access one previous byte for sync detection
-				gcr_offset = 1;
-			}
 
 			const uint8_t * p = gcr_data[current_halftrack] + gcr_offset;
 
 			// Sync = ten "1" bits
-			on_sync = ((p[-1] & 0x03) == 0x03) && (p[0] == 0xff);
+			if (gcr_offset != 0) {
+				on_sync = ((p[-1] & 0x03) == 0x03) && (p[0] == 0xff);
+			} else {
+				on_sync = ((gcr_data[current_halftrack][track_length - 1] & 0x03) == 0x03) && (p[0] == 0xff);
+			}
 
 			// Byte is ready if not on sync
 			if (! on_sync) {
