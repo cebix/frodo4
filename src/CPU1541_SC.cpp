@@ -307,7 +307,7 @@ uint8_t MOS6502_1541::read_byte(uint16_t adr)
 			}
 			case 1:		// Port A
 			case 15:	// Port A (no handshake)
-				via1->SetPAIn(0xff);	// Keep 1541C ROMs happy (track 0 sensor)
+				via1->SetPAIn(0xff);
 				break;
 		}
 		return via1->ReadRegister(adr);
