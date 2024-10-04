@@ -172,6 +172,10 @@ void MOS6502_1541::GetState(MOS6502State *s) const
 	s->irq_delay = 0;
 
 	s->instruction_complete = true;
+	s->state = 0;
+	s->op = 0;
+	s->ar = s->ar2 = 0;
+	s->rdbuf = 0;
 
 	s->idle = Idle;
 

@@ -184,6 +184,11 @@ void MOS6502_1541::GetState(MOS6502State *s) const
 	s->irq_delay = irq_delay;
 
 	s->instruction_complete = (state == O_FETCH);
+	s->state = state;
+	s->op = op;
+	s->ar = ar;
+	s->ar2 = ar2;
+	s->rdbuf = rdbuf;
 
 	s->idle = Idle;
 
@@ -220,9 +225,11 @@ void MOS6502_1541::SetState(const MOS6502State *s)
 	irq_pending = s->irq_pending;
 	irq_delay = s->irq_delay;
 
-	if (s->instruction_complete) {
-		state = O_FETCH;
-	}
+	state = s->state;
+	op = s->op;
+	ar = s->ar;
+	ar2 = s->ar2;
+	rdbuf = s->rdbuf;
 
 	Idle = s->idle;
 

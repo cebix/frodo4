@@ -170,6 +170,10 @@ void MOS6510::GetState(MOS6510State *s) const
 	s->dfff_byte = dfff_byte;
 
 	s->instruction_complete = true;
+	s->state = 0;
+	s->op = 0;
+	s->ar = s->ar2 = 0;
+	s->rdbuf = 0;
 }
 
 

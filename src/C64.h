@@ -86,7 +86,7 @@ public:
 	void NewPrefs(const Prefs *prefs);
 	void SetEmul1541Proc(bool on, const char * path = nullptr);
 
-	void MakeSnapshot(Snapshot * s);
+	void MakeSnapshot(Snapshot * s, bool instruction_boundary = false);
 	void RestoreSnapshot(const Snapshot * s);
 	bool SaveSnapshot(const std::string & filename, std::string & ret_error_msg);
 	bool LoadSnapshot(const std::string & filename, Prefs * prefs, std::string & ret_error_msg);

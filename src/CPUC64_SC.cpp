@@ -176,6 +176,11 @@ void MOS6510::GetState(MOS6510State *s) const
 	s->dfff_byte = 0x55;
 
 	s->instruction_complete = (state == O_FETCH);
+	s->state = state;
+	s->op = op;
+	s->ar = ar;
+	s->ar2 = ar2;
+	s->rdbuf = rdbuf;
 }
 
 
@@ -215,9 +220,11 @@ void MOS6510::SetState(const MOS6510State *s)
 	nmi_pending = s->nmi_pending;
 	nmi_delay = s->nmi_delay;
 
-	if (s->instruction_complete) {
-		state = O_FETCH;
-	}
+	state = s->state;
+	op = s->op;
+	ar = s->ar;
+	ar2 = s->ar2;
+	rdbuf = s->rdbuf;
 }
 
 

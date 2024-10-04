@@ -947,13 +947,9 @@ uint8_t C64::poll_joystick(int port)
 
 /*
  *  Save state to snapshot (emulation must be in VBlank)
- *
- *  To be able to use SC snapshots with SL, the state of the SC C64 and 1541
- *  CPUs are not saved in the middle of an instruction. Instead the state is
- *  advanced cycle by cycle until the current instruction has finished.
  */
 
-void C64::MakeSnapshot(Snapshot * s)
+void C64::MakeSnapshot(Snapshot * s, bool instruction_boundary)
 {
 	memset(s, 0, sizeof(*s));
 
@@ -967,7 +963,7 @@ void C64::MakeSnapshot(Snapshot * s)
 	while (true) {
 		TheCPU->GetState(&(s->cpu));
 
-		if (s->cpu.instruction_complete)
+		if (s->cpu.instruction_complete || !instruction_boundary)
 			break;
 
 		// Advance C64 state by one cycle
@@ -996,7 +992,7 @@ void C64::MakeSnapshot(Snapshot * s)
 		while (true) {
 			TheCPU1541->GetState(&(s->driveCPU));
 
-			if (s->driveCPU.idle || s->driveCPU.instruction_complete)
+			if (s->driveCPU.idle || s->driveCPU.instruction_complete || !instruction_boundary)
 				break;
 
 			// Advance 1541 state by one cycle
@@ -1056,8 +1052,11 @@ bool C64::SaveSnapshot(const std::string & filename, std::string & ret_error_msg
 		return false;
 	}
 
+	// To be able to use SC snapshots with SL, the state of the SC C64 and 1541
+	// CPUs are not saved in the middle of an instruction. Instead the state is
+	// advanced cycle by cycle until the current instruction has finished.
 	auto s = std::make_unique<Snapshot>();
-	MakeSnapshot(s.get());
+	MakeSnapshot(s.get(), true);
 
 	// TODO: Endianess and alignment should be taken care of
 	// to make snapshot files portable

@@ -183,6 +183,9 @@ struct MOS6510State {
 	uint8_t dfff_byte;
 								// Frodo SC:
 	bool instruction_complete;
+	uint8_t state, op;
+	uint16_t ar, ar2;
+	uint8_t rdbuf;
 
 	bool irq_pending;
 	uint8_t irq_delay;
