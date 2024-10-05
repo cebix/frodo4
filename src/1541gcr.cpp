@@ -123,7 +123,7 @@ GCRDisk::~GCRDisk()
 
 void GCRDisk::Reset()
 {
-	current_halftrack = 0;
+	current_halftrack = 2 * (18 - 1);	// Track 18
 	gcr_offset = 0;
 
 	disk_change_seq = 0;
