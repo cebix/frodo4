@@ -141,7 +141,7 @@ C64::C64() : quit_requested(false), prefs_editor_requested(false), load_snapshot
 	TheIEC = new IEC(this);
 
 	TheCart = new NoCartridge;
-	swap_cartridge(REU_NONE, ThePrefs.REUType);
+	swap_cartridge(REU_NONE, "", ThePrefs.REUType, ThePrefs.CartridgePath);
 
 	TheCPU->SetChips(TheVIC, TheSID, TheCIA1, TheCIA2, TheCart, TheIEC);
 
@@ -374,7 +374,7 @@ void C64::NewPrefs(const Prefs *prefs)
 
 	TheSID->NewPrefs(prefs);
 
-	swap_cartridge(ThePrefs.REUType, prefs->REUType);
+	swap_cartridge(ThePrefs.REUType, ThePrefs.CartridgePath, prefs->REUType, prefs->CartridgePath);
 	TheCPU->SetChips(TheVIC, TheSID, TheCIA1, TheCIA2, TheCart, TheIEC);
 
 	// Reset 1541 processor if turned on or off (to bring IEC lines back to sane state)
@@ -390,13 +390,29 @@ void C64::NewPrefs(const Prefs *prefs)
  *  Turn 1541 processor emulation on or off, and optionally set the drive path.
  */
 
-void C64::SetEmul1541Proc(bool on, const char * path)
+void C64::MountDrive8(bool emul_1541_proc, const char * path)
 {
 	auto prefs = std::make_unique<Prefs>(ThePrefs);
 	if (path != nullptr) {
 		prefs->DrivePath[0] = path;
 	}
-	prefs->Emul1541Proc = on;
+	prefs->Emul1541Proc = emul_1541_proc;
+	NewPrefs(prefs.get());
+	ThePrefs = *prefs;
+}
+
+
+/*
+ *  Insert cartridge
+ */
+
+void C64::InsertCartridge(const std::string & path)
+{
+	auto prefs = std::make_unique<Prefs>(ThePrefs);
+	prefs->CartridgePath = path;
+	if (! path.empty()) {
+		prefs->REUType = REU_NONE;	// Cartridge overrides REU
+	}
 	NewPrefs(prefs.get());
 	ThePrefs = *prefs;
 }
@@ -468,20 +484,45 @@ void C64::patch_kernal(bool fast_reset, bool emul_1541_proc)
  *  Change attached cartridge according to old and new preferences
  */
 
-void C64::swap_cartridge(int oldreu, int newreu)
+void C64::swap_cartridge(int oldreu, const std::string & oldpath, int newreu, const std::string & newpath)
 {
-	if (oldreu == newreu)
+	if (oldreu == newreu && oldpath == newpath)
 		return;
 
-	// Attach new cartridge
-	delete TheCart;
+	Cartridge * new_cart = nullptr;
 
+	// Create new cartridge object
 	if (newreu == REU_NONE) {
-		TheCart = new NoCartridge;
+
+		if (! newpath.empty()) {
+			std::string error;
+			new_cart = Cartridge::FromFile(newpath, error);
+
+			if (new_cart) {
+				ShowNotification("Cartridge inserted");
+				Reset();					// Reset C64 if new cartridge inserted
+			} else {
+				ShowNotification(error);	// Keep old cartridge on error
+			}
+
+		} else {
+
+			new_cart = new NoCartridge;
+			if (oldreu == REU_NONE) {
+				ShowNotification("Cartridge removed");
+			}
+		}
+
 	} else if (newreu == REU_GEORAM) {
-		TheCart = new GeoRAM;
+		new_cart = new GeoRAM;
 	} else {
-		TheCart = new REU(TheCPU, newreu);
+		new_cart = new REU(TheCPU, newreu);
+	}
+
+	// Swap cartridge object if successful
+	if (new_cart) {
+		delete TheCart;
+		TheCart = new_cart;
 	}
 }
 

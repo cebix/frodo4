@@ -84,7 +84,8 @@ public:
 	uint32_t CycleCounter() const { return cycle_counter; }
 
 	void NewPrefs(const Prefs *prefs);
-	void SetEmul1541Proc(bool on, const char * path = nullptr);
+	void MountDrive8(bool emul_1541_proc, const char * path = nullptr);
+	void InsertCartridge(const std::string & path);
 
 	void MakeSnapshot(Snapshot * s, bool instruction_boundary = false);
 	void RestoreSnapshot(const Snapshot * s);
@@ -145,7 +146,7 @@ private:
 	void emulate_1541_cycle();
 #endif
 
-	void swap_cartridge(int oldreu, int newreu);
+	void swap_cartridge(int oldreu, const std::string & oldcart, int newreu, const std::string & newcart);
 
 	void open_close_joystick(int port, int oldjoy, int newjoy);
 	void open_close_joysticks(int oldjoy1, int oldjoy2, int newjoy1, int newjoy2);

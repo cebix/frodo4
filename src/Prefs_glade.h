@@ -366,6 +366,7 @@ static void set_values()
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "fast_reset")), prefs->FastReset);
 
 	gtk_combo_box_set_active(GTK_COMBO_BOX(gtk_builder_get_object(builder, "reu_type")), prefs->REUType);
+	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "cartridge_path")), prefs->CartridgePath.c_str());
 
 	if (! IsFrodoSC) {
 		gtk_spin_button_set_value(GTK_SPIN_BUTTON(gtk_builder_get_object(builder, "normal_cycles")), prefs->NormalCycles);
@@ -386,11 +387,12 @@ static void set_values()
 
 static void get_drive_path(int num, const char *widget_name)
 {
-	prefs->DrivePath[num].clear();
 	gchar *path = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, widget_name)));
 	if (path) {
 		prefs->DrivePath[num] = path;
 		g_free(path);
+	} else {
+		prefs->DrivePath[num].clear();
 	}
 }
 
@@ -423,6 +425,13 @@ static void get_values()
 	prefs->FastReset = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "fast_reset")));
 
 	prefs->REUType = gtk_combo_box_get_active(GTK_COMBO_BOX(gtk_builder_get_object(builder, "reu_type")));
+	gchar *path = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "cartridge_path")));
+	if (path) {
+		prefs->CartridgePath = path;
+		g_free(path);
+	} else {
+		prefs->CartridgePath.clear();
+	}
 
 	if (! IsFrodoSC) {
 		prefs->NormalCycles = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(gtk_builder_get_object(builder, "normal_cycles")));
@@ -462,6 +471,8 @@ static void ghost_widgets()
 	ghost_widget("sid_filters", prefs->SIDType != SIDTYPE_DIGITAL_6581 && prefs->SIDType != SIDTYPE_DIGITAL_8580);
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "sid_filters")),
 	                             (prefs->SIDType == SIDTYPE_DIGITAL_6581 || prefs->SIDType == SIDTYPE_DIGITAL_8580) ? prefs->SIDFilters : (prefs->SIDType == SIDTYPE_SIDCARD ? true : false));
+
+	ghost_widget("cartridge_path", prefs->REUType != REU_NONE);
 }
 
 
@@ -810,6 +821,17 @@ extern "C" void on_sid_type_changed(GtkComboBox *box, gpointer user_data)
 extern "C" void on_sid_filters_toggled(GtkToggleButton *button, gpointer user_data)
 {
 	prefs->SIDFilters = gtk_toggle_button_get_active(button);
+}
+
+extern "C" void on_reu_type_changed(GtkComboBox *box, gpointer user_data)
+{
+	prefs->REUType = gtk_combo_box_get_active(box);
+	ghost_widgets();
+}
+
+extern "C" void on_cartridge_eject_clicked(GtkButton *button, gpointer user_data)
+{
+	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "cartridge_path")), "");
 }
 
 extern "C" gboolean on_prefs_win_delete_event(GtkWidget *widget, GdkEvent *event, gpointer user_data)

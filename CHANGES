@@ -24,12 +24,13 @@ Changes from V4.2 to V4.3:
  - SAM is now started from the "Tools" menu in the settings window instead
    of by pressing F9
  - Enabled drag-and-drop of files and folders onto the emulator window to
-   mount disk image files and directories, load snapshot files, or load
-   BASIC program files
+   mount disk image files and directories, mount cartridge files, load
+   snapshot files, or load BASIC program files
  - Improved sprite display
  - Improved CIA timer emulation
  - Improved 1541 emulation
  - Added read-only support for G64 files
+ - Added support for 8K and 16K game cartridges
  - Added GeoRAM emulation
  - Added emulation of SID registers 27 and 28 (voice 3 read-back)
  - Made the MapSlash setting functional again

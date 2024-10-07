@@ -130,6 +130,10 @@ struct GCRDiskState {
 };
 
 
+/*
+ *  Functions
+ */
+
 // Check whether file with given header (64 bytes) and size looks like a GCR
 // disk image file
 extern bool IsGCRImageFile(const std::string & path, const uint8_t *header, long size);

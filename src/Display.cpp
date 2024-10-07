@@ -22,6 +22,7 @@
 
 #include "Display.h"
 #include "C64.h"
+#include "Cartridge.h"
 #include "IEC.h"
 #include "Prefs.h"
 #include "Version.h"
@@ -754,20 +755,20 @@ void Display::PollKeyboard(uint8_t *key_matrix, uint8_t *rev_matrix, uint8_t *jo
 				if (fs::is_directory(filename)) {
 
 					// Turn off 1541 processor emulation and mount directory
-					the_c64->SetEmul1541Proc(false, filename);
+					the_c64->MountDrive8(false, filename);
 					ShowNotification("Directory mounted in drive 8");
 
 				} else if (IsMountableFile(filename, type)) {
 
 					// Mount disk image file
 					if (type == FILE_IMAGE) {
-						the_c64->SetEmul1541Proc(ThePrefs.Emul1541Proc, filename);
+						the_c64->MountDrive8(ThePrefs.Emul1541Proc, filename);
 						ShowNotification("Disk image file mounted in drive 8");
 					} else if (type == FILE_GCR_IMAGE) {
-						the_c64->SetEmul1541Proc(true, filename);
+						the_c64->MountDrive8(true, filename);
 						ShowNotification("Disk image file mounted in drive 8");
 					} else if (type == FILE_ARCH) {
-						the_c64->SetEmul1541Proc(false, filename);
+						the_c64->MountDrive8(false, filename);
 						ShowNotification("Archive file mounted in drive 8");
 					}
 
@@ -775,6 +776,11 @@ void Display::PollKeyboard(uint8_t *key_matrix, uint8_t *rev_matrix, uint8_t *jo
 
 					// Load snapshot
 					the_c64->RequestLoadSnapshot(filename);
+
+				} else if (IsCartridgeFile(filename)) {
+
+					// Insert cartridge
+					the_c64->InsertCartridge(filename);
 
 				} else if (IsBASICProgram(filename)) {
 

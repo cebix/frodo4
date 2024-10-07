@@ -25,6 +25,11 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
   <!-- interface-name Frodo -->
   <!-- interface-description A free, portable Commodore 64 emulator -->
   <!-- interface-copyright Copyright \302\251 Christian Bauer et al. -->
+  <object class="GtkFileFilter" id="C64 Cartridge Files (*.crt)">
+    <patterns>
+      <pattern>*.crt</pattern>
+    </patterns>
+  </object>
   <object class="GtkAboutDialog" id="about_win">
     <property name="can-focus">False</property>
     <property name="window-position">center-on-parent</property>
@@ -1148,26 +1153,29 @@ Lutz Vieweg</property>
                         <property name="bottom-padding">4</property>
                         <property name="left-padding">12</property>
                         <child>
-                          <object class="GtkBox">
+                          <!-- n-columns=3 n-rows=2 -->
+                          <object class="GtkGrid">
                             <property name="visible">True</property>
                             <property name="can-focus">False</property>
-                            <property name="spacing">4</property>
+                            <property name="row-spacing">4</property>
+                            <property name="column-spacing">4</property>
                             <child>
                               <object class="GtkLabel">
                                 <property name="visible">True</property>
                                 <property name="can-focus">False</property>
-                                <property name="label" translatable="yes">Type:</property>
+                                <property name="halign">start</property>
+                                <property name="label" translatable="yes">Memory Expansion:</property>
                               </object>
                               <packing>
-                                <property name="expand">False</property>
-                                <property name="fill">True</property>
-                                <property name="position">0</property>
+                                <property name="left-attach">0</property>
+                                <property name="top-attach">0</property>
                               </packing>
                             </child>
                             <child>
                               <object class="GtkComboBoxText" id="reu_type">
                                 <property name="visible">True</property>
                                 <property name="can-focus">False</property>
+                                <property name="halign">start</property>
                                 <property name="active">0</property>
                                 <items>
                                   <item id="0" translatable="yes">Off</item>
@@ -1176,12 +1184,53 @@ Lutz Vieweg</property>
                                   <item id="3" translatable="yes">Commodore 1750 REU (512K)</item>
                                   <item translatable="yes">GeoRAM (512K)</item>
                                 </items>
+                                <signal name="changed" handler="on_reu_type_changed" swapped="no"/>
                               </object>
                               <packing>
-                                <property name="expand">False</property>
-                                <property name="fill">True</property>
-                                <property name="position">1</property>
+                                <property name="left-attach">1</property>
+                                <property name="top-attach">0</property>
                               </packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="visible">True</property>
+                                <property name="can-focus">False</property>
+                                <property name="halign">start</property>
+                                <property name="label" translatable="yes">Cartridge:</property>
+                              </object>
+                              <packing>
+                                <property name="left-attach">0</property>
+                                <property name="top-attach">1</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkFileChooserButton" id="cartridge_path">
+                                <property name="visible">True</property>
+                                <property name="can-focus">False</property>
+                                <property name="filter">C64 Cartridge Files (*.crt)</property>
+                                <property name="title" translatable="yes"/>
+                              </object>
+                              <packing>
+                                <property name="left-attach">1</property>
+                                <property name="top-attach">1</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkButton" id="cartridge_eject">
+                                <property name="label" translatable="yes">Eject</property>
+                                <property name="visible">True</property>
+                                <property name="can-focus">True</property>
+                                <property name="receives-default">True</property>
+                                <property name="halign">end</property>
+                                <signal name="clicked" handler="on_cartridge_eject_clicked" swapped="no"/>
+                              </object>
+                              <packing>
+                                <property name="left-attach">2</property>
+                                <property name="top-attach">1</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <placeholder/>
                             </child>
                           </object>
                         </child>
@@ -1191,7 +1240,7 @@ Lutz Vieweg</property>
                       <object class="GtkLabel">
                         <property name="visible">True</property>
                         <property name="can-focus">False</property>
-                        <property name="label" translatable="yes">Memory Expansion:</property>
+                        <property name="label" translatable="yes">Expansion Slot:</property>
                       </object>
                     </child>
                   </object>

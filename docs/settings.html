@@ -145,16 +145,27 @@ joysticks” and continue to use your already assigned controller.
 speed of the emulation at 100% of that of an original C64. This is usually
 what you want when playing games.
 
-<P>With the setting <B>“Fast Reset”</B> you can disable the memory test
-which the C64 normally performs on a reset, and which takes about three
-seconds. Under emulation, the memory test is not necessary and resetting the
-C64 (F12 key) gets much faster when it is disabled.
+<P>With the setting <B>“Fast Reset”</B> you can bypass the memory test which
+the C64 normally performs on a reset, and which takes about three seconds to
+complete. Under emulation, this test is not necessary and resetting the C64
+(F12 key) gets much faster when it is bypassed.
 
-<P><B>“Memory Expansion Type”</B> sets the size of the RAM expansion module
-emulated by Frodo or turns the emulation off (“None”). Very few C64 software
-actually uses a RAM expansion (operating systems like ACE and GEOS, some
-disk copy utilities, and the port of the “Sonic the Hedgehog” game), so you
-can usually leave this at the <EM>“None”</EM> setting.
+<P>The “Expansion Slot” group allows you to attach various devices to the
+expansion slot of the emulated C64. Under <B>“Memory Expansion”</B> you can
+set the type and size of a RAM expansion module emulated by Frodo, or turn
+the emulation off (<EM>“None”</EM>). Very few C64 software actually uses a
+RAM expansion (operating systems like ACE and GEOS, some disk copy
+utilities, and the port of the “Sonic the Hedgehog” game, for example), so
+you can usually leave this at the <EM>“None”</EM> setting.
+
+<P>If the “Memory Expansion” is set to <EM>“None”</EM>, you can use the
+<B>“Cartridge” file selection button</B> to choose a .crt cartridge image
+file to attach to the C64. At the moment, Frodo only supports simple 8K and
+16K game cartridges (that means no Ultimax, Action Replay, or other funny
+things). When attaching a new cartridge, Frodo will reset the C64 to allow
+the cartridge software to start properly. Click on the <B>“Eject” button</B>
+to remove the cartridge from the emulated C64 and return it to normal
+operation, ready to load disk-based games again.
 
 
 <H2>Advanced</H2>
@@ -184,6 +195,7 @@ hang in an endless interrupt loop because they use an unusual technique to
 acknowledge CIA interrupts (sometimes by accident, it appears...). It should
 normally be turned off.
 
+
 <H2>Menus and Other Buttons</H2>
 
 <P>Clicking <B>“Start”/“Continue”</B> or selecting the respective command
@@ -201,7 +213,7 @@ snapshot...”</B> command in the “File” menu to save the current state of t
 emulated C64 to a file which you can then restore later using the <B>“Load
 Snapshot...”</B> command.
 
-<P><EM>Note: The format of snapshot files is expected to change in future
+<P><EM>Warning: The format of snapshot files is expected to change in future
 versions of Frodo, so don't get too attached to your saved snapshots.</EM>
 
 <P>The <B>“SAM Monitor...”</B> command in the “Tools” menu starts the <A

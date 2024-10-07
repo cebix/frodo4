@@ -99,6 +99,8 @@ public:
 	std::string KernalROMPath;	// Path for Kernal ROM
 	std::string CharROMPath;	// Path for Char ROM
 	std::string DriveROMPath;	// Path for Drive ROM
+
+	std::string CartridgePath;	// Path for cartridge image file
 };
 
 

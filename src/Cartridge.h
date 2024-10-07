@@ -23,12 +23,16 @@
 
 #include "sysdeps.h"
 
+#include <string>
+
 
 // Base class for cartridges
 class Cartridge {
 public:
 	Cartridge() { }
 	virtual ~Cartridge() { }
+
+	static Cartridge * FromFile(const std::string & path, std::string & ret_error_msg);
 
 	virtual void Reset() { }
 
@@ -72,6 +76,8 @@ public:
 	ROMCartridge(unsigned rom_size);
 	~ROMCartridge();
 
+	uint8_t * ROM() const { return rom; }
+
 protected:
 	uint8_t * rom = nullptr;	// Pointer to ROM contents
 };
@@ -94,6 +100,14 @@ public:
 	uint8_t ReadROML(uint16_t adr, uint8_t ram_byte, bool notLoram) override;
 	uint8_t ReadROMH(uint16_t adr, uint8_t ram_byte, uint8_t basic_byte, bool notLoram, bool notHiram) override;
 };
+
+
+/*
+ *  Functions
+ */
+
+// Check whether file is a cartridge image file
+extern bool IsCartridgeFile(const std::string & path);
 
 
 #endif // ndef CARTRIDGE_H
