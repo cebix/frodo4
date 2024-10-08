@@ -83,6 +83,7 @@ protected:
 		bool pb_toggle;			// Timer output to PB toggle state
 
 #ifdef FRODO_SC
+		bool idle;				// Flag: Timer idle
 		bool output;			// Timer output state
 		uint8_t count_delay;	// Delay line for counter input
 		uint8_t load_delay;		// Delay line for counter load
@@ -374,6 +375,7 @@ inline void MOS6526::write_register(uint8_t reg, uint8_t byte)
 			if (!(cra & 1)) {			// Timer stopped?
 #ifdef FRODO_SC
 				ta.load_delay |= 1;		// Load timer in two cycles
+				ta.idle = false;
 #else
 				ta.counter = ta.latch;	// Load timer immediately
 #endif
@@ -397,6 +399,7 @@ inline void MOS6526::write_register(uint8_t reg, uint8_t byte)
 			if (!(crb & 1)) {			// Timer stopped?
 #ifdef FRODO_SC
 				tb.load_delay |= 1;		// Load timer in two cycles
+				tb.idle = false;
 #else
 				tb.counter = tb.latch;	// Load timer immediately
 #endif
@@ -516,6 +519,7 @@ inline void MOS6526::write_register(uint8_t reg, uint8_t byte)
 			if ((cra & 0x40) == 0) {	// Serial port in input mode?
 				sdr_shift_counter = 0;
 			}
+			ta.idle = false;
 #endif
 			break;
 
@@ -532,6 +536,9 @@ inline void MOS6526::write_register(uint8_t reg, uint8_t byte)
 				tb.counter = tb.latch;	// Load timer immediately
 #endif
 			}
+#ifdef FRODO_SC
+			tb.idle = false;
+#endif
 			break;
 	}
 }

@@ -63,6 +63,7 @@ void MOS6526::Reset()
 	ta.counter       = tb.counter       = 0xffff;
 	ta.latch         = tb.latch         = 1;
 	ta.pb_toggle     = tb.pb_toggle     = false;
+	ta.idle          = tb.idle          = false;
 	ta.output        = tb.output        = false;
 	ta.count_delay   = tb.count_delay   = 0;
 	ta.load_delay    = tb.load_delay    = 0;
@@ -218,6 +219,8 @@ void MOS6526::SetState(const MOS6526State * s)
 	tb.load_delay = s->tb_load_delay;
 	ta.oneshot_delay = s->ta_oneshot_delay;
 	tb.oneshot_delay = s->tb_oneshot_delay;
+	ta.idle = false;
+	tb.idle = false;
 
 	sdr_shift_counter = s->sdr_shift_counter;
 	set_ir_delay = s->set_ir_delay;
@@ -432,51 +435,73 @@ void MOS6526::emulate_timer(Timer & t, uint8_t & cr, bool input)
 
 void MOS6526::EmulateCycle()
 {
-	// Shift delay lines
-	ta.count_delay <<= 1;
-	ta.load_delay <<= 1;
-	ta.oneshot_delay <<= 1;
+	if (! ta.idle) {
 
-	tb.count_delay <<= 1;
-	tb.load_delay <<= 1;
-	tb.oneshot_delay <<= 1;
+		// Shift timer A delay lines
+		ta.count_delay <<= 1;
+		ta.load_delay <<= 1;
+		ta.oneshot_delay <<= 1;
 
-	// Emulate timer A
-	bool ta_input = (cra & 0x20) == 0;	// Count Phi2
-	emulate_timer(ta, cra, ta_input);
+		// Emulate timer A
+		bool ta_input = (cra & 0x20) == 0;	// Count Phi2
+		emulate_timer(ta, cra, ta_input);
 
-	if (ta.output) {
-		set_int_flag(1);
+		if (ta.output) {
+			set_int_flag(1);
 
-		if (cra & 0x40) {	// Serial port in output mode?
-			if (sdr_shift_counter > 0) {
-				--sdr_shift_counter;
-				if (sdr_shift_counter == 0) {
-					set_int_flag(8);
+			if (cra & 0x40) {	// Serial port in output mode?
+				if (sdr_shift_counter > 0) {
+					--sdr_shift_counter;
+					if (sdr_shift_counter == 0) {
+						set_int_flag(8);
+					}
 				}
 			}
+
+			// Wake up timer B if counting timer A
+			if (crb & 0x40) {
+				tb.idle = false;
+			}
+		}
+
+		// Timer A now idle?
+		if ((ta.count_delay | ta.load_delay) == 0) {
+			ta.idle = true;
 		}
 	}
 
-	// Emulate timer B
-	bool tb_input;
-	switch (crb & 0x60) {
-		case 0x00:	// Count Phi2
-			tb_input = true;
-			break;
-		case 0x20:	// Count CNT (nothing connected)
-			tb_input = false;
-			break;
-		case 0x40:	// Count TA, without or with CNT
-		case 0x60:
-			tb_input = ta.output;
-			break;
-	}
-	emulate_timer(tb, crb, tb_input);
+	if (! tb.idle) {
 
-	if (tb.output) {
-		if ((clear_ir_delay & 1) == 0) {	// Timer B does not raise interrupt if ICR was read in previous cycle (HW bug)
-			set_int_flag(2);
+		// Shift timer B delay lines
+		tb.count_delay <<= 1;
+		tb.load_delay <<= 1;
+		tb.oneshot_delay <<= 1;
+
+		// Emulate timer B
+		bool tb_input;
+		switch (crb & 0x60) {
+			case 0x00:	// Count Phi2
+				tb_input = true;
+				break;
+			case 0x20:	// Count CNT (nothing connected)
+				tb_input = false;
+				break;
+			case 0x40:	// Count TA, without or with CNT
+			case 0x60:
+				tb_input = ta.output;
+				break;
+		}
+		emulate_timer(tb, crb, tb_input);
+
+		if (tb.output) {
+			if ((clear_ir_delay & 1) == 0) {	// Timer B does not raise interrupt if ICR was read in previous cycle (HW bug)
+				set_int_flag(2);
+			}
+		}
+
+		// Timer B now idle?
+		if ((tb.count_delay | tb.load_delay) == 0) {
+			tb.idle = true;
 		}
 	}
 
