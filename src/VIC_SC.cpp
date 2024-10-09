@@ -410,84 +410,104 @@ inline void MOS6569::check_raster_irq()
 
 uint8_t MOS6569::ReadRegister(uint16_t adr)
 {
+	uint8_t ret;
+
 	switch (adr) {
 		case 0x00: case 0x02: case 0x04: case 0x06:
 		case 0x08: case 0x0a: case 0x0c: case 0x0e:
-			return mx[adr >> 1];
+			ret = mx[adr >> 1];
+			break;
 
 		case 0x01: case 0x03: case 0x05: case 0x07:
 		case 0x09: case 0x0b: case 0x0d: case 0x0f:
-			return my[adr >> 1];
+			ret = my[adr >> 1];
+			break;
 
 		case 0x10:	// Sprite X position MSB
-			return mx8;
+			ret = mx8;
+			break;
 
 		case 0x11:	// Control register 1
-			return (ctrl1 & 0x7f) | ((raster_y & 0x100) >> 1);
+			ret = (ctrl1 & 0x7f) | ((raster_y & 0x100) >> 1);
+			break;
 
 		case 0x12:	// Raster counter
-			return raster_y;
+			ret = raster_y;
+			break;
 
 		case 0x13:	// Light pen X
-			return lpx;
+			ret = lpx;
+			break;
 
 		case 0x14:	// Light pen Y
-			return lpy;
+			ret = lpy;
+			break;
 
 		case 0x15:	// Sprite enable
-			return me;
+			ret = me;
+			break;
 
 		case 0x16:	// Control register 2
-			return ctrl2 | 0xc0;
+			ret = ctrl2 | 0xc0;
+			break;
 
 		case 0x17:	// Sprite Y expansion
-			return mye;
+			ret = mye;
+			break;
 
 		case 0x18:	// Memory pointers
-			return vbase | 0x01;
+			ret = vbase | 0x01;
+			break;
 
 		case 0x19:	// IRQ flags
-			return irq_flag | 0x70;
+			ret = irq_flag | 0x70;
+			break;
 
 		case 0x1a:	// IRQ mask
-			return irq_mask | 0xf0;
+			ret = irq_mask | 0xf0;
+			break;
 
 		case 0x1b:	// Sprite data priority
-			return mdp;
+			ret = mdp;
+			break;
 
 		case 0x1c:	// Sprite multicolor
-			return mmc;
+			ret = mmc;
+			break;
 
 		case 0x1d:	// Sprite X expansion
-			return mxe;
+			ret = mxe;
+			break;
 
-		case 0x1e:{	// Sprite-sprite collision
-			uint8_t ret = clx_spr;
+		case 0x1e:	// Sprite-sprite collision
+			ret = clx_spr;
 			clx_spr = 0;	// Read and clear
-			return ret;
-		}
+			break;
 
-		case 0x1f:{	// Sprite-background collision
-			uint8_t ret = clx_bgr;
+		case 0x1f:	// Sprite-background collision
+			ret = clx_bgr;
 			clx_bgr = 0;	// Read and clear
-			return ret;
-		}
+			break;
 
-		case 0x20: return ec | 0xf0;
-		case 0x21: return b0c | 0xf0;
-		case 0x22: return b1c | 0xf0;
-		case 0x23: return b2c | 0xf0;
-		case 0x24: return b3c | 0xf0;
-		case 0x25: return mm0 | 0xf0;
-		case 0x26: return mm1 | 0xf0;
+		case 0x20: ret = ec  | 0xf0; break;
+		case 0x21: ret = b0c | 0xf0; break;
+		case 0x22: ret = b1c | 0xf0; break;
+		case 0x23: ret = b2c | 0xf0; break;
+		case 0x24: ret = b3c | 0xf0; break;
+		case 0x25: ret = mm0 | 0xf0; break;
+		case 0x26: ret = mm1 | 0xf0; break;
 
 		case 0x27: case 0x28: case 0x29: case 0x2a:
 		case 0x2b: case 0x2c: case 0x2d: case 0x2e:
-			return sc[adr - 0x27] | 0xf0;
+			ret = sc[adr - 0x27] | 0xf0;
+			break;
 
 		default:
-			return 0xff;
+			ret = 0xff;
+			break;
 	}
+
+	return ret;
 }
 
 
@@ -1386,13 +1406,17 @@ inline void MOS6569::draw_sprites()
 #define SprDataAccess(num, bytenum) \
 	if (spr_dma_on & (1 << num)) { \
 		if (aec_delay && (bytenum == 0 || bytenum == 2)) { \
-			spr_data[num][bytenum] = 0xff; \
+			spr_data[num][bytenum] = 0xff; /* TODO: or byte which CPU is reading from/writing to VIC register right now */ \
 		} else { \
 			spr_data[num][bytenum] = read_byte(mc[num] | spr_ptr[num]); \
 		} \
 		mc[num] = (mc[num] + 1) & 0x3f; \
-	} else if (bytenum == 1) { \
-		IdleAccess; \
+	} else { \
+		if (bytenum == 1) { \
+			spr_data[num][bytenum] = read_byte(0x3fff); \
+		} else { \
+			spr_data[num][bytenum] = 0xff; /* TODO: or byte which CPU is reading from/writing to VIC register right now */ \
+		} \
 	}
 
 // Sample border color for deferred drawing at end of line
@@ -1423,7 +1447,16 @@ unsigned MOS6569::EmulateCycle()
 			unsigned mask = 1 << i;
 			SprLatch * latch = &spr_latch[i];
 
-			if (!latch->disp_on && (spr_disp_on & mask) && (mx[i] & 0x1f8) == cx) {
+			unsigned sx = mx[i];
+			if (sx >= 0x1f8) {
+				continue;	// Sprite invisible
+			} else if (sx >= 0x1f4) {
+				sx += 12;
+			} else {
+				sx += 4;
+			}
+
+ 			if (!latch->disp_on && (spr_disp_on & mask) && (sx & 0x1f8) == cx) {
 				latch->disp_on = true;
 				latch->mxe = mxe & mask;
 				latch->mdp = mdp & mask;
