@@ -38,11 +38,11 @@ public:
 	void Reset();
 	uint8_t ReadRegister(uint16_t adr);
 	void WriteRegister(uint16_t adr, uint8_t byte);
-	void NewPrefs(const Prefs *prefs);
+	void NewPrefs(const Prefs * prefs);
 	void PauseSound();
 	void ResumeSound();
-	void GetState(MOS6581State *ss) const;
-	void SetState(const MOS6581State *ss);
+	void GetState(MOS6581State * s) const;
+	void SetState(const MOS6581State * s);
 	void EmulateLine();
 
 	static const int16_t EGDivTable[16];	// Clock divisors for A/D/R settings
@@ -58,7 +58,13 @@ private:
 	SIDRenderer *the_renderer;	// Pointer to current renderer
 
 	uint8_t regs[32];			// Copies of the 25 write-only SID registers
-	uint8_t last_sid_byte;		// Last value written to SID
+
+	unsigned last_sid_seq;		// SID data bus leakage sequence step (counts down to 0)
+	uint16_t last_sid_cycles;	// Remaining cycles for SID data bus leakage sequence step
+	uint8_t last_sid_byte;		// Last value on SID data bus
+
+	static uint16_t sid_leakage_cycles[9];
+	static uint8_t sid_leakage_mask[9];
 
 	uint32_t fake_v3_update_cycle;	// Cycle of last fake voice 3 oscillator update
 	uint32_t fake_v3_count;			// Fake voice 3 phase accumulator for oscillator read-back
@@ -71,12 +77,12 @@ private:
 class SIDRenderer {
 public:
 	virtual ~SIDRenderer() {}
-	virtual void Reset()=0;
-	virtual void EmulateLine()=0;
-	virtual void WriteRegister(uint16_t adr, uint8_t byte)=0;
-	virtual void NewPrefs(const Prefs *prefs)=0;
-	virtual void Pause()=0;
-	virtual void Resume()=0;
+	virtual void Reset() = 0;
+	virtual void EmulateLine() = 0;
+	virtual void WriteRegister(uint16_t adr, uint8_t byte) = 0;
+	virtual void NewPrefs(const Prefs * prefs) = 0;
+	virtual void Pause() = 0;
+	virtual void Resume() = 0;
 };
 
 
@@ -118,6 +124,10 @@ struct MOS6581State {
 	uint32_t v3_count;
 	int32_t v3_eg_level;
 	uint32_t v3_eg_state;
+
+	uint16_t last_sid_cycles;
+	uint8_t last_sid_seq;
+	uint8_t last_sid_byte;
 };
 
 
@@ -170,6 +180,17 @@ inline void MOS6581::EmulateLine()
 			break;
 	}
 
+	// Simulate internal SID data bus leakage
+	if (last_sid_seq > 0) {
+		if (last_sid_cycles > SID_CYCLES_PER_LINE) {
+			last_sid_cycles -= SID_CYCLES_PER_LINE;
+		} else {
+			last_sid_byte &= sid_leakage_mask[last_sid_seq];	// Leak one bit, advance sequence
+			--last_sid_seq;
+			last_sid_cycles = sid_leakage_cycles[last_sid_seq];
+		}
+	}
+
 	if (the_renderer != nullptr) {
 		the_renderer->EmulateLine();
 	}
@@ -182,25 +203,26 @@ inline void MOS6581::EmulateLine()
 
 inline uint8_t MOS6581::ReadRegister(uint16_t adr)
 {
-	// A/D converters are not implemented
+	bool start_leakage = false;
+
 	if (adr == 0x19 || adr == 0x1a) {
-		last_sid_byte = 0;
-		return 0xff;
+		last_sid_byte = 0xff;			// A/D converters are not implemented
+		start_leakage = true;
+	} else if (adr == 0x1b) {
+		last_sid_byte = read_osc3();	// Voice 3 oscillator read-back
+		start_leakage = true;
+	} else if (adr == 0x1c) {
+		last_sid_byte = read_env3();	// Voice 3 EG read-back
+		start_leakage = true;
 	}
 
-	// Voice 3 oscillator read-back
-	if (adr == 0x1b) {
-		last_sid_byte = 0;
-		return read_osc3();
+	// Start SID data bus leakage sequence?
+	if (start_leakage) {
+		last_sid_seq = 8;	// 8 bits to leak
+		last_sid_cycles = sid_leakage_cycles[last_sid_seq];
 	}
 
-	// Voice 3 EG read-back
-	if (adr == 0x1c) {
-		last_sid_byte = 0;
-		return read_env3();
-	}
-
-	// Write-only register: Return last value written to SID
+	// Return value on SID data bus
 	return last_sid_byte;
 }
 
@@ -229,7 +251,12 @@ inline void MOS6581::WriteRegister(uint16_t adr, uint8_t byte)
 	}
 
 	// Keep a local copy of the register values
-	last_sid_byte = regs[adr] = byte;
+	regs[adr] = byte;
+
+	// Start SID data bus leakage sequence
+	last_sid_byte = byte;
+	last_sid_seq = 8;	// 8 bits to leak
+	last_sid_cycles = sid_leakage_cycles[last_sid_seq];
 
 	if (the_renderer != nullptr) {
 		the_renderer->WriteRegister(adr, byte);

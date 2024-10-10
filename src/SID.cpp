@@ -119,7 +119,9 @@ void MOS6581::Reset()
 	for (unsigned i = 0; i < 32; ++i) {
 		regs[i] = 0;
 	}
+
 	last_sid_byte = 0;
+	last_sid_seq = 0;
 
 	fake_v3_update_cycle = 0;
 	fake_v3_count = 0;
@@ -236,47 +238,66 @@ uint8_t MOS6581::read_env3() const
 
 
 /*
+ *  Tables (sampled from a 6581R4AR)
+ */
+
+// Number of cycles for each SID data bus leakage step
+uint16_t MOS6581::sid_leakage_cycles[9] = {
+	0, 0xa300, 0x3b00, 0x2280, 0x0400, 0x1280, 0x1a80, 0x3a00, 0x0080
+};
+
+// Bit mask for each SID data bus leakage step
+uint8_t MOS6581::sid_leakage_mask[9] = {
+	0, 0x7f, 0xfb, 0xf7, 0xfd, 0xbf, 0xdf, 0xef, 0xfe
+};
+
+
+/*
  *  Get SID state
  */
 
-void MOS6581::GetState(MOS6581State *ss) const
+void MOS6581::GetState(MOS6581State * s) const
 {
-	ss->freq_lo_1 = regs[0];
-	ss->freq_hi_1 = regs[1];
-	ss->pw_lo_1 = regs[2];
-	ss->pw_hi_1 = regs[3];
-	ss->ctrl_1 = regs[4];
-	ss->AD_1 = regs[5];
-	ss->SR_1 = regs[6];
+	s->freq_lo_1 = regs[0];
+	s->freq_hi_1 = regs[1];
+	s->pw_lo_1 = regs[2];
+	s->pw_hi_1 = regs[3];
+	s->ctrl_1 = regs[4];
+	s->AD_1 = regs[5];
+	s->SR_1 = regs[6];
 
-	ss->freq_lo_2 = regs[7];
-	ss->freq_hi_2 = regs[8];
-	ss->pw_lo_2 = regs[9];
-	ss->pw_hi_2 = regs[10];
-	ss->ctrl_2 = regs[11];
-	ss->AD_2 = regs[12];
-	ss->SR_2 = regs[13];
+	s->freq_lo_2 = regs[7];
+	s->freq_hi_2 = regs[8];
+	s->pw_lo_2 = regs[9];
+	s->pw_hi_2 = regs[10];
+	s->ctrl_2 = regs[11];
+	s->AD_2 = regs[12];
+	s->SR_2 = regs[13];
 
-	ss->freq_lo_3 = regs[14];
-	ss->freq_hi_3 = regs[15];
-	ss->pw_lo_3 = regs[16];
-	ss->pw_hi_3 = regs[17];
-	ss->ctrl_3 = regs[18];
-	ss->AD_3 = regs[19];
-	ss->SR_3 = regs[20];
+	s->freq_lo_3 = regs[14];
+	s->freq_hi_3 = regs[15];
+	s->pw_lo_3 = regs[16];
+	s->pw_hi_3 = regs[17];
+	s->ctrl_3 = regs[18];
+	s->AD_3 = regs[19];
+	s->SR_3 = regs[20];
 
-	ss->fc_lo = regs[21];
-	ss->fc_hi = regs[22];
-	ss->res_filt = regs[23];
-	ss->mode_vol = regs[24];
+	s->fc_lo = regs[21];
+	s->fc_hi = regs[22];
+	s->res_filt = regs[23];
+	s->mode_vol = regs[24];
 
-	ss->pot_x = 0xff;
-	ss->pot_y = 0xff;
+	s->pot_x = 0xff;
+	s->pot_y = 0xff;
 
-	ss->v3_update_cycle = fake_v3_update_cycle;
-	ss->v3_count = fake_v3_count;
-	ss->v3_eg_level = fake_v3_eg_level;
-	ss->v3_eg_state = fake_v3_eg_state;
+	s->v3_update_cycle = fake_v3_update_cycle;
+	s->v3_count = fake_v3_count;
+	s->v3_eg_level = fake_v3_eg_level;
+	s->v3_eg_state = fake_v3_eg_state;
+
+	s->last_sid_cycles = last_sid_cycles;
+	s->last_sid_seq = last_sid_seq;
+	s->last_sid_byte = last_sid_byte;
 }
 
 
@@ -284,41 +305,45 @@ void MOS6581::GetState(MOS6581State *ss) const
  *  Restore SID state
  */
 
-void MOS6581::SetState(const MOS6581State *ss)
+void MOS6581::SetState(const MOS6581State * s)
 {
-	regs[0] = ss->freq_lo_1;
-	regs[1] = ss->freq_hi_1;
-	regs[2] = ss->pw_lo_1;
-	regs[3] = ss->pw_hi_1;
-	regs[4] = ss->ctrl_1;
-	regs[5] = ss->AD_1;
-	regs[6] = ss->SR_1;
+	regs[0] = s->freq_lo_1;
+	regs[1] = s->freq_hi_1;
+	regs[2] = s->pw_lo_1;
+	regs[3] = s->pw_hi_1;
+	regs[4] = s->ctrl_1;
+	regs[5] = s->AD_1;
+	regs[6] = s->SR_1;
 
-	regs[7] = ss->freq_lo_2;
-	regs[8] = ss->freq_hi_2;
-	regs[9] = ss->pw_lo_2;
-	regs[10] = ss->pw_hi_2;
-	regs[11] = ss->ctrl_2;
-	regs[12] = ss->AD_2;
-	regs[13] = ss->SR_2;
+	regs[7] = s->freq_lo_2;
+	regs[8] = s->freq_hi_2;
+	regs[9] = s->pw_lo_2;
+	regs[10] = s->pw_hi_2;
+	regs[11] = s->ctrl_2;
+	regs[12] = s->AD_2;
+	regs[13] = s->SR_2;
 
-	regs[14] = ss->freq_lo_3;
-	regs[15] = ss->freq_hi_3;
-	regs[16] = ss->pw_lo_3;
-	regs[17] = ss->pw_hi_3;
-	regs[18] = ss->ctrl_3;
-	regs[19] = ss->AD_3;
-	regs[20] = ss->SR_3;
+	regs[14] = s->freq_lo_3;
+	regs[15] = s->freq_hi_3;
+	regs[16] = s->pw_lo_3;
+	regs[17] = s->pw_hi_3;
+	regs[18] = s->ctrl_3;
+	regs[19] = s->AD_3;
+	regs[20] = s->SR_3;
 
-	regs[21] = ss->fc_lo;
-	regs[22] = ss->fc_hi;
-	regs[23] = ss->res_filt;
-	regs[24] = ss->mode_vol;
+	regs[21] = s->fc_lo;
+	regs[22] = s->fc_hi;
+	regs[23] = s->res_filt;
+	regs[24] = s->mode_vol;
 
-	fake_v3_update_cycle = ss->v3_update_cycle;
-	fake_v3_count = ss->v3_count;
-	fake_v3_eg_level = ss->v3_eg_level;
-	fake_v3_eg_state = ss->v3_eg_state;
+	fake_v3_update_cycle = s->v3_update_cycle;
+	fake_v3_count = s->v3_count;
+	fake_v3_eg_level = s->v3_eg_level;
+	fake_v3_eg_state = s->v3_eg_state;
+
+	last_sid_cycles = s->last_sid_cycles;
+	last_sid_seq = s->last_sid_seq;
+	last_sid_byte = s->last_sid_byte;
 
 	// Stuff the new register values into the renderer
 	if (the_renderer != nullptr) {
