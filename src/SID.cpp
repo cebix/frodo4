@@ -124,7 +124,7 @@ void MOS6581::Reset()
 	last_sid_seq = 0;
 
 	fake_v3_update_cycle = 0;
-	fake_v3_count = 0;
+	fake_v3_count = 0x555555;
 	fake_v3_eg_level = 0;
 	fake_v3_eg_state = EG_RELEASE;
 
@@ -950,7 +950,8 @@ void DigitalRenderer::Reset()
 	for (unsigned v = 0; v < 3; ++v) {
 		voice[v].wave = WAVE_NONE;
 		voice[v].eg_state = EG_RELEASE;
-		voice[v].count = voice[v].add = 0;
+		voice[v].count = 0x555555;
+		voice[v].add = 0;
 		voice[v].freq = voice[v].pw = 0;
 		voice[v].eg_level = voice[v].s_level = 0;
 		voice[v].a_add = voice[v].d_sub = voice[v].r_sub = sid_cycles_frac / MOS6581::EGDivTable[0];
