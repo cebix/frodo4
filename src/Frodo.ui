@@ -622,7 +622,7 @@ Lutz Vieweg</property>
               <object class="GtkLabel">
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
-                <property name="label" translatable="yes">Drives</property>
+                <property name="label" translatable="yes">Disk Drives</property>
               </object>
               <packing>
                 <property name="tab-fill">False</property>

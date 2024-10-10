@@ -58,8 +58,8 @@ Num Lock key to switch between joystick Port 1 and 2.
 You can also use the Enter key on the numeric keypad to change the display mode
 on the fly while the emulator is running.
 
-* The “Drives” tab is where you make software available for the emulator to
-  load and run.
+* The “Disk Drives” tab is where you make software available for the emulator
+  to load and run.
 
 Frodo only supports software written for the Commodore 1541 disk drive. This
 typically comes in the form of .D64 disk image files *(no, they are not called
