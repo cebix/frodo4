@@ -1186,15 +1186,11 @@ void DigitalRenderer::calc_filter()
 		case FILT_BP: {		// Roots at +1 and -1, H_max=1
 			d1 = filter_t(0.0); d2 = filter_t(-1.0);
 #ifdef USE_FIXPOINT_MATHS
-			filter_t ca = fixcos(arg);
-			filter_t sa = fixsin(arg);
-			filter_t c = fixsqrt(g2 * g2 + filter_t(2.0) * g2 - g1 * g1 + filter_t(1.0));
+			filter_t c = fixsqrt(g2*g2 + filter_t(2.0)*g2 - g1*g1 + filter_t(1.0));
 #else
-			filter_t ca = cos(M_PI * arg);
-			filter_t sa = sin(M_PI * arg);
-			filter_t c = sqrt(g2 * g2 + filter_t(2.0) * g2 - g1 * g1 + filter_t(1.0));
+			filter_t c = sqrt(g2*g2 + filter_t(2.0)*g2 - g1*g1 + filter_t(1.0));
 #endif
-			f_ampl = filter_t(0.25) * (filter_t(1.0) + g1 + g2) * (filter_t(1.0) + ca) / sa;
+			f_ampl = filter_t(0.25) * (filter_t(-2.0)*g2*g2 - (filter_t(4.0)+filter_t(2.0)*c)*g2 - filter_t(2.0)*c + (c+filter_t(2.0))*g1*g1 - filter_t(2.0)) / (-g2*g2 - (c+filter_t(2.0))*g2 - c + g1*g1 - filter_t(1.0));
 			break;
 		}
 
