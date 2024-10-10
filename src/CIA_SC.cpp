@@ -486,8 +486,7 @@ void MOS6526::EmulateCycle()
 			case 0x20:	// Count CNT (nothing connected)
 				tb_input = false;
 				break;
-			case 0x40:	// Count TA, without or with CNT
-			case 0x60:
+			default:	// Count TA, without or with CNT
 				tb_input = ta.output;
 				break;
 		}

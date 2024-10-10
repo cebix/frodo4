@@ -49,7 +49,7 @@ enum {
 constexpr uint32_t PULSE_ms = 400;
 
 // Notification timeout
-constexpr uint32_t NOTIFICATION_TIMEOUT_ms = 4000;
+constexpr int NOTIFICATION_TIMEOUT_ms = 4000;
 
 // Drive LED image
 static const char * led_image[8] = {
@@ -406,9 +406,9 @@ void Display::Update()
 
 				const uint8_t * q;
 				switch (led_state[i]) {
-					case LED_ON:        q = led_pixmap[0]; break;
 					case LED_ERROR_ON:  q = led_pixmap[1]; break;
 					case LED_ERROR_OFF: q = led_pixmap[2]; break;
+					default:            q = led_pixmap[0]; break;
 				}
 
 				for (unsigned y = 0; y < 8; ++y) {
