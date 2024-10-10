@@ -281,9 +281,8 @@ bool Prefs::Save(fs::path prefs_path)
 }
 
 
-#if defined(HAVE_GLADE)
-#include "Prefs_glade.h"
-
+#ifdef HAVE_GTK
+#include "Prefs_gtk.h"
 #else
 #include "Prefs_none.h"
 #endif

@@ -25,7 +25,7 @@
 #include "Prefs.h"
 #include "Version.h"
 
-#ifdef HAVE_GLADE
+#ifdef HAVE_GTK
 #include <gtk/gtk.h>
 #endif
 
@@ -59,7 +59,7 @@ void Frodo::ProcessArgs(int argc, char ** argv)
  *  Arguments processed, run emulation
  */
 
-#ifdef HAVE_GLADE
+#ifdef HAVE_GTK
 static gboolean pump_sdl_events(gpointer user_data)
 {
 	SDL_Event event;
@@ -85,7 +85,7 @@ void Frodo::ReadyToRun()
 	}
 	ThePrefs.Load(prefs_path);
 
-#ifdef HAVE_GLADE
+#ifdef HAVE_GTK
 	// Show preferences editor
 	if (!ThePrefs.ShowEditor(true, prefs_path, snapshot_path))
 		return;  // "Quit" clicked
@@ -128,7 +128,7 @@ bool Frodo::RunPrefsEditor()
 
 int main(int argc, char ** argv)
 {
-#ifdef HAVE_GLADE
+#ifdef HAVE_GTK
 	gtk_init(&argc, &argv);
 #else
 	printf(

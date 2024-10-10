@@ -14,7 +14,7 @@ FrodoLite_SOURCES = $(common_SOURCES) \
     C64.cpp CPUC64.cpp VIC.cpp CIA.cpp CPU1541.cpp VIA.cpp \
     CPU_emulline.h
 
-EXTRA_Frodo_SOURCES = sysdeps.h debug.h SID_catweasel.h Prefs_glade.h Prefs_none.h
+EXTRA_Frodo_SOURCES = sysdeps.h debug.h SID_catweasel.h Prefs_gtk.h Prefs_none.h
 
 common_CPPFLAGS = -DDATADIR=\"$(pkgdatadir)/\"
 

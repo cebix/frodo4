@@ -14,12 +14,12 @@ AM_PATH_SDL2(2.30.0, AC_DEFINE(HAVE_SDL, 1, [SDL support is enabled]), AC_MSG_ER
 CPPFLAGS="$CPPFLAGS $SDL_CFLAGS"
 LIBS="$LIBS $SDL_LIBS"
 
-HAVE_GLADE=no
-PKG_CHECK_MODULES(GLADE, [gtk+-3.0 >= 3.24], HAVE_GLADE=yes)
-if [[ $HAVE_GLADE = yes ]]; then
-  AC_DEFINE(HAVE_GLADE, 1, [GTK preferences GUI is enabled])
-  CPPFLAGS="$CPPFLAGS $GLADE_CFLAGS"
-  LIBS="$LIBS $GLADE_LIBS"
+HAVE_GTK=no
+PKG_CHECK_MODULES(GTK, [gtk+-3.0 >= 3.24], HAVE_GTK=yes)
+if [[ $HAVE_GTK = yes ]]; then
+  AC_DEFINE(HAVE_GTK, 1, [GTK preferences GUI is enabled])
+  CPPFLAGS="$CPPFLAGS $GTK_CFLAGS"
+  LIBS="$LIBS $GTK_LIBS"
   LDFLAGS="$LDFLAGS -rdynamic"
 fi
 

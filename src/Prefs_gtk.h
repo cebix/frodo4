@@ -1,5 +1,5 @@
 /*
- *  Prefs_glade.h - Global preferences, GTK specific stuff
+ *  Prefs_gtk.h - Global preferences, GTK specific stuff
  *
  *  Frodo Copyright (C) Christian Bauer
  *
@@ -628,7 +628,7 @@ extern "C" void on_load_snapshot(GtkMenuItem *menuitem, gpointer user_data)
 	if (res == GTK_RESPONSE_ACCEPT) {
 		GtkWidget * msg = gtk_message_dialog_new(prefs_win, GTK_DIALOG_MODAL,
 			load_ok ? GTK_MESSAGE_INFO : GTK_MESSAGE_ERROR, GTK_BUTTONS_OK,
-			message.c_str()
+			"%s", message.c_str()
 		);
 		gtk_dialog_run(GTK_DIALOG(msg));
 		gtk_widget_destroy(msg);
@@ -665,7 +665,7 @@ extern "C" void on_save_snapshot(GtkMenuItem *menuitem, gpointer user_data)
 	if (res == GTK_RESPONSE_ACCEPT) {
 		GtkWidget * msg = gtk_message_dialog_new(prefs_win, GTK_DIALOG_MODAL,
 			save_ok ? GTK_MESSAGE_INFO : GTK_MESSAGE_ERROR, GTK_BUTTONS_OK,
-			message.c_str()
+			"%s", message.c_str()
 		);
 		gtk_dialog_run(GTK_DIALOG(msg));
 		gtk_widget_destroy(msg);
