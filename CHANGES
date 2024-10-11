@@ -10,7 +10,7 @@ Changes from V4.2 to V4.3:
    - Plus key (or right game controller trigger) to fast-forward
  - Holding down Shift while pressing F12 clears all RAM memory during reset
  - Game controllers are automatically detected and used
- - D-pad on game controllers now works
+ - D-pad on game controllers is now supported
  - Replaced status bar with overlay
  - Settings window changes:
    - Added setting for status overlay display
