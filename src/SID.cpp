@@ -414,7 +414,6 @@ struct DRVoice {
 	bool gate;			// EG gate bit
 	bool ring;			// Ring modulation bit
 	bool test;			// Test bit
-	bool filter;		// Flag: Voice filtered
 
 						// The following bit is set for the modulating
 						// voice, not for the modulated one (as the SID bits)
@@ -444,7 +443,9 @@ private:
 	void calc_buffer(int16_t *buf, long count);
 
 	bool ready;						// Flag: Renderer has initialized and is ready
+
 	uint8_t volume;					// Master volume
+	uint8_t res_filt;				// RES/FILT register
 
 	uint32_t sid_cycles_frac;		// Number of SID cycles per output sample frame (16.16)
 #ifdef USE_FIXPOINT_MATHS
@@ -466,8 +467,6 @@ private:
 	static const uint16_t SawRectTable_8580[0x100];
 	static const uint16_t TriSawRectTable_8580[0x100];
 
-	static const int16_t SampleTab[16];	// Table for sampled voice
-
 	DRVoice voice[3];				// Data for 3 voices
 
 	uint8_t f_type;					// Filter type
@@ -488,8 +487,9 @@ private:
 	filter_t audio_out_lp1;
 	filter_t audio_out_hp;
 
-	uint8_t sample_buf[SAMPLE_BUF_SIZE]; // Buffer for sampled voice
-	unsigned sample_in_ptr;			// Index in sample_buf for writing
+	uint8_t sample_vol[SAMPLE_BUF_SIZE]; 		// Sampled master volume setting (Impossible Mission, Ghostbusters, Arkanoid, ...)
+	uint8_t sample_res_filt[SAMPLE_BUF_SIZE];	// Sampled RES/FILT register (Space Taxi)
+	unsigned sample_in_ptr;			// Index in sample buffers for writing
 
 	static void buffer_proc(void * userdata, uint8_t * buffer, int size);
 	SDL_AudioDeviceID device_id;	// SDL audio device ID
@@ -855,12 +855,6 @@ const uint8_t MOS6581::EGDRShift[256] = {
 };
 
 
-const int16_t DigitalRenderer::SampleTab[16] = {
-	-0x7fff, -0x6eee, -0x5ddd, -0x4ccc, -0x3bbb, -0x2aaa, -0x1999, -0x0888,
-	 0x0888,  0x1999,  0x2aaa,  0x3bbb,  0x4ccc,  0x5ddd,  0x6eee,  0x7fff,
-};
-
-
 /*
  *  Constructor
  */
@@ -946,6 +940,7 @@ DigitalRenderer::~DigitalRenderer()
 void DigitalRenderer::Reset()
 {
 	volume = 0;
+	res_filt = 0;
 
 	for (unsigned v = 0; v < 3; ++v) {
 		voice[v].wave = WAVE_NONE;
@@ -956,7 +951,7 @@ void DigitalRenderer::Reset()
 		voice[v].eg_level = voice[v].s_level = 0;
 		voice[v].a_add = voice[v].d_sub = voice[v].r_sub = sid_cycles_frac / MOS6581::EGDivTable[0];
 		voice[v].gate = voice[v].ring = voice[v].test = false;
-		voice[v].filter = voice[v].sync = voice[v].mute = false;
+		voice[v].sync = voice[v].mute = false;
 	}
 
 	f_type = FILT_NONE;
@@ -969,7 +964,8 @@ void DigitalRenderer::Reset()
 	audio_out_lp = audio_out_lp1 = audio_out_hp = filter_t(0.0);
 
 	sample_in_ptr = 0;
-	memset(sample_buf, 0, SAMPLE_BUF_SIZE);
+	memset(sample_vol, 0, SAMPLE_BUF_SIZE);
+	memset(sample_res_filt, 0, SAMPLE_BUF_SIZE);
 }
 
 
@@ -1003,8 +999,9 @@ void DigitalRenderer::Resume()
 
 void DigitalRenderer::EmulateLine()
 {
-	// Record sampled voice produced via volume control bits
-	sample_buf[sample_in_ptr] = volume;
+	// Record registers for sample playback
+	sample_vol[sample_in_ptr] = volume;
+	sample_res_filt[sample_in_ptr] = res_filt;
 	sample_in_ptr = (sample_in_ptr + 1) % SAMPLE_BUF_SIZE;
 }
 
@@ -1018,7 +1015,7 @@ void DigitalRenderer::WriteRegister(uint16_t adr, uint8_t byte)
 	if (!ready)
 		return;
 
-	int v = adr/7;	// Voice number
+	unsigned v = adr / 7;	// Voice number
 
 	switch (adr) {
 		case 0:
@@ -1093,10 +1090,7 @@ void DigitalRenderer::WriteRegister(uint16_t adr, uint8_t byte)
 			break;
 
 		case 23:
-			voice[0].filter = byte & 1;
-			voice[1].filter = byte & 2;
-			voice[2].filter = byte & 4;
-
+			res_filt = byte;
 			f_res = byte >> 4;
 			break;
 
@@ -1263,23 +1257,28 @@ void DigitalRenderer::calc_filter()
 
 void DigitalRenderer::calc_buffer(int16_t *buf, long count)
 {
-	// Index in sample_buf for reading, 16.16 fixed
+	// Index in sample buffer for reading, 16.16 fixed
 	uint32_t sample_count = (sample_in_ptr + SAMPLE_BUF_SIZE/2) << 16;
+
+	// Output DC offset
+	int32_t dc_offset = (ThePrefs.SIDType == SIDTYPE_DIGITAL_6581) ? 0x800000 : 0x100000;
 
 	count >>= 1;	// 16 bit mono output, count is in bytes
 	while (count--) {
-		// Get current master volume from sample buffer,
-		// calculate sampled voice
-		uint8_t master_volume = sample_buf[(sample_count >> 16) % SAMPLE_BUF_SIZE];
+
+		// Get current master volume and RES/FILT setting from sample buffers
+		uint8_t master_volume = sample_vol[(sample_count >> 16) % SAMPLE_BUF_SIZE];
+		uint8_t res_filt = sample_res_filt[(sample_count >> 16) % SAMPLE_BUF_SIZE];
 		sample_count += ((TOTAL_RASTERS * SCREEN_FREQ) << 16) / obtained.freq;
-		int32_t sum_output = SampleTab[master_volume] << 8;
+
+		int32_t sum_output = 0;
 		int32_t sum_output_filter = 0;
 
 		// Loop for all three voices
 		for (unsigned j = 0; j < 3; ++j) {
 			DRVoice *v = &voice[j];
 
-			// Envelope generators
+			// Envelope generator
 			uint16_t envelope;
 
 			switch (v->eg_state) {
@@ -1303,7 +1302,7 @@ void DigitalRenderer::calc_buffer(int16_t *buf, long count)
 					}
 					break;
 			}
-			envelope = ((v->eg_level >> 16) * master_volume) >> 4;
+			envelope = v->eg_level >> 16;
 
 			// Waveform generator
 			uint16_t output;
@@ -1335,7 +1334,9 @@ void DigitalRenderer::calc_buffer(int16_t *buf, long count)
 					output = v->count >> 8;
 					break;
 				case WAVE_RECT:
-					if (v->count > (uint32_t)(v->pw << 12)) {
+					if (v->test) {
+						output = 0xffff;
+					} else if (v->count >= (uint32_t)(v->pw << 12)) {
 						output = 0xffff;
 					} else {
 						output = 0;
@@ -1345,21 +1346,21 @@ void DigitalRenderer::calc_buffer(int16_t *buf, long count)
 					output = TriSawTable[v->count >> 16];
 					break;
 				case WAVE_TRIRECT:
-					if (v->count > (uint32_t)(v->pw << 12)) {
+					if (v->count >= (uint32_t)(v->pw << 12)) {
 						output = TriRectTable[v->count >> 16];
 					} else {
 						output = 0;
 					}
 					break;
 				case WAVE_SAWRECT:
-					if (v->count > (uint32_t)(v->pw << 12)) {
+					if (v->count >= (uint32_t)(v->pw << 12)) {
 						output = SawRectTable[v->count >> 16];
 					} else {
 						output = 0;
 					}
 					break;
 				case WAVE_TRISAWRECT:
-					if (v->count > (uint32_t)(v->pw << 12)) {
+					if (v->count >= (uint32_t)(v->pw << 12)) {
 						output = TriSawRectTable[v->count >> 16];
 					} else {
 						output = 0;
@@ -1377,7 +1378,9 @@ void DigitalRenderer::calc_buffer(int16_t *buf, long count)
 					output = 0x8000;
 					break;
 			}
-			if (v->filter) {
+
+			// Route voice through filter if selected
+			if (res_filt & (1 << j)) {
 				sum_output_filter += (int16_t)(output ^ 0x8000) * envelope;
 			} else if (!v->mute) {
 				sum_output += (int16_t)(output ^ 0x8000) * envelope;
@@ -1406,18 +1409,19 @@ void DigitalRenderer::calc_buffer(int16_t *buf, long count)
 		}
 
 		// External filter on AUDIO OUT
-		int32_t ext_output;
+		int32_t ext_output = (sum_output - sum_output_filter + dc_offset) * master_volume;
+
 #ifdef USE_FIXPOINT_MATHS
-		ext_output = (sum_output + sum_output_filter) >> 10;
+		ext_output >>= 14;
 #else
 		if (ThePrefs.SIDFilters) {
-			filter_t audio_out = filter_t(sum_output + sum_output_filter) / (1 << 10);
+			filter_t audio_out = filter_t(ext_output) / (1 << 14);
 			audio_out_lp = out_lp_g * audio_out_lp + (1 - out_lp_g) * audio_out;
 			audio_out_hp = out_hp_g * audio_out_hp + out_hp_d * (audio_out_lp - audio_out_lp1);
 			audio_out_lp1 = audio_out_lp;
 			ext_output = (int32_t) audio_out_hp;
 		} else {
-			ext_output = (sum_output + sum_output_filter) >> 10;
+			ext_output >>= 14;
 		}
 #endif
 
