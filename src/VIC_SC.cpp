@@ -39,6 +39,10 @@
 #include "Prefs.h"
 
 
+// Define to enable VIC state overlay
+#undef VIS_DEBUG
+
+
 // First and last displayed line
 const int FIRST_DISP_LINE = 0x10;
 const int LAST_DISP_LINE = 0x11f;
@@ -1426,6 +1430,18 @@ inline void MOS6569::draw_sprites()
 	}
 
 
+#ifdef VIS_DEBUG
+struct DebugSample {
+	bool ba_low, aec_delay, display_state;
+	uint8_t display_idx;
+	uint8_t vbase;
+	uint8_t rc;
+};
+
+static DebugSample vis_debug[CYCLES_PER_LINE + 1];
+#endif
+
+
 unsigned MOS6569::EmulateCycle()
 {
 	unsigned retFlags = 0;
@@ -1925,6 +1941,61 @@ unsigned MOS6569::EmulateCycle()
 					}
 				}
 
+#ifdef VIS_DEBUG
+				for (unsigned c = 12; c <= 59; ++c) {
+					uint8_t * p = chunky_line_start + (c - 12) * 8;
+
+					// First pixel: BA/AEC state
+					if (vis_debug[c].ba_low) {
+						if (vis_debug[c].aec_delay) {
+							p[0] = 10;	// Light red: BA low, AEC clocking
+						} else {
+							p[0] = 2;	// Red: BA and AEC low
+						}
+					}
+
+					// Pixel 1: Display mode
+					if (vis_debug[c].display_state) {
+						unsigned idx = vis_debug[c].display_idx;
+						if (idx == 0) {
+							p[1] = 5;	// Green: standard text
+						} else if (idx == 1 || idx == 4) {
+							p[1] = 13;	// Light green: multicolor text
+						} else if (idx == 2) {
+							p[1] = 6;	// Blue: standard bitmap
+						} else if (idx == 3) {
+							p[1] = 14;	// Light blue: multicolor bitmap
+						} else {
+							p[1] = 7;	// Yellow: invalid
+						}
+					} else {
+						p[1] = 12;		// Gray: idle
+					}
+
+					if (raster_y >= FIRST_DMA_LINE && raster_y < LAST_DMA_LINE + 8 && vis_debug[c].display_state) {
+
+						// Pixel 2: Video matrix base
+						p[2] = vis_debug[c].vbase >> 4;
+
+						// Pixel 3: Character generator base
+						p[3] = vis_debug[c].vbase & 0x0f;
+					}
+
+					// Pixels 4..6: RC
+					if (c == 13 || c == 14 || c ==57 || c == 58) {
+						if (vis_debug[c].rc & 4) {
+							p[4] = 15;
+						}
+						if (vis_debug[c].rc & 2) {
+							p[5] = 15;
+						}
+						if (vis_debug[c].rc & 1) {
+							p[6] = 15;
+						}
+					}
+				}
+#endif
+
 				// Increment pointer in chunky buffer
 				chunky_line_start += xmod;
 			}
@@ -1975,6 +2046,16 @@ unsigned MOS6569::EmulateCycle()
 	} else if (raster_y == dy_start && (ctrl1 & 0x10)) {
 		ud_border_on = ud_border_set = false;
 	}
+
+#ifdef VIS_DEBUG
+	// Sample VIC state for debugging
+	vis_debug[cycle].ba_low = the_cpu->BALow;
+	vis_debug[cycle].aec_delay = aec_delay;
+	vis_debug[cycle].display_state = display_state;
+	vis_debug[cycle].display_idx = display_idx;
+	vis_debug[cycle].vbase = vbase;
+	vis_debug[cycle].rc = rc;
+#endif
 
 	// Next cycle
 	if (cycle != 57) {	// Keep current XSCROLL for final 0..7 pixels drawn in cycle 58
