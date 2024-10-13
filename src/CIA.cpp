@@ -154,6 +154,7 @@ void MOS6526::GetState(MOS6526State * s) const
 	s->set_ir_delay = 0;
 	s->clear_ir_delay = 0;
 	s->irq_delay = 0;
+	s->trigger_tb_bug = false;
 }
 
 

@@ -114,6 +114,7 @@ protected:
 	uint8_t set_ir_delay;	// Delay line for setting IR bit in ICR
 	uint8_t clear_ir_delay;	// Delay line for clearing IR bit in ICR
 	uint8_t irq_delay;		// Delay line for asserting IRQ
+	bool trigger_tb_bug;	// Flag: Timer B bug triggered
 #endif
 };
 
@@ -226,6 +227,7 @@ struct MOS6526State {
 	uint8_t set_ir_delay;
 	uint8_t clear_ir_delay;
 	uint8_t irq_delay;
+	bool trigger_tb_bug;
 };
 
 

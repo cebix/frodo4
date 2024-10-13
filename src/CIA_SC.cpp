@@ -30,11 +30,6 @@
  *    C64 keyboard (0: key pressed, 1: key released). KeyMatrix is used for
  *    normal keyboard polling (PRA->PRB), RevMatrix for reversed polling
  *    (PRB->PRA).
- *
- * Incompatibilities:
- * ------------------
- *
- *  - The SDR interrupt is faked.
  */
 
 #include "sysdeps.h"
@@ -78,6 +73,7 @@ void MOS6526::Reset()
 	set_ir_delay = 0;
 	clear_ir_delay = 0;
 	irq_delay = 0;
+	trigger_tb_bug = false;
 }
 
 void MOS6526_1::Reset()
@@ -164,6 +160,7 @@ void MOS6526::GetState(MOS6526State * s) const
 	s->set_ir_delay = set_ir_delay;
 	s->clear_ir_delay = clear_ir_delay;
 	s->irq_delay = irq_delay;
+	s->trigger_tb_bug = trigger_tb_bug;
 }
 
 
@@ -226,6 +223,7 @@ void MOS6526::SetState(const MOS6526State * s)
 	set_ir_delay = s->set_ir_delay;
 	clear_ir_delay = s->clear_ir_delay;
 	irq_delay = s->irq_delay;
+	trigger_tb_bug = s->trigger_tb_bug;
 }
 
 void MOS6526_2::SetState(const MOS6526State * s)
@@ -470,6 +468,12 @@ void MOS6526::EmulateCycle()
 		}
 	}
 
+	bool tb_bug = false;
+	if (trigger_tb_bug) {
+		tb_bug = true;
+		trigger_tb_bug = false;
+	}
+
 	if (! tb.idle) {
 
 		// Shift timer B delay lines
@@ -493,8 +497,9 @@ void MOS6526::EmulateCycle()
 		emulate_timer(tb, crb, tb_input);
 
 		if (tb.output) {
-			if ((clear_ir_delay & 1) == 0) {	// Timer B does not raise interrupt if ICR was read in previous cycle (HW bug)
-				set_int_flag(2);
+			set_int_flag(2);
+			if (clear_ir_delay & 1) {	// Timer B acknowledges interrupt if ICR was read in previous cycle (HW bug)
+				trigger_tb_bug = true;
 			}
 		}
 
@@ -510,6 +515,9 @@ void MOS6526::EmulateCycle()
 		irq_delay |= 1;
 	}
 	if (clear_ir_delay & 2) {	// One cycle delay clearing IR
+		if (tb_bug) {
+			icr &= ~2;
+		}
 		icr &= 0x7f;
 	}
 	if (set_ir_delay & 2) {		// One cycle of delay setting IR
