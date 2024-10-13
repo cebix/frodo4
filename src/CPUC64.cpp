@@ -126,6 +126,9 @@ void MOS6510::Reset()
 
 	nmi_triggered = false;
 
+	// Set I flag
+	i_flag = true;
+
 	// Read reset vector
 	pc = read_word(0xfffc);
 	jammed = false;
@@ -162,6 +165,7 @@ void MOS6510::GetState(MOS6510State *s) const
 
 	s->irq_pending = false;
 	s->irq_delay = 0;
+	s->irq_off_delay = 0;
 
 	s->nmi_triggered = nmi_triggered;
 	s->nmi_pending = false;

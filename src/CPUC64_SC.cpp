@@ -83,6 +83,7 @@ MOS6510::MOS6510(C64 *c64, uint8_t *Ram, uint8_t *Basic, uint8_t *Kernal, uint8_
 
 	irq_pending = false;
 	irq_delay = 0;
+	irq_off_delay = 0;
 
 	nmi_triggered = false;
 	nmi_pending = false;
@@ -127,9 +128,15 @@ void MOS6510::Reset()
 	int_line[INT_RESET] = false;
 
 	irq_pending = false;
+	irq_delay = 0;
+	irq_off_delay = 0;
 
 	nmi_triggered = false;
 	nmi_pending = false;
+	nmi_delay = 0;
+
+	// Set I flag
+	i_flag = true;
 
 	// Read reset vector
 	pc = read_word(0xfffc);
@@ -168,6 +175,7 @@ void MOS6510::GetState(MOS6510State *s) const
 
 	s->irq_pending = irq_pending;
 	s->irq_delay = irq_delay;
+	s->irq_off_delay = irq_off_delay;
 
 	s->nmi_triggered = nmi_triggered;
 	s->nmi_pending = nmi_pending;
@@ -215,6 +223,7 @@ void MOS6510::SetState(const MOS6510State *s)
 
 	irq_pending = s->irq_pending;
 	irq_delay = s->irq_delay;
+	irq_off_delay = s->irq_off_delay;
 
 	nmi_triggered = s->nmi_triggered;
 	nmi_pending = s->nmi_pending;
@@ -602,7 +611,7 @@ void MOS6510::illegal_op(uint16_t adr)
 // Check for pending interrupts
 void MOS6510::check_interrupts()
 {
-	if ((int_line[INT_VICIRQ] || int_line[INT_CIAIRQ]) && !i_flag && irq_delay == 0 && !jammed) {
+	if ((int_line[INT_VICIRQ] || int_line[INT_CIAIRQ] || irq_off_delay) && !i_flag && irq_delay == 0 && !jammed) {
 		irq_pending = true;
 	}
 
@@ -618,6 +627,7 @@ void MOS6510::EmulateCycle()
 
 	// Shift delay lines
 	irq_delay >>= 1;
+	irq_off_delay >>= 1;
 	nmi_delay >>= 1;
 
 #define RESET_PENDING (int_line[INT_RESET])

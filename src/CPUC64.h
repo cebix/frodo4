@@ -152,6 +152,7 @@ private:
 
 	bool irq_pending;
 	uint8_t irq_delay;			// Delay line for IRQ recognition (11→01→00)
+	uint8_t irq_off_delay;		// Delay line for IRQ deassertion (11→01→00)
 
 	bool nmi_pending;
 	uint8_t nmi_delay;			// Delay line for NMI recognition (11→01→00)
@@ -189,6 +190,7 @@ struct MOS6510State {
 
 	bool irq_pending;
 	uint8_t irq_delay;
+	uint8_t irq_off_delay;
 	bool nmi_pending;
 	uint8_t nmi_delay;
 };
@@ -228,11 +230,21 @@ inline void MOS6510::TriggerNMI()
 
 inline void MOS6510::ClearVICIRQ()
 {
+#ifdef FRODO_SC
+	if (int_line[INT_VICIRQ] && ! int_line[INT_CIAIRQ]) {
+		irq_off_delay = 3;	// Two cycles delay after deassertion
+	}
+#endif
 	int_line[INT_VICIRQ] = false;
 }
 
 inline void MOS6510::ClearCIAIRQ()
 {
+#ifdef FRODO_SC
+	if (int_line[INT_CIAIRQ] && ! int_line[INT_VICIRQ]) {
+		irq_off_delay = 3;	// Two cycles delay after deassertion
+	}
+#endif
 	int_line[INT_CIAIRQ] = false;
 }
 
