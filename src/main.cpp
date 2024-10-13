@@ -59,15 +59,6 @@ void Frodo::ProcessArgs(int argc, char ** argv)
  *  Arguments processed, run emulation
  */
 
-#ifdef HAVE_GTK
-static gboolean pump_sdl_events(gpointer user_data)
-{
-	SDL_Event event;
-	SDL_WaitEventTimeout(&event, 5);
-	return true;
-}
-#endif
-
 void Frodo::ReadyToRun()
 {
 	// Load preferences
@@ -89,9 +80,6 @@ void Frodo::ReadyToRun()
 	// Show preferences editor
 	if (!ThePrefs.ShowEditor(true, prefs_path, snapshot_path))
 		return;  // "Quit" clicked
-
-	// Keep SDL event loop running while preferences editor is open the next time
-	g_idle_add(pump_sdl_events, nullptr);
 #endif
 
 	// Create and start C64

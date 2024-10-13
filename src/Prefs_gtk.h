@@ -190,6 +190,17 @@ static const char * shortcuts_win_ui =
 	"</interface>";
 
 
+// Mainloop idler to keep SDL events going
+static guint idle_source_id = 0;
+
+static gboolean pump_sdl_events(gpointer user_data)
+{
+	SDL_Event event;
+	SDL_WaitEventTimeout(&event, 5);
+	return true;
+}
+
+
 /*
  *  Show preferences editor (synchronously)
  *  prefs_path is the preferences file name
@@ -295,6 +306,9 @@ bool Prefs::ShowEditor(bool startup, fs::path prefs_path, fs::path snapshot_path
 		gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object(builder, "save_snapshot_menu")), true);
 		gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object(builder, "sam_menu")), true);
 
+		// Keep SDL event loop running while preferences editor is open
+		idle_source_id = g_idle_add(pump_sdl_events, nullptr);
+
 		SAM_GetState(TheC64);
 	}
 
@@ -304,6 +318,11 @@ bool Prefs::ShowEditor(bool startup, fs::path prefs_path, fs::path snapshot_path
 
 	gtk_window_present(prefs_win);
 	gtk_main();
+
+	if (idle_source_id > 0) {
+		g_source_remove(idle_source_id);
+		idle_source_id = 0;
+	}
 
 	// Save preferences if "Start"/"Continue" clicked
 	if (result) {
