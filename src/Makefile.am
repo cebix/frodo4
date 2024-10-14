@@ -16,7 +16,7 @@ FrodoLite_SOURCES = $(common_SOURCES) \
 
 EXTRA_Frodo_SOURCES = sysdeps.h debug.h SID_catweasel.h Prefs_gtk.h Prefs_none.h
 
-common_CPPFLAGS = -DDATADIR=\"$(pkgdatadir)/\"
+common_CPPFLAGS = -DDATADIR=\"$(pkgdatadir)/\" -DHTMLDIR=\"$(htmldir)/\"
 
 Frodo_CPPFLAGS = -DFRODO_SC $(common_CPPFLAGS)
 FrodoLite_CPPFLAGS = -DPRECISE_CPU_CYCLES=1 -DPRECISE_CIA_CYCLES=1 $(common_CPPFLAGS)

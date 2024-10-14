@@ -1,3 +1,10 @@
+Changes from V4.3 to V4.4:
+ - Fixed startup problem when running under Wayland
+ - Settings window changes:
+   - Added menu item for opening the included user manual
+ - Improved interrupt timing
+ - Improved SID sample playback
+
 Changes from V4.2 to V4.3:
  - "Frodo SC" renamed to "Frodo", original "Frodo" renamed to "Frodo Lite"
  - Ported to SDL2 and GTK 3

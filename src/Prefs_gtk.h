@@ -739,6 +739,11 @@ extern "C" void on_shortcuts_activate(GtkMenuItem *menuitem, gpointer user_data)
 	g_object_unref(shortcuts_builder);
 }
 
+extern "C" void on_user_manual_activate(GtkMenuItem *menuitem, gpointer user_data)
+{
+	gtk_show_uri_on_window(prefs_win, "file://" HTMLDIR "index.html", GDK_CURRENT_TIME, nullptr);
+}
+
 extern "C" void on_about_activate(GtkMenuItem *menuitem, gpointer user_data)
 {
 	GtkAboutDialog * about_win = GTK_ABOUT_DIALOG(gtk_builder_get_object(builder, "about_win"));
