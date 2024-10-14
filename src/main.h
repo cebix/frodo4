@@ -22,6 +22,7 @@
 #define MAIN_H
 
 #include <filesystem>
+#include <vector>
 
 
 class C64;
@@ -43,6 +44,8 @@ public:
 private:
 	std::filesystem::path prefs_path;		// Pathname of current preferences file
 	std::filesystem::path snapshot_path;	// Directory for saving snapshots
+
+	std::vector<std::string> prefs_override;	// Preferences items overridden on command line
 };
 
 

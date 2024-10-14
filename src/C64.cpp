@@ -799,7 +799,7 @@ void C64::open_close_joystick(int port, int oldjoy, int newjoy)
 			int index = newjoy - 1;
 			joy[port] = SDL_JoystickOpen(index);
 			if (joy[port] == nullptr) {
-				fprintf(stderr, "Couldn't open joystick %d: %s\n", port + 1, SDL_GetError());
+				fprintf(stderr, "WARNING: Cannot open joystick %d: %s\n", port + 1, SDL_GetError());
 			} else if (SDL_IsGameController(index)) {
 				controller[port] = SDL_GameControllerOpen(index);
 			}

@@ -67,6 +67,7 @@ public:
 	void Check();
 	void Load(std::filesystem::path prefs_path);
 	bool Save(std::filesystem::path prefs_path);
+	void ParseItem(std::string item);
 
 	int NormalCycles;		// Available CPU cycles in normal raster lines
 	int BadLineCycles;		// Available CPU cycles in Bad Lines

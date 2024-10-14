@@ -105,110 +105,130 @@ void Prefs::Load(fs::path prefs_path)
 {
 	std::ifstream file(prefs_path);
 	if (! file) {
+		fprintf(stderr, "WARNING: Cannot open configuration file '%s'\n", prefs_path.c_str());
 		return;
 	}
 
 	std::string line;
 	while (std::getline(file, line)) {
-		static const std::regex prefsLine(R"((\S*)\s*=\s*([\S ]*))");
-
-		std::smatch m;
-		if (std::regex_match(line, m, prefsLine)) {
-			const std::string keyword = m[1].str();
-			const std::string value = m[2].str();
-
-			if (keyword == "NormalCycles") {
-				NormalCycles = atoi(value.c_str());
-			} else if (keyword == "BadLineCycles") {
-				BadLineCycles = atoi(value.c_str());
-			} else if (keyword == "CIACycles") {
-				CIACycles = atoi(value.c_str());
-			} else if (keyword == "FloppyCycles") {
-				FloppyCycles = atoi(value.c_str());
-
-			} else if (keyword == "DrivePath8") {
-				DrivePath[0] = value;
-			} else if (keyword == "DrivePath9") {
-				DrivePath[1] = value;
-			} else if (keyword == "DrivePath10") {
-				DrivePath[2] = value;
-			} else if (keyword == "DrivePath11") {
-				DrivePath[3] = value;
-
-			} else if (keyword == "BasicROM") {
-				BasicROMPath = value;
-			} else if (keyword == "KernalROM") {
-				KernalROMPath = value;
-			} else if (keyword == "CharROM") {
-				CharROMPath = value;
-			} else if (keyword == "DriveROM") {
-				DriveROMPath = value;
-
-			} else if (keyword == "Cartridge") {
-				CartridgePath = value;
-
-			} else if (keyword == "SIDType") {
-				if (value == "DIGITAL") {
-					SIDType = SIDTYPE_DIGITAL_6581;
-				} else if (value == "6581") {
-					SIDType = SIDTYPE_DIGITAL_6581;
-				} else if (value == "8580") {
-					SIDType = SIDTYPE_DIGITAL_8580;
-				} else if (value == "SIDCARD") {
-					SIDType = SIDTYPE_SIDCARD;
-				} else {
-					SIDType = SIDTYPE_NONE;
-				}
-			} else if (keyword == "REUType") {
-				if (value == "128K") {
-					REUType = REU_128K;
-				} else if (value == "256K") {
-					REUType = REU_256K;
-				} else if (value == "512K") {
-					REUType = REU_512K;
-				} else if (value == "GEORAM") {
-					REUType = REU_GEORAM;
-				} else {
-					REUType = REU_NONE;
-				}
-			} else if (keyword == "DisplayType") {
-				DisplayType = (value == "SCREEN") ? DISPTYPE_SCREEN : DISPTYPE_WINDOW;
-			} else if (keyword == "Palette") {
-				Palette = (value == "COLODORE") ? PALETTE_COLODORE : PALETTE_PEPTO;
-			} else if (keyword == "Joystick1Port") {
-				Joystick1Port = atoi(value.c_str());
-			} else if (keyword == "Joystick2Port") {
-				Joystick2Port = atoi(value.c_str());
-			} else if (keyword == "ScalingNumerator") {
-				ScalingNumerator = atoi(value.c_str());
-			} else if (keyword == "ScalingDenominator") {
-				ScalingDenominator = atoi(value.c_str());
-
-			} else if (keyword == "SpritesOn") {
-				SpritesOn = (value == "true");
-			} else if (keyword == "SpriteCollisions") {
-				SpriteCollisions = (value == "true");
-			} else if (keyword == "JoystickSwap") {
-				JoystickSwap = (value == "true");
-			} else if (keyword == "LimitSpeed") {
-				LimitSpeed = (value == "true");
-			} else if (keyword == "FastReset") {
-				FastReset = (value == "true");
-			} else if (keyword == "CIAIRQHack") {
-				CIAIRQHack = (value == "true");
-			} else if (keyword == "MapSlash") {
-				MapSlash = (value == "true");
-			} else if (keyword == "Emul1541Proc") {
-				Emul1541Proc = (value == "true");
-			} else if (keyword == "SIDFilters") {
-				SIDFilters = (value == "true");
-			} else if (keyword == "ShowLEDs") {
-				ShowLEDs = (value == "true");
-			}
-		}
+		ParseItem(line);
 	}
 
 	Check();
+}
+
+
+/*
+ *  Parse preferences item ("KEYWORD = VALUE")
+ */
+
+void Prefs::ParseItem(std::string item)
+{
+	if (item.empty())
+		return;
+
+	static const std::regex prefsLine(R"((\S*)\s*=\s*([\S ]*))");
+
+	std::smatch m;
+	if (! std::regex_match(item, m, prefsLine)) {
+		fprintf(stderr, "WARNING: Ignoring malformed settings item '%s'\n", item.c_str());
+		return;
+	}
+
+	const std::string keyword = m[1].str();
+	const std::string value = m[2].str();
+
+	if (keyword == "NormalCycles") {
+		NormalCycles = atoi(value.c_str());
+	} else if (keyword == "BadLineCycles") {
+		BadLineCycles = atoi(value.c_str());
+	} else if (keyword == "CIACycles") {
+		CIACycles = atoi(value.c_str());
+	} else if (keyword == "FloppyCycles") {
+		FloppyCycles = atoi(value.c_str());
+
+	} else if (keyword == "DrivePath8") {
+		DrivePath[0] = value;
+	} else if (keyword == "DrivePath9") {
+		DrivePath[1] = value;
+	} else if (keyword == "DrivePath10") {
+		DrivePath[2] = value;
+	} else if (keyword == "DrivePath11") {
+		DrivePath[3] = value;
+
+	} else if (keyword == "BasicROM") {
+		BasicROMPath = value;
+	} else if (keyword == "KernalROM") {
+		KernalROMPath = value;
+	} else if (keyword == "CharROM") {
+		CharROMPath = value;
+	} else if (keyword == "DriveROM") {
+		DriveROMPath = value;
+
+	} else if (keyword == "Cartridge") {
+		CartridgePath = value;
+
+	} else if (keyword == "SIDType") {
+		if (value == "DIGITAL") {
+			SIDType = SIDTYPE_DIGITAL_6581;
+		} else if (value == "6581") {
+			SIDType = SIDTYPE_DIGITAL_6581;
+		} else if (value == "8580") {
+			SIDType = SIDTYPE_DIGITAL_8580;
+		} else if (value == "SIDCARD") {
+			SIDType = SIDTYPE_SIDCARD;
+		} else {
+			SIDType = SIDTYPE_NONE;
+		}
+	} else if (keyword == "REUType") {
+		if (value == "128K") {
+			REUType = REU_128K;
+		} else if (value == "256K") {
+			REUType = REU_256K;
+		} else if (value == "512K") {
+			REUType = REU_512K;
+		} else if (value == "GEORAM") {
+			REUType = REU_GEORAM;
+		} else {
+			REUType = REU_NONE;
+		}
+	} else if (keyword == "DisplayType") {
+		DisplayType = (value == "SCREEN") ? DISPTYPE_SCREEN : DISPTYPE_WINDOW;
+	} else if (keyword == "Palette") {
+		Palette = (value == "COLODORE") ? PALETTE_COLODORE : PALETTE_PEPTO;
+	} else if (keyword == "Joystick1Port") {
+		Joystick1Port = atoi(value.c_str());
+	} else if (keyword == "Joystick2Port") {
+		Joystick2Port = atoi(value.c_str());
+	} else if (keyword == "ScalingNumerator") {
+		ScalingNumerator = atoi(value.c_str());
+	} else if (keyword == "ScalingDenominator") {
+		ScalingDenominator = atoi(value.c_str());
+
+	} else if (keyword == "SpritesOn") {
+		SpritesOn = (value == "true");
+	} else if (keyword == "SpriteCollisions") {
+		SpriteCollisions = (value == "true");
+	} else if (keyword == "JoystickSwap") {
+		JoystickSwap = (value == "true");
+	} else if (keyword == "LimitSpeed") {
+		LimitSpeed = (value == "true");
+	} else if (keyword == "FastReset") {
+		FastReset = (value == "true");
+	} else if (keyword == "CIAIRQHack") {
+		CIAIRQHack = (value == "true");
+	} else if (keyword == "MapSlash") {
+		MapSlash = (value == "true");
+	} else if (keyword == "Emul1541Proc") {
+		Emul1541Proc = (value == "true");
+	} else if (keyword == "SIDFilters") {
+		SIDFilters = (value == "true");
+	} else if (keyword == "ShowLEDs") {
+		ShowLEDs = (value == "true");
+
+	} else {
+		fprintf(stderr, "WARNING: Ignoring unknown settings item '%s'\n", keyword.c_str());
+	}
 }
 
 

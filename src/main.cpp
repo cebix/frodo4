@@ -49,9 +49,38 @@ C64 * TheC64 = nullptr;		// Global C64 object
 
 void Frodo::ProcessArgs(int argc, char ** argv)
 {
-	if (argc == 2) {
-		prefs_path = argv[1];
+#ifdef HAVE_GTK
+	gchar * config_file = nullptr;
+	gchar ** remaining_args = nullptr;
+
+	static GOptionEntry entries[] = {
+		{ "config", 'c', G_OPTION_FLAG_NONE, G_OPTION_ARG_FILENAME, &config_file, "Run with a different configuration file than the default", "FILE" },
+		{ G_OPTION_REMAINING, 0, G_OPTION_FLAG_NONE, G_OPTION_ARG_STRING_ARRAY, &remaining_args, nullptr, "[ITEM=VALUE…]" },
+		{ nullptr, 0, G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, nullptr, nullptr, nullptr }
+	};
+
+	GOptionContext * context = g_option_context_new("- Commodore 64 emulator");
+	g_option_context_add_main_entries(context, entries, nullptr);
+
+	GError * error = nullptr;
+	if (! g_option_context_parse(context, &argc, &argv, &error)) {
+		g_print("Error on command line: %s\n", error->message);
+		SDL_Quit();
+		exit(1);
 	}
+
+	if (config_file) {
+		prefs_path = config_file;
+		g_free(config_file);
+	}
+
+	if (remaining_args) {
+		for (auto arg = remaining_args; *arg != nullptr; ++arg) {
+			prefs_override.push_back(*arg);
+		}
+		g_strfreev(remaining_args);
+	}
+#endif
 }
 
 
@@ -75,6 +104,11 @@ void Frodo::ReadyToRun()
 		SDL_free(path);
 	}
 	ThePrefs.Load(prefs_path);
+
+	// Override preferences items given on command line
+	for (auto & item : prefs_override) {
+		ThePrefs.ParseItem(item);
+	}
 
 #ifdef HAVE_GTK
 	// Show preferences editor
@@ -128,7 +162,7 @@ int main(int argc, char ** argv)
 #endif
 
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) < 0) {
-		fprintf(stderr, "Couldn't initialize SDL (%s)\n", SDL_GetError());
+		fprintf(stderr, "Cannot initialize SDL: %s\n", SDL_GetError());
 		return 1;
 	}
 
