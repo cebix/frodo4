@@ -23,6 +23,7 @@
 #include "Prefs.h"
 #include "C64.h"
 
+#include <algorithm>
 #include <fstream>
 #include <regex>
 namespace fs = std::filesystem;
@@ -94,6 +95,10 @@ void Prefs::Check()
 	if (Palette < PALETTE_PEPTO || Palette > PALETTE_COLODORE) {
 		Palette = PALETTE_PEPTO;
 	}
+
+	if (ROMSetDefs.count(ROMSet) == 0) {
+		ROMSet.clear();
+	}
 }
 
 
@@ -156,14 +161,25 @@ void Prefs::ParseItem(std::string item)
 	} else if (keyword == "DrivePath11") {
 		DrivePath[3] = value;
 
-	} else if (keyword == "BasicROM") {
-		BasicROMPath = value;
-	} else if (keyword == "KernalROM") {
-		KernalROMPath = value;
-	} else if (keyword == "CharROM") {
-		CharROMPath = value;
-	} else if (keyword == "DriveROM") {
-		DriveROMPath = value;
+	} else if (keyword == "ROMSetDef") {
+		if (std::ranges::count(value, ';') == 4) {
+			ROMPaths p;
+			auto pos = value.find(';');
+			std::string name = value.substr(0, pos);
+			auto last = pos + 1;
+			pos = value.find(';', last);
+			p.BasicROMPath = value.substr(last, pos - last);
+			last = pos + 1;
+			pos = value.find(';', last);
+			p.KernalROMPath = value.substr(last, pos - last);
+			last = pos + 1;
+			pos = value.find(';', last);
+			p.CharROMPath = value.substr(last, pos - last);
+			p.DriveROMPath = value.substr(pos + 1);
+			ROMSetDefs[name] = p;
+		}
+	} else if (keyword == "ROMSet") {
+		ROMSet = value;
 
 	} else if (keyword == "Cartridge") {
 		CartridgePath = value;
@@ -257,12 +273,12 @@ bool Prefs::Save(fs::path prefs_path)
 		file << "DrivePath" << (i+8) << " = " << DrivePath[i] << std::endl;
 	}
 
-	file << "BasicROM" << " = " << BasicROMPath << std::endl;
-	file << "KernalROM" << " = " << KernalROMPath << std::endl;
-	file << "CharROM" << " = " << CharROMPath << std::endl;
-	file << "DriveROM" << " = " << DriveROMPath << std::endl;
+	for (const auto & [name, paths] : ROMSetDefs) {
+		file << "ROMSetDef = " << name << ";" << paths.BasicROMPath << ";" << paths.KernalROMPath << ";" << paths.CharROMPath << ";" << paths.DriveROMPath << std::endl;
+	}
+	file << "ROMSet = " << ROMSet << std::endl;
 
-	file << "Cartridge" << " = " << CartridgePath << std::endl;
+	file << "Cartridge = " << CartridgePath << std::endl;
 
 	file << "SIDType = ";
 	switch (SIDType) {
@@ -298,6 +314,17 @@ bool Prefs::Save(fs::path prefs_path)
 	file << "ShowLEDs = " << ShowLEDs << std::endl;
 
 	return true;
+}
+
+
+/*
+ *  Return paths of selected ROM set (or set of empty paths if not found)
+ */
+
+ROMPaths Prefs::SelectedROMPaths() const
+{
+	auto it = ROMSetDefs.find(ROMSet);
+	return it == ROMSetDefs.end() ? ROMPaths{} : it->second;
 }
 
 

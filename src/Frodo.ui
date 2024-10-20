@@ -1265,6 +1265,98 @@ Lutz Vieweg</property>
                     <property name="position">1</property>
                   </packing>
                 </child>
+                <child>
+                  <object class="GtkFrame" id="firmware_roms">
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                    <property name="margin-start">4</property>
+                    <property name="margin-end">4</property>
+                    <property name="label-xalign">0</property>
+                    <property name="shadow-type">in</property>
+                    <child>
+                      <object class="GtkAlignment">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="top-padding">4</property>
+                        <property name="bottom-padding">4</property>
+                        <property name="left-padding">12</property>
+                        <child>
+                          <object class="GtkBox">
+                            <property name="visible">True</property>
+                            <property name="can-focus">False</property>
+                            <property name="spacing">4</property>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="visible">True</property>
+                                <property name="can-focus">False</property>
+                                <property name="label" translatable="yes">Firmware Set:</property>
+                              </object>
+                              <packing>
+                                <property name="expand">False</property>
+                                <property name="fill">True</property>
+                                <property name="position">0</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkComboBoxText" id="rom_set">
+                                <property name="visible">True</property>
+                                <property name="can-focus">False</property>
+                              </object>
+                              <packing>
+                                <property name="expand">False</property>
+                                <property name="fill">True</property>
+                                <property name="position">1</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkButton" id="edit_rom_sets">
+                                <property name="label" translatable="yes">Edit...</property>
+                                <property name="visible">True</property>
+                                <property name="can-focus">True</property>
+                                <property name="receives-default">True</property>
+                                <signal name="clicked" handler="on_edit_rom_sets_clicked" swapped="no"/>
+                              </object>
+                              <packing>
+                                <property name="expand">False</property>
+                                <property name="fill">True</property>
+                                <property name="position">2</property>
+                              </packing>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child type="label">
+                      <object class="GtkLabel">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">Firmware ROMs</property>
+                      </object>
+                    </child>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">True</property>
+                    <property name="position">2</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                    <property name="halign">start</property>
+                    <property name="margin-start">4</property>
+                    <property name="margin-end">4</property>
+                    <property name="margin-top">4</property>
+                    <property name="margin-bottom">4</property>
+                    <property name="label" translatable="yes">Note: Changing cartridges or firmware will reset the C64</property>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">True</property>
+                    <property name="position">3</property>
+                  </packing>
+                </child>
               </object>
               <packing>
                 <property name="position">3</property>
@@ -1538,6 +1630,354 @@ Lutz Vieweg</property>
         </child>
       </object>
     </child>
+  </object>
+  <object class="GtkDialog" id="rom_set_editor">
+    <property name="can-focus">False</property>
+    <property name="title" translatable="yes">Edit Firmware Sets</property>
+    <property name="modal">True</property>
+    <property name="window-position">center-on-parent</property>
+    <property name="default-width">700</property>
+    <property name="type-hint">dialog</property>
+    <property name="transient-for">prefs_win</property>
+    <child internal-child="vbox">
+      <object class="GtkBox">
+        <property name="can-focus">False</property>
+        <property name="orientation">vertical</property>
+        <property name="spacing">4</property>
+        <child internal-child="action_area">
+          <object class="GtkButtonBox">
+            <property name="can-focus">False</property>
+            <property name="layout-style">end</property>
+            <child>
+              <object class="GtkButton" id="rom_set_editor_ok">
+                <property name="label">gtk-ok</property>
+                <property name="visible">True</property>
+                <property name="can-focus">True</property>
+                <property name="receives-default">True</property>
+                <property name="use-stock">True</property>
+              </object>
+              <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkButton" id="rom_set_editor_cancel">
+                <property name="label">gtk-cancel</property>
+                <property name="visible">True</property>
+                <property name="can-focus">True</property>
+                <property name="receives-default">True</property>
+                <property name="use-stock">True</property>
+              </object>
+              <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
+                <property name="position">1</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">False</property>
+            <property name="position">0</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkBox">
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="spacing">4</property>
+            <child>
+              <object class="GtkBox">
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+                <property name="orientation">vertical</property>
+                <property name="spacing">4</property>
+                <child>
+                  <object class="GtkFrame">
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                    <property name="label-xalign">0</property>
+                    <property name="shadow-type">out</property>
+                    <child>
+                      <object class="GtkListBox" id="rom_set_list">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <signal name="row-selected" handler="on_rom_set_list_row_selected" swapped="no"/>
+                      </object>
+                    </child>
+                    <child type="label_item">
+                      <placeholder/>
+                    </child>
+                  </object>
+                  <packing>
+                    <property name="expand">True</property>
+                    <property name="fill">True</property>
+                    <property name="position">0</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkBox">
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                    <property name="spacing">4</property>
+                    <child>
+                      <object class="GtkButton" id="new_rom_set">
+                        <property name="label">gtk-new</property>
+                        <property name="visible">True</property>
+                        <property name="can-focus">True</property>
+                        <property name="receives-default">True</property>
+                        <property name="use-stock">True</property>
+                        <signal name="clicked" handler="on_new_rom_set_clicked" swapped="no"/>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">0</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkButton" id="delete_rom_set">
+                        <property name="label">gtk-delete</property>
+                        <property name="visible">True</property>
+                        <property name="can-focus">True</property>
+                        <property name="receives-default">True</property>
+                        <property name="use-stock">True</property>
+                        <signal name="clicked" handler="on_delete_rom_set_clicked" swapped="no"/>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">1</property>
+                      </packing>
+                    </child>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">True</property>
+                    <property name="position">1</property>
+                  </packing>
+                </child>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <!-- n-columns=3 n-rows=5 -->
+              <object class="GtkGrid">
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+                <property name="row-spacing">4</property>
+                <property name="column-spacing">4</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                    <property name="halign">start</property>
+                    <property name="label" translatable="yes">1541 ROM File:</property>
+                  </object>
+                  <packing>
+                    <property name="left-attach">0</property>
+                    <property name="top-attach">4</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkFileChooserButton" id="drive_rom_path">
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                    <property name="title" translatable="yes">Choose 1541 Drive ROM File</property>
+                    <signal name="file-set" handler="on_drive_rom_file_set" swapped="no"/>
+                  </object>
+                  <packing>
+                    <property name="left-attach">1</property>
+                    <property name="top-attach">4</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                    <property name="halign">start</property>
+                    <property name="label" translatable="yes">Char ROM File:</property>
+                  </object>
+                  <packing>
+                    <property name="left-attach">0</property>
+                    <property name="top-attach">3</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkFileChooserButton" id="char_rom_path">
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                    <property name="title" translatable="yes">Choose C64 Char ROM File</property>
+                    <signal name="file-set" handler="on_char_rom_file_set" swapped="no"/>
+                  </object>
+                  <packing>
+                    <property name="left-attach">1</property>
+                    <property name="top-attach">3</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                    <property name="halign">start</property>
+                    <property name="label" translatable="yes">Kernal ROM File:</property>
+                  </object>
+                  <packing>
+                    <property name="left-attach">0</property>
+                    <property name="top-attach">2</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkFileChooserButton" id="kernal_rom_path">
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                    <property name="title" translatable="yes">Choose C64 Kernal ROM File</property>
+                    <signal name="file-set" handler="on_kernal_rom_file_set" swapped="no"/>
+                  </object>
+                  <packing>
+                    <property name="left-attach">1</property>
+                    <property name="top-attach">2</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                    <property name="halign">start</property>
+                    <property name="label" translatable="yes">Basic ROM File:</property>
+                  </object>
+                  <packing>
+                    <property name="left-attach">0</property>
+                    <property name="top-attach">1</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkFileChooserButton" id="basic_rom_path">
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                    <property name="title" translatable="yes">Choose C64 Basic ROM File</property>
+                    <signal name="file-set" handler="on_basic_rom_file_set" swapped="no"/>
+                  </object>
+                  <packing>
+                    <property name="left-attach">1</property>
+                    <property name="top-attach">1</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                    <property name="halign">start</property>
+                    <property name="label" translatable="yes">Name:</property>
+                  </object>
+                  <packing>
+                    <property name="left-attach">0</property>
+                    <property name="top-attach">0</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkEntry" id="rom_set_name">
+                    <property name="name">rom_set_name</property>
+                    <property name="visible">True</property>
+                    <property name="can-focus">True</property>
+                    <signal name="changed" handler="on_rom_set_name_changed" swapped="no"/>
+                    <signal name="insert-text" handler="on_rom_set_name_insert_text" swapped="no"/>
+                  </object>
+                  <packing>
+                    <property name="left-attach">1</property>
+                    <property name="top-attach">0</property>
+                    <property name="width">2</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkButton" id="basic_rom_builtin">
+                    <property name="label" translatable="yes">Use Built-In</property>
+                    <property name="visible">True</property>
+                    <property name="can-focus">True</property>
+                    <property name="receives-default">True</property>
+                    <signal name="clicked" handler="on_basic_rom_builtin_clicked" swapped="no"/>
+                  </object>
+                  <packing>
+                    <property name="left-attach">2</property>
+                    <property name="top-attach">1</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkButton" id="kernal_rom_builtin">
+                    <property name="label" translatable="yes">Use Built-In</property>
+                    <property name="visible">True</property>
+                    <property name="can-focus">True</property>
+                    <property name="receives-default">True</property>
+                    <signal name="clicked" handler="on_kernal_rom_builtin_clicked" swapped="no"/>
+                  </object>
+                  <packing>
+                    <property name="left-attach">2</property>
+                    <property name="top-attach">2</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkButton" id="char_rom_builtin">
+                    <property name="label" translatable="yes">Use Built-In</property>
+                    <property name="visible">True</property>
+                    <property name="can-focus">True</property>
+                    <property name="receives-default">True</property>
+                    <signal name="clicked" handler="on_char_rom_builtin_clicked" swapped="no"/>
+                  </object>
+                  <packing>
+                    <property name="left-attach">2</property>
+                    <property name="top-attach">3</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkButton" id="drive_rom_builtin">
+                    <property name="label" translatable="yes">Use Built-In</property>
+                    <property name="visible">True</property>
+                    <property name="can-focus">True</property>
+                    <property name="receives-default">True</property>
+                    <signal name="clicked" handler="on_drive_rom_builtin_clicked" swapped="no"/>
+                  </object>
+                  <packing>
+                    <property name="left-attach">2</property>
+                    <property name="top-attach">4</property>
+                  </packing>
+                </child>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">1</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="position">1</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkSeparator">
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="position">3</property>
+          </packing>
+        </child>
+      </object>
+    </child>
+    <action-widgets>
+      <action-widget response="-3">rom_set_editor_ok</action-widget>
+      <action-widget response="-2">rom_set_editor_cancel</action-widget>
+    </action-widgets>
   </object>
   <object class="GtkApplicationWindow" id="sam_win">
     <property name="can-focus">False</property>

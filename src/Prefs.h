@@ -22,6 +22,7 @@
 #define PREFS_H
 
 #include <filesystem>
+#include <map>
 #include <string>
 
 
@@ -58,6 +59,17 @@ enum {
 };
 
 
+// Set of fimware ROM paths
+struct ROMPaths {
+	auto operator<=>(const ROMPaths &) const = default;
+
+	std::string BasicROMPath;	// Path for BASIC ROM
+	std::string KernalROMPath;	// Path for Kernal ROM
+	std::string CharROMPath;	// Path for Char ROM
+	std::string DriveROMPath;	// Path for Drive ROM
+};
+
+
 // Preferences data
 class Prefs {
 public:
@@ -68,6 +80,7 @@ public:
 	void Load(std::filesystem::path prefs_path);
 	bool Save(std::filesystem::path prefs_path);
 	void ParseItem(std::string item);
+	ROMPaths SelectedROMPaths() const;
 
 	int NormalCycles;		// Available CPU cycles in normal raster lines
 	int BadLineCycles;		// Available CPU cycles in Bad Lines
@@ -96,10 +109,8 @@ public:
 	bool SIDFilters;		// Emulate SID filters
 	bool ShowLEDs;			// Show status bar
 
-	std::string BasicROMPath;	// Path for BASIC ROM
-	std::string KernalROMPath;	// Path for Kernal ROM
-	std::string CharROMPath;	// Path for Char ROM
-	std::string DriveROMPath;	// Path for Drive ROM
+	std::map<std::string, ROMPaths> ROMSetDefs;	// Defined ROM sets, indexed by name
+	std::string ROMSet;		// Name of selected ROM set (empty = built-in)
 
 	std::string CartridgePath;	// Path for cartridge image file
 };

@@ -5,6 +5,7 @@ Changes from V4.3 to V4.4:
  - Settings from configuration file can be overridden on command line (for
    example “DrivePath8=/path/to/disk.d64”)
  - Settings window changes:
+   - Added ability to define firmware ROM sets, and switch between them
    - Added menu item for opening the included user manual
  - Improved interrupt timing
  - Improved SID sample playback

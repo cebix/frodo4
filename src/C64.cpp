@@ -125,7 +125,10 @@ C64::C64() : quit_requested(false), prefs_editor_requested(false), load_snapshot
 	init_memory();
 
 	// Load ROM files
-	load_rom_files();
+	load_rom_files(ThePrefs.SelectedROMPaths());
+
+	// Patch ROMs for IEC routines and fast reset
+	patch_roms(ThePrefs.FastReset, ThePrefs.Emul1541Proc);
 
 	// Create the chips
 	TheCPU = new MOS6510(this, RAM, Basic, Kernal, Char, Color);
@@ -219,18 +222,20 @@ void C64::load_rom(const std::string & which, const std::string & path, uint8_t 
 
 			fclose(f);
 		}
+
+		fprintf(stderr, "WARNING: Cannot load %s ROM file '%s', using built-in\n", which.c_str(), path.c_str());
 	}
 
 	// Use builtin ROM
 	memcpy(where, builtin, size);
 }
 
-void C64::load_rom_files()
+void C64::load_rom_files(const ROMPaths & p)
 {
-	load_rom("Basic", ThePrefs.BasicROMPath, Basic, BASIC_ROM_SIZE, BuiltinBasicROM);
-	load_rom("Kernal", ThePrefs.KernalROMPath, Kernal, KERNAL_ROM_SIZE, BuiltinKernalROM);
-	load_rom("Char", ThePrefs.CharROMPath, Char, CHAR_ROM_SIZE, BuiltinCharROM);
-	load_rom("1541", ThePrefs.DriveROMPath, ROM1541, DRIVE_ROM_SIZE, BuiltinDriveROM);
+	load_rom("Basic", p.BasicROMPath, Basic, BASIC_ROM_SIZE, BuiltinBasicROM);
+	load_rom("Kernal", p.KernalROMPath, Kernal, KERNAL_ROM_SIZE, BuiltinKernalROM);
+	load_rom("Char", p.CharROMPath, Char, CHAR_ROM_SIZE, BuiltinCharROM);
+	load_rom("1541", p.DriveROMPath, ROM1541, DRIVE_ROM_SIZE, BuiltinDriveROM);
 }
 
 
@@ -275,9 +280,6 @@ void C64::Run()
 	TheCIA2->Reset();
 	TheCPU1541->Reset();
 	TheGCRDisk->Reset();
-
-	// Patch Kernal ROM for IEC routines and fast reset
-	patch_kernal(ThePrefs.FastReset, ThePrefs.Emul1541Proc);
 
 	// Remember start time of first frame
 	frame_start = chrono::steady_clock::now();
@@ -365,14 +367,21 @@ void C64::NewPrefs(const Prefs *prefs)
 {
 	open_close_joysticks(ThePrefs.Joystick1Port, ThePrefs.Joystick2Port, prefs->Joystick1Port, prefs->Joystick2Port);
 
-	patch_kernal(prefs->FastReset, prefs->Emul1541Proc);
-
 	TheDisplay->NewPrefs(prefs);
 
 	TheIEC->NewPrefs(prefs);
 	TheGCRDisk->NewPrefs(prefs);
 
 	TheSID->NewPrefs(prefs);
+
+	auto old_roms = ThePrefs.SelectedROMPaths();
+	auto new_roms = prefs->SelectedROMPaths();
+	if (old_roms != new_roms) {
+		load_rom_files(new_roms);
+		Reset();	// Reset C64 if ROMs have changed
+	}
+
+	patch_roms(prefs->FastReset, prefs->Emul1541Proc);
 
 	swap_cartridge(ThePrefs.REUType, ThePrefs.CartridgePath, prefs->REUType, prefs->CartridgePath);
 	TheCPU->SetChips(TheVIC, TheSID, TheCIA1, TheCIA2, TheCart, TheIEC);
@@ -419,7 +428,7 @@ void C64::InsertCartridge(const std::string & path)
 
 
 /*
- *  Patch kernal reset and IEC routines
+ *  Patch kernal ROM reset and IEC routines
  */
 
 static void apply_patch(bool apply, uint8_t * rom, const uint8_t * builtin, uint16_t offset, unsigned size, const uint8_t * patch)
@@ -440,7 +449,7 @@ static void apply_patch(bool apply, uint8_t * rom, const uint8_t * builtin, uint
 	}
 }
 
-void C64::patch_kernal(bool fast_reset, bool emul_1541_proc)
+void C64::patch_roms(bool fast_reset, bool emul_1541_proc)
 {
 	// Fast reset
 	static const uint8_t fast_reset_patch[] = { 0xa0, 0x00 };
@@ -499,7 +508,7 @@ void C64::swap_cartridge(int oldreu, const std::string & oldpath, int newreu, co
 			new_cart = Cartridge::FromFile(newpath, error);
 
 			if (new_cart) {
-				ShowNotification("Cartridge inserted");
+				ShowNotification("Cartridge inserted");	// This message is good to have on screen even on startup
 				Reset();					// Reset C64 if new cartridge inserted
 			} else {
 				ShowNotification(error);	// Keep old cartridge on error

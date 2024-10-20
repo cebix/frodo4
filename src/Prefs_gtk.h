@@ -28,7 +28,9 @@
 
 #include <SDL.h>
 
+#include <filesystem>
 #include <format>
+namespace fs = std::filesystem;
 
 
 // GTK builder object
@@ -290,6 +292,34 @@ bool Prefs::ShowEditor(bool startup, fs::path prefs_path, fs::path snapshot_path
 		write_sam_output(SAM_GetStartupMessage());
 		write_sam_output(SAM_GetPrompt());
 
+		// Create file filters for ROM file choosers
+		auto allow_files_with_size = [](const GtkFileFilterInfo * filter_info, gpointer user_data) -> gboolean {
+			if (fs::is_regular_file(filter_info->filename)) {
+				return fs::file_size(filter_info->filename) == (size_t) user_data && strchr(filter_info->filename, ';') == nullptr;
+			}
+			return true;
+		};
+
+		GtkFileChooser * rom_chooser = GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "basic_rom_path"));
+		filter = gtk_file_filter_new();
+		gtk_file_filter_add_custom(filter, GTK_FILE_FILTER_FILENAME, allow_files_with_size, (gpointer) BASIC_ROM_SIZE, nullptr);
+		gtk_file_chooser_add_filter(rom_chooser, filter);
+
+		rom_chooser = GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "kernal_rom_path"));
+		filter = gtk_file_filter_new();
+		gtk_file_filter_add_custom(filter, GTK_FILE_FILTER_FILENAME, allow_files_with_size, (gpointer) KERNAL_ROM_SIZE, nullptr);
+		gtk_file_chooser_add_filter(rom_chooser, filter);
+
+		rom_chooser = GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "char_rom_path"));
+		filter = gtk_file_filter_new();
+		gtk_file_filter_add_custom(filter, GTK_FILE_FILTER_FILENAME, allow_files_with_size, (gpointer) CHAR_ROM_SIZE, nullptr);
+		gtk_file_chooser_add_filter(rom_chooser, filter);
+
+		rom_chooser = GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "drive_rom_path"));
+		filter = gtk_file_filter_new();
+		gtk_file_filter_add_custom(filter, GTK_FILE_FILTER_FILENAME, allow_files_with_size, (gpointer) DRIVE_ROM_SIZE, nullptr);
+		gtk_file_chooser_add_filter(rom_chooser, filter);
+
 		// Adjust menus for startup
 		gtk_menu_item_set_label(GTK_MENU_ITEM(gtk_builder_get_object(builder, "ok_menu")), "Start");
 		gtk_button_set_label(GTK_BUTTON(gtk_builder_get_object(builder, "ok_button")), "Start");
@@ -354,6 +384,26 @@ static void create_joystick_menu(const char *widget_name)
 	}
 }
 
+static void create_rom_set_menu(const std::string & selected_rom_set)
+{
+	GtkComboBoxText * rom_set = GTK_COMBO_BOX_TEXT(gtk_builder_get_object(builder, "rom_set"));
+
+	gtk_combo_box_text_remove_all(rom_set);
+	gtk_combo_box_text_append_text(rom_set, "Built-In");
+
+	for (const auto & [name, _] : prefs->ROMSetDefs) {
+		gtk_combo_box_text_append(rom_set, name.c_str(), name.c_str());	// ID = name
+	}
+
+	if (selected_rom_set.empty()) {
+		gtk_combo_box_set_active(GTK_COMBO_BOX(rom_set), 0);	// Built-In
+	} else {
+		if (! gtk_combo_box_set_active_id(GTK_COMBO_BOX(rom_set), selected_rom_set.c_str())) {
+			gtk_combo_box_set_active(GTK_COMBO_BOX(rom_set), 0);
+		}
+	}
+}
+
 static void set_values()
 {
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "emul1541_proc")), prefs->Emul1541Proc);
@@ -387,6 +437,8 @@ static void set_values()
 	gtk_combo_box_set_active(GTK_COMBO_BOX(gtk_builder_get_object(builder, "reu_type")), prefs->REUType);
 	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "cartridge_path")), prefs->CartridgePath.c_str());
 
+	create_rom_set_menu(prefs->ROMSet);
+
 	if (! IsFrodoSC) {
 		gtk_spin_button_set_value(GTK_SPIN_BUTTON(gtk_builder_get_object(builder, "normal_cycles")), prefs->NormalCycles);
 		gtk_spin_button_set_value(GTK_SPIN_BUTTON(gtk_builder_get_object(builder, "bad_line_cycles")), prefs->BadLineCycles);
@@ -406,12 +458,22 @@ static void set_values()
 
 static void get_drive_path(int num, const char *widget_name)
 {
-	gchar *path = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, widget_name)));
+	gchar * path = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, widget_name)));
 	if (path) {
 		prefs->DrivePath[num] = path;
 		g_free(path);
 	} else {
 		prefs->DrivePath[num].clear();
+	}
+}
+
+static std::string get_selected_rom_set()
+{
+	GtkComboBox * rom_set = GTK_COMBO_BOX(gtk_builder_get_object(builder, "rom_set"));
+	if (gtk_combo_box_get_active(rom_set) == 0) {
+		return {};	// Built-In
+	} else {
+		return gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(rom_set));
 	}
 }
 
@@ -451,6 +513,8 @@ static void get_values()
 	} else {
 		prefs->CartridgePath.clear();
 	}
+
+	prefs->ROMSet = get_selected_rom_set();
 
 	if (! IsFrodoSC) {
 		prefs->NormalCycles = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(gtk_builder_get_object(builder, "normal_cycles")));
@@ -597,6 +661,212 @@ extern "C" void on_sam_clear_activate(GtkMenuItem *menuitem, gpointer user_data)
 extern "C" void on_sam_close_activate(GtkMenuItem *menuitem, gpointer user_data)
 {
 	gtk_widget_hide(GTK_WIDGET(gtk_builder_get_object(builder, "sam_win")));
+}
+
+
+/*
+ *  ROM set editor window handling
+ */
+
+static GtkListBoxRow * add_rom_set_editor_item(const std::string & name, const ROMPaths & p)
+{
+	GtkListBox * rom_set_list = GTK_LIST_BOX(gtk_builder_get_object(builder, "rom_set_list"));
+	GtkContainer * row = GTK_CONTAINER(gtk_list_box_row_new());
+
+	// Store pointer to associated ROMPaths as custom data object
+	g_object_set_data(G_OBJECT(row), "roms", new ROMPaths(p));
+
+	GtkWidget * label = gtk_label_new(name.c_str());
+	gtk_widget_set_halign(label, GTK_ALIGN_START);
+	gtk_container_add(row, label);
+
+	gtk_container_add(GTK_CONTAINER(rom_set_list), GTK_WIDGET(row));
+	return GTK_LIST_BOX_ROW(row);
+}
+
+static std::string name_of_rom_set_row(const GtkListBoxRow * row)
+{
+	return gtk_label_get_text(GTK_LABEL(gtk_bin_get_child(GTK_BIN(row))));
+}
+
+static ROMPaths * paths_of_rom_set_row(const GtkListBoxRow * row)
+{
+	return (ROMPaths *) g_object_get_data(G_OBJECT(row), "roms");
+}
+
+static int rom_set_list_sort_func(GtkListBoxRow * row1, GtkListBoxRow * row2, gpointer user_data)
+{
+	auto ord = name_of_rom_set_row(row1) <=> name_of_rom_set_row(row2);
+	if (ord > 0) {
+		return 1;
+	} else if (ord < 0) {
+		return -1;
+	} else {
+		return 0;
+	}
+}
+
+static GtkListBoxRow * selected_rom_set_row()
+{
+	GtkListBox * rom_set_list = GTK_LIST_BOX(gtk_builder_get_object(builder, "rom_set_list"));
+	return gtk_list_box_get_selected_row(rom_set_list);
+}
+
+static void ghost_rom_set_editor_widgets(bool ghosted)
+{
+	gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object(builder, "rom_set_name")), !ghosted);
+	gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object(builder, "basic_rom_path")), !ghosted);
+	gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object(builder, "kernal_rom_path")), !ghosted);
+	gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object(builder, "char_rom_path")), !ghosted);
+	gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object(builder, "drive_rom_path")), !ghosted);
+	gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object(builder, "basic_rom_builtin")), !ghosted);
+	gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object(builder, "kernal_rom_builtin")), !ghosted);
+	gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object(builder, "char_rom_builtin")), !ghosted);
+	gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object(builder, "drive_rom_builtin")), !ghosted);
+	gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object(builder, "delete_rom_set")), !ghosted);
+}
+
+static void update_rom_set_editor_widgets(const std::string & name, const ROMPaths & p)
+{
+	gtk_entry_set_text(GTK_ENTRY(gtk_builder_get_object(builder, "rom_set_name")), name.c_str());
+	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "basic_rom_path")), p.BasicROMPath.c_str());
+	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "kernal_rom_path")), p.KernalROMPath.c_str());
+	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "char_rom_path")), p.CharROMPath.c_str());
+	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "drive_rom_path")), p.DriveROMPath.c_str());
+}
+
+extern "C" void on_new_rom_set_clicked(GtkButton *button, gpointer user_data)
+{
+	GtkListBox * rom_set_list = GTK_LIST_BOX(gtk_builder_get_object(builder, "rom_set_list"));
+	GtkListBoxRow * row = add_rom_set_editor_item("unnamed set", ROMPaths{});
+	gtk_widget_show_all(GTK_WIDGET(rom_set_list));
+	gtk_list_box_select_row(rom_set_list, row);
+}
+
+extern "C" void on_delete_rom_set_clicked(GtkButton *button, gpointer user_data)
+{
+	if (GtkListBoxRow * row = selected_rom_set_row()) {
+		delete paths_of_rom_set_row(row);
+		gtk_widget_destroy(GTK_WIDGET(row));
+
+		ghost_rom_set_editor_widgets(true);
+		update_rom_set_editor_widgets("", ROMPaths{});
+	}
+}
+
+extern "C" void on_rom_set_list_row_selected(GtkListBox *self, GtkListBoxRow *row, gpointer user_data)
+{
+	if (row) {
+		ghost_rom_set_editor_widgets(false);
+		update_rom_set_editor_widgets(name_of_rom_set_row(row), *paths_of_rom_set_row(row));
+	} else {
+		ghost_rom_set_editor_widgets(true);
+		update_rom_set_editor_widgets("", ROMPaths{});
+	}
+}
+
+extern "C" void on_rom_set_name_insert_text(GtkEditable *self, gchar *new_text, gint new_text_length, gint *position, gpointer user_data)
+{
+	// Prevent ';' characters in ROM set names
+	if (strchr(new_text, ';') == nullptr) {
+		g_signal_handlers_block_by_func(G_OBJECT(self), (void *) on_rom_set_name_insert_text, user_data);
+		gtk_editable_insert_text(self, new_text, new_text_length, position);
+		g_signal_handlers_unblock_by_func(G_OBJECT(self), (void *) on_rom_set_name_insert_text, user_data);
+	}
+	g_signal_stop_emission_by_name(self, "insert-text");
+}
+
+extern "C" void on_rom_set_name_changed(GtkEditable *self, gpointer user_data)
+{
+	if (GtkListBoxRow * row = selected_rom_set_row()) {
+		const gchar * name = gtk_entry_get_text(GTK_ENTRY(self));
+		gtk_label_set_text(GTK_LABEL(gtk_bin_get_child(GTK_BIN(row))), name);
+		gtk_list_box_invalidate_sort(GTK_LIST_BOX(gtk_builder_get_object(builder, "rom_set_list")));
+	}
+}
+
+extern "C" void on_basic_rom_file_set(GtkFileChooserButton *self, gpointer user_data)
+{
+	if (GtkListBoxRow * row = selected_rom_set_row()) {
+		gchar * path = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(self));
+		if (path) {
+			paths_of_rom_set_row(row)->BasicROMPath = path;
+			g_free(path);
+		} else {
+			paths_of_rom_set_row(row)->BasicROMPath.clear();
+		}
+	}
+}
+
+extern "C" void on_basic_rom_builtin_clicked(GtkButton *self, gpointer user_data)
+{
+	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "basic_rom_path")), "");
+	if (GtkListBoxRow * row = selected_rom_set_row()) {
+		paths_of_rom_set_row(row)->BasicROMPath.clear();
+	}
+}
+
+extern "C" void on_kernal_rom_file_set(GtkFileChooserButton *self, gpointer user_data)
+{
+	if (GtkListBoxRow * row = selected_rom_set_row()) {
+		gchar * path = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(self));
+		if (path) {
+			paths_of_rom_set_row(row)->KernalROMPath = path;
+			g_free(path);
+		} else {
+			paths_of_rom_set_row(row)->KernalROMPath.clear();
+		}
+	}
+}
+
+extern "C" void on_kernal_rom_builtin_clicked(GtkButton *self, gpointer user_data)
+{
+	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "kernal_rom_path")), "");
+	if (GtkListBoxRow * row = selected_rom_set_row()) {
+		paths_of_rom_set_row(row)->KernalROMPath.clear();
+	}
+}
+
+extern "C" void on_char_rom_file_set(GtkFileChooserButton *self, gpointer user_data)
+{
+	if (GtkListBoxRow * row = selected_rom_set_row()) {
+		gchar * path = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(self));
+		if (path) {
+			paths_of_rom_set_row(row)->CharROMPath = path;
+			g_free(path);
+		} else {
+			paths_of_rom_set_row(row)->CharROMPath.clear();
+		}
+	}
+}
+
+extern "C" void on_char_rom_builtin_clicked(GtkButton *self, gpointer user_data)
+{
+	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "char_rom_path")), "");
+	if (GtkListBoxRow * row = selected_rom_set_row()) {
+		paths_of_rom_set_row(row)->CharROMPath.clear();
+	}
+}
+
+extern "C" void on_drive_rom_file_set(GtkFileChooserButton *self, gpointer user_data)
+{
+	if (GtkListBoxRow * row = selected_rom_set_row()) {
+		gchar * path = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(self));
+		if (path) {
+			paths_of_rom_set_row(row)->DriveROMPath = path;
+			g_free(path);
+		} else {
+			paths_of_rom_set_row(row)->DriveROMPath.clear();
+		}
+	}
+}
+
+extern "C" void on_drive_rom_builtin_clicked(GtkButton *self, gpointer user_data)
+{
+	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "drive_rom_path")), "");
+	if (GtkListBoxRow * row = selected_rom_set_row()) {
+		paths_of_rom_set_row(row)->DriveROMPath.clear();
+	}
 }
 
 
@@ -856,6 +1126,66 @@ extern "C" void on_reu_type_changed(GtkComboBox *box, gpointer user_data)
 extern "C" void on_cartridge_eject_clicked(GtkButton *button, gpointer user_data)
 {
 	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "cartridge_path")), "");
+}
+
+extern "C" void on_edit_rom_sets_clicked(GtkButton *button, gpointer user_data)
+{
+	GtkDialog * editor = GTK_DIALOG(gtk_builder_get_object(builder, "rom_set_editor"));
+	GtkListBox * rom_set_list = GTK_LIST_BOX(gtk_builder_get_object(builder, "rom_set_list"));
+
+	// Keep ROM set list sorted by name
+	gtk_list_box_set_sort_func(rom_set_list, rom_set_list_sort_func, nullptr, nullptr);
+
+	std::string selected_rom_set = get_selected_rom_set();
+
+	// Repopulate ROM set list
+	GList * children = gtk_container_get_children(GTK_CONTAINER(rom_set_list));
+	for (GList * it = children; it != nullptr; it = g_list_next(it)) {
+		GtkListBoxRow * row = GTK_LIST_BOX_ROW(it->data);
+		delete paths_of_rom_set_row(row);
+		gtk_widget_destroy(GTK_WIDGET(row));
+	}
+	g_list_free(children);
+
+	for (const auto & [name, paths] : prefs->ROMSetDefs) {
+		GtkListBoxRow * row = add_rom_set_editor_item(name, paths);
+		if (name.c_str() == selected_rom_set) {
+			gtk_list_box_select_row(rom_set_list, row);
+		}
+	}
+	gtk_widget_show_all(GTK_WIDGET(rom_set_list));
+
+	gint res = gtk_dialog_run(editor);
+	if (res == GTK_RESPONSE_ACCEPT) {
+
+		// Read back ROM set list
+		prefs->ROMSetDefs.clear();
+
+		children = gtk_container_get_children(GTK_CONTAINER(rom_set_list));
+		for (GList * it = children; it != nullptr; it = g_list_next(it)) {
+			GtkListBoxRow * row = GTK_LIST_BOX_ROW(it->data);
+
+			// Prevent empty names, enforce uniqueness
+			auto name = name_of_rom_set_row(row);
+			if (name.empty()) {
+				name = "unnamed set";
+			}
+
+			auto base_name = name;
+			unsigned index = 1;
+			while (prefs->ROMSetDefs.count(name) > 0) {
+				name = base_name + std::to_string(index);
+				++index;
+			}
+
+			prefs->ROMSetDefs[name] = *paths_of_rom_set_row(row);
+		}
+		g_list_free(children);
+
+		create_rom_set_menu(selected_rom_set);
+	}
+
+	gtk_widget_hide(GTK_WIDGET(editor));
 }
 
 extern "C" gboolean on_prefs_win_delete_event(GtkWidget *widget, GdkEvent *event, gpointer user_data)

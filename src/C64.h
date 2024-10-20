@@ -53,6 +53,7 @@ enum PlayMode {
 
 
 class Prefs;
+class ROMPaths;
 class Display;
 class MOS6510;
 class MOS6569;
@@ -133,13 +134,13 @@ public:
 
 private:
 	void load_rom(const std::string & which, const std::string & path, uint8_t * where, size_t size, const uint8_t * builtin);
-	void load_rom_files();
+	void load_rom_files(const ROMPaths & p);
 	void init_memory();
 
 	void pause();
 	void resume();
 
-	void patch_kernal(bool fast_reset, bool emul_1541_proc);
+	void patch_roms(bool fast_reset, bool emul_1541_proc);
 
 #ifdef FRODO_SC
 	bool emulate_c64_cycle();
