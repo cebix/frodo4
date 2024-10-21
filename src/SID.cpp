@@ -1122,9 +1122,6 @@ void DigitalRenderer::NewPrefs(const Prefs *prefs)
 
 void DigitalRenderer::calc_filter()
 {
-	if (! ThePrefs.SIDFilters)
-		return;
-
 	// Filter off? Then reset all coefficients
 	if (f_type == FILT_NONE) {
 		d1 = filter_t(0.0); d2 = filter_t(0.0);
@@ -1388,25 +1385,23 @@ void DigitalRenderer::calc_buffer(int16_t *buf, long count)
 		}
 
 		// SID-internal filters
-		if (ThePrefs.SIDFilters) {
-			f_ampl_eff = f_ampl_eff * filter_t(0.8) + f_ampl * filter_t(0.2);	// Smooth out filter parameter transitions
-			d1_eff     = d1_eff     * filter_t(0.8) + d1     * filter_t(0.2);
-			d2_eff     = d2_eff     * filter_t(0.8) + d2     * filter_t(0.2);
-			g1_eff     = g1_eff     * filter_t(0.8) + g1     * filter_t(0.2);
-			g2_eff     = g2_eff     * filter_t(0.8) + g2     * filter_t(0.2);
+		f_ampl_eff = f_ampl_eff * filter_t(0.8) + f_ampl * filter_t(0.2);	// Smooth out filter parameter transitions
+		d1_eff     = d1_eff     * filter_t(0.8) + d1     * filter_t(0.2);
+		d2_eff     = d2_eff     * filter_t(0.8) + d2     * filter_t(0.2);
+		g1_eff     = g1_eff     * filter_t(0.8) + g1     * filter_t(0.2);
+		g2_eff     = g2_eff     * filter_t(0.8) + g2     * filter_t(0.2);
 
 #ifdef USE_FIXPOINT_MATHS
-			int32_t xn = f_ampl_eff.imul(sum_output_filter);
-			int32_t yn = xn + d1_eff.imul(xn1) + d2_eff.imul(xn2) - g1_eff.imul(yn1) - g2_eff.imul(yn2);
-			yn2 = yn1; yn1 = yn; xn2 = xn1; xn1 = xn;
-			sum_output_filter = yn;
+		int32_t xn = f_ampl_eff.imul(sum_output_filter);
+		int32_t yn = xn + d1_eff.imul(xn1) + d2_eff.imul(xn2) - g1_eff.imul(yn1) - g2_eff.imul(yn2);
+		yn2 = yn1; yn1 = yn; xn2 = xn1; xn1 = xn;
+		sum_output_filter = yn;
 #else
-			filter_t xn = filter_t(sum_output_filter) * f_ampl_eff;
-			filter_t yn = xn + d1_eff * xn1 + d2_eff * xn2 - g1_eff * yn1 - g2_eff * yn2;
-			yn2 = yn1; yn1 = yn; xn2 = xn1; xn1 = xn;
-			sum_output_filter = (int32_t) yn;
+		filter_t xn = filter_t(sum_output_filter) * f_ampl_eff;
+		filter_t yn = xn + d1_eff * xn1 + d2_eff * xn2 - g1_eff * yn1 - g2_eff * yn2;
+		yn2 = yn1; yn1 = yn; xn2 = xn1; xn1 = xn;
+		sum_output_filter = (int32_t) yn;
 #endif
-		}
 
 		// External filter on AUDIO OUT
 		int32_t ext_output = (sum_output - sum_output_filter + dc_offset) * master_volume;
@@ -1414,15 +1409,11 @@ void DigitalRenderer::calc_buffer(int16_t *buf, long count)
 #ifdef USE_FIXPOINT_MATHS
 		ext_output >>= 14;
 #else
-		if (ThePrefs.SIDFilters) {
-			filter_t audio_out = filter_t(ext_output) / (1 << 14);
-			audio_out_lp = out_lp_g * audio_out_lp + (1 - out_lp_g) * audio_out;
-			audio_out_hp = out_hp_g * audio_out_hp + out_hp_d * (audio_out_lp - audio_out_lp1);
-			audio_out_lp1 = audio_out_lp;
-			ext_output = (int32_t) audio_out_hp;
-		} else {
-			ext_output >>= 14;
-		}
+		filter_t audio_out = filter_t(ext_output) / (1 << 14);
+		audio_out_lp = out_lp_g * audio_out_lp + (1 - out_lp_g) * audio_out;
+		audio_out_hp = out_hp_g * audio_out_hp + out_hp_d * (audio_out_lp - audio_out_lp1);
+		audio_out_lp1 = audio_out_lp;
+		ext_output = (int32_t) audio_out_hp;
 #endif
 
 		// Write to buffer

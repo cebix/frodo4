@@ -111,7 +111,6 @@ public:
 	bool CIAIRQHack;		// Write to CIA ICR clears IRQ
 	bool MapSlash;			// Map '/' in C64 filenames
 	bool Emul1541Proc;		// Enable processor-level 1541 emulation
-	bool SIDFilters;		// Emulate SID filters
 	bool ShowLEDs;			// Show status bar
 
 	std::map<std::string, ROMPaths> ROMSetDefs;	// Defined ROM sets, indexed by name

@@ -480,7 +480,6 @@ static void set_values()
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "show_leds")), prefs->ShowLEDs);
 
 	gtk_combo_box_set_active(GTK_COMBO_BOX(gtk_builder_get_object(builder, "sid_type")), prefs->SIDType);
-	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "sid_filters")), prefs->SIDFilters);
 
 	create_joystick_menu("joystick1_port");
 	create_joystick_menu("joystick2_port");
@@ -564,7 +563,6 @@ static void get_values()
 	prefs->ShowLEDs = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "show_leds")));
 
 	prefs->SIDType = gtk_combo_box_get_active(GTK_COMBO_BOX(gtk_builder_get_object(builder, "sid_type")));
-	prefs->SIDFilters = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "sid_filters")));
 
 	prefs->Joystick1Port = gtk_combo_box_get_active(GTK_COMBO_BOX(gtk_builder_get_object(builder, "joystick1_port")));
 	prefs->Joystick2Port = gtk_combo_box_get_active(GTK_COMBO_BOX(gtk_builder_get_object(builder, "joystick2_port")));
@@ -618,10 +616,6 @@ static void ghost_widgets()
 	ghost_widget("map_slash", prefs->Emul1541Proc);
 
 	ghost_widget("scaling_numerator", prefs->DisplayType == DISPTYPE_SCREEN);
-
-	ghost_widget("sid_filters", prefs->SIDType != SIDTYPE_DIGITAL_6581 && prefs->SIDType != SIDTYPE_DIGITAL_8580);
-	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "sid_filters")),
-	                             (prefs->SIDType == SIDTYPE_DIGITAL_6581 || prefs->SIDType == SIDTYPE_DIGITAL_8580) ? prefs->SIDFilters : (prefs->SIDType == SIDTYPE_SIDCARD ? true : false));
 
 	ghost_widget("cartridge_path", prefs->REUType != REU_NONE);
 }
@@ -1432,17 +1426,6 @@ extern "C" void on_display_type_changed(GtkComboBox *box, gpointer user_data)
 {
 	prefs->DisplayType = gtk_combo_box_get_active(box);
 	ghost_widgets();
-}
-
-extern "C" void on_sid_type_changed(GtkComboBox *box, gpointer user_data)
-{
-	prefs->SIDType = gtk_combo_box_get_active(box);
-	ghost_widgets();
-}
-
-extern "C" void on_sid_filters_toggled(GtkToggleButton *button, gpointer user_data)
-{
-	prefs->SIDFilters = gtk_toggle_button_get_active(button);
 }
 
 extern "C" void on_reu_type_changed(GtkComboBox *box, gpointer user_data)

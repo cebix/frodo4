@@ -8,6 +8,7 @@ Changes from V4.3 to V4.4:
    - Added ability to map game controller buttons to keys on the C64 keyboard
    - Added ability to define firmware ROM sets, and switch between them
    - Added menu item for opening the included user manual
+   - Removed "Enable SID Filters" setting which is now always enabled
  - Improved interrupt timing
  - Improved SID sample playback
 

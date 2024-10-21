@@ -63,7 +63,6 @@ Prefs::Prefs()
 	CIAIRQHack = false;
 	MapSlash = true;
 	Emul1541Proc = true;
-	SIDFilters = true;
 	ShowLEDs = true;
 }
 
@@ -283,8 +282,6 @@ void Prefs::ParseItem(std::string item)
 		MapSlash = (value == "true");
 	} else if (keyword == "Emul1541Proc") {
 		Emul1541Proc = (value == "true");
-	} else if (keyword == "SIDFilters") {
-		SIDFilters = (value == "true");
 	} else if (keyword == "ShowLEDs") {
 		ShowLEDs = (value == "true");
 
@@ -373,7 +370,6 @@ bool Prefs::Save(fs::path prefs_path)
 	file << "CIAIRQHack = " << CIAIRQHack << std::endl;
 	file << "MapSlash = " << MapSlash << std::endl;
 	file << "Emul1541Proc = " << Emul1541Proc << std::endl;
-	file << "SIDFilters = " << SIDFilters << std::endl;
 	file << "ShowLEDs = " << ShowLEDs << std::endl;
 
 	return true;
