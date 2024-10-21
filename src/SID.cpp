@@ -428,12 +428,12 @@ public:
 	DigitalRenderer();
 	virtual ~DigitalRenderer();
 
-	virtual void Reset();
-	virtual void EmulateLine();
-	virtual void WriteRegister(uint16_t adr, uint8_t byte);
-	virtual void NewPrefs(const Prefs *prefs);
-	virtual void Pause();
-	virtual void Resume();
+	void Reset() override;
+	void EmulateLine() override;
+	void WriteRegister(uint16_t adr, uint8_t byte) override;
+	void NewPrefs(const Prefs *prefs) override;
+	void Pause() override;
+	void Resume() override;
 
 private:
 	void set_wave_table(int sid_type);

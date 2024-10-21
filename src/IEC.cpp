@@ -950,7 +950,7 @@ void Drive::unsupp_cmd()
 
 uint8_t ascii2petscii(char c)
 {
-	if ((c >= 'A') && (c <= 'Z') || (c >= 'a') && (c <= 'z'))
+	if (((c >= 'A') && (c <= 'Z')) || ((c >= 'a') && (c <= 'z')))
 		return c ^ 0x20;
 	return c;
 }
@@ -962,7 +962,7 @@ void ascii2petscii(uint8_t *dest, const char *src, int n)
 
 char petscii2ascii(uint8_t c)
 {
-	if ((c >= 'A') && (c <= 'Z') || (c >= 'a') && (c <= 'z'))
+	if (((c >= 'A') && (c <= 'Z')) || ((c >= 'a') && (c <= 'z')))
 		return c ^ 0x20;
 	if ((c >= 0xc1) && (c <= 0xda))
 		return c ^ 0x80;

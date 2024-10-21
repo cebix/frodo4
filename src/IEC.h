@@ -192,11 +192,11 @@ public:
 	Drive(IEC *iec);
 	virtual ~Drive() {}
 
-	virtual uint8_t Open(int channel, const uint8_t *name, int name_len)=0;
-	virtual uint8_t Close(int channel)=0;
-	virtual uint8_t Read(int channel, uint8_t &byte)=0;
-	virtual uint8_t Write(int channel, uint8_t byte, bool eoi)=0;
-	virtual void Reset()=0;
+	virtual uint8_t Open(int channel, const uint8_t *name, int name_len) = 0;
+	virtual uint8_t Close(int channel) = 0;
+	virtual uint8_t Read(int channel, uint8_t &byte) = 0;
+	virtual uint8_t Write(int channel, uint8_t byte, bool eoi) = 0;
+	virtual void Reset() = 0;
 
 	int LED;			// Drive LED state
 	bool Ready;			// Drive is ready for operation

@@ -32,11 +32,11 @@ public:
 	FSDrive(IEC *iec, const std::string & path);
 	virtual ~FSDrive();
 
-	virtual uint8_t Open(int channel, const uint8_t *name, int name_len);
-	virtual uint8_t Close(int channel);
-	virtual uint8_t Read(int channel, uint8_t &byte);
-	virtual uint8_t Write(int channel, uint8_t byte, bool eoi);
-	virtual void Reset();
+	uint8_t Open(int channel, const uint8_t *name, int name_len) override;
+	uint8_t Close(int channel) override;
+	uint8_t Read(int channel, uint8_t &byte) override;
+	uint8_t Write(int channel, uint8_t byte, bool eoi) override;
+	void Reset() override;
 
 private:
 	bool change_dir(const std::string & path);
@@ -46,8 +46,8 @@ private:
 	void find_first_file(char *pattern);
 	void close_all_channels();
 
-	virtual void initialize_cmd();
-	virtual void validate_cmd();
+	void initialize_cmd() override;
+	void validate_cmd() override;
 
 	std::filesystem::path dir_path;	// Path to directory
 	uint8_t dir_title[16];			// Directory title in PETSCII

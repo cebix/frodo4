@@ -306,8 +306,9 @@ uint8_t ArchDrive::open_directory(int channel, const uint8_t *pattern, int patte
 
 	// Create directory title
 	uint8_t buf[] = "\001\004\001\001\0\0\022\042                \042 00 2A";
-	for (int i=0; i<16 && dir_title[i]; i++)
+	for (unsigned i = 0; i < 16 && dir_title[i]; ++i) {
 		buf[i + 8] = dir_title[i];
+	}
 	fwrite(buf, 1, 32, file[channel]);
 
 	// Create and write one line for every directory entry
@@ -337,8 +338,9 @@ uint8_t ArchDrive::open_directory(int channel, const uint8_t *pattern, int patte
 			// Convert and insert file name
 			*p++ = '\"';
 			uint8_t *q = p;
-			for (int j=0; j<16 && i->name[j]; j++)
+			for (unsigned j = 0; j < 16 && i->name[j]; ++j) {
 				*q++ = i->name[j];
+			}
 			*q++ = '\"';
 			p += 18;
 
@@ -588,7 +590,8 @@ static bool parse_t64_file(FILE *f, std::vector<c64_dir_entry> &vec, char *dir_t
 	fseek(f, 32, SEEK_SET);
 	uint8_t buf[32];
 	fread(&buf, 32, 1, f);
-	int max = (buf[3] << 8) | buf[2];
+
+	unsigned max = (buf[3] << 8) | buf[2];
 	if (max == 0) {
 		max = 1;
 	}
@@ -600,14 +603,14 @@ static bool parse_t64_file(FILE *f, std::vector<c64_dir_entry> &vec, char *dir_t
 	fread(buf2, 32, max, f);
 
 	// Determine number of files contained
-	int num_files = 0;
-	for (int i=0; i<max; i++) {
+	unsigned num_files = 0;
+	for (unsigned i = 0; i < max; ++i) {
 		if (buf2[i*32] == 1) {
 			num_files++;
 		}
 	}
 
-	if (!num_files) {
+	if (num_files == 0) {
 		delete[] buf2;
 		return false;
 	}
@@ -615,7 +618,7 @@ static bool parse_t64_file(FILE *f, std::vector<c64_dir_entry> &vec, char *dir_t
 	// Construct file information array
 	vec.reserve(num_files);
 	uint8_t *b = buf2;
-	for (int i=0; i<max; i++, b+=32) {
+	for (unsigned i = 0; i < max; ++i, b += 32) {
 		if (b[0] == 1) {
 
 			// Convert file name (strip trailing spaces)
@@ -657,8 +660,8 @@ static bool parse_lynx_file(FILE *f, std::vector<c64_dir_entry> &vec, char *dir_
 
 	// Construct file information array
 	vec.reserve(num_files);
-	int cur_offset = dir_blocks * 254;
-	for (int i=0; i<num_files; i++) {
+	unsigned cur_offset = dir_blocks * 254;
+	for (int i = 0; i < num_files; ++i) {
 
 		// Read and convert file name (strip trailing shift-spaces)
 		uint8_t name_buf[17];
@@ -727,7 +730,7 @@ static bool parse_p00_file(FILE *f, std::vector<c64_dir_entry> &vec, char *dir_t
 
 	// Get file size
 	fseek(f, 0, SEEK_END);
-	size_t size = ftell(f) - 26;
+	long size = ftell(f) - 26;
 
 	// Add entry
 	vec.push_back(c64_dir_entry(name_buf, FTYPE_PRG, false, false, size, 26, sa_lo, sa_hi));

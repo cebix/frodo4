@@ -44,11 +44,11 @@ public:
 	ArchDrive(IEC *iec, const std::string & filepath);
 	virtual ~ArchDrive();
 
-	virtual uint8_t Open(int channel, const uint8_t *name, int name_len);
-	virtual uint8_t Close(int channel);
-	virtual uint8_t Read(int channel, uint8_t &byte);
-	virtual uint8_t Write(int channel, uint8_t byte, bool eoi);
-	virtual void Reset();
+	uint8_t Open(int channel, const uint8_t *name, int name_len) override;
+	uint8_t Close(int channel) override;
+	uint8_t Read(int channel, uint8_t &byte) override;
+	uint8_t Write(int channel, uint8_t byte, bool eoi) override;
+	void Reset() override;
 
 private:
 	bool change_arch(const std::string & path);
@@ -58,9 +58,9 @@ private:
 	bool find_first_file(const uint8_t *pattern, int pattern_len, int &num);
 	void close_all_channels();
 
-	virtual void rename_cmd(const uint8_t *new_file, int new_file_len, const uint8_t *old_file, int old_file_len);
-	virtual void initialize_cmd();
-	virtual void validate_cmd();
+	void rename_cmd(const uint8_t *new_file, int new_file_len, const uint8_t *old_file, int old_file_len) override;
+	void initialize_cmd() override;
+	void validate_cmd() override;
 
 	FILE *the_file;			// File pointer for archive file
 	int archive_type;		// File/archive type (see defines above)

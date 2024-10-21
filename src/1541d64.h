@@ -72,11 +72,11 @@ public:
 	ImageDrive(IEC *iec, const std::string & filepath);
 	virtual ~ImageDrive();
 
-	virtual uint8_t Open(int channel, const uint8_t *name, int name_len);
-	virtual uint8_t Close(int channel);
-	virtual uint8_t Read(int channel, uint8_t &byte);
-	virtual uint8_t Write(int channel, uint8_t byte, bool eoi);
-	virtual void Reset();
+	uint8_t Open(int channel, const uint8_t *name, int name_len) override;
+	uint8_t Close(int channel) override;
+	uint8_t Read(int channel, uint8_t &byte) override;
+	uint8_t Write(int channel, uint8_t byte, bool eoi) override;
+	void Reset() override;
 
 	static int ConvErrorInfo(uint8_t error);
 
@@ -111,19 +111,19 @@ private:
 	bool write_sector(int track, int sector, uint8_t *buffer);
 	void write_error_info();
 
-	virtual void block_read_cmd(int channel, int track, int sector, bool user_cmd = false);
-	virtual void block_write_cmd(int channel, int track, int sector, bool user_cmd = false);
-	virtual void block_allocate_cmd(int track, int sector);
-	virtual void block_free_cmd(int track, int sector);
-	virtual void buffer_pointer_cmd(int channel, int pos);
-	virtual void mem_read_cmd(uint16_t adr, uint8_t len);
-	virtual void mem_write_cmd(uint16_t adr, uint8_t len, uint8_t *p);
-	virtual void copy_cmd(const uint8_t *new_file, int new_file_len, const uint8_t *old_files, int old_files_len);
-	virtual void rename_cmd(const uint8_t *new_file, int new_file_len, const uint8_t *old_file, int old_file_len);
-	virtual void scratch_cmd(const uint8_t *files, int files_len);
-	virtual void initialize_cmd();
-	virtual void new_cmd(const uint8_t *name, int name_len, const uint8_t *comma);
-	virtual void validate_cmd();
+	void block_read_cmd(int channel, int track, int sector, bool user_cmd = false) override;
+	void block_write_cmd(int channel, int track, int sector, bool user_cmd = false) override;
+	void block_allocate_cmd(int track, int sector) override;
+	void block_free_cmd(int track, int sector) override;
+	void buffer_pointer_cmd(int channel, int pos) override;
+	void mem_read_cmd(uint16_t adr, uint8_t len) override;
+	void mem_write_cmd(uint16_t adr, uint8_t len, uint8_t *p) override;
+	void copy_cmd(const uint8_t *new_file, int new_file_len, const uint8_t *old_files, int old_files_len) override;
+	void rename_cmd(const uint8_t *new_file, int new_file_len, const uint8_t *old_file, int old_file_len) override;
+	void scratch_cmd(const uint8_t *files, int files_len) override;
+	void initialize_cmd() override;
+	void new_cmd(const uint8_t *name, int name_len, const uint8_t *comma) override;
+	void validate_cmd() override;
 
 	FILE *the_file;			// File pointer for image file
 	image_file_desc desc;	// Image file descriptor

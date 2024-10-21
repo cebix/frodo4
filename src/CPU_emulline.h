@@ -37,8 +37,8 @@
 // Read zeropage y-indexed operand address
 #define read_adr_zero_y() ((read_byte_imm() + y) & 0xff)
 
-// Read absolute operand address (uses adr!)
-#define read_adr_abs() (adr = read_word(pc), pc+=2, adr)
+// Read absolute operand address
+#define read_adr_abs() (tmp_adr = read_word(pc), pc+=2, tmp_adr)
 
 // Read absolute x-indexed operand address
 #define read_adr_abs_x() (read_adr_abs() + x)
@@ -67,7 +67,7 @@
 #if PRECISE_CPU_CYCLES
 // Acount for cyles due to crossing page boundaries
 #define page_plus(exp, reg) \
-	(adr = exp, page_cycles = (adr & 0xff) + reg >= 0x100, adr + reg)
+	(tmp_adr = exp, page_cycles = (tmp_adr & 0xff) + reg >= 0x100, tmp_adr + reg)
 
 // Read absolute x-indexed operand
 #define read_byte_abs_x() read_byte(page_plus(read_adr_abs(), x))

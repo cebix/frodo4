@@ -296,7 +296,7 @@ static uint16_t get_number()
 	char c;
 	uint16_t i = 0;
 
-	while (((c = get_char()) >= '0') && (c <= '9') || (c >= 'a') && (c <= 'f')) {
+	while ((((c = get_char()) >= '0') && (c <= '9')) || ((c >= 'a') && (c <= 'f'))) {
 		if (c < 'a') {
 			i = (i << 4) + (c - '0');
 		} else {
@@ -890,7 +890,7 @@ static void registers()
 
 static char conv_from_64(char c)
 {
-	if ((c >= 'A') && (c <= 'Z') || (c >= 'a') && (c <= 'z')) {
+	if (((c >= 'A') && (c <= 'Z')) || ((c >= 'a') && (c <= 'z'))) {
 		return c ^ 0x20;
 	} else {
 		return c;

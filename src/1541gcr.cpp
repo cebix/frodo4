@@ -252,7 +252,7 @@ bool GCRDisk::load_image_file()
 
 	// Check length
 	fseek(the_file, 0, SEEK_END);
-	size_t size = ftell(the_file);
+	long size = ftell(the_file);
 	fseek(the_file, 0, SEEK_SET);
 
 	if (size == NUM_SECTORS_35 * 256) {

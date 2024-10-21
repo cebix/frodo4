@@ -415,7 +415,7 @@ inline void MOS6502_1541::write_byte(uint16_t adr, uint8_t byte)
 
 inline uint8_t MOS6502_1541::read_zp(uint16_t adr)
 {
-	return ram[adr];
+	return ram[adr & 0xff];
 }
 
 
@@ -435,7 +435,7 @@ inline uint16_t MOS6502_1541::read_zp_word(uint16_t adr)
 
 inline void MOS6502_1541::write_zp(uint16_t adr, uint8_t byte)
 {
-	ram[adr] = byte;
+	ram[adr & 0xff] = byte;
 }
 
 
@@ -557,7 +557,8 @@ void MOS6502_1541::illegal_op(uint16_t adr)
 int MOS6502_1541::EmulateLine(int cycles_left)
 {
 	uint8_t tmp, tmp2;
-	uint16_t adr;
+	uint16_t adr, tmp_adr;
+
 	int last_cycles = 0;
 
 #define IS_CPU_1541

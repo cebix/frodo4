@@ -130,7 +130,7 @@ ImageDrive::ImageDrive(IEC *iec, const std::string & filepath) : Drive(iec), the
 	desc.id1 = desc.id2 = 0;
 	desc.has_error_info = false;
 
-	for (int i=0; i<18; i++) {
+	for (unsigned i = 0; i < 18; ++i) {
 		ch[i].mode = CHMOD_FREE;
 		ch[i].buf = nullptr;
 	}
@@ -509,12 +509,13 @@ uint8_t ImageDrive::open_directory(const uint8_t *pattern, int pattern_len)
 	*p++ = '\"';
 
 	uint8_t *q = bam + BAM_DISK_NAME;
-	for (int i=0; i<23; i++) {
+	for (unsigned i = 0; i < 23; ++i) {
 		int c;
-		if ((c = *q++) == 0xa0)
+		if ((c = *q++) == 0xa0) {
 			*p++ = ' ';		// Replace 0xa0 by space
-		else
+		} else {
 			*p++ = c;
+		}
 	}
 	*(p-7) = '\"';
 	*p++ = 0;
@@ -523,7 +524,7 @@ uint8_t ImageDrive::open_directory(const uint8_t *pattern, int pattern_len)
 	dir[DIR_NEXT_TRACK] = DIR_TRACK;
 	dir[DIR_NEXT_SECTOR] = 1;
 
-	int num_dir_blocks = 0;
+	unsigned num_dir_blocks = 0;
 	while (dir[DIR_NEXT_TRACK] && num_dir_blocks < num_sectors[DIR_TRACK]) {
 		if (!read_sector(dir[DIR_NEXT_TRACK], dir[DIR_NEXT_SECTOR], dir))
 			return ST_OK;
@@ -532,7 +533,7 @@ uint8_t ImageDrive::open_directory(const uint8_t *pattern, int pattern_len)
 
 		// Scan all 8 entries of a block
 		uint8_t *de = dir + DIR_ENTRIES;
-		for (int j=0; j<8; j++, de+=SIZEOF_DE) {
+		for (unsigned j = 0; j < 8; ++j, de += SIZEOF_DE) {
 			if (de[DE_TYPE] && (pattern_len == 0 || match(pattern, pattern_len, de + DE_NAME))) {
 
 				// Dummy line link
@@ -554,7 +555,7 @@ uint8_t ImageDrive::open_directory(const uint8_t *pattern, int pattern_len)
 				q = de + DE_NAME;
 				uint8_t c;
 				bool m = false;
-				for (int i=0; i<16; i++) {
+				for (unsigned i = 0; i < 16; ++i) {
 					if ((c = *q++) == 0xa0) {
 						if (m) {
 							*p++ = ' ';			// Replace all 0xa0 by spaces
@@ -600,10 +601,10 @@ uint8_t ImageDrive::open_directory(const uint8_t *pattern, int pattern_len)
 	}
 
 	// Final line, count number of free blocks
-	int n = 0;
-	for (int i=1; i<=35; i++) {
-		if (i != DIR_TRACK)	{ // exclude track 18
-			n += num_free_blocks(i);
+	unsigned n = 0;
+	for (unsigned track = 1; track <= 35; ++track) {
+		if (track != DIR_TRACK)	{ // exclude track 18
+			n += num_free_blocks(track);
 		}
 	}
 
@@ -748,7 +749,7 @@ free:		free_buffer(ch[channel].buf_num);
 
 void ImageDrive::close_all_channels()
 {
-	for (int i=0; i<15; i++) {
+	for (unsigned i = 0; i < 15; ++i) {
 		Close(i);
 	}
 	Close(16);
@@ -918,7 +919,7 @@ void ImageDrive::Reset()
 	close_all_channels();
 
 	cmd_len = 0;
-	for (int i=0; i<4; i++) {
+	for (unsigned i = 0; i < 4; ++i) {
 		buf_free[i] = true;
 	}
 
@@ -1003,7 +1004,7 @@ static bool match(const uint8_t *p, int p_len, const uint8_t *n)
 bool ImageDrive::find_file(const uint8_t *pattern, int pattern_len, int &dir_track, int &dir_sector, int &entry, bool cont)
 {
 	// Counter to prevent cyclic directories from resulting in an infinite loop
-	int num_dir_blocks = 0;
+	unsigned num_dir_blocks = 0;
 
 	// Pointer to current directory entry
 	uint8_t *de = nullptr;
@@ -1122,7 +1123,7 @@ int ImageDrive::num_free_blocks(int track)
 
 static void clear_bam(uint8_t *bam)
 {
-	for (int track=1; track<=35; track++) {
+	for (unsigned track = 1; track <= 35; ++track) {
 		static const uint8_t num2bits[8] = {0x01, 0x03, 0x07, 0x0f, 0x1f, 0x3f, 0x7f, 0xff};
 		(bam + BAM_BITMAP)[(track-1) * 4 + 0] = num_sectors[track];
 		(bam + BAM_BITMAP)[(track-1) * 4 + 1] = 0xff;
@@ -1263,7 +1264,7 @@ full:		track = sector = 0;
 	}
 
 	// Find next free block on track
-	int num = num_sectors[track];
+	unsigned num = num_sectors[track];
 	sector = sector + interleave;
 	if (sector >= num) {
 		sector -= num;
@@ -1306,19 +1307,8 @@ static long offset_from_ts(const image_file_desc &desc, int track, int sector)
 	return ((accum_num_sectors[track] + sector) << 8) + desc.header_size;
 }
 
-// Get number of sectors per given track
-int sectors_per_track(const image_file_desc &desc, int track)
-{
-	return num_sectors[track];
-}
-
 // Get reference to error info byte of given track/sector
-uint8_t &error_info_for_sector(image_file_desc &desc, int track, int sector)
-{
-	return desc.error_info[accum_num_sectors[track] + sector];
-}
-
-static inline const uint8_t &error_info_for_sector(const image_file_desc &desc, int track, int sector)
+static const uint8_t &error_info_for_sector(const image_file_desc &desc, int track, int sector)
 {
 	return desc.error_info[accum_num_sectors[track] + sector];
 }
@@ -1411,7 +1401,7 @@ bool ImageDrive::write_sector(int track, int sector, uint8_t *buffer)
 static void write_back_error_info(FILE *f, const image_file_desc &desc)
 {
 	if (desc.type == TYPE_D64 && desc.has_error_info) {
-		int num_sectors = desc.num_tracks == 40 ? NUM_SECTORS_40 : NUM_SECTORS_35;
+		unsigned num_sectors = desc.num_tracks == 40 ? NUM_SECTORS_40 : NUM_SECTORS_35;
 		fseek(f, num_sectors * 256, SEEK_SET);
 		fwrite(desc.error_info, num_sectors, 1, f);
 	}
@@ -1429,11 +1419,11 @@ static bool format_image(FILE *f, image_file_desc &desc, bool lowlevel, uint8_t 
 		memset(p, 1, 256);
 
 		// Overwrite all blocks
-		for (int track=1; track<=35; track++) {
+		for (unsigned track = 1; track <= 35; ++track) {
 			if (track == 2) {
 				p[0] = 0x4b;
 			}
-			for (int sector=0; sector<num_sectors[track]; sector++) {
+			for (unsigned sector = 0; sector < num_sectors[track]; ++sector) {
 				if (write_sector(f, desc, track, sector, p) != ERR_OK)
 					return false;
 			}
@@ -1711,7 +1701,7 @@ void ImageDrive::scratch_cmd(const uint8_t *files, int files_len)
 	}
 
 	// Loop for all files
-	int num_files = 0;
+	unsigned num_files = 0;
 	while (files_len > 0) {
 		uint8_t *comma = (uint8_t *)memchr(files, ',', files_len);
 		int name_len = comma ? comma - files : files_len;
@@ -1970,7 +1960,7 @@ bool ReadImageDirectory(const std::string & path, std::vector<c64_dir_entry> &ve
 	// Open file
 	FILE *f = open_image_file(path, false);
 	if (f) {
-		int num_dir_blocks = 0;
+		unsigned num_dir_blocks = 0;
 
 		// Determine file type and fill in image_file_desc structure
 		image_file_desc desc;
@@ -1989,7 +1979,7 @@ bool ReadImageDirectory(const std::string & path, std::vector<c64_dir_entry> &ve
 
 			// Scan all 8 entries of a block
 			uint8_t *de = dir + DIR_ENTRIES;
-			for (int j=0; j<8; j++, de+=SIZEOF_DE) {
+			for (unsigned j = 0; j < 8; ++j, de += SIZEOF_DE) {
 
 				// Skip empty entries
 				if (de[DE_TYPE] == 0)

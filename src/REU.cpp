@@ -49,6 +49,7 @@ REU::REU(MOS6510 * cpu, int prefs_reu_size) : the_cpu(cpu)
 				ram_size = 0x40000;
 				break;
 			case REU_512K:
+			default:
 				ram_size = 0x80000;
 				break;
 		}
