@@ -1437,7 +1437,7 @@ unsigned MOS6569::EmulateLine(int & retCyclesLeft)
 			}
 
 			// Draw sprites
-			if (sprite_on && ThePrefs.SpritesOn) {
+			if (sprite_on) {
 
 				// Clear sprite collision buffer
 				uint32_t *lp = (uint32_t *)spr_coll_buf - 1;

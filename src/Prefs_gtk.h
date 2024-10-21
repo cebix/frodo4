@@ -475,7 +475,6 @@ static void set_values()
 	gtk_combo_box_set_active(GTK_COMBO_BOX(gtk_builder_get_object(builder, "display_type")), prefs->DisplayType);
 	gtk_combo_box_set_active(GTK_COMBO_BOX(gtk_builder_get_object(builder, "scaling_numerator")), prefs->ScalingNumerator - 1);
 	gtk_combo_box_set_active(GTK_COMBO_BOX(gtk_builder_get_object(builder, "palette")), prefs->Palette);
-	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "sprites_on")), prefs->SpritesOn);
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "sprite_collisions")), prefs->SpriteCollisions);
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "show_leds")), prefs->ShowLEDs);
 
@@ -558,7 +557,6 @@ static void get_values()
 	prefs->ScalingNumerator = gtk_combo_box_get_active(GTK_COMBO_BOX(gtk_builder_get_object(builder, "scaling_numerator"))) + 1;
 	prefs->ScalingDenominator = 1;  // for now...
 	prefs->Palette = gtk_combo_box_get_active(GTK_COMBO_BOX(gtk_builder_get_object(builder, "palette")));
-	prefs->SpritesOn = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "sprites_on")));
 	prefs->SpriteCollisions = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "sprite_collisions")));
 	prefs->ShowLEDs = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "show_leds")));
 

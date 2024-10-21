@@ -1904,9 +1904,7 @@ unsigned MOS6569::EmulateCycle()
 				fore_mask_buf[0x218 / 8 + 2] = fore_mask_buf[COL40_XSTART / 8 + 2];
 
 				// Draw sprites
-				if (ThePrefs.SpritesOn) {
-					draw_sprites();
-				}
+				draw_sprites();
 
 				// Draw border
 				if (border_on_sample[0]) {

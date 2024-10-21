@@ -55,7 +55,6 @@ Prefs::Prefs()
 	Joystick1Port = 0;
 	Joystick2Port = 0;
 
-	SpritesOn = true;
 	SpriteCollisions = true;
 	JoystickSwap = false;
 	LimitSpeed = true;
@@ -266,8 +265,6 @@ void Prefs::ParseItem(std::string item)
 	} else if (keyword == "ScalingDenominator") {
 		ScalingDenominator = atoi(value.c_str());
 
-	} else if (keyword == "SpritesOn") {
-		SpritesOn = (value == "true");
 	} else if (keyword == "SpriteCollisions") {
 		SpriteCollisions = (value == "true");
 	} else if (keyword == "JoystickSwap") {
@@ -362,7 +359,6 @@ bool Prefs::Save(fs::path prefs_path)
 	}
 	file << "ButtonMap = " << ButtonMap << std::endl;
 
-	file << "SpritesOn = " << SpritesOn << std::endl;
 	file << "SpriteCollisions = " << SpriteCollisions << std::endl;
 	file << "JoystickSwap = " << JoystickSwap << std::endl;
 	file << "LimitSpeed = " << LimitSpeed << std::endl;

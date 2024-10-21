@@ -103,7 +103,6 @@ public:
 	int ScalingNumerator;	// Window scaling numerator
 	int ScalingDenominator;	// Window scaling denominator
 
-	bool SpritesOn;			// Sprite display is on
 	bool SpriteCollisions;	// Sprite collision detection is on
 	bool JoystickSwap;		// Swap joysticks 1<->2
 	bool LimitSpeed;		// Limit speed to 100%
