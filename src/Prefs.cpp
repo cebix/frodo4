@@ -23,6 +23,8 @@
 #include "Prefs.h"
 #include "C64.h"
 
+#include <SDL.h>
+
 #include <algorithm>
 #include <fstream>
 #include <regex>
@@ -99,6 +101,10 @@ void Prefs::Check()
 	if (ROMSetDefs.count(ROMSet) == 0) {
 		ROMSet.clear();
 	}
+
+	if (ButtonMapDefs.count(ButtonMap) == 0) {
+		ButtonMap.clear();
+	}
 }
 
 
@@ -141,7 +147,7 @@ void Prefs::ParseItem(std::string item)
 	}
 
 	const std::string keyword = m[1].str();
-	const std::string value = m[2].str();
+	std::string value = m[2].str();
 
 	if (keyword == "NormalCycles") {
 		NormalCycles = atoi(value.c_str());
@@ -166,20 +172,60 @@ void Prefs::ParseItem(std::string item)
 			ROMPaths p;
 			auto pos = value.find(';');
 			std::string name = value.substr(0, pos);
+
 			auto last = pos + 1;
 			pos = value.find(';', last);
 			p.BasicROMPath = value.substr(last, pos - last);
+
 			last = pos + 1;
 			pos = value.find(';', last);
 			p.KernalROMPath = value.substr(last, pos - last);
+
 			last = pos + 1;
 			pos = value.find(';', last);
 			p.CharROMPath = value.substr(last, pos - last);
 			p.DriveROMPath = value.substr(pos + 1);
+
 			ROMSetDefs[name] = p;
 		}
 	} else if (keyword == "ROMSet") {
 		ROMSet = value;
+
+	} else if (keyword == "ButtonMapDef") {
+		ButtonMapping mapping;
+
+		auto pos = value.find(';');
+		std::string name = value.substr(0, pos);
+
+		while (pos != std::string::npos) {
+			value.erase(0, pos + 1);
+
+			pos = value.find(';');
+			std::string map_str = value.substr(0, pos);
+
+			static const std::regex mapItem(R"((\S*):([\S ]*))");
+			std::smatch mi;
+			if (std::regex_match(map_str, mi, mapItem)) {
+				SDL_GameControllerButton button = SDL_GameControllerGetButtonFromString(mi[1].str().c_str());
+				std::string key_name = mi[2].str();
+				if (key_name == "colon") {
+					key_name = ":";
+				} else if (key_name == "semicolon") {
+					key_name = ";";
+				}
+				unsigned keycode = KeycodeFromString(key_name);
+
+				if (button != SDL_CONTROLLER_BUTTON_INVALID && keycode < 64) {
+					mapping[button] = keycode;
+				}
+			}
+		}
+
+		if (! name.empty()) {
+			ButtonMapDefs[name] = mapping;
+		}
+	} else if (keyword == "ButtonMap") {
+		ButtonMap = value;
 
 	} else if (keyword == "Cartridge") {
 		CartridgePath = value;
@@ -302,6 +348,23 @@ bool Prefs::Save(fs::path prefs_path)
 	file << "ScalingNumerator = " << ScalingNumerator << std::endl;
 	file << "ScalingDenominator = " << ScalingDenominator << std::endl;
 
+	for (const auto & [name, mapping] : ButtonMapDefs) {
+		file << "ButtonMapDef = " << name;
+		for (const auto & [button, keycode] : mapping) {
+			file << ";" << SDL_GameControllerGetStringForButton((SDL_GameControllerButton) button) << ":";
+			std::string key_name = StringForKeycode(keycode);
+			if (key_name == ":") {
+				file << "colon";
+			} else if (key_name == ";") {
+				file << "semicolon";
+			} else {
+				file << key_name;
+			}
+		}
+		file << std::endl;
+	}
+	file << "ButtonMap = " << ButtonMap << std::endl;
+
 	file << "SpritesOn = " << SpritesOn << std::endl;
 	file << "SpriteCollisions = " << SpriteCollisions << std::endl;
 	file << "JoystickSwap = " << JoystickSwap << std::endl;
@@ -325,6 +388,17 @@ ROMPaths Prefs::SelectedROMPaths() const
 {
 	auto it = ROMSetDefs.find(ROMSet);
 	return it == ROMSetDefs.end() ? ROMPaths{} : it->second;
+}
+
+
+/*
+ *  Return selected controller button mapping
+ */
+
+ButtonMapping Prefs::SelectedButtonMapping() const
+{
+	auto it = ButtonMapDefs.find(ButtonMap);
+	return it == ButtonMapDefs.end() ? ButtonMapping{} : it->second;
 }
 
 

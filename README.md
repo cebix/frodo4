@@ -38,10 +38,11 @@ have reasonable defaults, so there should be very little you have to configure:
   ports. If you do not assign them manually, Frodo will auto-detect any
   connected game controllers when starting the emulation.
 
-C64 joysticks are typically digital devices with eight directions and just one
-button. Frodo lets you use the D-pad and left stick of the controller for the
-direction, and the “A” and “B” (or Cross and Circle) face buttons as the
-joystick button.
+C64 joysticks are typically digital devices with eight directions and just
+one button. Frodo lets you use the D-pad and left stick of the controller
+for the direction, and the “A” (or Cross) face button as the joystick
+button. The “Button Mapping” function lets you assign additional controller
+buttons to keys on the C64 keyboard, depending on the game you want to play.
 
 Note that most C64 games use a joystick in Port 2 by default, even if they are
 single-player. If you don't get a reaction from controller input, try the “Swap

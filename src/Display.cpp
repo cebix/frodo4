@@ -133,6 +133,7 @@ Display::Display(C64 * c64) : the_c64(c64)
 	}
 
 	SDL_SetWindowTitle(the_window, VERSION_STRING);
+	SDL_SetWindowPosition(the_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
 	SDL_SetWindowMinimumSize(the_window, DISPLAY_X, DISPLAY_Y);
 	SDL_RenderSetLogicalSize(the_renderer, DISPLAY_X, DISPLAY_Y);
 
@@ -190,6 +191,9 @@ Display::Display(C64 * c64) : the_c64(c64)
 	if (pulse_timer == 0) {
 		error_and_quit(std::format("Couldn't create SDL pulse timer ({})\n", SDL_GetError()));
 	}
+
+	// Get controller button mapping
+	button_mapping = ThePrefs.SelectedButtonMapping();
 
 	// Clear notifications
 	for (unsigned i = 0; i < NUM_NOTIFICATIONS; ++i) {
@@ -268,6 +272,8 @@ void Display::NewPrefs(const Prefs *prefs)
 	if (prefs->Palette != ThePrefs.Palette) {
 		init_colors(prefs->Palette);
 	}
+
+	button_mapping = prefs->SelectedButtonMapping();
 }
 
 
@@ -793,6 +799,26 @@ void Display::PollKeyboard(uint8_t *key_matrix, uint8_t *rev_matrix, uint8_t *jo
 				}
 
 				SDL_free(filename);
+				break;
+			}
+
+			// Map controller buttons to keyboard
+			// Note: 'A' button is handled in C64::poll_joystick() separately for each controller
+			case SDL_CONTROLLERBUTTONDOWN:
+			case SDL_CONTROLLERBUTTONUP: {
+				SDL_GameControllerButton button = (SDL_GameControllerButton) event.cbutton.button;
+				if (button_mapping.count(button) > 0) {
+					unsigned keycode = button_mapping[button];
+					if (keycode < 64) {
+						if (event.type == SDL_CONTROLLERBUTTONUP) {
+							key_matrix[keycode >> 3] |= 1 << (keycode & 7);
+							rev_matrix[keycode & 7] |= 1 << (keycode >> 3);
+						} else {
+							key_matrix[keycode >> 3] &= ~(1 << (keycode & 7));
+							rev_matrix[keycode & 7] &= ~(1 << (keycode >> 3));
+						}
+					}
+				}
 				break;
 			}
 

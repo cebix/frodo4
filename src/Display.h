@@ -21,6 +21,8 @@
 #ifndef DISPLAY_H
 #define DISPLAY_H
 
+#include "Prefs.h"
+
 #include <SDL.h>
 
 #include <chrono>
@@ -37,7 +39,6 @@ constexpr unsigned NOTIFICATION_LENGTH = 46;
 
 
 class C64;
-class Prefs;
 
 
 // Class for C64 graphics display
@@ -101,6 +102,7 @@ private:
 	Notification notes[NUM_NOTIFICATIONS];	// On-screen notifications
 	unsigned next_note;					// Index of next free notification
 
+	ButtonMapping button_mapping;		// Controller button mapping
 	bool num_locked = false;			// For keyboard joystick swap
 };
 

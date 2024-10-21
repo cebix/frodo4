@@ -70,6 +70,10 @@ struct ROMPaths {
 };
 
 
+// Controller button mapping (map from SDL_GameControllerButton to C64 keycode)
+using ButtonMapping = std::map<unsigned, unsigned>;
+
+
 // Preferences data
 class Prefs {
 public:
@@ -81,6 +85,7 @@ public:
 	bool Save(std::filesystem::path prefs_path);
 	void ParseItem(std::string item);
 	ROMPaths SelectedROMPaths() const;
+	ButtonMapping SelectedButtonMapping() const;
 
 	int NormalCycles;		// Available CPU cycles in normal raster lines
 	int BadLineCycles;		// Available CPU cycles in Bad Lines
@@ -111,6 +116,9 @@ public:
 
 	std::map<std::string, ROMPaths> ROMSetDefs;	// Defined ROM sets, indexed by name
 	std::string ROMSet;		// Name of selected ROM set (empty = built-in)
+
+	std::map<std::string, ButtonMapping> ButtonMapDefs;	// Defined button mappings, indexed by name
+	std::string ButtonMap;	// Name of selected controller button mapping
 
 	std::string CartridgePath;	// Path for cartridge image file
 };

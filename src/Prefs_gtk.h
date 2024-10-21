@@ -30,6 +30,7 @@
 
 #include <filesystem>
 #include <format>
+#include <set>
 namespace fs = std::filesystem;
 
 
@@ -192,6 +193,30 @@ static const char * shortcuts_win_ui =
 	"</interface>";
 
 
+// Assiciation of SDL controller buttons with widgets
+static const struct {
+	SDL_GameControllerButton button;
+	const char * widget_name;
+} button_widgets[] = {
+	{ SDL_CONTROLLER_BUTTON_B, "cmap_b" },
+	{ SDL_CONTROLLER_BUTTON_X, "cmap_x" },
+	{ SDL_CONTROLLER_BUTTON_Y, "cmap_y" },
+	{ SDL_CONTROLLER_BUTTON_BACK, "cmap_back" },
+	{ SDL_CONTROLLER_BUTTON_GUIDE, "cmap_guide" },
+	{ SDL_CONTROLLER_BUTTON_START, "cmap_start" },
+	{ SDL_CONTROLLER_BUTTON_LEFTSTICK, "cmap_leftstick" },
+	{ SDL_CONTROLLER_BUTTON_RIGHTSTICK, "cmap_rightstick" },
+	{ SDL_CONTROLLER_BUTTON_LEFTSHOULDER, "cmap_leftshoulder" },
+	{ SDL_CONTROLLER_BUTTON_RIGHTSHOULDER, "cmap_rightshoulder" },
+	{ SDL_CONTROLLER_BUTTON_MISC1, "cmap_misc1" },
+	{ SDL_CONTROLLER_BUTTON_PADDLE1, "cmap_paddle1" },
+	{ SDL_CONTROLLER_BUTTON_PADDLE2, "cmap_paddle2" },
+	{ SDL_CONTROLLER_BUTTON_PADDLE3, "cmap_paddle3" },
+	{ SDL_CONTROLLER_BUTTON_PADDLE4, "cmap_paddle4" },
+	{ SDL_CONTROLLER_BUTTON_TOUCHPAD, "cmap_touchpad" },
+};
+
+
 // Mainloop idler to keep SDL events going
 static guint idle_source_id = 0;
 
@@ -292,6 +317,19 @@ bool Prefs::ShowEditor(bool startup, fs::path prefs_path, fs::path snapshot_path
 		write_sam_output(SAM_GetStartupMessage());
 		write_sam_output(SAM_GetPrompt());
 
+		// Set up C64 keyboard combo boxes
+		std::set<std::string> c64_key_names;
+		for (unsigned keycode = 0; keycode < 64; ++keycode) {
+			c64_key_names.insert(StringForKeycode(keycode));
+		}
+
+		for (const auto & [_, widget_name] : button_widgets) {
+			GtkComboBoxText * box = GTK_COMBO_BOX_TEXT(gtk_builder_get_object(builder, widget_name));
+			for (const auto & key_name : c64_key_names) {
+				gtk_combo_box_text_append(box, key_name.c_str(), key_name.c_str());	// ID = key name
+			}
+		}
+
 		// Create file filters for ROM file choosers
 		auto allow_files_with_size = [](const GtkFileFilterInfo * filter_info, gpointer user_data) -> gboolean {
 			if (fs::is_regular_file(filter_info->filename)) {
@@ -372,15 +410,35 @@ bool Prefs::ShowEditor(bool startup, fs::path prefs_path, fs::path snapshot_path
  *  Set the values of the widgets
  */
 
-static void create_joystick_menu(const char *widget_name)
+static void create_joystick_menu(const char * widget_name)
 {
-	GtkComboBoxText *w = GTK_COMBO_BOX_TEXT(gtk_builder_get_object(builder, widget_name));
+	GtkComboBoxText * w = GTK_COMBO_BOX_TEXT(gtk_builder_get_object(builder, widget_name));
 
 	gtk_combo_box_text_remove_all(w);
 	gtk_combo_box_text_append_text(w, "None");
 
 	for (int i = 0; i < SDL_NumJoysticks(); ++i) {
 		gtk_combo_box_text_append_text(w, SDL_JoystickNameForIndex(i));
+	}
+}
+
+static void create_button_map_menu(const std::string & selected_button_map)
+{
+	GtkComboBoxText * button_map = GTK_COMBO_BOX_TEXT(gtk_builder_get_object(builder, "button_map"));
+
+	gtk_combo_box_text_remove_all(button_map);
+	gtk_combo_box_text_append_text(button_map, "Default");
+
+	for (const auto & [name, _] : prefs->ButtonMapDefs) {
+		gtk_combo_box_text_append(button_map, name.c_str(), name.c_str());	// ID = name
+	}
+
+	if (selected_button_map.empty()) {
+		gtk_combo_box_set_active(GTK_COMBO_BOX(button_map), 0);	// Built-In
+	} else {
+		if (! gtk_combo_box_set_active_id(GTK_COMBO_BOX(button_map), selected_button_map.c_str())) {
+			gtk_combo_box_set_active(GTK_COMBO_BOX(button_map), 0);
+		}
 	}
 }
 
@@ -426,6 +484,7 @@ static void set_values()
 
 	create_joystick_menu("joystick1_port");
 	create_joystick_menu("joystick2_port");
+	create_button_map_menu(prefs->ButtonMap);
 
 	gtk_combo_box_set_active(GTK_COMBO_BOX(gtk_builder_get_object(builder, "joystick1_port")), prefs->Joystick1Port);
 	gtk_combo_box_set_active(GTK_COMBO_BOX(gtk_builder_get_object(builder, "joystick2_port")), prefs->Joystick2Port);
@@ -436,7 +495,6 @@ static void set_values()
 
 	gtk_combo_box_set_active(GTK_COMBO_BOX(gtk_builder_get_object(builder, "reu_type")), prefs->REUType);
 	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "cartridge_path")), prefs->CartridgePath.c_str());
-
 	create_rom_set_menu(prefs->ROMSet);
 
 	if (! IsFrodoSC) {
@@ -467,13 +525,23 @@ static void get_drive_path(int num, const char *widget_name)
 	}
 }
 
+static std::string get_selected_button_map()
+{
+	GtkComboBox * button_map = GTK_COMBO_BOX(gtk_builder_get_object(builder, "button_map"));
+	if (gtk_combo_box_get_active(button_map) == 0) {
+		return {};	// Built-In
+	} else {
+		return gtk_combo_box_get_active_id(button_map);
+	}
+}
+
 static std::string get_selected_rom_set()
 {
 	GtkComboBox * rom_set = GTK_COMBO_BOX(gtk_builder_get_object(builder, "rom_set"));
 	if (gtk_combo_box_get_active(rom_set) == 0) {
 		return {};	// Built-In
 	} else {
-		return gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(rom_set));
+		return gtk_combo_box_get_active_id(rom_set);
 	}
 }
 
@@ -501,6 +569,7 @@ static void get_values()
 	prefs->Joystick1Port = gtk_combo_box_get_active(GTK_COMBO_BOX(gtk_builder_get_object(builder, "joystick1_port")));
 	prefs->Joystick2Port = gtk_combo_box_get_active(GTK_COMBO_BOX(gtk_builder_get_object(builder, "joystick2_port")));
 	prefs->JoystickSwap = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "joystick_swap")));
+	prefs->ButtonMap = get_selected_button_map();
 
 	prefs->LimitSpeed = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "limit_speed")));
 	prefs->FastReset = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "fast_reset")));
@@ -513,7 +582,6 @@ static void get_values()
 	} else {
 		prefs->CartridgePath.clear();
 	}
-
 	prefs->ROMSet = get_selected_rom_set();
 
 	if (! IsFrodoSC) {
@@ -661,6 +729,205 @@ extern "C" void on_sam_clear_activate(GtkMenuItem *menuitem, gpointer user_data)
 extern "C" void on_sam_close_activate(GtkMenuItem *menuitem, gpointer user_data)
 {
 	gtk_widget_hide(GTK_WIDGET(gtk_builder_get_object(builder, "sam_win")));
+}
+
+
+/*
+ *  Controller button mapping editor window handling
+ */
+
+static GtkListBoxRow * add_button_mapping_editor_item(const std::string & name, const ButtonMapping & m)
+{
+	GtkListBox * button_map_list = GTK_LIST_BOX(gtk_builder_get_object(builder, "button_map_list"));
+	GtkContainer * row = GTK_CONTAINER(gtk_list_box_row_new());
+
+	// Store pointer to associated ButtonMapping as custom data object
+	g_object_set_data(G_OBJECT(row), "mapping", new ButtonMapping(m));
+
+	GtkWidget * label = gtk_label_new(name.c_str());
+	gtk_widget_set_halign(label, GTK_ALIGN_START);
+	gtk_container_add(row, label);
+
+	gtk_container_add(GTK_CONTAINER(button_map_list), GTK_WIDGET(row));
+	return GTK_LIST_BOX_ROW(row);
+}
+
+static std::string name_of_button_map_row(const GtkListBoxRow * row)
+{
+	return gtk_label_get_text(GTK_LABEL(gtk_bin_get_child(GTK_BIN(row))));
+}
+
+static ButtonMapping * mapping_of_button_map_row(const GtkListBoxRow * row)
+{
+	return (ButtonMapping *) g_object_get_data(G_OBJECT(row), "mapping");
+}
+
+static int button_map_list_sort_func(GtkListBoxRow * row1, GtkListBoxRow * row2, gpointer user_data)
+{
+	auto ord = name_of_button_map_row(row1) <=> name_of_button_map_row(row2);
+	if (ord > 0) {
+		return 1;
+	} else if (ord < 0) {
+		return -1;
+	} else {
+		return 0;
+	}
+}
+
+static GtkListBoxRow * selected_button_map_row()
+{
+	GtkListBox * button_map_list = GTK_LIST_BOX(gtk_builder_get_object(builder, "button_map_list"));
+	return gtk_list_box_get_selected_row(button_map_list);
+}
+
+static void ghost_button_mapping_editor_widgets(bool ghosted)
+{
+	gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object(builder, "button_map_name")), !ghosted);
+	for (const auto & [_, widget_name] : button_widgets) {
+		gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object(builder, widget_name)), !ghosted);
+	}
+}
+
+static void update_button_mapping_editor_widgets(const std::string & name, const ButtonMapping & m)
+{
+	gtk_entry_set_text(GTK_ENTRY(gtk_builder_get_object(builder, "button_map_name")), name.c_str());
+	for (const auto & [button, widget_name] : button_widgets) {
+		GtkComboBox * box = GTK_COMBO_BOX(gtk_builder_get_object(builder, widget_name));
+		auto it = m.find(button);
+		if (it == m.end()) {
+			gtk_combo_box_set_active(box, 0);	// None
+		} else {
+			gtk_combo_box_set_active_id(box, StringForKeycode(it->second));
+		}
+	}
+}
+
+extern "C" void on_new_button_mapping_clicked(GtkButton *button, gpointer user_data)
+{
+	GtkListBox * button_map_list = GTK_LIST_BOX(gtk_builder_get_object(builder, "button_map_list"));
+	GtkListBoxRow * row = add_button_mapping_editor_item("unnamed mapping", ButtonMapping{});
+	gtk_widget_show_all(GTK_WIDGET(button_map_list));
+	gtk_list_box_select_row(button_map_list, row);
+}
+
+extern "C" void on_delete_button_mapping_clicked(GtkButton *button, gpointer user_data)
+{
+	if (GtkListBoxRow * row = selected_button_map_row()) {
+		delete mapping_of_button_map_row(row);
+		gtk_widget_destroy(GTK_WIDGET(row));
+
+		ghost_button_mapping_editor_widgets(true);
+		update_button_mapping_editor_widgets("", ButtonMapping{});
+	}
+}
+
+extern "C" void on_button_map_list_row_selected(GtkListBox *self, GtkListBoxRow *row, gpointer user_data)
+{
+	if (row) {
+		ghost_button_mapping_editor_widgets(false);
+		update_button_mapping_editor_widgets(name_of_button_map_row(row), *mapping_of_button_map_row(row));
+	} else {
+		ghost_button_mapping_editor_widgets(true);
+		update_button_mapping_editor_widgets("", ButtonMapping{});
+	}
+}
+
+extern "C" void on_button_map_name_insert_text(GtkEditable *self, gchar *new_text, gint new_text_length, gint *position, gpointer user_data)
+{
+	// Prevent ';' characters in mapping names
+	if (strchr(new_text, ';') == nullptr) {
+		g_signal_handlers_block_by_func(G_OBJECT(self), (void *) on_button_map_name_insert_text, user_data);
+		gtk_editable_insert_text(self, new_text, new_text_length, position);
+		g_signal_handlers_unblock_by_func(G_OBJECT(self), (void *) on_button_map_name_insert_text, user_data);
+	}
+	g_signal_stop_emission_by_name(self, "insert-text");
+}
+
+extern "C" void on_button_map_name_changed(GtkEditable *self, gpointer user_data)
+{
+	if (GtkListBoxRow * row = selected_button_map_row()) {
+		const gchar * name = gtk_entry_get_text(GTK_ENTRY(self));
+		gtk_label_set_text(GTK_LABEL(gtk_bin_get_child(GTK_BIN(row))), name);
+		gtk_list_box_invalidate_sort(GTK_LIST_BOX(gtk_builder_get_object(builder, "button_map_list")));
+	}
+}
+
+extern "C" void on_cmap_changed(GtkComboBox *box, gpointer user_data)
+{
+	if (GtkListBoxRow * row = selected_button_map_row()) {
+		std::string my_name = gtk_buildable_get_name(GTK_BUILDABLE(box));
+		for (const auto & [button, widget_name] : button_widgets) {
+			if (my_name == widget_name) {
+				if (gtk_combo_box_get_active(box) > 0) {
+					(*mapping_of_button_map_row(row))[button] = KeycodeFromString(gtk_combo_box_get_active_id(box));
+				} else {
+					mapping_of_button_map_row(row)->erase(button);	// None
+				}
+				break;
+			}
+		}
+	}
+}
+
+extern "C" void on_edit_button_mappings_clicked(GtkButton *button, gpointer user_data)
+{
+	GtkDialog * editor = GTK_DIALOG(gtk_builder_get_object(builder, "button_mapping_editor"));
+	GtkListBox * button_map_list = GTK_LIST_BOX(gtk_builder_get_object(builder, "button_map_list"));
+
+	// Keep mapping list sorted by name
+	gtk_list_box_set_sort_func(button_map_list, button_map_list_sort_func, nullptr, nullptr);
+
+	std::string selected_button_map = get_selected_button_map();
+
+	// Repopulate mapping list
+	GList * children = gtk_container_get_children(GTK_CONTAINER(button_map_list));
+	for (GList * it = children; it != nullptr; it = g_list_next(it)) {
+		GtkListBoxRow * row = GTK_LIST_BOX_ROW(it->data);
+		delete mapping_of_button_map_row(row);
+		gtk_widget_destroy(GTK_WIDGET(row));
+	}
+	g_list_free(children);
+
+	for (const auto & [name, mapping] : prefs->ButtonMapDefs) {
+		GtkListBoxRow * row = add_button_mapping_editor_item(name, mapping);
+		if (name.c_str() == selected_button_map) {
+			gtk_list_box_select_row(button_map_list, row);
+		}
+	}
+	gtk_widget_show_all(GTK_WIDGET(button_map_list));
+
+	// Run editor dialog
+	gint res = gtk_dialog_run(editor);
+	if (res == GTK_RESPONSE_ACCEPT) {
+
+		// Read back mapping list
+		prefs->ButtonMapDefs.clear();
+
+		children = gtk_container_get_children(GTK_CONTAINER(button_map_list));
+		for (GList * it = children; it != nullptr; it = g_list_next(it)) {
+			GtkListBoxRow * row = GTK_LIST_BOX_ROW(it->data);
+
+			// Prevent empty names, enforce uniqueness
+			auto name = name_of_button_map_row(row);
+			if (name.empty()) {
+				name = "unnamed mapping";
+			}
+
+			auto base_name = name;
+			unsigned index = 1;
+			while (prefs->ButtonMapDefs.count(name) > 0) {
+				name = base_name + std::to_string(index);
+				++index;
+			}
+
+			prefs->ButtonMapDefs[name] = *mapping_of_button_map_row(row);
+		}
+		g_list_free(children);
+
+		create_button_map_menu(selected_button_map);
+	}
+
+	gtk_widget_hide(GTK_WIDGET(editor));
 }
 
 
@@ -867,6 +1134,67 @@ extern "C" void on_drive_rom_builtin_clicked(GtkButton *self, gpointer user_data
 	if (GtkListBoxRow * row = selected_rom_set_row()) {
 		paths_of_rom_set_row(row)->DriveROMPath.clear();
 	}
+}
+
+extern "C" void on_edit_rom_sets_clicked(GtkButton *button, gpointer user_data)
+{
+	GtkDialog * editor = GTK_DIALOG(gtk_builder_get_object(builder, "rom_set_editor"));
+	GtkListBox * rom_set_list = GTK_LIST_BOX(gtk_builder_get_object(builder, "rom_set_list"));
+
+	// Keep ROM set list sorted by name
+	gtk_list_box_set_sort_func(rom_set_list, rom_set_list_sort_func, nullptr, nullptr);
+
+	std::string selected_rom_set = get_selected_rom_set();
+
+	// Repopulate ROM set list
+	GList * children = gtk_container_get_children(GTK_CONTAINER(rom_set_list));
+	for (GList * it = children; it != nullptr; it = g_list_next(it)) {
+		GtkListBoxRow * row = GTK_LIST_BOX_ROW(it->data);
+		delete paths_of_rom_set_row(row);
+		gtk_widget_destroy(GTK_WIDGET(row));
+	}
+	g_list_free(children);
+
+	for (const auto & [name, paths] : prefs->ROMSetDefs) {
+		GtkListBoxRow * row = add_rom_set_editor_item(name, paths);
+		if (name.c_str() == selected_rom_set) {
+			gtk_list_box_select_row(rom_set_list, row);
+		}
+	}
+	gtk_widget_show_all(GTK_WIDGET(rom_set_list));
+
+	// Run editor dialog
+	gint res = gtk_dialog_run(editor);
+	if (res == GTK_RESPONSE_ACCEPT) {
+
+		// Read back ROM set list
+		prefs->ROMSetDefs.clear();
+
+		children = gtk_container_get_children(GTK_CONTAINER(rom_set_list));
+		for (GList * it = children; it != nullptr; it = g_list_next(it)) {
+			GtkListBoxRow * row = GTK_LIST_BOX_ROW(it->data);
+
+			// Prevent empty names, enforce uniqueness
+			auto name = name_of_rom_set_row(row);
+			if (name.empty()) {
+				name = "unnamed set";
+			}
+
+			auto base_name = name;
+			unsigned index = 1;
+			while (prefs->ROMSetDefs.count(name) > 0) {
+				name = base_name + std::to_string(index);
+				++index;
+			}
+
+			prefs->ROMSetDefs[name] = *paths_of_rom_set_row(row);
+		}
+		g_list_free(children);
+
+		create_rom_set_menu(selected_rom_set);
+	}
+
+	gtk_widget_hide(GTK_WIDGET(editor));
 }
 
 
@@ -1126,66 +1454,6 @@ extern "C" void on_reu_type_changed(GtkComboBox *box, gpointer user_data)
 extern "C" void on_cartridge_eject_clicked(GtkButton *button, gpointer user_data)
 {
 	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "cartridge_path")), "");
-}
-
-extern "C" void on_edit_rom_sets_clicked(GtkButton *button, gpointer user_data)
-{
-	GtkDialog * editor = GTK_DIALOG(gtk_builder_get_object(builder, "rom_set_editor"));
-	GtkListBox * rom_set_list = GTK_LIST_BOX(gtk_builder_get_object(builder, "rom_set_list"));
-
-	// Keep ROM set list sorted by name
-	gtk_list_box_set_sort_func(rom_set_list, rom_set_list_sort_func, nullptr, nullptr);
-
-	std::string selected_rom_set = get_selected_rom_set();
-
-	// Repopulate ROM set list
-	GList * children = gtk_container_get_children(GTK_CONTAINER(rom_set_list));
-	for (GList * it = children; it != nullptr; it = g_list_next(it)) {
-		GtkListBoxRow * row = GTK_LIST_BOX_ROW(it->data);
-		delete paths_of_rom_set_row(row);
-		gtk_widget_destroy(GTK_WIDGET(row));
-	}
-	g_list_free(children);
-
-	for (const auto & [name, paths] : prefs->ROMSetDefs) {
-		GtkListBoxRow * row = add_rom_set_editor_item(name, paths);
-		if (name.c_str() == selected_rom_set) {
-			gtk_list_box_select_row(rom_set_list, row);
-		}
-	}
-	gtk_widget_show_all(GTK_WIDGET(rom_set_list));
-
-	gint res = gtk_dialog_run(editor);
-	if (res == GTK_RESPONSE_ACCEPT) {
-
-		// Read back ROM set list
-		prefs->ROMSetDefs.clear();
-
-		children = gtk_container_get_children(GTK_CONTAINER(rom_set_list));
-		for (GList * it = children; it != nullptr; it = g_list_next(it)) {
-			GtkListBoxRow * row = GTK_LIST_BOX_ROW(it->data);
-
-			// Prevent empty names, enforce uniqueness
-			auto name = name_of_rom_set_row(row);
-			if (name.empty()) {
-				name = "unnamed set";
-			}
-
-			auto base_name = name;
-			unsigned index = 1;
-			while (prefs->ROMSetDefs.count(name) > 0) {
-				name = base_name + std::to_string(index);
-				++index;
-			}
-
-			prefs->ROMSetDefs[name] = *paths_of_rom_set_row(row);
-		}
-		g_list_free(children);
-
-		create_rom_set_menu(selected_rom_set);
-	}
-
-	gtk_widget_hide(GTK_WIDGET(editor));
 }
 
 extern "C" gboolean on_prefs_win_delete_event(GtkWidget *widget, GdkEvent *event, gpointer user_data)

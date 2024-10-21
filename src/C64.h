@@ -192,5 +192,11 @@ private:
 // Check whether file is a snapshot file
 extern bool IsSnapshotFile(const char * filename);
 
+// Obtain C64 keycode from key name
+extern unsigned KeycodeFromString(const std::string & s);
+
+// Obtain key name from C64 keycode
+extern const char * StringForKeycode(unsigned kc);
+
 
 #endif // ndef C64_H

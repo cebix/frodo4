@@ -903,8 +903,7 @@ uint8_t C64::poll_joystick(int port)
 		if (SDL_GameControllerGetButton(controller[port], SDL_CONTROLLER_BUTTON_DPAD_DOWN)) {
 			j &= 0xfd;							// Down
 		}
-		if (SDL_GameControllerGetButton(controller[port], SDL_CONTROLLER_BUTTON_A) ||
-		    SDL_GameControllerGetButton(controller[port], SDL_CONTROLLER_BUTTON_B)) {
+		if (SDL_GameControllerGetButton(controller[port], SDL_CONTROLLER_BUTTON_A)) {
 			j &= 0xef;							// Button
 		}
 
@@ -1316,4 +1315,103 @@ void C64::SetDriveLEDs(int l0, int l1, int l2, int l3)
 void C64::ShowNotification(std::string s)
 {
 	TheDisplay->ShowNotification(s);
+}
+
+
+/*
+ *  Convert C64 keycodes from/to strings
+ */
+
+static const char * c64_key_names[64] = {
+	"INS/DEL",
+	"RETURN",
+	"CRSR ←→",
+	"F7",
+	"F1",
+	"F3",
+	"F5",
+	"CRSR ↑↓",
+
+	"3",
+	"W",
+	"A",
+	"4",
+	"Z",
+	"S",
+	"E",
+	"SHIFT (Left)",
+
+	"5",
+	"R",
+	"D",
+	"6",
+	"C",
+	"F",
+	"T",
+	"X",
+
+	"7",
+	"Y",
+	"G",
+	"8",
+	"B",
+	"H",
+	"U",
+	"V",
+
+	"9",
+	"I",
+	"J",
+	"0",
+	"M",
+	"K",
+	"O",
+	"N",
+
+	"+",
+	"P",
+	"L",
+	"-",
+	".",
+	":",
+	"@",
+	",",
+
+	"£",
+	"*",
+	";",
+	"CLR/HOME",
+	"SHIFT (Right)",
+	"=",
+	"↑",
+	"/",
+
+	"1",
+	"←",
+	"CONTROL",
+	"2",
+	"SPACE",
+	"C=",
+	"Q",
+	"RUN/STOP"
+};
+
+unsigned KeycodeFromString(const std::string & s)
+{
+	for (unsigned i = 0; i < 64; ++i) {
+		if (s == c64_key_names[i]) {
+			return i;
+		}
+	}
+
+	return 64;
+}
+
+const char * StringForKeycode(unsigned kc)
+{
+	if (kc < 64) {
+		return c64_key_names[kc];
+	} else {
+		return "";
+	}
 }
