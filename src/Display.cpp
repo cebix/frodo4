@@ -63,6 +63,13 @@ static const char * led_image[8] = {
     "  XXXX  ",
 };
 
+// Menu font
+#include "MenuFont.h"
+
+#define MCHAR_REWIND "\x0b"
+#define MCHAR_FORWARD "\x0c"
+#define MCHAR_PAUSE "\x0d"
+
 
 // C64 color palettes based on measurements by Philip "Pepto" Timmermann <pepto@pepto.de>
 // (see http://www.pepto.de/projects/colorvic/)
@@ -296,19 +303,13 @@ void Display::SetLEDs(int l0, int l1, int l2, int l3)
 
 void Display::ShowNotification(std::string s)
 {
-	// Convert message to screen codes
+	// Copy message
 	unsigned size = s.length();
 	if (size >= sizeof(Notification::text)) {
 		size = sizeof(Notification::text) - 1;
 	}
 	for (unsigned i = 0; i < size; ++i) {
-		char c = s[i];
-		if (c == '@') {
-			c = 0x00;
-		} else if ((c >= 'a') && (c <= 'z')) {
-			c ^= 0x60;
-		}
-		notes[next_note].text[i] = c;
+		notes[next_note].text[i] = s[i];
 	}
 	notes[next_note].text[size] = '\0';
 
@@ -396,19 +397,19 @@ void Display::Update()
 	if (ThePrefs.ShowLEDs) {
 
 		// Draw speedometer/LEDs
-		draw_string(9, DISPLAY_Y - 8, speedometer_string, shadow_gray);
-		draw_string(8, DISPLAY_Y - 9, speedometer_string, shine_gray);
+		draw_string(6, DISPLAY_Y - 9, speedometer_string, shadow_gray);
+		draw_string(5, DISPLAY_Y - 10, speedometer_string, shine_gray);
 
 		for (unsigned i = 0; i < 4; ++i) {
 			if (led_state[i] != LED_OFF) {
 				static const char * drive_str[4] = {
-					"D\x12 8", "D\x12 9", "D\x12 10", "D\x12 11"	// \x12 = "r"
+					"Dr 8", "Dr 9", "Dr 10", "Dr 11"
 				};
 
-				draw_string(DISPLAY_X * (i+1) / 6 + 8, DISPLAY_Y - 8, drive_str[i], shadow_gray);
-				draw_string(DISPLAY_X * (i+1) / 6 + 7, DISPLAY_Y - 9, drive_str[i], shine_gray);
+				draw_string(DISPLAY_X * (i+1) / 7 + 1, DISPLAY_Y - 9, drive_str[i], shadow_gray);
+				draw_string(DISPLAY_X * (i+1) / 7, DISPLAY_Y - 10, drive_str[i], shine_gray);
 
-				uint8_t * p = vic_pixels + (DISPLAY_X * (i+2) / 6 - 16) + DISPLAY_X * (DISPLAY_Y - 9);
+				uint8_t * p = vic_pixels + (DISPLAY_X * (i+1) / 7 + (i < 2 ? 28 : 35)) + DISPLAY_X * (DISPLAY_Y - 10);
 
 				const uint8_t * q;
 				switch (led_state[i]) {
@@ -436,18 +437,18 @@ void Display::Update()
 			const char * str = nullptr;
 			switch (mode) {
 				case PLAY_MODE_REWIND:
-					str = "<<";
+					str = MCHAR_REWIND;
 					break;
 				case PLAY_MODE_FORWARD:
-					str = ">>";
+					str = MCHAR_FORWARD;
 					break;
 				case PLAY_MODE_PAUSE:
-					str = "\x5d\x65";
+					str = MCHAR_PAUSE;
 					break;
 			};
 			if (str) {
-				draw_string(DISPLAY_X - 23, DISPLAY_Y - 8, str, shadow_gray);
-				draw_string(DISPLAY_X - 24, DISPLAY_Y - 9, str, shine_gray);
+				draw_string(DISPLAY_X - 12, DISPLAY_Y - 9, str, shadow_gray);
+				draw_string(DISPLAY_X - 13, DISPLAY_Y - 10, str, shine_gray);
 			}
 		}
 	}
@@ -485,19 +486,23 @@ void Display::Update()
 void Display::draw_string(unsigned x, unsigned y, const char *str, uint8_t front_color) const
 {
 	uint8_t *pb = vic_pixels + DISPLAY_X*y + x;
-	char c;
+
+	unsigned char c;
 	while ((c = *str++) != 0) {
-		const uint8_t * q = the_c64->BuiltinCharROM + c*8 + 0x800;
+		if (c >= 0x80) {
+			c = 0x7f;	// Replacement character
+		}
+		const uint8_t * q = menu_font + c*8;
 		uint8_t * p = pb;
 		for (unsigned y = 0; y < 8; y++) {
 			uint8_t v = *q++;
-			for (unsigned x = 0; x < 8; ++x) {
+			for (unsigned x = 0; x < menu_char_width[c]; ++x) {
 				if (v & 0x80) { p[x] = front_color; }
 				v <<= 1;
 			}
 			p += DISPLAY_X;
 		}
-		pb += 8;
+		pb += menu_char_width[c];
 	}
 }
 
