@@ -610,6 +610,13 @@ void C64::resume()
 
 void C64::vblank()
 {
+	// Handle single-frame controls
+	if (play_mode == PLAY_MODE_REQUEST_PAUSE) {
+		play_mode = PLAY_MODE_PAUSE;
+	} else if (play_mode == PLAY_MODE_REWIND_FRAME || play_mode == PLAY_MODE_FORWARD_FRAME) {
+		play_mode = PLAY_MODE_PAUSE;
+	}
+
 	// Poll keyboard and joysticks
 	poll_input();
 
@@ -636,8 +643,10 @@ void C64::vblank()
 	}
 
 	// Count TOD clocks
-	TheCIA1->CountTOD();
-	TheCIA2->CountTOD();
+	if (play_mode != PLAY_MODE_PAUSE) {
+		TheCIA1->CountTOD();
+		TheCIA2->CountTOD();
+	}
 
 	// Update window if needed
 	--frame_skip_counter;
@@ -691,6 +700,12 @@ void C64::main_loop()
 
 	while (!quit_requested) {
 		bool new_frame;
+
+		// Stop emulation in pause mode, just update the display
+		if (play_mode == PLAY_MODE_PAUSE) {
+			vblank();
+			continue;
+		}
 
 #ifdef FRODO_SC
 
@@ -1242,7 +1257,7 @@ void C64::SetPlayMode(PlayMode mode)
 void C64::handle_rewind()
 {
 	if (rewind_buffer != nullptr) {
-		if (play_mode == PLAY_MODE_REWIND) {
+		if (play_mode == PLAY_MODE_REWIND || play_mode == PLAY_MODE_REWIND_FRAME) {
 
 			// Pop snapshot from ring buffer
 			if (rewind_fill > 0) {
@@ -1256,7 +1271,7 @@ void C64::handle_rewind()
 				}
 			}
 
-		} else {
+		} else if (play_mode == PLAY_MODE_PLAY || play_mode == PLAY_MODE_FORWARD || play_mode == PLAY_MODE_FORWARD_FRAME) {
 
 			// Add snapshot to ring buffer
 			size_t write_index = (rewind_start + rewind_fill) % REWIND_LENGTH;

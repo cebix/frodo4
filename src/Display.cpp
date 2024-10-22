@@ -433,9 +433,22 @@ void Display::Update()
 		// Draw rewind/forward marker
 		PlayMode mode = the_c64->GetPlayMode();
 		if (mode != PLAY_MODE_PLAY) {
-			const char * str = (mode == PLAY_MODE_REWIND) ? "<<" : ">>";
-			draw_string(DISPLAY_X - 23, DISPLAY_Y - 8, str, shadow_gray);
-			draw_string(DISPLAY_X - 24, DISPLAY_Y - 9, str, shine_gray);
+			const char * str = nullptr;
+			switch (mode) {
+				case PLAY_MODE_REWIND:
+					str = "<<";
+					break;
+				case PLAY_MODE_FORWARD:
+					str = ">>";
+					break;
+				case PLAY_MODE_PAUSE:
+					str = "\x5d\x65";
+					break;
+			};
+			if (str) {
+				draw_string(DISPLAY_X - 23, DISPLAY_Y - 8, str, shadow_gray);
+				draw_string(DISPLAY_X - 24, DISPLAY_Y - 9, str, shine_gray);
+			}
 		}
 	}
 
@@ -723,14 +736,29 @@ void Display::PollKeyboard(uint8_t *key_matrix, uint8_t *rev_matrix, uint8_t *jo
 					case SDL_SCANCODE_KP_PLUS:	// Plus on keypad: Fast-forward while pressed
 						if (the_c64->GetPlayMode() == PLAY_MODE_PLAY) {
 							the_c64->SetPlayMode(PLAY_MODE_FORWARD);
+						} else if (the_c64->GetPlayMode() == PLAY_MODE_PAUSE) {
+							the_c64->SetPlayMode(PLAY_MODE_FORWARD_FRAME);
 						}
 						break;
 
 					case SDL_SCANCODE_KP_MINUS:	// Minus on keypad: Rewind while pressed
 						if (the_c64->GetPlayMode() == PLAY_MODE_PLAY) {
 							the_c64->SetPlayMode(PLAY_MODE_REWIND);
+						} else if (the_c64->GetPlayMode() == PLAY_MODE_PAUSE) {
+							the_c64->SetPlayMode(PLAY_MODE_REWIND_FRAME);
 						}
 						break;
+
+#undef DEBUG
+#ifdef DEBUG
+					case SDL_SCANCODE_PAUSE:
+						if (the_c64->GetPlayMode() == PLAY_MODE_PLAY) {
+							the_c64->SetPlayMode(PLAY_MODE_REQUEST_PAUSE);
+						} else if (the_c64->GetPlayMode() == PLAY_MODE_PAUSE) {
+							the_c64->SetPlayMode(PLAY_MODE_PLAY);
+						}
+						break;
+#endif
 
 					default:
 						translate_key(event.key.keysym.scancode, false, key_matrix, rev_matrix, joystick);
