@@ -1010,7 +1010,7 @@ static void screen_dump()
 			if (address == end_address) done = true;
 
 			uint8_t byte = SAMReadByte(address);
-			if (byte < 90) {
+			if (byte <= 90) {
 				mem += conv_from_scode(byte);
 			} else {
 				mem += '.';
