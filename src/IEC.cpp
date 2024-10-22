@@ -169,7 +169,9 @@ void IEC::NewPrefs(const Prefs *prefs)
 		}
 	}
 
-	UpdateLEDs();
+	if (ThePrefs.Emul1541Proc != prefs->Emul1541Proc) {
+		UpdateLEDs();
+	}
 }
 
 
