@@ -46,7 +46,7 @@ enum {
 };
 
 // Period of LED error blinking
-constexpr uint32_t PULSE_ms = 400;
+constexpr uint32_t PULSE_ms = 138;
 
 // Notification timeout
 constexpr int NOTIFICATION_TIMEOUT_ms = 4000;
@@ -168,7 +168,7 @@ Display::Display(C64 * c64) : the_c64(c64)
 
 	// LEDs off
 	for (unsigned i = 0; i < 4; ++i) {
-		led_state[i] = old_led_state[i] = LED_OFF;
+		led_state[i] = LED_OFF;
 	}
 
 	// Create LED images
@@ -335,7 +335,7 @@ uint32_t Display::pulse_handler_static(uint32_t interval, void * arg)
 
 void Display::pulse_handler()
 {
-	for (int i = 0; i < 4; ++i) {
+	for (unsigned i = 0; i < 4; ++i) {
 		switch (led_state[i]) {
 			case LED_ERROR_ON:
 				led_state[i] = LED_ERROR_OFF;
