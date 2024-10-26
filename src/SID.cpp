@@ -1331,9 +1331,7 @@ void DigitalRenderer::calc_buffer(int16_t *buf, long count)
 					output = v->count >> 8;
 					break;
 				case WAVE_RECT:
-					if (v->test) {
-						output = 0xffff;
-					} else if (v->count >= (uint32_t)(v->pw << 12)) {
+					if (v->test || v->count >= (uint32_t)(v->pw << 12)) {
 						output = 0xffff;
 					} else {
 						output = 0;
@@ -1343,21 +1341,25 @@ void DigitalRenderer::calc_buffer(int16_t *buf, long count)
 					output = TriSawTable[v->count >> 16];
 					break;
 				case WAVE_TRIRECT:
-					if (v->count >= (uint32_t)(v->pw << 12)) {
-						output = TriRectTable[v->count >> 16];
+					if (v->test || v->count >= (uint32_t)(v->pw << 12)) {
+						uint32_t ctrl = v->count;
+						if (v->ring) {
+							ctrl ^= ~(v->mod_by->count) & 0x800000;
+						}
+						output = TriRectTable[ctrl >> 16];
 					} else {
 						output = 0;
 					}
 					break;
 				case WAVE_SAWRECT:
-					if (v->count >= (uint32_t)(v->pw << 12)) {
+					if (v->test || v->count >= (uint32_t)(v->pw << 12)) {
 						output = SawRectTable[v->count >> 16];
 					} else {
 						output = 0;
 					}
 					break;
 				case WAVE_TRISAWRECT:
-					if (v->count >= (uint32_t)(v->pw << 12)) {
+					if (v->test || v->count >= (uint32_t)(v->pw << 12)) {
 						output = TriSawRectTable[v->count >> 16];
 					} else {
 						output = 0;
