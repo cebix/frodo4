@@ -237,18 +237,17 @@ static std::vector<std::string> scan_directory(const fs::path & dir_path, const 
 // Return true if name 'n' matches pattern 'p'
 static bool match(const char *p, const char *n)
 {
-	if (!*p)		// Null pattern matches everything
-		return true;
-
-	do {
-		if (*p == '*')	// Wildcard '*' matches all following characters
+	while (*p != '\0') {
+		if (*p == '*') {	// Wildcard '*' matches all following characters
 			return true;
-		if ((*p != *n) && (*p != '?'))	// Wildcard '?' matches single character
-			return false;
+		} else if (*p != *n) {
+			if ((*n == '\0') || (*p != '?'))	// Wildcard '?' matches single character
+				return false;
+		}
 		p++; n++;
-	} while (*p);
+	}
 
-	return !*n;
+	return *n == '\0';
 }
 
 void FSDrive::find_first_file(char *pattern)
@@ -282,15 +281,13 @@ uint8_t FSDrive::open_directory(int channel, const uint8_t *pattern, int pattern
 		pattern_len--;
 	}
 
-	// Skip everything before the ':' in the pattern
-	uint8_t *t = (uint8_t *)memchr(pattern, ':', pattern_len);
-	if (t) {
-		pattern = t + 1;
-	}
+	// Look for file name pattern after ':'
+	char ascii_pattern[NAMEBUF_LENGTH] = "*";
 
-	// Convert pattern to ASCII
-	char ascii_pattern[NAMEBUF_LENGTH];
-	petscii2ascii(ascii_pattern, pattern, NAMEBUF_LENGTH);
+	const uint8_t *t = (uint8_t *) memchr(pattern, ':', pattern_len);
+	if (t) {
+		petscii2ascii(ascii_pattern, t + 1, NAMEBUF_LENGTH);
+	}
 
 	// Scan directory for matching entries
 	if (! fs::is_directory(dir_path)) {
@@ -313,68 +310,64 @@ uint8_t FSDrive::open_directory(int channel, const uint8_t *pattern, int pattern
 	// Create and write one line for every directory entry
 	for (const auto & file_name : entries) {
 
-		// Include only files matching the ascii_pattern
-		if (match(ascii_pattern, file_name.c_str())) {
+		// Get file statistics
+		auto file_path = dir_path / file_name;
 
-			// Get file statistics
-			auto file_path = dir_path / file_name;
+		// Clear line with spaces and terminate with null byte
+		memset(buf, ' ', sizeof(buf));
+		buf[sizeof(buf) - 1] = 0;
 
-			// Clear line with spaces and terminate with null byte
-			memset(buf, ' ', sizeof(buf));
-			buf[sizeof(buf) - 1] = 0;
+		uint8_t *p = buf;
+		*p++ = 0x01;	// Dummy line link
+		*p++ = 0x01;
 
-			uint8_t *p = buf;
-			*p++ = 0x01;	// Dummy line link
-			*p++ = 0x01;
-
-			// Calculate size in blocks (of 254 bytes each)
-			std::uintmax_t num_blocks;
-			if (fs::is_directory(file_path)) {
-				num_blocks = 0;
-			} else {
-				num_blocks = (fs::file_size(file_path) + 254) / 254;
-				if (num_blocks > 0xffff) {
-					num_blocks = 0xffff;
-				}
+		// Calculate size in blocks (of 254 bytes each)
+		std::uintmax_t num_blocks;
+		if (fs::is_directory(file_path)) {
+			num_blocks = 0;
+		} else {
+			num_blocks = (fs::file_size(file_path) + 254) / 254;
+			if (num_blocks > 0xffff) {
+				num_blocks = 0xffff;
 			}
-			*p++ = num_blocks & 0xff;
-			*p++ = (num_blocks >> 8) & 0xff;
-
-			p++;
-			if (num_blocks < 10) p++;	// Less than 10: add one space
-			if (num_blocks < 100) p++;	// Less than 100: add another space
-
-			// Convert and insert file name
-			*p++ = '\"';
-			uint8_t *q = p;
-			for (unsigned i = 0; i < 16 && i < file_name.length(); ++i) {
-				uint8_t c = ascii2petscii(file_name[i]);
-				if (ThePrefs.MapSlash) {
-					if (c == '/') {
-						c = '\\';
-					} else if (c == '\\') {
-						c = '/';
-					}
-				}
-				*q++ = c;
-			}
-			*q++ = '\"';
-			p += 18;
-
-			// File type
-			if (fs::is_directory(file_path)) {
-				*p++ = 'D';
-				*p++ = 'I';
-				*p++ = 'R';
-			} else {
-				*p++ = 'P';
-				*p++ = 'R';
-				*p++ = 'G';
-			}
-
-			// Write line
-			fwrite(buf, 1, sizeof(buf), file[channel]);
 		}
+		*p++ = num_blocks & 0xff;
+		*p++ = (num_blocks >> 8) & 0xff;
+
+		p++;
+		if (num_blocks < 10) p++;	// Less than 10: add one space
+		if (num_blocks < 100) p++;	// Less than 100: add another space
+
+		// Convert and insert file name
+		*p++ = '\"';
+		uint8_t *q = p;
+		for (unsigned i = 0; i < 16 && i < file_name.length(); ++i) {
+			uint8_t c = ascii2petscii(file_name[i]);
+			if (ThePrefs.MapSlash) {
+				if (c == '/') {
+					c = '\\';
+				} else if (c == '\\') {
+					c = '/';
+				}
+			}
+			*q++ = c;
+		}
+		*q++ = '\"';
+		p += 18;
+
+		// File type
+		if (fs::is_directory(file_path)) {
+			*p++ = 'D';
+			*p++ = 'I';
+			*p++ = 'R';
+		} else {
+			*p++ = 'P';
+			*p++ = 'R';
+			*p++ = 'G';
+		}
+
+		// Write line
+		fwrite(buf, 1, sizeof(buf), file[channel]);
 	}
 
 	// Final line (664 blocks free)

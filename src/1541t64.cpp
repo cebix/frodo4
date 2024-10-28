@@ -259,10 +259,12 @@ uint8_t ArchDrive::open_file(int channel, const uint8_t *name, int name_len)
 static bool match(const uint8_t *p, int p_len, const uint8_t *n)
 {
 	while (p_len-- > 0) {
-		if (*p == '*')	// Wildcard '*' matches all following characters
+		if (*p == '*') {	// Wildcard '*' matches all following characters
 			return true;
-		if ((*p != *n) && (*p != '?'))	// Wildcard '?' matches single character
-			return false;
+		} else if (*p != *n) {
+			if ((*n == 0) || (*p != '?'))	// Wildcard '?' matches single character
+				return false;
+		}
 		p++; n++;
 	}
 
@@ -292,12 +294,15 @@ uint8_t ArchDrive::open_directory(int channel, const uint8_t *pattern, int patte
 		pattern_len--;
 	}
 
-	// Skip everything before the ':' in the pattern
-	uint8_t *t = (uint8_t *)memchr(pattern, ':', pattern_len);
+	// Look for file name pattern after ':'
+	const uint8_t *t = (uint8_t *) memchr(pattern, ':', pattern_len);
 	if (t) {
 		t++;
 		pattern_len -= t - pattern;
 		pattern = t;
+	} else {
+		pattern = (uint8_t *) "*";
+		pattern_len = 1;
 	}
 
 	// Create temporary file
@@ -316,7 +321,7 @@ uint8_t ArchDrive::open_directory(int channel, const uint8_t *pattern, int patte
 	for (i = file_info.begin(); i != end; i++) {
 
 		// Include only files matching the pattern
-		if (pattern_len == 0 || match(pattern, pattern_len, (uint8_t *)i->name)) {
+		if (match(pattern, pattern_len, (uint8_t *)i->name)) {
 
 			// Clear line with spaces and terminate with null byte
 			memset(buf, ' ', 31);

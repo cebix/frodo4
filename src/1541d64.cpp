@@ -487,12 +487,15 @@ uint8_t ImageDrive::open_directory(const uint8_t *pattern, int pattern_len)
 		pattern_len--;
 	}
 
-	// Skip everything before the ':' in the pattern
-	uint8_t *t = (uint8_t *)memchr(pattern, ':', pattern_len);
+	// Look for file name pattern after ':'
+	const uint8_t *t = (uint8_t *) memchr(pattern, ':', pattern_len);
 	if (t) {
 		t++;
 		pattern_len -= t - pattern;
 		pattern = t;
+	} else {
+		pattern = (uint8_t *) "*";
+		pattern_len = 1;
 	}
 
 	ch[0].mode = CHMOD_DIRECTORY;
@@ -534,7 +537,7 @@ uint8_t ImageDrive::open_directory(const uint8_t *pattern, int pattern_len)
 		// Scan all 8 entries of a block
 		uint8_t *de = dir + DIR_ENTRIES;
 		for (unsigned j = 0; j < 8; ++j, de += SIZEOF_DE) {
-			if (de[DE_TYPE] && (pattern_len == 0 || match(pattern, pattern_len, de + DE_NAME))) {
+			if (de[DE_TYPE] && match(pattern, pattern_len, de + DE_NAME)) {
 
 				// Dummy line link
 				*p++ = 0x01;
