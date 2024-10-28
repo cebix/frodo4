@@ -377,8 +377,8 @@ uint8_t FSDrive::open_directory(int channel, const uint8_t *pattern, int pattern
 		}
 	}
 
-	// Final line
-	fwrite("\001\001\0\0BLOCKS FREE.             \0\0", 1, 32, file[channel]);
+	// Final line (664 blocks free)
+	fwrite("\x01\x01\x98\x02" "BLOCKS FREE.             \0\0", 1, 32, file[channel]);
 
 	// Rewind file for reading and read first byte
 	rewind(file[channel]);
