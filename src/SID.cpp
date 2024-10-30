@@ -427,7 +427,6 @@ void MOS6581::SetState(const MOS6581State * s)
 
 constexpr int SAMPLE_FREQ = 48000;			// Desired default sample frequency (note: obtained freq may be different!)
 constexpr uint32_t SID_FREQ = 985248;		// SID frequency in Hz
-constexpr uint32_t CALC_FREQ = 50;			// Frequency at which calc_buffer is called in Hz (should be 50Hz)
 constexpr size_t SAMPLE_BUF_SIZE = TOTAL_RASTERS * 2;	// Size of buffer for sampled voice (double buffered)
 
 
@@ -477,7 +476,7 @@ public:
 	void Resume() override;
 
 private:
-	void set_ffreq_table(int sid_type);
+	void set_farg_tables(int sid_type);
 
 	void calc_filter();
 	void calc_buffer(int16_t *buf, long count);
@@ -497,16 +496,17 @@ private:
 	DRVoice voice[3];				// Data for 3 voices
 
 	uint8_t f_type;					// Filter type
-	uint8_t f_freq;					// SID filter frequency (upper 8 bits)
-	uint8_t f_res;					// Filter resonance (0..15)
+	uint16_t f_fc;					// Filter cutoff frequency register (11 bits)
+	uint8_t f_res;					// Filter resonance register (4 bits)
 	filter_t f_ampl;				// IIR filter input attenuation
 	filter_t d1, d2, g1, g2;		// IIR filter coefficients
 	filter_t f_ampl_eff;			// Smoothed filter parameters
 	filter_t d1_eff, d2_eff;
 	filter_t g1_eff, g2_eff;
 	filter_t xn1, xn2, yn1, yn2;	// IIR filter previous input/output signal
-	filter_t ffreq_LP[256];			// Precomputed filter resonance frequencies
-	filter_t ffreq_HP[256];
+	filter_t farg_LP[2048];			// Precomputed filter pole arguments
+	filter_t farg_BP[2048];
+	filter_t farg_HP[2048];
 
 	filter_t out_lp_g;				// IIR filter coefficients for external output
 	filter_t out_hp_d, out_hp_g;
@@ -573,9 +573,6 @@ DigitalRenderer::DigitalRenderer(MOS6581 * sid) : the_sid(sid)
 	voice[1].mod_to = &voice[2];
 	voice[2].mod_to = &voice[0];
 
-	// Precompute filter resonance frequencies
-	set_ffreq_table(ThePrefs.SIDType);
-
 	// Reset SID
 	Reset();
 
@@ -600,6 +597,9 @@ DigitalRenderer::DigitalRenderer(MOS6581 * sid) : the_sid(sid)
 
 	// Calculate number of SID cycles per sample frame
 	sid_cycles_frac = uint32_t(float(SID_FREQ) / obtained.freq * 65536.0);
+
+	// Precompute filter pole argument tables
+	set_farg_tables(ThePrefs.SIDType);
 
 	// AUDIO OUT of SID is connected to 16 kHz (R = 10 kΩ, C = 1 nF)
 	// low-pass and 16 Hz (R = 1 kΩ, C = 10 µF) high-pass RC filters
@@ -652,7 +652,7 @@ void DigitalRenderer::Reset()
 	}
 
 	f_type = FILT_NONE;
-	f_freq = f_res = 0;
+	f_fc = f_res = 0;
 	f_ampl = f_ampl_eff = filter_t(0.5);
 	d1 = d2 = g1 = g2 = filter_t(0.0);
 	d1_eff = d2_eff = g1_eff = g2_eff = filter_t(0.0);
@@ -782,8 +782,12 @@ void DigitalRenderer::WriteRegister(uint16_t adr, uint8_t byte)
 			voice[v].r_sub = sid_cycles_frac / MOS6581::EGDivTable[byte & 0xf];
 			break;
 
+		case 21:
+			f_fc = (f_fc & 0x7f8) | (byte & 7);
+			break;
+
 		case 22:
-			f_freq = byte;
+			f_fc = (f_fc & 7) | (byte << 3);
 			break;
 
 		case 23:
@@ -807,44 +811,67 @@ void DigitalRenderer::WriteRegister(uint16_t adr, uint8_t byte)
 
 void DigitalRenderer::NewPrefs(const Prefs *prefs)
 {
-	set_ffreq_table(prefs->SIDType);
+	set_farg_tables(prefs->SIDType);
 }
 
 
 /*
- *  Resonance frequency polynomials (6581)
+ *  Compute filter pole argument tables according to SID type
  */
 
-static inline float resonance_freq_lp(float f)
+// Limit normalized pole argument to <1/2 sample frequency, and avoid zero
+static float limit_farg(float arg)
 {
-	return 227.755 - 1.7635 * f - 0.0176385 * f * f + 0.00333484 * f * f * f;
-}
-
-static inline float resonance_freq_hp(float f)
-{
-	return 366.374 - 14.0052 * f + 0.603212 * f * f - 0.000880196 * f * f * f;
-}
-
-
-/*
- *  Compute filter resonance frequencies according to SID type
- */
-
-void DigitalRenderer::set_ffreq_table(int sid_type)
-{
-	// Not actually a function of SID type per se, but the 8580 is usually
-	// used with 2200 pF filter caps (vs. 470 pF on the 6581), so the
-	// resonance frequencies of the 8580 are lower
-	float c;
-	if (sid_type == SIDTYPE_DIGITAL_6581) {
-		c = 1.0;
+	if (arg > 0.99) {
+		return 0.99;
+	} else if (arg < 0.001) {
+		return 0.001;
 	} else {
-		c = 470.0 / 2200.0;
+		return arg;
 	}
+}
 
-	for (unsigned f = 0; f < 256; ++f) {
-		ffreq_LP[f] = filter_t(resonance_freq_lp(f) * c);
-		ffreq_HP[f] = filter_t(resonance_freq_hp(f) * c);
+void DigitalRenderer::set_farg_tables(int sid_type)
+{
+	for (unsigned fc = 0; fc < 2048; ++fc) {
+		float freq, arg;
+
+		if (sid_type == SIDTYPE_DIGITAL_8580) {
+
+			// Measured on 8580R5 with 2200 pF filter caps
+			freq = 27.02913149 + 7.22365895*fc;	// Resonance frequency
+			arg = 2 * freq / obtained.freq;		// Normalized argument [0..1] ≘ [0..half sample freq]
+			farg_LP[fc] = filter_t(limit_farg(arg));
+
+			freq = 45.69368799 + 6.89891638*fc;
+			arg = 2 * freq / obtained.freq;
+			farg_BP[fc] = filter_t(limit_farg(arg));
+
+			freq = 41.91553007 + 6.98149818*fc;
+			arg = 2 * freq / obtained.freq;
+			farg_HP[fc] = filter_t(limit_farg(arg));
+
+		} else {
+
+			// Measured on 6581R4AR with 470 pF filter caps
+			freq = 315.10270585 + 2.89088246*fc
+			     - 0.0235074*fc*fc + (5.91649492e-05)*fc*fc*fc
+			     - (3.55565809e-08)*fc*fc*fc*fc + (6.69597461e-12)*fc*fc*fc*fc*fc;
+			arg = 2 * freq / obtained.freq;
+			farg_LP[fc] = filter_t(limit_farg(arg));
+
+			freq = 401.42665374 + 1.29838201*fc
+			     - 0.0174956*fc*fc + (5.28152034e-05)*fc*fc*fc
+			     - (3.23594755e-08)*fc*fc*fc*fc + (6.11384644e-12)*fc*fc*fc*fc*fc;
+			arg = 2 * freq / obtained.freq;
+			farg_BP[fc] = filter_t(limit_farg(arg));
+
+			freq = 412.06914424 - 0.53241458*fc
+			     - 0.00982478*fc*fc + (4.22739602e-05)*fc*fc*fc
+			     - (2.79090373e-08)*fc*fc*fc*fc + (5.53145135e-12)*fc*fc*fc*fc*fc;
+			arg = 2 * freq / obtained.freq;
+			farg_HP[fc] = filter_t(limit_farg(arg));
+		}
 	}
 }
 
@@ -863,27 +890,15 @@ void DigitalRenderer::calc_filter()
 		return;
 	}
 
-	filter_t fr, arg;
+	filter_t arg;
 
 	// Calculate resonance frequency
 	if (f_type == FILT_LP || f_type == FILT_LPBP) {
-		fr = ffreq_LP[f_freq];
+		arg = farg_LP[f_fc];
+	} else if (f_type == FILT_BP) {
+		arg = farg_BP[f_fc];
 	} else {
-		fr = ffreq_HP[f_freq];
-	}
-
-	// Limit to <1/2 sample frequency, avoid div by 0 in case FILT_BP/FILT_NOTCH below
-#ifdef USE_FIXPOINT_MATHS
-	arg = fr / (obtained.freq >> 1);
-#else
-	arg = fr / (float(obtained.freq) * 0.5);
-#endif
-
-	if (arg > filter_t(0.99)) {
-		arg = filter_t(0.99);
-	}
-	if (arg < filter_t(0.01)) {
-		arg = filter_t(0.01);
+		arg = farg_HP[f_fc];
 	}
 
 	// Calculate poles (resonance frequency and resonance)
