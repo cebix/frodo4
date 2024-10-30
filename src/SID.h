@@ -53,15 +53,15 @@ public:
 	const uint16_t * SawRectTable = nullptr;
 	const uint16_t * TriSawRectTable = nullptr;
 
-	static const uint16_t TriSawTable_6581[0x100];
-	static const uint16_t TriRectTable_6581[0x100];
-	static const uint16_t SawRectTable_6581[0x100];
-	static const uint16_t TriSawRectTable_6581[0x100];
+	static const uint16_t TriSawTable_6581[0x1000];
+	static const uint16_t TriRectTable_6581[0x1000];
+	static const uint16_t SawRectTable_6581[0x1000];
+	static const uint16_t TriSawRectTable_6581[0x1000];
 
-	static const uint16_t TriSawTable_8580[0x100];
-	static const uint16_t TriRectTable_8580[0x100];
-	static const uint16_t SawRectTable_8580[0x100];
-	static const uint16_t TriSawRectTable_8580[0x100];
+	static const uint16_t TriSawTable_8580[0x1000];
+	static const uint16_t TriRectTable_8580[0x1000];
+	static const uint16_t SawRectTable_8580[0x1000];
+	static const uint16_t TriSawRectTable_8580[0x1000];
 
 private:
 	void open_close_renderer(int old_type, int new_type);

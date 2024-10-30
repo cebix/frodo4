@@ -1,7 +1,7 @@
 bin_PROGRAMS = Frodo FrodoLite
 
 common_SOURCES = \
-    main.cpp main.h Display.cpp Display.h Prefs.cpp Prefs.h SID.cpp SID.h REU.cpp REU.h \
+    main.cpp main.h Display.cpp Display.h Prefs.cpp Prefs.h SID.cpp SID.h SID_wave_tables.h REU.cpp REU.h \
     IEC.cpp IEC.h 1541fs.cpp 1541fs.h 1541d64.cpp 1541d64.h 1541t64.cpp 1541t64.h 1541gcr.cpp 1541gcr.h \
     Cartridge.cpp Cartridge.h SAM.cpp SAM.h 1541_ROM.h Basic_ROM.h Char_ROM.h Kernal_ROM.h Version.h \
     MenuFont.h C64.h CPUC64.h CPU1541.h VIC.h CIA.h VIA.h
