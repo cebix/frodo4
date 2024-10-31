@@ -498,12 +498,18 @@ private:
 	uint8_t f_type;					// Filter type
 	uint16_t f_fc;					// Filter cutoff frequency register (11 bits)
 	uint8_t f_res;					// Filter resonance register (4 bits)
-	filter_t f_ampl;				// IIR filter input attenuation
-	filter_t d1, d2, g1, g2;		// IIR filter coefficients
-	filter_t f_ampl_eff;			// Smoothed filter parameters
-	filter_t d1_eff, d2_eff;
+
+	filter_t d0, d1, d2, g1, g2;	// IIR filter coefficients
+									// Note: Compared to traditional notation we have factored
+									// out d0 from d1 and d2, so d0 acts as an input attenuation.
+									// In the usual polynomial notation for the transfer function
+									// numerator (b) and denominator (a), this corresponds to:
+									// b0 = d0, b1 = d1 * d0, b2 = d2 * d0, a1 = g1, a2 = g2
+	filter_t d0_eff, d1_eff, d2_eff; // Smoothed filter parameters
 	filter_t g1_eff, g2_eff;
+
 	filter_t xn1, xn2, yn1, yn2;	// IIR filter previous input/output signal
+
 	filter_t farg_LP[2048];			// Precomputed filter pole arguments
 	filter_t farg_BP[2048];
 	filter_t farg_HP[2048];
@@ -653,9 +659,8 @@ void DigitalRenderer::Reset()
 
 	f_type = FILT_NONE;
 	f_fc = f_res = 0;
-	f_ampl = f_ampl_eff = filter_t(0.5);
-	d1 = d2 = g1 = g2 = filter_t(0.0);
-	d1_eff = d2_eff = g1_eff = g2_eff = filter_t(0.0);
+	d0 = d1 = d2 = g1 = g2 = filter_t(0.0);
+	d0_eff = d1_eff = d2_eff = g1_eff = g2_eff = filter_t(0.0);
 	xn1 = xn2 = yn1 = yn2 = filter_t(0.0);
 
 	audio_out_lp = audio_out_lp1 = audio_out_hp = filter_t(0.0);
@@ -884,9 +889,8 @@ void DigitalRenderer::calc_filter()
 {
 	// Filter off? Then reset all coefficients
 	if (f_type == FILT_NONE) {
-		d1 = filter_t(0.0); d2 = filter_t(0.0);
+		d0 = filter_t(0.0); d1 = filter_t(0.0); d2 = filter_t(0.0);
 		g1 = filter_t(0.0); g2 = filter_t(0.0);
-		f_ampl = filter_t(0.0);
 		return;
 	}
 
@@ -930,63 +934,68 @@ void DigitalRenderer::calc_filter()
 		}
 	}
 
-	// Calculate roots (filter characteristic) and input attenuation
+	// Calculate zeros (filter characteristic) and input attenuation
 	//
-	// The (complex) roots are at
+	// The (complex) zeros are at
 	//   z0_1/2 = (-d1 +/- sqrt(d1^2 - 4*d2)) / 2
 	switch (f_type) {
 
 		case FILT_LPBP:
-		case FILT_LP:		// Both roots at -1, H(1)=1
-			d1 = filter_t(2.0); d2 = filter_t(1.0);
-			f_ampl = filter_t(0.25) * (filter_t(1.0) + g1 + g2);
+		case FILT_LP:		// Both zeros at -1, H(1)=1
+			d0 = filter_t(0.25) * (filter_t(1.0) + g1 + g2);
+			d1 = filter_t(2.0);
+			d2 = filter_t(1.0);
 			break;
 
 		case FILT_HPBP:
-		case FILT_HP:		// Both roots at 1, H(-1)=1
-			d1 = filter_t(-2.0); d2 = filter_t(1.0);
-			f_ampl = filter_t(0.25) * (filter_t(1.0) - g1 + g2);
+		case FILT_HP:		// Both zeros at 1, H(-1)=1
+			d0 = filter_t(0.25) * (filter_t(1.0) - g1 + g2);
+			d1 = filter_t(-2.0);
+			d2 = filter_t(1.0);
 			break;
 
-		case FILT_BP: {		// Roots at +1 and -1, H_max=1
-			d1 = filter_t(0.0); d2 = filter_t(-1.0);
+		case FILT_BP: {		// Zeros at +1 and -1, H_max=1
 #ifdef USE_FIXPOINT_MATHS
 			filter_t c = fixsqrt(g2*g2 + filter_t(2.0)*g2 - g1*g1 + filter_t(1.0));
 #else
 			filter_t c = sqrt(g2*g2 + filter_t(2.0)*g2 - g1*g1 + filter_t(1.0));
 #endif
-			f_ampl = filter_t(0.25) * (filter_t(-2.0)*g2*g2 - (filter_t(4.0)+filter_t(2.0)*c)*g2 - filter_t(2.0)*c + (c+filter_t(2.0))*g1*g1 - filter_t(2.0)) / (-g2*g2 - (c+filter_t(2.0))*g2 - c + g1*g1 - filter_t(1.0));
+			d0 = filter_t(0.25) * (filter_t(-2.0)*g2*g2 - (filter_t(4.0)+filter_t(2.0)*c)*g2 - filter_t(2.0)*c + (c+filter_t(2.0))*g1*g1 - filter_t(2.0)) / (-g2*g2 - (c+filter_t(2.0))*g2 - c + g1*g1 - filter_t(1.0));
+			d1 = filter_t(0.0);
+			d2 = filter_t(-1.0);
 			break;
 		}
 
-		case FILT_NOTCH: {	// Roots at exp(i*pi*arg) and exp(-i*pi*arg), H(1)=1 (arg>=0.5) or H(-1)=1 (arg<0.5)
+		case FILT_NOTCH: {	// Zeros at exp(i*pi*arg) and exp(-i*pi*arg), H(1)=1 (arg>=0.5) or H(-1)=1 (arg<0.5)
 #ifdef USE_FIXPOINT_MATHS
 			filter_t ca = fixcos(arg);
 #else
 			filter_t ca = cos(M_PI * arg);
 #endif
-			d1 = filter_t(-2.0) * ca; d2 = filter_t(1.0);
 			if (arg >= filter_t(0.5)) {
-				f_ampl = filter_t(0.5) * (filter_t(1.0) + g1 + g2) / (filter_t(1.0) - ca);
+				d0 = filter_t(0.5) * (filter_t(1.0) + g1 + g2) / (filter_t(1.0) - ca);
 			} else {
-				f_ampl = filter_t(0.5) * (filter_t(1.0) - g1 + g2) / (filter_t(1.0) + ca);
+				d0 = filter_t(0.5) * (filter_t(1.0) - g1 + g2) / (filter_t(1.0) + ca);
 			}
+			d1 = filter_t(-2.0) * ca;
+			d2 = filter_t(1.0);
 			break;
 		}
 
 		// TODO: This is pure guesswork...
-		case FILT_ALL: {	// Roots at 2*exp(i*pi*arg) and 2*exp(-i*pi*arg), H(-1)=1 (arg>=0.5) or H(1)=1 (arg<0.5)
+		case FILT_ALL: {	// Zeros at 2*exp(i*pi*arg) and 2*exp(-i*pi*arg), H(-1)=1 (arg>=0.5) or H(1)=1 (arg<0.5)
 #ifdef USE_FIXPOINT_MATHS
 			filter_t ca = fixcos(arg);
 #else
 			filter_t ca = cos(M_PI * arg);
 #endif
-			d1 = filter_t(-4.0) * ca; d2 = filter_t(4.0);
 			if (arg >= filter_t(0.5)) {
-				f_ampl = (filter_t(1.0) - g1 + g2) / (filter_t(5.0) + filter_t(4.0) * ca);
+				d0 = (filter_t(1.0) - g1 + g2) / (filter_t(5.0) + filter_t(4.0) * ca);
 			} else {
-				f_ampl = (filter_t(1.0) + g1 + g2) / (filter_t(5.0) - filter_t(4.0) * ca);
+				d0 = (filter_t(1.0) + g1 + g2) / (filter_t(5.0) - filter_t(4.0) * ca);
 			}
+			d1 = filter_t(-4.0) * ca;
+			d2 = filter_t(4.0);
 			break;
 		}
 
@@ -1135,19 +1144,19 @@ void DigitalRenderer::calc_buffer(int16_t *buf, long count)
 		}
 
 		// SID-internal filters
-		f_ampl_eff = f_ampl_eff * filter_t(0.8) + f_ampl * filter_t(0.2);	// Smooth out filter parameter transitions
-		d1_eff     = d1_eff     * filter_t(0.8) + d1     * filter_t(0.2);
-		d2_eff     = d2_eff     * filter_t(0.8) + d2     * filter_t(0.2);
-		g1_eff     = g1_eff     * filter_t(0.8) + g1     * filter_t(0.2);
-		g2_eff     = g2_eff     * filter_t(0.8) + g2     * filter_t(0.2);
+		d0_eff = d0_eff * filter_t(0.8) + d0 * filter_t(0.2);	// Smooth out filter parameter transitions
+		d1_eff = d1_eff * filter_t(0.8) + d1 * filter_t(0.2);
+		d2_eff = d2_eff * filter_t(0.8) + d2 * filter_t(0.2);
+		g1_eff = g1_eff * filter_t(0.8) + g1 * filter_t(0.2);
+		g2_eff = g2_eff * filter_t(0.8) + g2 * filter_t(0.2);
 
 #ifdef USE_FIXPOINT_MATHS
-		int32_t xn = f_ampl_eff.imul(sum_output_filter);
+		int32_t xn = d0_eff.imul(sum_output_filter);
 		int32_t yn = xn + d1_eff.imul(xn1) + d2_eff.imul(xn2) - g1_eff.imul(yn1) - g2_eff.imul(yn2);
 		yn2 = yn1; yn1 = yn; xn2 = xn1; xn1 = xn;
 		sum_output_filter = yn;
 #else
-		filter_t xn = filter_t(sum_output_filter) * f_ampl_eff;
+		filter_t xn = filter_t(sum_output_filter) * d0_eff;
 		filter_t yn = xn + d1_eff * xn1 + d2_eff * xn2 - g1_eff * yn1 - g2_eff * yn2;
 		yn2 = yn1; yn1 = yn; xn2 = xn1; xn1 = xn;
 		sum_output_filter = (int32_t) yn;
