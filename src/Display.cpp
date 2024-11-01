@@ -850,6 +850,12 @@ void Display::PollKeyboard(uint8_t *key_matrix, uint8_t *rev_matrix, uint8_t *jo
 							key_matrix[keycode >> 3] &= ~(1 << (keycode & 7));
 							rev_matrix[keycode & 7] &= ~(1 << (keycode >> 3));
 						}
+					} else if (keycode == KEYCODE_PLAY_ON_TAPE) {
+						if (event.type == SDL_CONTROLLERBUTTONUP) {
+							the_c64->SetTapeControllerButton(false);
+						} else {
+							the_c64->SetTapeControllerButton(true);
+						}
 					}
 				}
 				break;

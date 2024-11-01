@@ -83,6 +83,7 @@ MOS6510::MOS6510(C64 *c64, uint8_t *Ram, uint8_t *Basic, uint8_t *Kernal, uint8_
 
 	nmi_triggered = false;
 
+	tape_sense = false;
 	borrowed_cycles = 0;
 	dfff_byte = 0x55;
 }
@@ -116,6 +117,7 @@ void MOS6510::Reset()
 {
 	// Initialize extra 6510 registers and memory configuration
 	ram[0] = ram[1] = 0;
+	tape_sense = false;
 	new_config();
 
 	// Clear all interrupt lines
@@ -216,13 +218,35 @@ void MOS6510::SetState(const MOS6510State *s)
 
 
 /*
+ *  Set tape sense line status
+ */
+
+void MOS6510::SetTapeSense(bool pressed)
+{
+	tape_sense = pressed;
+
+	if ((ram[0] & 0x10) == 0) {
+		if (pressed) {
+			ram[1] &= 0xef;
+		} else {
+			ram[1] |= 0x10;
+		}
+	}
+}
+
+
+/*
  *  Memory configuration has probably changed
  */
 
 void MOS6510::new_config()
 {
 	if ((ram[0] & 0x10) == 0) {
-		ram[1] |= 0x10;	// Keep cassette sense line high
+		if (tape_sense) {
+			ram[1] &= 0xef;
+		} else {
+			ram[1] |= 0x10;
+		}
 	}
 
 	uint8_t port = ~ram[0] | ram[1];

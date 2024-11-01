@@ -119,6 +119,7 @@ void MOS6510::Reset()
 {
 	// Initialize extra 6510 registers and memory configuration
 	ddr = pr = pr_out = 0;
+	pr_in = 0x17;
 	new_config();
 
 	// Clear all interrupt lines
@@ -238,6 +239,20 @@ void MOS6510::SetState(const MOS6510State *s)
 
 
 /*
+ *  Set tape sense line status
+ */
+
+void MOS6510::SetTapeSense(bool pressed)
+{
+	if (pressed) {
+		pr_in &= 0xef;
+	} else {
+		pr_in |= 0x10;
+	}
+}
+
+
+/*
  *  Memory configuration has probably changed
  */
 
@@ -337,7 +352,7 @@ uint8_t MOS6510::read_byte(uint16_t adr)
 		} else if (adr == 0) {
 			return ddr;
 		} else {
-			uint8_t byte = (pr | ~ddr) & (pr_out | 0x17);
+			uint8_t byte = (pr | ~ddr) & (pr_out | pr_in);
 			if (!(ddr & 0x20)) {
 				byte &= 0xdf;
 			}

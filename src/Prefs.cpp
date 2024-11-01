@@ -211,9 +211,9 @@ void Prefs::ParseItem(std::string item)
 				} else if (key_name == "semicolon") {
 					key_name = ";";
 				}
-				unsigned keycode = KeycodeFromString(key_name);
+				int keycode = KeycodeFromString(key_name);
 
-				if (button != SDL_CONTROLLER_BUTTON_INVALID && keycode < 64) {
+				if (button != SDL_CONTROLLER_BUTTON_INVALID && keycode >= 0) {
 					mapping[button] = keycode;
 				}
 			}

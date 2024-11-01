@@ -105,6 +105,8 @@ public:
 	void JoystickAdded(int32_t index);
 	void JoystickRemoved(int32_t instance_id);
 
+	void SetTapeControllerButton(bool pressed);
+
 	void SetDriveLEDs(int l0, int l1, int l2, int l3);
 	void ShowNotification(std::string s);
 
@@ -196,8 +198,13 @@ private:
 // Check whether file is a snapshot file
 extern bool IsSnapshotFile(const char * filename);
 
-// Obtain C64 keycode from key name
-extern unsigned KeycodeFromString(const std::string & s);
+enum {
+	KEYCODE_PLAY_ON_TAPE = 64,
+	NUM_C64_KEYCODES = 65,
+};
+
+// Obtain C64 keycode from key name (<0: invalid key)
+extern int KeycodeFromString(const std::string & s);
 
 // Obtain key name from C64 keycode
 extern const char * StringForKeycode(unsigned kc);

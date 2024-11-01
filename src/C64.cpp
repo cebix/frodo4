@@ -1010,6 +1010,16 @@ uint8_t C64::poll_joystick(int port)
 
 
 /*
+ *  Tape PLAY button on game controller pressed or released
+ */
+
+void C64::SetTapeControllerButton(bool pressed)
+{
+	TheCPU->SetTapeSense(pressed);
+}
+
+
+/*
  *  Save state to snapshot (emulation must be in VBlank)
  */
 
@@ -1337,7 +1347,7 @@ void C64::ShowNotification(std::string s)
  *  Convert C64 keycodes from/to strings
  */
 
-static const char * c64_key_names[64] = {
+static const char * c64_key_names[NUM_C64_KEYCODES] = {
 	"INS/DEL",
 	"RETURN",
 	"CRSR ←→",
@@ -1408,23 +1418,25 @@ static const char * c64_key_names[64] = {
 	"SPACE",
 	"C=",
 	"Q",
-	"RUN/STOP"
+	"RUN/STOP",
+
+	"PLAY",	// KEYCODE_PLAY_ON_TAPE
 };
 
-unsigned KeycodeFromString(const std::string & s)
+int KeycodeFromString(const std::string & s)
 {
-	for (unsigned i = 0; i < 64; ++i) {
+	for (int i = 0; i < NUM_C64_KEYCODES; ++i) {
 		if (s == c64_key_names[i]) {
 			return i;
 		}
 	}
 
-	return 64;
+	return -1;
 }
 
 const char * StringForKeycode(unsigned kc)
 {
-	if (kc < 64) {
+	if (kc < NUM_C64_KEYCODES) {
 		return c64_key_names[kc];
 	} else {
 		return "";

@@ -319,7 +319,7 @@ bool Prefs::ShowEditor(bool startup, fs::path prefs_path, fs::path snapshot_path
 
 		// Set up C64 keyboard combo boxes
 		std::set<std::string> c64_key_names;
-		for (unsigned keycode = 0; keycode < 64; ++keycode) {
+		for (unsigned keycode = 0; keycode < NUM_C64_KEYCODES; ++keycode) {
 			c64_key_names.insert(StringForKeycode(keycode));
 		}
 
@@ -800,6 +800,7 @@ extern "C" void on_new_button_mapping_clicked(GtkButton *button, gpointer user_d
 	GtkListBoxRow * row = add_button_mapping_editor_item("unnamed mapping", ButtonMapping{});
 	gtk_widget_show_all(GTK_WIDGET(button_map_list));
 	gtk_list_box_select_row(button_map_list, row);
+	gtk_widget_grab_focus(GTK_WIDGET(gtk_builder_get_object(builder, "button_map_name")));
 }
 
 extern "C" void on_delete_button_mapping_clicked(GtkButton *button, gpointer user_data)
@@ -1000,6 +1001,7 @@ extern "C" void on_new_rom_set_clicked(GtkButton *button, gpointer user_data)
 	GtkListBoxRow * row = add_rom_set_editor_item("unnamed set", ROMPaths{});
 	gtk_widget_show_all(GTK_WIDGET(rom_set_list));
 	gtk_list_box_select_row(rom_set_list, row);
+	gtk_widget_grab_focus(GTK_WIDGET(gtk_builder_get_object(builder, "rom_set_name")));
 }
 
 extern "C" void on_delete_rom_set_clicked(GtkButton *button, gpointer user_data)

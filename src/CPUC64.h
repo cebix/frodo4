@@ -94,6 +94,8 @@ public:
 	void TriggerNMI();
 	void ClearNMI();
 
+	void SetTapeSense(bool pressed);
+
 	uint16_t GetPC() const { return pc; }
 
 	int ExtConfig;			// Memory configuration for ExtRead/WriteByte (0..7)
@@ -160,8 +162,10 @@ private:
 	uint8_t state, op;			// Current state and opcode
 	uint16_t ar, ar2;			// Address registers
 	uint8_t rdbuf;				// Data buffer for RMW instructions
-	uint8_t ddr, pr, pr_out;	// Processor port
+	uint8_t ddr, pr;			// Processor port
+	uint8_t pr_out, pr_in;
 #else
+	bool tape_sense;			// Tape sense line (true = pressed)
 	int	borrowed_cycles;		// Borrowed cycles from next line
 	uint8_t dfff_byte;			// Byte at $dfff for emulator ID
 #endif
@@ -176,7 +180,7 @@ struct MOS6510State {
 	uint8_t p;					// Processor flags
 	uint16_t pc, sp;
 
-	uint8_t ddr, pr, pr_out;	// Port
+	uint8_t ddr, pr, pr_out;	// Processor port
 
 	bool int_line[4];			// Interrupt line state
 	bool nmi_triggered;	
