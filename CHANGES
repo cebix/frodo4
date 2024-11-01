@@ -11,7 +11,7 @@ Changes from V4.3 to V4.4:
    - Removed "Display Sprites" and "Enable SID Filters" settings which are
      now always enabled
  - Improved interrupt timing
- - Improved SID sample playback
+ - Improved SID emulation
  - New font for on-screen displays
 
 Changes from V4.2 to V4.3:
