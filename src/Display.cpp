@@ -53,22 +53,26 @@ constexpr int NOTIFICATION_TIMEOUT_ms = 4000;
 
 // Drive LED image
 static const char * led_image[8] = {
-    "  XXXX  ",
-    " X.O..X ",
-    "X.O....X",
-    "X.O....X",
-    "X......X",
-    "X......X",
-    " X....X ",
-    "  XXXX  ",
+    "  XXX   ",
+    " X.O.X  ",
+    "X.O...X ",
+    "X.O...X ",
+    "X.....X ",
+    " X...X  ",
+    "  XXX   ",
+    "        ",
 };
 
 // Menu font
 #include "MenuFont.h"
 
+#define MCHAR_DRIVE_L "\x07"
+#define MCHAR_DRIVE_R "\x08"
 #define MCHAR_REWIND "\x0b"
 #define MCHAR_FORWARD "\x0c"
 #define MCHAR_PAUSE "\x0d"
+#define MCHAR_REC "\x0e"
+#define MCHAR_TAPE "\x0f"
 
 
 // C64 color palettes based on measurements by Philip "Pepto" Timmermann <pepto@pepto.de>
@@ -379,7 +383,7 @@ void Display::Update()
 	auto now = chrono::steady_clock::now();
 
 	unsigned i = next_note;
-	unsigned y_pos = 4;
+	unsigned y_pos = 3;
 	do {
 		if (notes[i].active) {
 			int elapsed_ms = chrono::duration_cast<chrono::milliseconds>(now - notes[i].time).count();
@@ -397,19 +401,22 @@ void Display::Update()
 	if (ThePrefs.ShowLEDs) {
 
 		// Draw speedometer/LEDs
-		draw_string(6, DISPLAY_Y - 9, speedometer_string, shadow_gray);
-		draw_string(5, DISPLAY_Y - 10, speedometer_string, shine_gray);
+		draw_string(5, DISPLAY_Y - 8, speedometer_string, shadow_gray);
+		draw_string(4, DISPLAY_Y - 9, speedometer_string, shine_gray);
 
 		for (unsigned i = 0; i < 4; ++i) {
 			if (led_state[i] != LED_OFF) {
 				static const char * drive_str[4] = {
-					"Dr 8", "Dr 9", "Dr 10", "Dr 11"
+					MCHAR_DRIVE_L MCHAR_DRIVE_R "8",
+					MCHAR_DRIVE_L MCHAR_DRIVE_R "9",
+					MCHAR_DRIVE_L MCHAR_DRIVE_R "10",
+					MCHAR_DRIVE_L MCHAR_DRIVE_R "11",
 				};
 
-				draw_string(DISPLAY_X * (i+1) / 7 + 1, DISPLAY_Y - 9, drive_str[i], shadow_gray);
-				draw_string(DISPLAY_X * (i+1) / 7, DISPLAY_Y - 10, drive_str[i], shine_gray);
+				draw_string(DISPLAY_X * (i+1) / 7 + 1, DISPLAY_Y - 8, drive_str[i], shadow_gray);
+				draw_string(DISPLAY_X * (i+1) / 7,     DISPLAY_Y - 9, drive_str[i], shine_gray);
 
-				uint8_t * p = vic_pixels + (DISPLAY_X * (i+1) / 7 + (i < 2 ? 28 : 35)) + DISPLAY_X * (DISPLAY_Y - 10);
+				uint8_t * p = vic_pixels + (DISPLAY_X * (i+1) / 7 + (i < 2 ? 24 : 31)) + DISPLAY_X * (DISPLAY_Y - 9);
 
 				const uint8_t * q;
 				switch (led_state[i]) {
@@ -431,7 +438,7 @@ void Display::Update()
 			}
 		}
 
-		// Draw rewind/forward marker
+		// Draw play mode marker
 		PlayMode mode = the_c64->GetPlayMode();
 		if (mode != PLAY_MODE_PLAY) {
 			const char * str = nullptr;
@@ -447,8 +454,8 @@ void Display::Update()
 					break;
 			};
 			if (str) {
-				draw_string(DISPLAY_X - 12, DISPLAY_Y - 9, str, shadow_gray);
-				draw_string(DISPLAY_X - 13, DISPLAY_Y - 10, str, shine_gray);
+				draw_string(DISPLAY_X - 11, DISPLAY_Y - 9, str, shadow_gray);
+				draw_string(DISPLAY_X - 12, DISPLAY_Y - 10, str, shine_gray);
 			}
 		}
 	}
