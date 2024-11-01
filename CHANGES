@@ -8,6 +8,8 @@ Changes from V4.3 to V4.4:
    - Added ability to map game controller buttons to keys on the C64 keyboard
      or the tape PLAY button
    - Added ability to define firmware ROM sets, and switch between them
+   - Added option for twin-stick joystick control (for games like “Robotron
+     2084”)
    - Added option to enable controller rumble effects via the C64 tape drive
      motor signal (for the game “Aquarius”)
    - Added menu item for opening the included user manual

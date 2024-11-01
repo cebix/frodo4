@@ -1052,6 +1052,20 @@ Lutz Vieweg</property>
                               </packing>
                             </child>
                             <child>
+                              <object class="GtkCheckButton" id="twin_stick">
+                                <property name="label" translatable="yes">Twin-Stick Mode</property>
+                                <property name="visible">True</property>
+                                <property name="can-focus">True</property>
+                                <property name="receives-default">False</property>
+                                <property name="draw-indicator">True</property>
+                              </object>
+                              <packing>
+                                <property name="expand">False</property>
+                                <property name="fill">True</property>
+                                <property name="position">2</property>
+                              </packing>
+                            </child>
+                            <child>
                               <object class="GtkCheckButton" id="tape_rumble">
                                 <property name="label" translatable="yes">Enable Tape Motor Rumble</property>
                                 <property name="visible">True</property>
@@ -1062,7 +1076,7 @@ Lutz Vieweg</property>
                               <packing>
                                 <property name="expand">False</property>
                                 <property name="fill">True</property>
-                                <property name="position">2</property>
+                                <property name="position">3</property>
                               </packing>
                             </child>
                           </object>

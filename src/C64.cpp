@@ -986,6 +986,15 @@ uint8_t C64::poll_joystick(int port)
 		y = SDL_JoystickGetAxis(joy[port], 1);
 	}
 
+	// In twin-stick mode, axes are controlled by right stick on opposite port
+	if (ThePrefs.TwinStick) {
+		if (controller[port ^ 1]) {
+			x = SDL_GameControllerGetAxis(controller[port ^ 1], SDL_CONTROLLER_AXIS_RIGHTX);
+			y = SDL_GameControllerGetAxis(controller[port ^ 1], SDL_CONTROLLER_AXIS_RIGHTY);
+		}
+	}
+
+	// Convert analog axes to digital directions
 	if (x < joy_minx[port]) {
 		j &= 0xfb;							// Left
 		joy_minx[port] = -(JOYSTICK_DEAD_ZONE - JOYSTICK_HYSTERESIS);

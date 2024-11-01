@@ -105,6 +105,7 @@ public:
 
 	bool SpriteCollisions;	// Sprite collision detection is on
 	bool JoystickSwap;		// Swap joysticks 1<->2
+	bool TwinStick;			// Twin-stick control
 	bool TapeRumble;		// Tape motor controller rumble
 	bool LimitSpeed;		// Limit speed to 100%
 	bool FastReset;			// Skip RAM test on reset
