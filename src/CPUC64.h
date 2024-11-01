@@ -95,6 +95,7 @@ public:
 	void ClearNMI();
 
 	void SetTapeSense(bool pressed);
+	bool TapeMotorOn() const;
 
 	uint16_t GetPC() const { return pc; }
 

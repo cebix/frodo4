@@ -57,6 +57,7 @@ Prefs::Prefs()
 
 	SpriteCollisions = true;
 	JoystickSwap = false;
+	TapeRumble = false;
 	LimitSpeed = true;
 	FastReset = false;
 	CIAIRQHack = false;
@@ -269,6 +270,8 @@ void Prefs::ParseItem(std::string item)
 		SpriteCollisions = (value == "true");
 	} else if (keyword == "JoystickSwap") {
 		JoystickSwap = (value == "true");
+	} else if (keyword == "TapeRumble") {
+		TapeRumble = (value == "true");
 	} else if (keyword == "LimitSpeed") {
 		LimitSpeed = (value == "true");
 	} else if (keyword == "FastReset") {
@@ -361,6 +364,7 @@ bool Prefs::Save(fs::path prefs_path)
 
 	file << "SpriteCollisions = " << SpriteCollisions << std::endl;
 	file << "JoystickSwap = " << JoystickSwap << std::endl;
+	file << "TapeRumble = " << TapeRumble << std::endl;
 	file << "LimitSpeed = " << LimitSpeed << std::endl;
 	file << "FastReset = " << FastReset << std::endl;
 	file << "CIAIRQHack = " << CIAIRQHack << std::endl;

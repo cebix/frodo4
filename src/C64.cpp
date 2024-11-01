@@ -966,6 +966,15 @@ uint8_t C64::poll_joystick(int port)
 		x = SDL_GameControllerGetAxis(controller[port], SDL_CONTROLLER_AXIS_LEFTX);
 		y = SDL_GameControllerGetAxis(controller[port], SDL_CONTROLLER_AXIS_LEFTY);
 
+		// Control rumble effects
+		if (ThePrefs.TapeRumble) {
+			if (TheCPU->TapeMotorOn()) {
+				SDL_GameControllerRumble(controller[port], 0, 0x8000, 1000 / SCREEN_FREQ);
+			} else {
+				SDL_GameControllerRumble(controller[port], 0, 0, 1000 / SCREEN_FREQ);
+			}
+		}
+
 	} else if (joy[port]) {
 
 		// Not a Game Controller, use joystick API

@@ -236,6 +236,17 @@ void MOS6510::SetTapeSense(bool pressed)
 
 
 /*
+ *  Get tape motor status
+ */
+
+bool MOS6510::TapeMotorOn() const
+{
+	uint8_t port = ~ram[0] | ram[1];
+	return (port & 0x20) == 0;
+}
+
+
+/*
  *  Memory configuration has probably changed
  */
 
