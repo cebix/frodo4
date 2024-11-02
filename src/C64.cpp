@@ -1236,7 +1236,8 @@ bool C64::DMALoad(const std::string & filename, std::string & ret_error_msg)
 	uint16_t end_addr = load_addr + num_bytes;
 
 	// Set Kernal and BASIC pointers to simulate LOAD command
-	// TODO: Set more variables, such as the drive number?
+	RAM[0x90] = 0x40;						// STATUS = end of file
+	RAM[0xba] = 8;							// FA, current device number (8 = first disk)
 	RAM[0xae] = end_addr & 0xff;			// EAL/EAH, end address of LOAD
 	RAM[0xaf] = end_addr >> 8;
 	if (load_addr == 0x0801) {
