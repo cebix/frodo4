@@ -1643,6 +1643,20 @@ Lutz Vieweg</property>
               </packing>
             </child>
             <child>
+              <object class="GtkButton" id="auto_start_button">
+                <property name="label" translatable="yes">Auto-Start Drive 8</property>
+                <property name="visible">True</property>
+                <property name="can-focus">True</property>
+                <property name="receives-default">True</property>
+                <signal name="clicked" handler="on_auto_start_clicked" swapped="no"/>
+              </object>
+              <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
+                <property name="position">1</property>
+              </packing>
+            </child>
+            <child>
               <object class="GtkButton" id="quit_button">
                 <property name="label">gtk-quit</property>
                 <property name="visible">True</property>
@@ -1655,7 +1669,7 @@ Lutz Vieweg</property>
               <packing>
                 <property name="expand">True</property>
                 <property name="fill">True</property>
-                <property name="position">1</property>
+                <property name="position">2</property>
               </packing>
             </child>
           </object>

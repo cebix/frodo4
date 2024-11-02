@@ -4,6 +4,8 @@ Changes from V4.3 to V4.4:
    file than the default
  - Settings from configuration file can be overridden on command line (for
    example “DrivePath8=/path/to/disk.d64”)
+ - Holding down Ctrl while pressing F12 resets the C64 and auto-starts from
+   disk drive 8
  - Settings window changes:
    - Added ability to map game controller buttons to keys on the C64 keyboard
      or the tape PLAY button
@@ -12,6 +14,7 @@ Changes from V4.3 to V4.4:
      2084”)
    - Added option to enable controller rumble effects via the C64 tape drive
      motor signal (for the game “Aquarius”)
+   - Added “Auto-Start Drive 8” button
    - Added menu item for opening the included user manual
    - Removed "Display Sprites" and "Enable SID Filters" settings which are
      now always enabled

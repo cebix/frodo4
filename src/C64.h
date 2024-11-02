@@ -84,6 +84,7 @@ public:
 	void RequestLoadSnapshot(const std::string & path);
 
 	void Reset(bool clear_memory = false);
+	void ResetAndAutoStart();
 	void NMI();
 
 	uint32_t CycleCounter() const { return cycle_counter; }
@@ -98,7 +99,7 @@ public:
 	bool LoadSnapshot(const std::string & filename, Prefs * prefs, std::string & ret_error_msg);
 
 	bool DMALoad(const std::string & filename, std::string & ret_error_msg);
-	void AutoStart();
+	void AutoStartOp();
 
 	void SetPlayMode(PlayMode mode);
 	PlayMode GetPlayMode() const { return play_mode; }

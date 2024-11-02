@@ -349,6 +349,18 @@ void C64::Reset(bool clear_memory)
 
 
 /*
+ *  Reset C64 and auto-start from drive 8
+ */
+
+void C64::ResetAndAutoStart()
+{
+	patch_roms(ThePrefs.FastReset, ThePrefs.Emul1541Proc, true);
+
+	Reset(true);
+}
+
+
+/*
  *  NMI C64
  */
 
@@ -378,10 +390,14 @@ void C64::NewPrefs(const Prefs *prefs)
 	auto new_roms = prefs->SelectedROMPaths();
 	if (old_roms != new_roms) {
 		load_rom_files(new_roms);
-		Reset();	// Reset C64 if ROMs have changed
+		Reset(true);	// Reset C64 if ROMs have changed
 	}
 
 	patch_roms(prefs->FastReset, prefs->Emul1541Proc, prefs->AutoStart);
+
+	if (prefs->AutoStart) {
+		Reset(true);	// Reset C64 if auto-start requested
+	}
 
 	swap_cartridge(ThePrefs.REUType, ThePrefs.CartridgePath, prefs->REUType, prefs->CartridgePath);
 	TheCPU->SetChips(TheVIC, TheSID, TheCIA1, TheCIA2, TheCart, TheIEC);
@@ -1275,7 +1291,7 @@ bool C64::DMALoad(const std::string & filename, std::string & ret_error_msg)
  *  (called from BASIC interactive input loop)
  */
 
-void C64::AutoStart()
+void C64::AutoStartOp()
 {
 	// Remove ROM patch to avoid recursion
 	patch_roms(ThePrefs.FastReset, ThePrefs.Emul1541Proc, ThePrefs.AutoStart = false);

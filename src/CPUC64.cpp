@@ -743,7 +743,7 @@ int MOS6510::EmulateLine(int cycles_left)
 					jump(0xedac);
 					break;
 				case 0x10:
-					the_c64->AutoStart();
+					the_c64->AutoStartOp();
 					x = 0;	// patch replaces LDX #0
 					break;
 				default:

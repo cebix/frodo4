@@ -66,6 +66,7 @@ static void set_values();
 static void get_values();
 static void ghost_widgets();
 static void write_sam_output(std::string s, bool error = false);
+extern "C" void on_cartridge_eject_clicked(GtkButton *button, gpointer user_data);
 
 // Shortcuts window definition
 static const char * shortcuts_win_ui =
@@ -100,6 +101,13 @@ static const char * shortcuts_win_ui =
 	              "<property name=\"visible\">1</property>"
 	              "<property name=\"accelerator\">&lt;shift&gt;F12</property>"
 	              "<property name=\"title\">Reset C64 and clear memory</property>"
+	            "</object>"
+	          "</child>"
+	          "<child>"
+	            "<object class=\"GtkShortcutsShortcut\">"
+	              "<property name=\"visible\">1</property>"
+	              "<property name=\"accelerator\">&lt;ctrl&gt;F12</property>"
+	              "<property name=\"title\">Reset C64 and auto-start from drive 8</property>"
 	            "</object>"
 	          "</child>"
 	          "<child>"
@@ -620,6 +628,15 @@ static void ghost_widgets()
 	ghost_widget("scaling_numerator", prefs->DisplayType == DISPTYPE_SCREEN);
 
 	ghost_widget("cartridge_path", prefs->REUType != REU_NONE);
+
+	// Auto-start is available if drive 8 has a path
+	gchar * path = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "drive8_path")));
+	if (path) {
+		ghost_widget("auto_start_button", false);
+		g_free(path);
+	} else {
+		ghost_widget("auto_start_button", true);
+	}
 }
 
 
@@ -1210,6 +1227,15 @@ extern "C" void on_ok_clicked(GtkButton *button, gpointer user_data)
 	gtk_main_quit();
 }
 
+extern "C" void on_auto_start_clicked(GtkButton *button, gpointer user_data)
+{
+	// Eject cartridge and set auto-start flag
+	on_cartridge_eject_clicked(button, user_data);
+	prefs->AutoStart = true;
+
+	on_ok_clicked(button, user_data);
+}
+
 extern "C" void on_quit_clicked(GtkButton *button, gpointer user_data)
 {
 	result = false;
@@ -1367,6 +1393,8 @@ extern "C" void on_emul1541_proc_toggled(GtkToggleButton *button, gpointer user_
 
 extern "C" void on_drive_path_file_set(GtkFileChooserButton *button, gpointer user_data)
 {
+	ghost_widgets();	// Auto-start
+
 	gchar * path = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(button));
 	if (path == nullptr)
 		return;
@@ -1385,6 +1413,7 @@ extern "C" void on_drive_path_file_set(GtkFileChooserButton *button, gpointer us
 extern "C" void on_drive8_eject_clicked(GtkButton *button, gpointer user_data)
 {
 	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "drive8_path")), "");
+	ghost_widgets();	// Auto-start
 }
 
 extern "C" void on_drive9_eject_clicked(GtkButton *button, gpointer user_data)

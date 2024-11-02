@@ -706,7 +706,7 @@ void MOS6510::EmulateCycle()
 					pc = 0xedac;
 					Last;
 				case 0x10:
-					the_c64->AutoStart();
+					the_c64->AutoStartOp();
 					x = 0;	// patch replaces LDX #0
 					Last;
 				default:

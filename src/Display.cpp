@@ -733,8 +733,12 @@ void Display::PollKeyboard(uint8_t *key_matrix, uint8_t *rev_matrix, uint8_t *jo
 						the_c64->NMI();
 						break;
 
-					case SDL_SCANCODE_F12:	// F12: Reset (hold Shift to clear memory)
-						the_c64->Reset(SDL_GetModState() & KMOD_SHIFT);
+					case SDL_SCANCODE_F12:	// F12: Reset (hold Shift to clear memory, Ctrl to auto-start)
+						if (SDL_GetModState() & KMOD_CTRL) {
+							the_c64->ResetAndAutoStart();
+						} else {
+							the_c64->Reset(SDL_GetModState() & KMOD_SHIFT);
+						}
 						break;
 
 					case SDL_SCANCODE_NUMLOCKCLEAR:
