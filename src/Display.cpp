@@ -635,6 +635,7 @@ static void translate_key(SDL_Scancode key, bool key_up, uint8_t *key_matrix, ui
 		case SDL_SCANCODE_RETURN: c64_key = MATRIX(0,1); break;
 		case SDL_SCANCODE_BACKSPACE:
 		case SDL_SCANCODE_DELETE: c64_key = MATRIX(0,0); break;			// INS/DEL
+		case SDL_SCANCODE_INSERT: c64_key = MATRIX(0,0) | 0x80; break;
 		case SDL_SCANCODE_HOME: c64_key = MATRIX(6,3); break;			// CLR/HOME
 		case SDL_SCANCODE_END: c64_key = MATRIX(6,0); break;			// £
 		case SDL_SCANCODE_PAGEUP: c64_key = MATRIX(6,6); break;			// ↑
