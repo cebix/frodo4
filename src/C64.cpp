@@ -453,8 +453,16 @@ void C64::patch_roms(bool fast_reset, bool emul_1541_proc, bool auto_start)
 {
 	// Fast reset
 	static const uint8_t fast_reset_patch[] = { 0xa0, 0x00 };
+	static const uint8_t fast_reset_drive_patch_1[] = { 0xfb, 0x4c, 0xc9, 0xea };	// Skip zero page test, just clear
+	static const uint8_t fast_reset_drive_patch_2[] = { 0x4c, 0xea, 0xea };			// Skip ROM test
+	static const uint8_t fast_reset_drive_patch_3[] = { 0x4c, 0x22, 0xeb };			// Skip RAM test...
+	static const uint8_t fast_reset_drive_patch_4[] = { 0xea, 0xea, 0xa9, 0x00 };	// ...just clear
 
 	apply_patch(fast_reset, Kernal, BuiltinKernalROM, 0x1d84, sizeof(fast_reset_patch), fast_reset_patch);
+	apply_patch(fast_reset, ROM1541, BuiltinDriveROM, 0x2ab1, sizeof(fast_reset_drive_patch_1), fast_reset_drive_patch_1);
+	apply_patch(fast_reset, ROM1541, BuiltinDriveROM, 0x2ad1, sizeof(fast_reset_drive_patch_2), fast_reset_drive_patch_2);
+	apply_patch(fast_reset, ROM1541, BuiltinDriveROM, 0x2b00, sizeof(fast_reset_drive_patch_3), fast_reset_drive_patch_3);
+	apply_patch(fast_reset, ROM1541, BuiltinDriveROM, 0x2af2, sizeof(fast_reset_drive_patch_4), fast_reset_drive_patch_4);
 
 	// IEC
 	static const uint8_t iec_patch_1[] = { 0xf2, 0x00 };	// IECOut
