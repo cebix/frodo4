@@ -702,7 +702,7 @@ int MOS6510::EmulateLine(int cycles_left)
 
 		// Extension opcode
 		case 0xf2:
-			if (pc < 0xe000) {
+			if ((pc < 0xa000) || (pc >= 0xc000 && pc < 0xe000)) {
 				illegal_op(pc - 1);
 			} else switch (read_byte_imm()) {
 				case 0x00:
@@ -741,6 +741,10 @@ int MOS6510::EmulateLine(int cycles_left)
 				case 0x07:
 					the_iec->Release();
 					jump(0xedac);
+					break;
+				case 0x10:
+					the_c64->AutoStart();
+					x = 0;	// patch replaces LDX #0
 					break;
 				default:
 					illegal_op(pc - 1);

@@ -128,7 +128,7 @@ C64::C64() : quit_requested(false), prefs_editor_requested(false), load_snapshot
 	load_rom_files(ThePrefs.SelectedROMPaths());
 
 	// Patch ROMs for IEC routines and fast reset
-	patch_roms(ThePrefs.FastReset, ThePrefs.Emul1541Proc);
+	patch_roms(ThePrefs.FastReset, ThePrefs.Emul1541Proc, ThePrefs.AutoStart);
 
 	// Create the chips
 	TheCPU = new MOS6510(this, RAM, Basic, Kernal, Char, Color);
@@ -381,7 +381,7 @@ void C64::NewPrefs(const Prefs *prefs)
 		Reset();	// Reset C64 if ROMs have changed
 	}
 
-	patch_roms(prefs->FastReset, prefs->Emul1541Proc);
+	patch_roms(prefs->FastReset, prefs->Emul1541Proc, prefs->AutoStart);
 
 	swap_cartridge(ThePrefs.REUType, ThePrefs.CartridgePath, prefs->REUType, prefs->CartridgePath);
 	TheCPU->SetChips(TheVIC, TheSID, TheCIA1, TheCIA2, TheCart, TheIEC);
@@ -449,7 +449,7 @@ static void apply_patch(bool apply, uint8_t * rom, const uint8_t * builtin, uint
 	}
 }
 
-void C64::patch_roms(bool fast_reset, bool emul_1541_proc)
+void C64::patch_roms(bool fast_reset, bool emul_1541_proc, bool auto_start)
 {
 	// Fast reset
 	static const uint8_t fast_reset_patch[] = { 0xa0, 0x00 };
@@ -474,6 +474,11 @@ void C64::patch_roms(bool fast_reset, bool emul_1541_proc)
 	apply_patch(!emul_1541_proc, Kernal, BuiltinKernalROM, 0x0dbe, sizeof(iec_patch_6), iec_patch_6);
 	apply_patch(!emul_1541_proc, Kernal, BuiltinKernalROM, 0x0dcc, sizeof(iec_patch_7), iec_patch_7);
 	apply_patch(!emul_1541_proc, Kernal, BuiltinKernalROM, 0x0e03, sizeof(iec_patch_8), iec_patch_8);
+
+	// Auto start after reset
+	static const uint8_t auto_start_patch[] = { 0xf2, 0x10 };	// BASIC interactive input loop
+
+	apply_patch(auto_start, Basic, BuiltinBasicROM, 0x0560, sizeof(auto_start_patch), auto_start_patch);
 
 	// 1541
 	static const uint8_t drive_patch_1[] = { 0xea, 0xea };						// Don't check ROM checksum
@@ -1254,6 +1259,43 @@ bool C64::DMALoad(const std::string & filename, std::string & ret_error_msg)
 	}
 
 	return true;
+}
+
+
+/*
+ *  Auto start first program from drive 8
+ *  (called from BASIC interactive input loop)
+ */
+
+void C64::AutoStart()
+{
+	// Remove ROM patch to avoid recursion
+	patch_roms(ThePrefs.FastReset, ThePrefs.Emul1541Proc, ThePrefs.AutoStart = false);
+
+	// Write LOAD command to screen
+	static const char * load_cmd = "load\"*\",8,1";
+
+	uint16_t pnt = RAM[0xd1] | (RAM[0xd2] << 8);	// Pointer to current screen line
+	for (size_t i = 0; i < strlen(load_cmd); ++i) {
+		uint8_t c = load_cmd[i];
+
+		// Convert ASCII to screen code
+		if (c == '@') {
+			c = 0x00;
+		} else if ((c >= 'a') && (c <= 'z')) {
+			c ^= 0x60;
+		}
+
+		RAM[pnt + i] = c;
+	}
+
+	// Put <RETURN> RUN <RETURN> into keyboard buffer
+	RAM[0x277] = 0x0d;
+	RAM[0x278] = 'R';
+	RAM[0x279] = 'U';
+	RAM[0x27a] = 'N';
+	RAM[0x27b] = 0x0d;
+	RAM[0xc6] = 5;	// Number of characters
 }
 
 

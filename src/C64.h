@@ -98,6 +98,7 @@ public:
 	bool LoadSnapshot(const std::string & filename, Prefs * prefs, std::string & ret_error_msg);
 
 	bool DMALoad(const std::string & filename, std::string & ret_error_msg);
+	void AutoStart();
 
 	void SetPlayMode(PlayMode mode);
 	PlayMode GetPlayMode() const { return play_mode; }
@@ -146,7 +147,7 @@ private:
 	void pause();
 	void resume();
 
-	void patch_roms(bool fast_reset, bool emul_1541_proc);
+	void patch_roms(bool fast_reset, bool emul_1541_proc, bool auto_start);
 
 #ifdef FRODO_SC
 	bool emulate_c64_cycle();

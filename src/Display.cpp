@@ -215,7 +215,9 @@ Display::Display(C64 * c64) : the_c64(c64)
 	next_note = 0;
 
 	// Show greeting
-	ShowNotification("Welcome to Frodo, press F10 for settings");
+	if (! ThePrefs.AutoStart) {
+		ShowNotification("Welcome to Frodo, press F10 for settings");
+	}
 }
 
 

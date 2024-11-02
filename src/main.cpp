@@ -112,8 +112,10 @@ void Frodo::ReadyToRun()
 
 #ifdef HAVE_GTK
 	// Show preferences editor
-	if (!ThePrefs.ShowEditor(true, prefs_path, snapshot_path))
-		return;  // "Quit" clicked
+	if (!ThePrefs.AutoStart) {
+		if (!ThePrefs.ShowEditor(true, prefs_path, snapshot_path))
+			return;  // "Quit" clicked
+	}
 #endif
 
 	// Create and start C64

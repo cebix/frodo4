@@ -113,6 +113,7 @@ public:
 	bool MapSlash;			// Map '/' in C64 filenames
 	bool Emul1541Proc;		// Enable processor-level 1541 emulation
 	bool ShowLEDs;			// Show status bar
+	bool AutoStart;			// Autostart from drive 8 after reset (not saved to preferences file)
 
 	std::map<std::string, ROMPaths> ROMSetDefs;	// Defined ROM sets, indexed by name
 	std::string ROMSet;		// Name of selected ROM set (empty = built-in)

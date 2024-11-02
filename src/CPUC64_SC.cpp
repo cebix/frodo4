@@ -663,7 +663,7 @@ void MOS6510::EmulateCycle()
 
 		// Extension opcode
 		case O_EXT:
-			if (pc < 0xe000) {
+			if ((pc < 0xa000) || (pc >= 0xc000 && pc < 0xe000)) {
 				illegal_op(pc - 1);
 				break;
 			}
@@ -704,6 +704,10 @@ void MOS6510::EmulateCycle()
 				case 0x07:
 					the_iec->Release();
 					pc = 0xedac;
+					Last;
+				case 0x10:
+					the_c64->AutoStart();
+					x = 0;	// patch replaces LDX #0
 					Last;
 				default:
 					illegal_op(pc - 1);
