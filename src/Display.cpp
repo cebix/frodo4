@@ -39,13 +39,15 @@ namespace chrono = std::chrono;
 
 // Drive LED display states
 enum {
-	LED_OFF = DRVLED_OFF,			// LED off
-	LED_ON = DRVLED_ON,				// LED on (green)
-	LED_ERROR_ON = DRVLED_ERROR,	// LED blinking (red), currently on
-	LED_ERROR_OFF					// LED blinking, currently off
+	LED_OFF = DRVLED_OFF,				// LED and icon off
+	LED_ON = DRVLED_ON,					// LED on (green)
+	LED_ERROR_OFF = DRVLED_ERROR_OFF,	// LED off, drive icon visible
+	LED_ERROR_ON = DRVLED_ERROR_ON,		// LED on (red)
+	LED_FLASH_ON = DRVLED_ERROR_FLASH,	// LED flashing, currently on (red)
+	LED_FLASH_OFF						// LED flashing, currently off
 };
 
-// Period of LED error blinking
+// Period of LED error flashing
 constexpr uint32_t PULSE_ms = 138;
 
 // Notification timeout
@@ -197,7 +199,7 @@ Display::Display(C64 * c64) : the_c64(c64)
 		}
 	}
 
-	// Start timer for LED error blinking
+	// Start timer for LED error flashing
 	pulse_timer = SDL_AddTimer(PULSE_ms, pulse_handler_static, this);
 	if (pulse_timer == 0) {
 		error_and_quit(std::format("Couldn't create SDL pulse timer ({})\n", SDL_GetError()));
@@ -327,7 +329,7 @@ void Display::ShowNotification(std::string s)
 
 
 /*
- *  LED error blink
+ *  LED error flashing
  */
 
 uint32_t Display::pulse_handler_static(uint32_t interval, void * arg)
@@ -341,11 +343,11 @@ void Display::pulse_handler()
 {
 	for (unsigned i = 0; i < 4; ++i) {
 		switch (led_state[i]) {
-			case LED_ERROR_ON:
-				led_state[i] = LED_ERROR_OFF;
+			case LED_FLASH_ON:
+				led_state[i] = LED_FLASH_OFF;
 				break;
-			case LED_ERROR_OFF:
-				led_state[i] = LED_ERROR_ON;
+			case LED_FLASH_OFF:
+				led_state[i] = LED_FLASH_ON;
 				break;
 		}
 	}
@@ -420,8 +422,10 @@ void Display::Update()
 
 				const uint8_t * q;
 				switch (led_state[i]) {
-					case LED_ERROR_ON:  q = led_pixmap[1]; break;
-					case LED_ERROR_OFF: q = led_pixmap[2]; break;
+					case LED_ERROR_ON:
+					case LED_FLASH_ON:  q = led_pixmap[1]; break;
+					case LED_ERROR_OFF:
+					case LED_FLASH_OFF: q = led_pixmap[2]; break;
 					default:            q = led_pixmap[0]; break;
 				}
 

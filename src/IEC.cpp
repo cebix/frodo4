@@ -384,7 +384,7 @@ uint8_t IEC::sec_listen()
 			return ST_OK;
 
 		case CMD_CLOSE: // Close channel
-			if (listener->LED != DRVLED_ERROR) {
+			if (listener->LED != DRVLED_ERROR_FLASH) {
 				listener->LED = DRVLED_OFF;		// Turn off drive LED
 				UpdateLEDs();
 			}
@@ -510,9 +510,9 @@ void Drive::set_error(int error, int track, int sector)
 		if (error == ERR_STARTUP) {
 			LED = DRVLED_OFF;
 		} else {
-			LED = DRVLED_ERROR;
+			LED = DRVLED_ERROR_FLASH;
 		}
-	} else if (LED == DRVLED_ERROR) {
+	} else if (LED == DRVLED_ERROR_FLASH) {
 		LED = DRVLED_OFF;
 	}
 

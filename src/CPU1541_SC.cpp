@@ -406,27 +406,42 @@ inline void MOS6502_1541::write_byte(uint16_t adr, uint8_t byte)
 		via2->WriteRegister(adr, byte);
 
 		switch (adr & 0xf) {
-			case 0:	// Port B
-			case 2:	// DDR B
+			case 0:		// Port B
+			case 2: {	// DDR B
 				uint8_t pb_out = via2->PBOut();
 				uint8_t changed = old_pb_out ^ pb_out;
-				if (changed & 0x03) {	// Bits 0/1: Stepper motor
+
+				// Bits 0/1: Stepper motor
+				if (changed & 0x03) {
 					if ((old_pb_out & 3) == ((pb_out + 1) & 3)) {
 						the_gcr_disk->MoveHeadOut();
 					} else if ((old_pb_out & 3) == ((pb_out - 1) & 3)) {
 						the_gcr_disk->MoveHeadIn();
 					}
 				}
-				if (changed & 0x04) {	// Bit 2: Spindle motor
+
+				// Bit 2: Spindle motor
+				if (changed & 0x04) {
 					the_gcr_disk->SetMotor(pb_out & 0x04);
 				}
-				if (changed & 0x08) {	// Bit 3: Drive LED
-					the_c64->SetDriveLEDs((pb_out & 8) ? DRVLED_ON : DRVLED_OFF, DRVLED_OFF, DRVLED_OFF, DRVLED_OFF);
+
+				// Bit 3: Drive LED
+				int led_status;
+				if (ram[0x26c] != 0 && ram[0x7c] == 0) {
+					// Error flag on and no attention pending
+					// (Note: flags may change even if port bit stays the same)
+					led_status = (pb_out & 0x08) ? DRVLED_ERROR_ON : DRVLED_ERROR_OFF;
+				} else {
+					led_status = (pb_out & 0x08) ? DRVLED_ON : DRVLED_OFF;
 				}
-				if (changed & 0x60) {	// Bits 5/6: GCR bit rate
+				the_c64->SetDriveLEDs(led_status, DRVLED_OFF, DRVLED_OFF, DRVLED_OFF);
+
+				// Bits 5/6: GCR bit rate
+				if (changed & 0x60) {
 					the_gcr_disk->SetBitRate((pb_out >> 5) & 0x03);
 				}
 				break;
+			}
 		}
 	}
 }
@@ -586,7 +601,7 @@ void MOS6502_1541::EmulateCPUCycle()
 				break;
 			}
 			switch (read_byte(pc++)) {
-				case 0x00:	// Go to sleep in DOS idle loop if error flag is clear and no command received
+				case 0x00:	// Go to sleep in DOS idle loop if error flag is clear and no attention pending
 					Idle = !(ram[0x26c] | ram[0x7c]);
 					pc = 0xebff;
 					Last;

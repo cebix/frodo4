@@ -104,9 +104,11 @@ enum {
 
 // Drive LED states
 enum {
-	DRVLED_OFF,		// Inactive, LED off
-	DRVLED_ON,		// Active, LED on
-	DRVLED_ERROR	// Error, blink LED
+	DRVLED_OFF,			// Inactive, LED off
+	DRVLED_ON,			// Active, LED on
+	DRVLED_ERROR_OFF,	// Error, LED off
+	DRVLED_ERROR_ON,	// Error, LED on
+	DRVLED_ERROR_FLASH	// Error, flash LED
 };
 
 // Information about file in disk image/archive file

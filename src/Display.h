@@ -79,7 +79,7 @@ private:
 	C64 * the_c64;						// Pointer to C64 object
 
 	int led_state[4];
-	SDL_TimerID pulse_timer = 0;		// Timer for LED error blinking
+	SDL_TimerID pulse_timer = 0;		// Timer for LED error flashing
 
 	uint8_t led_pixmap[3][64];			// LED pixmaps
 
