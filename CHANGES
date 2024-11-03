@@ -20,6 +20,7 @@ Changes from V4.3 to V4.4:
      now always enabled
  - Improved interrupt timing
  - Improved SID emulation
+ - Improved virtual 1541 file name pattern matching
  - New font for on-screen displays
 
 Changes from V4.2 to V4.3:

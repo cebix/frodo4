@@ -75,9 +75,24 @@ single-file games, but for most uses the “full” 1541 emulation is recommende
 
 ### Starting the Emulator and Running Software
 
-Click on the “Start” button to close the settings window and start the emulator.
-You will now see the beautiful, blue startup screen of the Commodore 64 with the
-iconic “READY.” prompt.
+The C64 is a Personal Computer, not a games console, and it doesn't normally
+auto-run software from the disk drive. Instead it comes with a built-in text
+adventure game in the form of an interpreter for (a simple implementation of)
+the BASIC programming language.
+
+*(If you're feeling adventurous, take a look at the
+[Commodore 64 User's Guide](https://archive.org/details/commodore-64-user-guide)
+and work through the included BASIC programming exercises. Maybe you'll
+eventually become a famous software developer and author of a C64 emulator!)*
+
+Getting software to load and run from the simulated disk drive also usually
+involves typing in some BASIC commands. Luckily, Frodo has an “auto-start”
+feature which types in the necessary commands for you.
+
+Click on the “Auto-Start From Drive 8” button to close the settings window and
+start the emulator with the .D64 image you have mounted in drive number 8. You
+will now see the beautiful, blue startup screen of the Commodore 64 with the
+iconic “READY.” prompt and a LOAD command executing.
 
 Important key combinations inside the emulator window:
 
@@ -86,6 +101,8 @@ Important key combinations inside the emulator window:
 * Pressing **F12** resets the C64. Hold down the Shift key while pressing
   F12 to also clear the memory of the C64. This is necessary for some
   programs which use reset protection to prevent them from being exited.
+  Hold down the Ctrl key while pressing F12 to reset the C64 and re-run the
+  “auto-start” sequence.
 * Hold down the **right trigger** on the game controller or the “+” (**Plus**)
   key on the numeric keypad to fast-forward at 4x speed (useful for example,
   while software is loading from the disk drive).
@@ -95,33 +112,20 @@ Important key combinations inside the emulator window:
 * Pressing the **Enter** key on the numeric keypad switches between fullscreen
   and windowed display.
 
-The C64 is a Personal Computer, not a games console, and it doesn't autostart
-software from the disk drive. Instead it comes with a built-in text adventure
-game in the form of an interpreter for (a simple implementation of) the BASIC
-programming language.
+If the C64 displays a “LOADING” message after auto-starting, things are looking
+good. If you instead get an error message you most likely forgot to mount a
+.D64 file, or mounted the wrong disk of a multi-disk game. Also check any
+documentation that came with the software for the command that should be used
+to run it (this was often printed on the disk label). It may be something
+different like LOAD"BOOT",8,1.
 
-*(If you're feeling adventurous, take a look at the
-[Commodore 64 User's Guide](https://archive.org/details/commodore-64-user-guide)
-and work through the included BASIC programming exercises. Maybe you'll
-eventually become a famous software developer and author of a C64 emulator!)*
+When typing in commands, be aware that Frodo simulates the original layout of
+the Commodore 64 keyboard, so the " (quote) character is on Shift-2, and the *
+(star) is most likely to be on the “]” (right bracket) key, or the equivalent
+key in the same position on national keyboards. Don't worry, you'll get used to
+that.
 
-Getting software to load and run from the simulated disk drive also involves
-typing in some BASIC commands. Unfortunately, there is no general standard for
-which commands to use here, but 90% of the time entering this will do the trick:
-
-    LOAD"*",8,1
-
-Frodo simulates the original layout of the Commodore 64 keyboard, so the "
-(quote) character is on Shift-2, and the * (star) is most likely to be on the
-“]” (right bracket) key, or the equivalent key in the same position on national
-keyboards. Don't worry, you'll get used to that.
-
-If you get a “LOADING” message from entering the above command, things are
-looking good. If you instead get an error message you most likely mistyped
-the command or forgot to mount a .D64 file. Also check any documentation
-that came with the software for the command that is used to run it (this was
-often printed on the disk label). It may be something different like
-LOAD"BOOT",8,1. If this still doesn't give you results, then try:
+If manually entering a LOAD command still doesn't give you results, then try:
 
     LOAD"$",8
 
@@ -149,17 +153,16 @@ can happen next:
    F10 to bring up the settings window again and mount the appropriate .D64
    file (the “Next Disk” button also usually produces the desired result).
 2. If the “LOADING” message stays on the screen for more than 10 seconds, you'll
-   probably have to start the game manually after the loading process has
-   finished. Because the Commodore 1541 is one of the slowest storage devices
-   known to mankind, this may take up to two minutes. If you're too impatient
-   to enjoy the full, authentic C64 loading experience, hold down the right
-   trigger on your game controller or the “+” (Plus) key on the numeric keypad
-   to speed things up a bit. *(For advanced users: Frodo does support
-   software-based “fast loaders”, so if you know what you are doing you can
-   try running one of those before loading your game.)*
+   have to wait for the game to finish loading. Because the Commodore 1541 is
+   one of the slowest storage devices known to mankind, this may take up to two
+   minutes. If you're too impatient to enjoy the full, authentic C64 loading
+   experience, hold down the right trigger on your game controller or the “+”
+   (Plus) key on the numeric keypad to speed things up a bit. *(For advanced
+   users: Frodo does support software-based “fast loaders”, so if you know what
+   you are doing you can try running one of those before loading your game.)*
 
-If the game did not autostart and you're back at the “READY.” prompt after
-loading, enter this to start the game:
+If the game did not start automatically and you're back at the “READY.” prompt
+after loading, enter this to start the game:
 
     RUN
 

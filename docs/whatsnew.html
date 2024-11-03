@@ -4,48 +4,41 @@
 </HEAD>
 <BODY>
 
-<H1>What's New in V4.3?</H1>
+<H1>What's New in V4.4?</H1>
 
 <HR>
 
-The most important changes from V4.2 are:
+The most important changes from V4.3 are:
 
 <UL>
-<LI>“Frodo SC” renamed to “Frodo”, original “Frodo” renamed to “Frodo Lite”
-<LI>Removed all platform-specific code, main target is now SDL2/GTK 3
-<LI>New functions on numeric keypad:
- <UL>
- <LI>Enter key toggles fullscreen mode
- <LI>Minus key (or left game controller trigger) for instant rewind
- <LI>Plus key (or right game controller trigger) to fast-forward
- </UL>
-<LI>Holding down Shift while pressing F12 clears all RAM memory during reset
-<LI>Game controllers are automatically detected and used
-<LI>D-pad on game controllers is now supported
-<LI>Replaced status bar with overlay
+<LI>Fixed startup problem when running under Wayland
+<LI>Command line option '-c' is now used to specify a different
+configuration file than the default
+<LI>Settings from configuration file can be overridden on command line (for
+example “DrivePath8=/path/to/disk.d64”)
+<LI>Holding down Ctrl while pressing F12 resets the C64 and auto-starts from
+disk drive 8
 <LI>Settings window changes:
  <UL>
- <LI>Added setting for status overlay display
- <LI>Added setting for initial window size
- <LI>Added setting for color palette
- <LI>Added setting for SID type (6581 or 8580)
- <LI>Added menu items for loading/saving snapshot files
- <LI>Added menu item for creating a blank D64 image
- <LI>Added “Eject” and “Next Disk” buttons to the drive paths
+ <LI>Added ability to map game controller buttons to keys on the C64
+     keyboard or the tape PLAY button
+ <LI>Added ability to define firmware ROM sets, and switch between them
+ <LI>Added option for twin-stick joystick control (for games like “Robotron
+     2084”)
+ <LI>Added option to enable controller rumble effects via the C64 tape drive
+     motor signal (for the game “Aquarius”)
+ <LI>Added “Auto-Start Drive 8” button
+ <LI>Added menu item for opening the included user manual
+ <LI>Removed "Display Sprites" and "Enable SID Filters" settings which are
+     now always enabled
  </UL>
-<LI>SAM is now started from the “Tools” menu in the settings window instead
-of by pressing F9
-<LI>Enabled drag-and-drop of files and folders onto the emulator window to
-mount disk image files and directories, mount cartridge files, load snapshot
-files, or load BASIC program files
-<LI>Improved sprite display
-<LI>Improved 1541 emulation
-<LI>Added read-only support for G64 files
-<LI>Added support for 8K and 16K game cartridges
-<LI>Added GeoRAM emulation
+<LI>Improved interrupt timing
+<LI>Improved SID emulation
+<LI>Improved virtual 1541 file name pattern matching
+<LI>New font for on-screen displays
 </UL>
 
-For the tons of other small changes and bug fixes, please look <A HREF="history.html">here</A>.<P>
+For changes to earlier versions of Frodo, please look <A HREF="history.html">here</A>.<P>
 
 </BODY>
 </HTML>
