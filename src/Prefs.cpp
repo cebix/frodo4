@@ -60,7 +60,7 @@ Prefs::Prefs()
 	TwinStick = false;
 	TapeRumble = false;
 	LimitSpeed = true;
-	FastReset = false;
+	FastReset = true;
 	CIAIRQHack = false;
 	MapSlash = true;
 	Emul1541Proc = true;
