@@ -230,9 +230,8 @@ static guint idle_source_id = 0;
 
 static gboolean pump_sdl_events(gpointer user_data)
 {
-	SDL_Event event;
-	SDL_WaitEventTimeout(&event, 5);
-	return true;
+	SDL_PumpEvents();
+	return G_SOURCE_CONTINUE;
 }
 
 
@@ -382,8 +381,11 @@ bool Prefs::ShowEditor(bool startup, fs::path prefs_path, fs::path snapshot_path
 		gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object(builder, "save_snapshot_menu")), true);
 		gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object(builder, "sam_menu")), true);
 
+#ifndef __APPLE__
 		// Keep SDL event loop running while preferences editor is open
-		idle_source_id = g_idle_add(pump_sdl_events, nullptr);
+		// to prevent "Application is not responding" messages from the WM
+		idle_source_id = g_timeout_add(10, pump_sdl_events, nullptr);
+#endif
 
 		SAM_GetState(TheC64);
 	}
