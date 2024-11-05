@@ -1375,6 +1375,11 @@ extern "C" void on_about_activate(GtkMenuItem *menuitem, gpointer user_data)
 	gtk_window_present(GTK_WINDOW(about_win));
 }
 
+extern "C" void on_about_win_response(GtkDialog * self, gint response_id, gpointer user_data)
+{
+	gtk_widget_hide(GTK_WIDGET(gtk_builder_get_object(builder, "about_win")));
+}
+
 extern "C" void on_show_sam_monitor(GtkMenuItem *menuitem, gpointer user_data)
 {
 	GtkWindow * sam_win = GTK_WINDOW(gtk_builder_get_object(builder, "sam_win"));
