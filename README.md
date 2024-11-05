@@ -24,8 +24,32 @@ $ make
 $ sudo make install
 ```
 
-Installation is only necessary if you intend to use the GTK-based
-preferences GUI.
+Installation is necessary to use the GTK-based settings GUI.
+
+## Installation on macOS
+
+Building Frodo for macOS requires [Homebrew](https://brew.sh/) to get access
+to the necessary software packages.
+
+Install the prerequisites using brew:
+
+```
+% brew install autoconf automake pkg-config sdl2 gtk+3
+```
+
+Now you can compile and install Frodo:
+
+```
+% ./autogen.sh
+% make
+% make install
+```
+
+To start Frodo:
+
+```
+% /usr/local/bin/Frodo
+```
 
 ## Beginner's Guide
 

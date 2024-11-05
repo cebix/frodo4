@@ -12,6 +12,7 @@
 source code that has to be compiled on your system. Binary distributions (or
 packages) contain an executable that can be started directly.
 
+
 <H2>Compiling on Unix-like systems</H2>
 
 <P>Prerequisites:
@@ -22,11 +23,28 @@ packages) contain an executable that can be started directly.
 <LI>GTK 3
 </UL>
 
-<P>Frodo can be compiled and installed in the usual way:
+<P>You can compile and install Frodo in the usual way:
 
 <P><KBD>$ ./autogen.sh<BR>
 $ make<BR>
 $ sudo make install</KBD>
+
+
+<H2>Compiling on macOS</H2>
+
+<P>The easiest way to build Frodo on macOS is to use
+<A HREF="https://brew.sh/">Homebrew</A> to get access to the necessary
+software packages.
+
+<P>Install the prerequisites using brew:
+
+<P><KBD>% brew install autoconf automake pkg-config sdl2 gtk+3</KBD>
+
+<P>Now you can compile and install Frodo:
+
+<P><KBD>% ./autogen.sh<BR>
+% make<BR>
+% make install</KBD>
 
 </BODY>
 </HTML>
