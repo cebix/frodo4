@@ -30,6 +30,7 @@
 
 #include <cmath>
 #include <complex>
+#include <numbers>
 
 
 // Types for filter calculations
@@ -809,7 +810,7 @@ filter_t DigitalRenderer::prewarp_freq(filter_t freq) const
 	}
 
 	// Pre-warp for filter transformation
-	return 4.0 * std::tan(M_PI * arg / 2);
+	return 4.0 * std::tan(std::numbers::pi * arg / 2);
 }
 
 void DigitalRenderer::calc_wa_tables(int sid_type)
@@ -859,7 +860,7 @@ void DigitalRenderer::calc_filter()
 {
 	// Prototype pole for low-pass and high-pass,
 	// rotated closer to imaginary axis for resonance
-	cfilter_t proto_p = std::polar(1.0, M_PI * 3 / 4 * (1 - filter_t(f_res) / 61));
+	cfilter_t proto_p = std::polar(1.0, std::numbers::pi * 3 / 4 * (1 - filter_t(f_res) / 61));
 
 	// Low-pass
 	{
