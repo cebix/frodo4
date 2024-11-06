@@ -51,6 +51,29 @@ To start Frodo:
 % /usr/local/bin/Frodo
 ```
 
+## Installation on Windows 10 and above
+
+Building Frodo for Windows requires the [MSYS2 environment](https://www.msys2.org/)
+to get access to the necessary software packages.
+
+After installation of MSYS2, start the MSYS2 environment and install the
+compiler and prerequisites using pacman:
+
+```
+$ pacman -S mingw-w64-ucrt-x86_64-gcc
+$ pacman -S mingw-w64-ucrt-x86_64-autotools
+$ pacman -S mingw-w64-ucrt-x86_64-SDL2
+$ pacman -S mingw-w64-ucrt-x86_64-gtk3
+```
+
+Now you can compile and install Frodo:
+
+```
+$ ./autogen.sh
+$ make
+$ make install
+```
+
 ## Beginner's Guide
 
 ### Configuring Important Settings

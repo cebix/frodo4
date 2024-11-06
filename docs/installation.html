@@ -46,5 +46,26 @@ software packages.
 % make<BR>
 % make install</KBD>
 
+
+<H2>Compiling on Windows 10 and above</H2>
+
+<P>Building Frodo for Windows requires the
+<A HREF="https://www.msys2.org/">MSYS2 environment</A> to get access to the
+necessary software packages.
+
+<P>After installation of MSYS2, start the MSYS2 environment and install the
+compiler and prerequisites using pacman:
+
+<P><KBD>$ pacman -S mingw-w64-ucrt-x86_64-gcc<BR>
+$ pacman -S mingw-w64-ucrt-x86_64-autotools<BR>
+$ pacman -S mingw-w64-ucrt-x86_64-SDL2<BR>
+$ pacman -S mingw-w64-ucrt-x86_64-gtk3</KBD>
+
+<P>Now you can compile and install Frodo:
+
+<P><KBD>$ ./autogen.sh<BR>
+$ make<BR>
+$ make install</KBD>
+
 </BODY>
 </HTML>
