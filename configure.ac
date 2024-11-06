@@ -20,7 +20,7 @@ if [[ $HAVE_GTK = yes ]]; then
   AC_DEFINE(HAVE_GTK, 1, [GTK preferences GUI is enabled])
   CPPFLAGS="$CPPFLAGS $GTK_CFLAGS"
   LIBS="$LIBS $GTK_LIBS"
-  LDFLAGS="$LDFLAGS -rdynamic"
+  LDFLAGS="$LDFLAGS -Wl,--export-dynamic"
 fi
 
 dnl Checks for typedefs, structures, and compiler characteristics.

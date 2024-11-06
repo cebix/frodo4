@@ -117,7 +117,7 @@ void Prefs::Load(fs::path prefs_path)
 {
 	std::ifstream file(prefs_path);
 	if (! file) {
-		fprintf(stderr, "WARNING: Cannot open configuration file '%s'\n", prefs_path.c_str());
+		fprintf(stderr, "WARNING: Cannot open configuration file '%s'\n", prefs_path.string().c_str());
 		return;
 	}
 

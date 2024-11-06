@@ -195,7 +195,7 @@ uint8_t FSDrive::open_file(int channel, const uint8_t *name, int name_len)
 
 	if (! fs::is_directory(dir_path)) {
 		set_error(ERR_NOTREADY);
-	} else if ((file[channel] = fopen(file_path.c_str(), mode_str)) != nullptr) {
+	} else if ((file[channel] = fopen(file_path.string().c_str(), mode_str)) != nullptr) {
 		if (mode == FMODE_READ || mode == FMODE_M) {	// Read and buffer first byte
 			read_char[channel] = fgetc(file[channel]);
 		}
@@ -218,8 +218,8 @@ static std::vector<std::string> scan_directory(const fs::path & dir_path, const 
 	std::vector<std::string> entries;
 	for (const auto & entry : fs::directory_iterator{dir_path}) {
 		auto file_name = entry.path().filename();
-		if (match(pattern, file_name.c_str())) {
-			entries.push_back(file_name);
+		if (match(pattern, file_name.string().c_str())) {
+			entries.push_back(file_name.string());
 		}
 	}
 

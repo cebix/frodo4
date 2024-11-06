@@ -66,7 +66,7 @@ static void set_values();
 static void get_values();
 static void ghost_widgets();
 static void write_sam_output(std::string s, bool error = false);
-extern "C" void on_cartridge_eject_clicked(GtkButton *button, gpointer user_data);
+extern "C" G_MODULE_EXPORT void on_cartridge_eject_clicked(GtkButton *button, gpointer user_data);
 
 // Shortcuts window definition
 static const char * shortcuts_win_ui =
@@ -278,8 +278,8 @@ bool Prefs::ShowEditor(bool startup, fs::path prefs_path, fs::path snapshot_path
 		snapshot_accept_button = gtk_dialog_add_button(GTK_DIALOG(snapshot_dialog), "Save", GTK_RESPONSE_ACCEPT);
 		gtk_dialog_set_default_response(GTK_DIALOG(snapshot_dialog), GTK_RESPONSE_ACCEPT);
 
-		gtk_file_chooser_add_shortcut_folder(GTK_FILE_CHOOSER(snapshot_dialog), snapshot_path.c_str(), nullptr);
-		gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(snapshot_dialog), snapshot_path.c_str());
+		gtk_file_chooser_add_shortcut_folder(GTK_FILE_CHOOSER(snapshot_dialog), snapshot_path.string().c_str(), nullptr);
+		gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(snapshot_dialog), snapshot_path.string().c_str());
 		gtk_file_chooser_set_current_name(GTK_FILE_CHOOSER(snapshot_dialog), "Untitled.snap");
 		gtk_file_chooser_set_do_overwrite_confirmation(GTK_FILE_CHOOSER(snapshot_dialog), true);
 
@@ -666,7 +666,7 @@ static void write_sam_output(std::string s, bool error)
 	gtk_text_buffer_move_mark(sam_buffer, sam_input_start, &end);
 }
 
-extern "C" gboolean on_sam_view_key_press_event(GtkWidget *widget, GdkEventKey *event, gpointer user_data)
+extern "C" G_MODULE_EXPORT gboolean on_sam_view_key_press_event(GtkWidget *widget, GdkEventKey *event, gpointer user_data)
 {
 	const char * key = gdk_keyval_name(event->keyval);
 	if (strcmp(key, "Return") == 0) {
@@ -722,12 +722,12 @@ extern "C" gboolean on_sam_view_key_press_event(GtkWidget *widget, GdkEventKey *
 	return false;
 }
 
-extern "C" void on_sam_copy_activate(GtkMenuItem *menuitem, gpointer user_data)
+extern "C" G_MODULE_EXPORT void on_sam_copy_activate(GtkMenuItem *menuitem, gpointer user_data)
 {
 	gtk_text_buffer_copy_clipboard(sam_buffer, gtk_clipboard_get_default(gdk_display_get_default()));
 }
 
-extern "C" void on_sam_select_all_activate(GtkMenuItem *menuitem, gpointer user_data)
+extern "C" G_MODULE_EXPORT void on_sam_select_all_activate(GtkMenuItem *menuitem, gpointer user_data)
 {
 	GtkTextIter start, end;
 	gtk_text_buffer_get_start_iter(sam_buffer, &start);
@@ -735,13 +735,13 @@ extern "C" void on_sam_select_all_activate(GtkMenuItem *menuitem, gpointer user_
 	gtk_text_buffer_select_range(sam_buffer, &start, &end);
 }
 
-extern "C" void on_sam_clear_activate(GtkMenuItem *menuitem, gpointer user_data)
+extern "C" G_MODULE_EXPORT void on_sam_clear_activate(GtkMenuItem *menuitem, gpointer user_data)
 {
 	gtk_text_buffer_set_text(sam_buffer, "", -1);
 	write_sam_output(SAM_GetPrompt());
 }
 
-extern "C" void on_sam_close_activate(GtkMenuItem *menuitem, gpointer user_data)
+extern "C" G_MODULE_EXPORT void on_sam_close_activate(GtkMenuItem *menuitem, gpointer user_data)
 {
 	gtk_widget_hide(GTK_WIDGET(gtk_builder_get_object(builder, "sam_win")));
 }
@@ -817,7 +817,7 @@ static void update_button_mapping_editor_widgets(const std::string & name, const
 	}
 }
 
-extern "C" void on_new_button_mapping_clicked(GtkButton *button, gpointer user_data)
+extern "C" G_MODULE_EXPORT void on_new_button_mapping_clicked(GtkButton *button, gpointer user_data)
 {
 	GtkListBox * button_map_list = GTK_LIST_BOX(gtk_builder_get_object(builder, "button_map_list"));
 	GtkListBoxRow * row = add_button_mapping_editor_item("unnamed mapping", ButtonMapping{});
@@ -826,7 +826,7 @@ extern "C" void on_new_button_mapping_clicked(GtkButton *button, gpointer user_d
 	gtk_widget_grab_focus(GTK_WIDGET(gtk_builder_get_object(builder, "button_map_name")));
 }
 
-extern "C" void on_delete_button_mapping_clicked(GtkButton *button, gpointer user_data)
+extern "C" G_MODULE_EXPORT void on_delete_button_mapping_clicked(GtkButton *button, gpointer user_data)
 {
 	if (GtkListBoxRow * row = selected_button_map_row()) {
 		delete mapping_of_button_map_row(row);
@@ -837,7 +837,7 @@ extern "C" void on_delete_button_mapping_clicked(GtkButton *button, gpointer use
 	}
 }
 
-extern "C" void on_button_map_list_row_selected(GtkListBox *self, GtkListBoxRow *row, gpointer user_data)
+extern "C" G_MODULE_EXPORT void on_button_map_list_row_selected(GtkListBox *self, GtkListBoxRow *row, gpointer user_data)
 {
 	if (row) {
 		ghost_button_mapping_editor_widgets(false);
@@ -848,7 +848,7 @@ extern "C" void on_button_map_list_row_selected(GtkListBox *self, GtkListBoxRow 
 	}
 }
 
-extern "C" void on_button_map_name_insert_text(GtkEditable *self, gchar *new_text, gint new_text_length, gint *position, gpointer user_data)
+extern "C" G_MODULE_EXPORT void on_button_map_name_insert_text(GtkEditable *self, gchar *new_text, gint new_text_length, gint *position, gpointer user_data)
 {
 	// Prevent ';' characters in mapping names
 	if (strchr(new_text, ';') == nullptr) {
@@ -859,7 +859,7 @@ extern "C" void on_button_map_name_insert_text(GtkEditable *self, gchar *new_tex
 	g_signal_stop_emission_by_name(self, "insert-text");
 }
 
-extern "C" void on_button_map_name_changed(GtkEditable *self, gpointer user_data)
+extern "C" G_MODULE_EXPORT void on_button_map_name_changed(GtkEditable *self, gpointer user_data)
 {
 	if (GtkListBoxRow * row = selected_button_map_row()) {
 		const gchar * name = gtk_entry_get_text(GTK_ENTRY(self));
@@ -868,7 +868,7 @@ extern "C" void on_button_map_name_changed(GtkEditable *self, gpointer user_data
 	}
 }
 
-extern "C" void on_cmap_changed(GtkComboBox *box, gpointer user_data)
+extern "C" G_MODULE_EXPORT void on_cmap_changed(GtkComboBox *box, gpointer user_data)
 {
 	if (GtkListBoxRow * row = selected_button_map_row()) {
 		std::string my_name = gtk_buildable_get_name(GTK_BUILDABLE(box));
@@ -885,7 +885,7 @@ extern "C" void on_cmap_changed(GtkComboBox *box, gpointer user_data)
 	}
 }
 
-extern "C" void on_edit_button_mappings_clicked(GtkButton *button, gpointer user_data)
+extern "C" G_MODULE_EXPORT void on_edit_button_mappings_clicked(GtkButton *button, gpointer user_data)
 {
 	GtkDialog * editor = GTK_DIALOG(gtk_builder_get_object(builder, "button_mapping_editor"));
 	GtkListBox * button_map_list = GTK_LIST_BOX(gtk_builder_get_object(builder, "button_map_list"));
@@ -1018,7 +1018,7 @@ static void update_rom_set_editor_widgets(const std::string & name, const ROMPat
 	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "drive_rom_path")), p.DriveROMPath.c_str());
 }
 
-extern "C" void on_new_rom_set_clicked(GtkButton *button, gpointer user_data)
+extern "C" G_MODULE_EXPORT void on_new_rom_set_clicked(GtkButton *button, gpointer user_data)
 {
 	GtkListBox * rom_set_list = GTK_LIST_BOX(gtk_builder_get_object(builder, "rom_set_list"));
 	GtkListBoxRow * row = add_rom_set_editor_item("unnamed set", ROMPaths{});
@@ -1027,7 +1027,7 @@ extern "C" void on_new_rom_set_clicked(GtkButton *button, gpointer user_data)
 	gtk_widget_grab_focus(GTK_WIDGET(gtk_builder_get_object(builder, "rom_set_name")));
 }
 
-extern "C" void on_delete_rom_set_clicked(GtkButton *button, gpointer user_data)
+extern "C" G_MODULE_EXPORT void on_delete_rom_set_clicked(GtkButton *button, gpointer user_data)
 {
 	if (GtkListBoxRow * row = selected_rom_set_row()) {
 		delete paths_of_rom_set_row(row);
@@ -1038,7 +1038,7 @@ extern "C" void on_delete_rom_set_clicked(GtkButton *button, gpointer user_data)
 	}
 }
 
-extern "C" void on_rom_set_list_row_selected(GtkListBox *self, GtkListBoxRow *row, gpointer user_data)
+extern "C" G_MODULE_EXPORT void on_rom_set_list_row_selected(GtkListBox *self, GtkListBoxRow *row, gpointer user_data)
 {
 	if (row) {
 		ghost_rom_set_editor_widgets(false);
@@ -1049,7 +1049,7 @@ extern "C" void on_rom_set_list_row_selected(GtkListBox *self, GtkListBoxRow *ro
 	}
 }
 
-extern "C" void on_rom_set_name_insert_text(GtkEditable *self, gchar *new_text, gint new_text_length, gint *position, gpointer user_data)
+extern "C" G_MODULE_EXPORT void on_rom_set_name_insert_text(GtkEditable *self, gchar *new_text, gint new_text_length, gint *position, gpointer user_data)
 {
 	// Prevent ';' characters in ROM set names
 	if (strchr(new_text, ';') == nullptr) {
@@ -1060,7 +1060,7 @@ extern "C" void on_rom_set_name_insert_text(GtkEditable *self, gchar *new_text, 
 	g_signal_stop_emission_by_name(self, "insert-text");
 }
 
-extern "C" void on_rom_set_name_changed(GtkEditable *self, gpointer user_data)
+extern "C" G_MODULE_EXPORT void on_rom_set_name_changed(GtkEditable *self, gpointer user_data)
 {
 	if (GtkListBoxRow * row = selected_rom_set_row()) {
 		const gchar * name = gtk_entry_get_text(GTK_ENTRY(self));
@@ -1069,7 +1069,7 @@ extern "C" void on_rom_set_name_changed(GtkEditable *self, gpointer user_data)
 	}
 }
 
-extern "C" void on_basic_rom_file_set(GtkFileChooserButton *self, gpointer user_data)
+extern "C" G_MODULE_EXPORT void on_basic_rom_file_set(GtkFileChooserButton *self, gpointer user_data)
 {
 	if (GtkListBoxRow * row = selected_rom_set_row()) {
 		gchar * path = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(self));
@@ -1082,7 +1082,7 @@ extern "C" void on_basic_rom_file_set(GtkFileChooserButton *self, gpointer user_
 	}
 }
 
-extern "C" void on_basic_rom_builtin_clicked(GtkButton *self, gpointer user_data)
+extern "C" G_MODULE_EXPORT void on_basic_rom_builtin_clicked(GtkButton *self, gpointer user_data)
 {
 	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "basic_rom_path")), "");
 	if (GtkListBoxRow * row = selected_rom_set_row()) {
@@ -1090,7 +1090,7 @@ extern "C" void on_basic_rom_builtin_clicked(GtkButton *self, gpointer user_data
 	}
 }
 
-extern "C" void on_kernal_rom_file_set(GtkFileChooserButton *self, gpointer user_data)
+extern "C" G_MODULE_EXPORT void on_kernal_rom_file_set(GtkFileChooserButton *self, gpointer user_data)
 {
 	if (GtkListBoxRow * row = selected_rom_set_row()) {
 		gchar * path = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(self));
@@ -1103,7 +1103,7 @@ extern "C" void on_kernal_rom_file_set(GtkFileChooserButton *self, gpointer user
 	}
 }
 
-extern "C" void on_kernal_rom_builtin_clicked(GtkButton *self, gpointer user_data)
+extern "C" G_MODULE_EXPORT void on_kernal_rom_builtin_clicked(GtkButton *self, gpointer user_data)
 {
 	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "kernal_rom_path")), "");
 	if (GtkListBoxRow * row = selected_rom_set_row()) {
@@ -1111,7 +1111,7 @@ extern "C" void on_kernal_rom_builtin_clicked(GtkButton *self, gpointer user_dat
 	}
 }
 
-extern "C" void on_char_rom_file_set(GtkFileChooserButton *self, gpointer user_data)
+extern "C" G_MODULE_EXPORT void on_char_rom_file_set(GtkFileChooserButton *self, gpointer user_data)
 {
 	if (GtkListBoxRow * row = selected_rom_set_row()) {
 		gchar * path = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(self));
@@ -1124,7 +1124,7 @@ extern "C" void on_char_rom_file_set(GtkFileChooserButton *self, gpointer user_d
 	}
 }
 
-extern "C" void on_char_rom_builtin_clicked(GtkButton *self, gpointer user_data)
+extern "C" G_MODULE_EXPORT void on_char_rom_builtin_clicked(GtkButton *self, gpointer user_data)
 {
 	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "char_rom_path")), "");
 	if (GtkListBoxRow * row = selected_rom_set_row()) {
@@ -1132,7 +1132,7 @@ extern "C" void on_char_rom_builtin_clicked(GtkButton *self, gpointer user_data)
 	}
 }
 
-extern "C" void on_drive_rom_file_set(GtkFileChooserButton *self, gpointer user_data)
+extern "C" G_MODULE_EXPORT void on_drive_rom_file_set(GtkFileChooserButton *self, gpointer user_data)
 {
 	if (GtkListBoxRow * row = selected_rom_set_row()) {
 		gchar * path = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(self));
@@ -1145,7 +1145,7 @@ extern "C" void on_drive_rom_file_set(GtkFileChooserButton *self, gpointer user_
 	}
 }
 
-extern "C" void on_drive_rom_builtin_clicked(GtkButton *self, gpointer user_data)
+extern "C" G_MODULE_EXPORT void on_drive_rom_builtin_clicked(GtkButton *self, gpointer user_data)
 {
 	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "drive_rom_path")), "");
 	if (GtkListBoxRow * row = selected_rom_set_row()) {
@@ -1153,7 +1153,7 @@ extern "C" void on_drive_rom_builtin_clicked(GtkButton *self, gpointer user_data
 	}
 }
 
-extern "C" void on_edit_rom_sets_clicked(GtkButton *button, gpointer user_data)
+extern "C" G_MODULE_EXPORT void on_edit_rom_sets_clicked(GtkButton *button, gpointer user_data)
 {
 	GtkDialog * editor = GTK_DIALOG(gtk_builder_get_object(builder, "rom_set_editor"));
 	GtkListBox * rom_set_list = GTK_LIST_BOX(gtk_builder_get_object(builder, "rom_set_list"));
@@ -1219,7 +1219,7 @@ extern "C" void on_edit_rom_sets_clicked(GtkButton *button, gpointer user_data)
  *  Signal handlers
  */
 
-extern "C" void on_ok_clicked(GtkButton *button, gpointer user_data)
+extern "C" G_MODULE_EXPORT void on_ok_clicked(GtkButton *button, gpointer user_data)
 {
 	gtk_widget_hide(GTK_WIDGET(prefs_win));
 	gtk_widget_hide(GTK_WIDGET(gtk_builder_get_object(builder, "about_win")));
@@ -1229,7 +1229,7 @@ extern "C" void on_ok_clicked(GtkButton *button, gpointer user_data)
 	gtk_main_quit();
 }
 
-extern "C" void on_auto_start_clicked(GtkButton *button, gpointer user_data)
+extern "C" G_MODULE_EXPORT void on_auto_start_clicked(GtkButton *button, gpointer user_data)
 {
 	// Eject cartridge and set auto-start flag
 	on_cartridge_eject_clicked(button, user_data);
@@ -1238,13 +1238,13 @@ extern "C" void on_auto_start_clicked(GtkButton *button, gpointer user_data)
 	on_ok_clicked(button, user_data);
 }
 
-extern "C" void on_quit_clicked(GtkButton *button, gpointer user_data)
+extern "C" G_MODULE_EXPORT void on_quit_clicked(GtkButton *button, gpointer user_data)
 {
 	result = false;
 	gtk_main_quit();
 }
 
-extern "C" void on_load_snapshot(GtkMenuItem *menuitem, gpointer user_data)
+extern "C" G_MODULE_EXPORT void on_load_snapshot(GtkMenuItem *menuitem, gpointer user_data)
 {
 	gtk_window_set_title(GTK_WINDOW(snapshot_dialog), "Load Snapshot");
 	gtk_file_chooser_set_action(GTK_FILE_CHOOSER(snapshot_dialog), GTK_FILE_CHOOSER_ACTION_OPEN);
@@ -1282,7 +1282,7 @@ extern "C" void on_load_snapshot(GtkMenuItem *menuitem, gpointer user_data)
 	}
 }
 
-extern "C" void on_save_snapshot(GtkMenuItem *menuitem, gpointer user_data)
+extern "C" G_MODULE_EXPORT void on_save_snapshot(GtkMenuItem *menuitem, gpointer user_data)
 {
 	gtk_window_set_title(GTK_WINDOW(snapshot_dialog), "Save Snapshot");
 	gtk_file_chooser_set_action(GTK_FILE_CHOOSER(snapshot_dialog), GTK_FILE_CHOOSER_ACTION_SAVE);
@@ -1319,7 +1319,7 @@ extern "C" void on_save_snapshot(GtkMenuItem *menuitem, gpointer user_data)
 	}
 }
 
-extern "C" void on_create_image(GtkMenuItem *menuitem, gpointer user_data)
+extern "C" G_MODULE_EXPORT void on_create_image(GtkMenuItem *menuitem, gpointer user_data)
 {
 	bool save_ok = false;
 	char * filename = nullptr;
@@ -1354,7 +1354,7 @@ extern "C" void on_create_image(GtkMenuItem *menuitem, gpointer user_data)
 	}
 }
 
-extern "C" void on_shortcuts_activate(GtkMenuItem *menuitem, gpointer user_data)
+extern "C" G_MODULE_EXPORT void on_shortcuts_activate(GtkMenuItem *menuitem, gpointer user_data)
 {
 	GtkBuilder * shortcuts_builder = gtk_builder_new_from_string(shortcuts_win_ui, -1);
 	GtkWindow * shortcuts_win = GTK_WINDOW(gtk_builder_get_object(shortcuts_builder, "shortcuts_win"));
@@ -1363,24 +1363,24 @@ extern "C" void on_shortcuts_activate(GtkMenuItem *menuitem, gpointer user_data)
 	g_object_unref(shortcuts_builder);
 }
 
-extern "C" void on_user_manual_activate(GtkMenuItem *menuitem, gpointer user_data)
+extern "C" G_MODULE_EXPORT void on_user_manual_activate(GtkMenuItem *menuitem, gpointer user_data)
 {
 	gtk_show_uri_on_window(prefs_win, "file://" HTMLDIR "index.html", GDK_CURRENT_TIME, nullptr);
 }
 
-extern "C" void on_about_activate(GtkMenuItem *menuitem, gpointer user_data)
+extern "C" G_MODULE_EXPORT void on_about_activate(GtkMenuItem *menuitem, gpointer user_data)
 {
 	GtkAboutDialog * about_win = GTK_ABOUT_DIALOG(gtk_builder_get_object(builder, "about_win"));
 	gtk_about_dialog_set_program_name(about_win, VERSION_STRING);
 	gtk_window_present(GTK_WINDOW(about_win));
 }
 
-extern "C" void on_about_win_response(GtkDialog * self, gint response_id, gpointer user_data)
+extern "C" G_MODULE_EXPORT void on_about_win_response(GtkDialog * self, gint response_id, gpointer user_data)
 {
 	gtk_widget_hide(GTK_WIDGET(gtk_builder_get_object(builder, "about_win")));
 }
 
-extern "C" void on_show_sam_monitor(GtkMenuItem *menuitem, gpointer user_data)
+extern "C" G_MODULE_EXPORT void on_show_sam_monitor(GtkMenuItem *menuitem, gpointer user_data)
 {
 	GtkWindow * sam_win = GTK_WINDOW(gtk_builder_get_object(builder, "sam_win"));
 	gtk_window_present(sam_win);
@@ -1392,13 +1392,13 @@ extern "C" void on_show_sam_monitor(GtkMenuItem *menuitem, gpointer user_data)
 	gtk_text_view_scroll_mark_onscreen(sam_view, gtk_text_buffer_get_insert(sam_buffer));
 }
 
-extern "C" void on_emul1541_proc_toggled(GtkToggleButton *button, gpointer user_data)
+extern "C" G_MODULE_EXPORT void on_emul1541_proc_toggled(GtkToggleButton *button, gpointer user_data)
 {
 	prefs->Emul1541Proc = gtk_toggle_button_get_active(button);
 	ghost_widgets();
 }
 
-extern "C" void on_drive_path_file_set(GtkFileChooserButton *button, gpointer user_data)
+extern "C" G_MODULE_EXPORT void on_drive_path_file_set(GtkFileChooserButton *button, gpointer user_data)
 {
 	ghost_widgets();	// Auto-start
 
@@ -1417,69 +1417,69 @@ extern "C" void on_drive_path_file_set(GtkFileChooserButton *button, gpointer us
 	g_free(path);
 }
 
-extern "C" void on_drive8_eject_clicked(GtkButton *button, gpointer user_data)
+extern "C" G_MODULE_EXPORT void on_drive8_eject_clicked(GtkButton *button, gpointer user_data)
 {
 	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "drive8_path")), "");
 	ghost_widgets();	// Auto-start
 }
 
-extern "C" void on_drive9_eject_clicked(GtkButton *button, gpointer user_data)
+extern "C" G_MODULE_EXPORT void on_drive9_eject_clicked(GtkButton *button, gpointer user_data)
 {
 	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "drive9_path")), "");
 }
 
-extern "C" void on_drive10_eject_clicked(GtkButton *button, gpointer user_data)
+extern "C" G_MODULE_EXPORT void on_drive10_eject_clicked(GtkButton *button, gpointer user_data)
 {
 	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "drive10_path")), "");
 }
 
-extern "C" void on_drive11_eject_clicked(GtkButton *button, gpointer user_data)
+extern "C" G_MODULE_EXPORT void on_drive11_eject_clicked(GtkButton *button, gpointer user_data)
 {
 	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "drive11_path")), "");
 }
 
-extern "C" void on_drive8_next_disk_clicked(GtkButton *button, gpointer user_data)
+extern "C" G_MODULE_EXPORT void on_drive8_next_disk_clicked(GtkButton *button, gpointer user_data)
 {
 	get_drive_path(0, "drive8_path");
 	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "drive8_path")), NextImageFile(prefs->DrivePath[0]).c_str());
 }
 
-extern "C" void on_drive9_next_disk_clicked(GtkButton *button, gpointer user_data)
+extern "C" G_MODULE_EXPORT void on_drive9_next_disk_clicked(GtkButton *button, gpointer user_data)
 {
 	get_drive_path(1, "drive9_path");
 	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "drive9_path")), NextImageFile(prefs->DrivePath[1]).c_str());
 }
 
-extern "C" void on_drive10_next_disk_clicked(GtkButton *button, gpointer user_data)
+extern "C" G_MODULE_EXPORT void on_drive10_next_disk_clicked(GtkButton *button, gpointer user_data)
 {
 	get_drive_path(2, "drive10_path");
 	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "drive10_path")), NextImageFile(prefs->DrivePath[2]).c_str());
 }
 
-extern "C" void on_drive11_next_disk_clicked(GtkButton *button, gpointer user_data)
+extern "C" G_MODULE_EXPORT void on_drive11_next_disk_clicked(GtkButton *button, gpointer user_data)
 {
 	get_drive_path(3, "drive11_path");
 	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "drive11_path")), NextImageFile(prefs->DrivePath[3]).c_str());
 }
 
-extern "C" void on_display_type_changed(GtkComboBox *box, gpointer user_data)
+extern "C" G_MODULE_EXPORT void on_display_type_changed(GtkComboBox *box, gpointer user_data)
 {
 	prefs->DisplayType = gtk_combo_box_get_active(box);
 	ghost_widgets();
 }
 
-extern "C" void on_reu_type_changed(GtkComboBox *box, gpointer user_data)
+extern "C" G_MODULE_EXPORT void on_reu_type_changed(GtkComboBox *box, gpointer user_data)
 {
 	prefs->REUType = gtk_combo_box_get_active(box);
 	ghost_widgets();
 }
 
-extern "C" void on_cartridge_eject_clicked(GtkButton *button, gpointer user_data)
+extern "C" G_MODULE_EXPORT void on_cartridge_eject_clicked(GtkButton *button, gpointer user_data)
 {
 	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "cartridge_path")), "");
 }
 
-extern "C" gboolean on_prefs_win_delete_event(GtkWidget *widget, GdkEvent *event, gpointer user_data)
+extern "C" G_MODULE_EXPORT gboolean on_prefs_win_delete_event(GtkWidget *widget, GdkEvent *event, gpointer user_data)
 {
 	// Closing the prefs editor behaves like "Quit" on startup,
 	// "Continue" otherwise
@@ -1493,13 +1493,13 @@ extern "C" gboolean on_prefs_win_delete_event(GtkWidget *widget, GdkEvent *event
 	return gtk_widget_hide_on_delete(widget);
 }
 
-extern "C" gboolean on_about_win_delete_event(GtkWidget *widget, GdkEvent *event, gpointer user_data)
+extern "C" G_MODULE_EXPORT gboolean on_about_win_delete_event(GtkWidget *widget, GdkEvent *event, gpointer user_data)
 {
 	// Prevent destruction
 	return gtk_widget_hide_on_delete(widget);
 }
 
-extern "C" gboolean on_sam_win_delete_event(GtkWidget *widget, GdkEvent *event, gpointer user_data)
+extern "C" G_MODULE_EXPORT gboolean on_sam_win_delete_event(GtkWidget *widget, GdkEvent *event, gpointer user_data)
 {
 	// Prevent destruction
 	return gtk_widget_hide_on_delete(widget);
