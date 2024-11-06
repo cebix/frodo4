@@ -126,7 +126,7 @@ enum {
 
 Display::Display(C64 * c64) : the_c64(c64)
 {
-	speedometer_string[0] = 0;
+	speedometer_string[0] = '\0';
 
 	// Create window and renderer
 	uint32_t flags;
@@ -369,7 +369,7 @@ void Display::SetSpeedometer(int speed)
 		if (speed == 100) {
 			speedometer_string[0] = '\0';  // hide if speed = 100%
 		} else {
-			sprintf(speedometer_string, "%d%%", speed);
+			snprintf(speedometer_string, sizeof(speedometer_string), "%d%%", speed);
 		}
 	} else {
 		delay++;
@@ -447,7 +447,7 @@ void Display::Update()
 		// Draw play mode marker
 		PlayMode mode = the_c64->GetPlayMode();
 		if (mode != PLAY_MODE_PLAY) {
-			const char * str = nullptr;
+			const char * str;
 			switch (mode) {
 				case PLAY_MODE_REWIND:
 					str = MCHAR_REWIND;
@@ -457,6 +457,9 @@ void Display::Update()
 					break;
 				case PLAY_MODE_PAUSE:
 					str = MCHAR_PAUSE;
+					break;
+				default:
+					str = nullptr;
 					break;
 			};
 			if (str) {

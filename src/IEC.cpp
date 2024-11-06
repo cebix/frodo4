@@ -500,7 +500,7 @@ static const char *Errors_1541[] = {
 void Drive::set_error(int error, int track, int sector)
 {
 	// Write error message to buffer
-	sprintf(error_buf, Errors_1541[error], track, sector);
+	snprintf(error_buf, sizeof(error_buf), Errors_1541[error], track, sector);
 	error_ptr = error_buf;
 	error_len = strlen(error_buf);
 	current_error = error;
