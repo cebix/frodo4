@@ -268,10 +268,10 @@ void C64::init_memory()
 
 
 /*
- *  Start main emulation loop
+ *  Start main emulation loop, returns with exit code
  */
 
-void C64::Run()
+int C64::Run()
 {
 	// Reset chips
 	TheCPU->Reset();
@@ -289,16 +289,17 @@ void C64::Run()
 	cycle_counter = 0;
 
 	// Enter main loop
-	main_loop();
+	return main_loop();
 }
 
 
 /*
- *  Request emulator to quit
+ *  Request emulator to quit with given exit code
  */
 
-void C64::RequestQuit()
+void C64::RequestQuit(int exit_code)
 {
+	main_loop_exit_code = exit_code;
 	quit_requested = true;
 }
 
@@ -723,7 +724,7 @@ void C64::vblank()
  *  The emulation's main loop
  */
 
-void C64::main_loop()
+int C64::main_loop()
 {
 	unsigned prev_raster_y = 0;
 
@@ -811,6 +812,8 @@ void C64::main_loop()
 			vblank();
 		}
 	}
+
+	return main_loop_exit_code;
 }
 
 

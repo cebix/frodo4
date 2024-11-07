@@ -66,6 +66,7 @@ Prefs::Prefs()
 	Emul1541Proc = true;
 	ShowLEDs = true;
 	AutoStart = false;
+	TestBench = false;
 }
 
 
@@ -293,6 +294,8 @@ void Prefs::ParseItem(std::string item)
 		ShowLEDs = (value == "true");
 	} else if (keyword == "AutoStart") {
 		AutoStart = (value == "true");
+	} else if (keyword == "TestBench") {
+		TestBench = (value == "true");
 
 	} else {
 		fprintf(stderr, "WARNING: Ignoring unknown settings item '%s'\n", keyword.c_str());

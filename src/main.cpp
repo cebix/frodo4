@@ -88,7 +88,7 @@ void Frodo::ProcessArgs(int argc, char ** argv)
  *  Arguments processed, run emulation
  */
 
-void Frodo::ReadyToRun()
+int Frodo::ReadyToRun()
 {
 	// Load preferences
 	if (prefs_path.empty()) {
@@ -114,19 +114,21 @@ void Frodo::ReadyToRun()
 	// Show preferences editor
 	if (! ThePrefs.AutoStart) {
 		if (! ThePrefs.ShowEditor(true, prefs_path, snapshot_path))
-			return;  // "Quit" clicked
+			return 0;  // "Quit" clicked
 	}
 #endif
 
 	// Create and start C64
 	TheC64 = new C64;
-	TheC64->Run();
+	int exit_code = TheC64->Run();
 
 	// Shutdown
 	delete TheC64;
 
 	// Save preferences
 	ThePrefs.Save(prefs_path);
+
+	return exit_code;
 }
 
 
@@ -174,11 +176,11 @@ int main(int argc, char ** argv)
 	// Run Frodo application
 	TheApp = new Frodo();
 	TheApp->ProcessArgs(argc, argv);
-	TheApp->ReadyToRun();
+	int exit_code = TheApp->ReadyToRun();
 
 	// Shutdown
 	delete TheApp;
 	SDL_Quit();
 
-	return 0;
+	return exit_code;
 }

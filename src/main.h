@@ -37,7 +37,7 @@ public:
 	Frodo() { }
 
 	void ProcessArgs(int argc, char ** argv);
-	void ReadyToRun();
+	int ReadyToRun();
 
 	bool RunPrefsEditor();
 

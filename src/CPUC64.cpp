@@ -460,8 +460,14 @@ void MOS6510::write_byte_io(uint16_t adr, uint8_t byte)
 			case 0x4:	// SID
 			case 0x5:
 			case 0x6:
-			case 0x7:
 				the_sid->WriteRegister(adr & 0x1f, byte);
+				return;
+			case 0x7:
+				if (ThePrefs.TestBench && adr == 0xd7ff) {
+					the_c64->RequestQuit(byte);
+				} else {
+					the_sid->WriteRegister(adr & 0x1f, byte);
+				}
 				return;
 			case 0x8:	// Color RAM
 			case 0x9:

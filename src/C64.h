@@ -77,9 +77,9 @@ public:
 	C64();
 	~C64();
 
-	void Run();
+	int Run();
 
-	void RequestQuit();
+	void RequestQuit(int exit_code = 0);
 	void RequestPrefsEditor();
 	void RequestLoadSnapshot(const std::string & path);
 
@@ -161,13 +161,15 @@ private:
 	void open_close_joysticks(int oldjoy1, int oldjoy2, int newjoy1, int newjoy2);
 	uint8_t poll_joystick(int port);
 
-	void main_loop();
+	int main_loop();
 	void poll_input();
 	void vblank();
 	void handle_rewind();
 	void reset_play_mode();
 
 	bool quit_requested;			// Emulator shall quit
+	int main_loop_exit_code = 0;	// Exit code to return from main loop
+
 	bool prefs_editor_requested;	// Emulator shall show prefs editor
 	bool load_snapshot_requested;	// Emulator shall load snapshot
 	std::string requested_snapshot;

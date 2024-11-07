@@ -114,6 +114,7 @@ public:
 	bool Emul1541Proc;			// Enable processor-level 1541 emulation
 	bool ShowLEDs;				// Show status bar
 	bool AutoStart;				// Auto-start from drive 8 after reset (not saved to preferences file)
+	bool TestBench;				// Enable features for automatic regression tests (not saved to preferences file)
 
 	std::string LoadProgram;	// BASIC program file to load in conjunction with AutoStart (not saved to preferences file)
 
