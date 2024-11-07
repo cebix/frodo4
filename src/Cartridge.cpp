@@ -31,6 +31,7 @@ ROMCartridge::ROMCartridge(unsigned rom_size)
 {
 	// Allocate ROM
 	rom = new uint8_t[rom_size];
+	memset(rom, 0xff, rom_size);
 }
 
 ROMCartridge::~ROMCartridge()
@@ -149,7 +150,7 @@ Cartridge * Cartridge::FromFile(const std::string & path, std::string & ret_erro
 		// Check for signature and size
 		uint16_t chip_type = (header[0x08] << 8) | header[0x09];
 		uint16_t chip_size = (header[0x0e] << 8) | header[0x0f];
-		if (memcmp(header, "CHIP", 4) != 0 || chip_type != 0 || chip_size != rom_size)
+		if (memcmp(header, "CHIP", 4) != 0 || chip_type != 0 || chip_size > rom_size)
 			goto error_unsupp;
 
 		// Create cartridge object and load ROM
@@ -159,7 +160,7 @@ Cartridge * Cartridge::FromFile(const std::string & path, std::string & ret_erro
 			cart = new Cartridge8K;
 		}
 
-		if (fread(static_cast<ROMCartridge *>(cart)->ROM(), rom_size, 1, f) != 1)
+		if (fread(static_cast<ROMCartridge *>(cart)->ROM(), chip_size, 1, f) != 1)
 			goto error_read;
 
 		fclose(f);
