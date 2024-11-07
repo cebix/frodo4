@@ -231,6 +231,9 @@ void Prefs::ParseItem(std::string item)
 	} else if (keyword == "Cartridge") {
 		CartridgePath = value;
 
+	} else if (keyword == "LoadProgram") {
+		LoadProgram = value;
+
 	} else if (keyword == "SIDType") {
 		if (value == "DIGITAL") {
 			SIDType = SIDTYPE_DIGITAL_6581;

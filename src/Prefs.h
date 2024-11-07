@@ -87,39 +87,41 @@ public:
 	ROMPaths SelectedROMPaths() const;
 	ButtonMapping SelectedButtonMapping() const;
 
-	int NormalCycles;		// Available CPU cycles in normal raster lines
-	int BadLineCycles;		// Available CPU cycles in Bad Lines
-	int CIACycles;			// CIA timer ticks per raster line
-	int FloppyCycles;		// Available 1541 CPU cycles per line
+	int NormalCycles;			// Available CPU cycles in normal raster lines
+	int BadLineCycles;			// Available CPU cycles in Bad Lines
+	int CIACycles;				// CIA timer ticks per raster line
+	int FloppyCycles;			// Available 1541 CPU cycles per line
 
 	std::string DrivePath[4];	// Path for drive 8..11
 
-	int SIDType;			// SID emulation type
-	int REUType;			// Type of RAM expansion
-	int DisplayType;		// Display type (windowed or full-screen)
-	int Palette;			// Color palette to use
-	int Joystick1Port;		// Port that joystick 1 is connected to (0 = no joystick, all other values are system dependant)
-	int Joystick2Port;		// Port that joystick 2 is connected to
-	int ScalingNumerator;	// Window scaling numerator
-	int ScalingDenominator;	// Window scaling denominator
+	int SIDType;				// SID emulation type
+	int REUType;				// Type of RAM expansion
+	int DisplayType;			// Display type (windowed or full-screen)
+	int Palette;				// Color palette to use
+	int Joystick1Port;			// Port that joystick 1 is connected to (0 = no joystick, all other values are system dependant)
+	int Joystick2Port;			// Port that joystick 2 is connected to
+	int ScalingNumerator;		// Window scaling numerator
+	int ScalingDenominator;		// Window scaling denominator
 
-	bool SpriteCollisions;	// Sprite collision detection is on
-	bool JoystickSwap;		// Swap joysticks 1<->2
-	bool TwinStick;			// Twin-stick control
-	bool TapeRumble;		// Tape motor controller rumble
-	bool LimitSpeed;		// Limit speed to 100%
-	bool FastReset;			// Skip RAM test on reset
-	bool CIAIRQHack;		// Write to CIA ICR clears IRQ
-	bool MapSlash;			// Map '/' in C64 filenames
-	bool Emul1541Proc;		// Enable processor-level 1541 emulation
-	bool ShowLEDs;			// Show status bar
-	bool AutoStart;			// Autostart from drive 8 after reset (not saved to preferences file)
+	bool SpriteCollisions;		// Sprite collision detection is on
+	bool JoystickSwap;			// Swap joysticks 1<->2
+	bool TwinStick;				// Twin-stick control
+	bool TapeRumble;			// Tape motor controller rumble
+	bool LimitSpeed;			// Limit speed to 100%
+	bool FastReset;				// Skip RAM test on reset
+	bool CIAIRQHack;			// Write to CIA ICR clears IRQ
+	bool MapSlash;				// Map '/' in C64 filenames
+	bool Emul1541Proc;			// Enable processor-level 1541 emulation
+	bool ShowLEDs;				// Show status bar
+	bool AutoStart;				// Auto-start from drive 8 after reset (not saved to preferences file)
+
+	std::string LoadProgram;	// BASIC program file to load in conjunction with AutoStart (not saved to preferences file)
 
 	std::map<std::string, ROMPaths> ROMSetDefs;	// Defined ROM sets, indexed by name
-	std::string ROMSet;		// Name of selected ROM set (empty = built-in)
+	std::string ROMSet;			// Name of selected ROM set (empty = built-in)
 
 	std::map<std::string, ButtonMapping> ButtonMapDefs;	// Defined button mappings, indexed by name
-	std::string ButtonMap;	// Name of selected controller button mapping
+	std::string ButtonMap;		// Name of selected controller button mapping
 
 	std::string CartridgePath;	// Path for cartridge image file
 };

@@ -1287,7 +1287,7 @@ bool C64::DMALoad(const std::string & filename, std::string & ret_error_msg)
 
 
 /*
- *  Auto start first program from drive 8
+ *  Auto start first program from drive 8 or program specified by preferences
  *  (called from BASIC interactive input loop)
  */
 
@@ -1296,30 +1296,49 @@ void C64::AutoStartOp()
 	// Remove ROM patch to avoid recursion
 	patch_roms(ThePrefs.FastReset, ThePrefs.Emul1541Proc, ThePrefs.AutoStart = false);
 
-	// Write LOAD command to screen
-	static const char * load_cmd = "load\"*\",8,1";
+	if (ThePrefs.LoadProgram.empty() ) {
 
-	uint16_t pnt = RAM[0xd1] | (RAM[0xd2] << 8);	// Pointer to current screen line
-	for (size_t i = 0; i < strlen(load_cmd); ++i) {
-		uint8_t c = load_cmd[i];
+		// Starting from drive 8, write LOAD command to screen
+		static const char * load_cmd = "load\"*\",8,1";
 
-		// Convert ASCII to screen code
-		if (c == '@') {
-			c = 0x00;
-		} else if ((c >= 'a') && (c <= 'z')) {
-			c ^= 0x60;
+		uint16_t pnt = RAM[0xd1] | (RAM[0xd2] << 8);	// Pointer to current screen line
+		for (size_t i = 0; i < strlen(load_cmd); ++i) {
+			uint8_t c = load_cmd[i];
+
+			// Convert ASCII to screen code
+			if (c == '@') {
+				c = 0x00;
+			} else if ((c >= 'a') && (c <= 'z')) {
+				c ^= 0x60;
+			}
+
+			RAM[pnt + i] = c;
 		}
 
-		RAM[pnt + i] = c;
-	}
+		// Put <RETURN> RUN <RETURN> into keyboard buffer
+		RAM[0x277] = 0x0d;
+		RAM[0x278] = 'R';
+		RAM[0x279] = 'U';
+		RAM[0x27a] = 'N';
+		RAM[0x27b] = 0x0d;
+		RAM[0xc6] = 5;	// Number of characters
 
-	// Put <RETURN> RUN <RETURN> into keyboard buffer
-	RAM[0x277] = 0x0d;
-	RAM[0x278] = 'R';
-	RAM[0x279] = 'U';
-	RAM[0x27a] = 'N';
-	RAM[0x27b] = 0x0d;
-	RAM[0xc6] = 5;	// Number of characters
+	} else {
+
+		// Load specified program
+		std::string error_msg;
+		if (! DMALoad(ThePrefs.LoadProgram, error_msg)) {
+			fprintf(stderr, "Unable to auto-start: %s\n", error_msg.c_str());
+			return;
+		}
+
+		// Put RUN <RETURN> into keyboard buffer
+		RAM[0x277] = 'R';
+		RAM[0x278] = 'U';
+		RAM[0x279] = 'N';
+		RAM[0x27a] = 0x0d;
+		RAM[0xc6] = 4;	// Number of characters
+	}
 }
 
 
