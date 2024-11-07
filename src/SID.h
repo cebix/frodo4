@@ -24,7 +24,6 @@
 #include <stdlib.h>
 
 
-class C64;
 class SIDRenderer;
 class Prefs;
 struct MOS6581State;

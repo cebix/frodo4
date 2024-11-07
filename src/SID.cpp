@@ -197,7 +197,7 @@ void MOS6581::update_osc3()
 	if (v3_ctrl & 8) {				// Test bit
 		fake_v3_count = 0;
 	} else {
-		uint32_t elapsed = now - fake_v3_update_cycle;
+		uint32_t elapsed = now - fake_v3_update_cycle - (ThePrefs.SIDType == SIDTYPE_DIGITAL_8580 ? 1 : 0);
 		uint32_t add = (regs[0x0f] << 8) | regs[0x0e];
 		fake_v3_count = (fake_v3_count + add * elapsed) & 0xffffff;
 	}
