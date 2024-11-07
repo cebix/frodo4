@@ -102,6 +102,7 @@ public:
 	int Joystick2Port;			// Port that joystick 2 is connected to
 	int ScalingNumerator;		// Window scaling numerator
 	int ScalingDenominator;		// Window scaling denominator
+	int TestMaxFrames;			// Maximum number of frames to run in test-bench mode (not saved to preferences file)
 
 	bool SpriteCollisions;		// Sprite collision detection is on
 	bool JoystickSwap;			// Swap joysticks 1<->2

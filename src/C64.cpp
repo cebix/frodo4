@@ -810,6 +810,15 @@ int C64::main_loop()
 		// Update display etc. if new frame has started
 		if (new_frame) {
 			vblank();
+
+			// Exit with code 1 if automated test time has elapsed
+			if (ThePrefs.TestMaxFrames > 0) {
+				--ThePrefs.TestMaxFrames;
+				if (ThePrefs.TestMaxFrames == 0) {
+					main_loop_exit_code = 1;
+					quit_requested = true;
+				}
+			}
 		}
 	}
 

@@ -47,6 +47,7 @@ Prefs::Prefs()
 	FloppyCycles = 64;
 	ScalingNumerator = 4;
 	ScalingDenominator = 1;
+	TestMaxFrames = 0;
 
 	SIDType = SIDTYPE_DIGITAL_6581;
 	REUType = REU_NONE;
@@ -82,6 +83,10 @@ void Prefs::Check()
 
 	if (ScalingDenominator <= 0) {
 		ScalingDenominator = 1;
+	}
+
+	if (TestMaxFrames < 0) {
+		TestMaxFrames = 0;
 	}
 
 	if (SIDType < SIDTYPE_NONE || SIDType > SIDTYPE_SIDCARD) {
@@ -271,6 +276,8 @@ void Prefs::ParseItem(std::string item)
 		ScalingNumerator = atoi(value.c_str());
 	} else if (keyword == "ScalingDenominator") {
 		ScalingDenominator = atoi(value.c_str());
+	} else if (keyword == "TestMaxFrames") {
+		TestMaxFrames = atoi(value.c_str());
 
 	} else if (keyword == "SpriteCollisions") {
 		SpriteCollisions = (value == "true");
