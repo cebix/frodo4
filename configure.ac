@@ -3,6 +3,7 @@ AC_PREREQ([2.69])
 AC_INIT([Frodo],[4.4], [], [Frodo])
 AC_CONFIG_SRCDIR([src/main.cpp])
 AM_INIT_AUTOMAKE([1.12 foreign])
+AC_CANONICAL_HOST
 
 dnl Checks for programs.
 AC_PROG_CXX
@@ -20,7 +21,13 @@ if [[ $HAVE_GTK = yes ]]; then
   AC_DEFINE(HAVE_GTK, 1, [GTK preferences GUI is enabled])
   CPPFLAGS="$CPPFLAGS $GTK_CFLAGS"
   LIBS="$LIBS $GTK_LIBS"
-  LDFLAGS="$LDFLAGS -Wl,--export-dynamic"
+  case "${host_os}" in
+    mingw*)
+      ;;
+    *)
+      LDFLAGS="$LDFLAGS -rdynamic"
+      ;;
+  esac
 fi
 
 dnl Checks for typedefs, structures, and compiler characteristics.
