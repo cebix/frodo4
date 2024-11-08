@@ -196,8 +196,11 @@ void MOS6581::update_osc3()
 	uint8_t v3_ctrl = regs[0x12];	// Voice 3 control register
 	if (v3_ctrl & 8) {				// Test bit
 		fake_v3_count = 0;
+		if (ThePrefs.SIDType == SIDTYPE_DIGITAL_8580) {
+			--now;	// For SID type detection
+		}
 	} else {
-		uint32_t elapsed = now - fake_v3_update_cycle - (ThePrefs.SIDType == SIDTYPE_DIGITAL_8580 ? 1 : 0);
+		uint32_t elapsed = now - fake_v3_update_cycle;
 		uint32_t add = (regs[0x0f] << 8) | regs[0x0e];
 		fake_v3_count = (fake_v3_count + add * elapsed) & 0xffffff;
 	}
@@ -214,48 +217,72 @@ uint8_t MOS6581::read_osc3()
 {
 	update_osc3();
 
-	uint32_t pw = ((regs[0x11] & 0x0f) << 8) | regs[0x10];
+	uint32_t count = fake_v3_count;
+	uint32_t add = (regs[0x0f] << 8) | regs[0x0e];
+	uint16_t pw = ((regs[0x11] & 0x0f) << 8) | regs[0x10];
 
 	uint8_t v3_ctrl = regs[0x12];   // Voice 3 control register
+	uint8_t wave = v3_ctrl >> 4;
 	bool test = v3_ctrl & 8;
 
-	switch ((v3_ctrl >> 4) & 0xf) {
+	switch (wave) {
 		case WAVE_TRI:
 			// TODO: Ring modulation from voice 2
-			if (fake_v3_count & 0x800000) {
-				return (fake_v3_count >> 15) ^ 0xff;
+			if (count & 0x800000) {
+				return (count >> 15) ^ 0xff;
 			} else {
-				return fake_v3_count >> 15;
+				return count >> 15;
 			}
 		case WAVE_SAW:
-			return fake_v3_count >> 16;
+			return count >> 16;
 		case WAVE_RECT:
-			if (test || (fake_v3_count >> 12) >= pw) {
+			count = (count - add) & 0xffffff;	// Rect output is delayed by a cycle
+			if (test || (count >> 12) >= pw) {
 				return 0xff;
 			} else {
 				return 0x00;
 			}
-		case WAVE_TRISAW:
-			return TriSawTable[fake_v3_count >> 12] >> 8;
+		case WAVE_TRISAW: {
+			uint8_t r =TriSawTable[count >> 12] >> 8;
+			if (ThePrefs.SIDType == SIDTYPE_DIGITAL_6581) {
+				fake_v3_count &= 0x7fffff | ((uint32_t) r << 16);	// Counter MSB may get cleared
+			}
+			return r;
+		}
 		case WAVE_TRIRECT:
 			// TODO: Ring modulation from voice 2
-			if (test || (fake_v3_count >> 12) >= pw) {
+			count = (count - add) & 0xffffff;	// Rect output is delayed by a cycle
+			if (test || (count >> 12) >= pw) {
 				return TriRectTable[fake_v3_count >> 12] >> 8;
 			} else {
 				return 0x00;
 			}
-		case WAVE_SAWRECT:
-			if (test || (fake_v3_count >> 12) >= pw) {
-				return SawRectTable[fake_v3_count >> 12] >> 8;
+		case WAVE_SAWRECT: {
+			count = (count - add) & 0xffffff;	// Rect output is delayed by a cycle
+			uint8_t r;
+			if (test || (count >> 12) >= pw) {
+				r = SawRectTable[fake_v3_count >> 12] >> 8;
 			} else {
-				return 0x00;
+				r = 0x00;
 			}
-		case WAVE_TRISAWRECT:
-			if (test || (fake_v3_count >> 12) >= pw) {
-				return TriSawRectTable[fake_v3_count >> 12] >> 8;
+			if (ThePrefs.SIDType == SIDTYPE_DIGITAL_6581) {
+				fake_v3_count &= 0x7fffff | ((uint32_t) r << 16);	// Counter MSB may get cleared
+			}
+			return r;
+		}
+		case WAVE_TRISAWRECT: {
+			count = (count - add) & 0xffffff;	// Rect output is delayed by a cycle
+			uint8_t r;
+			if (test || (count >> 12) >= pw) {
+				r = TriSawRectTable[fake_v3_count >> 12] >> 8;
 			} else {
-				return 0x00;
+				r = 0x00;
 			}
+			if (ThePrefs.SIDType == SIDTYPE_DIGITAL_6581) {
+				fake_v3_count &= 0x7fffff | ((uint32_t) r << 16);	// Counter MSB may get cleared
+			}
+			return r;
+		}
 		case WAVE_NOISE:
 			return sid_random();
 		default:
@@ -960,6 +987,8 @@ void DigitalRenderer::calc_filter()
 
 void DigitalRenderer::calc_buffer(int16_t *buf, long count)
 {
+	bool is6581 = (ThePrefs.SIDType == SIDTYPE_DIGITAL_6581);
+
 	// Index in sample buffer for reading, 16.16 fixed
 	uint32_t sample_count = (sample_in_ptr + SAMPLE_BUF_SIZE/2) << 16;
 
@@ -1047,6 +1076,9 @@ void DigitalRenderer::calc_buffer(int16_t *buf, long count)
 					break;
 				case WAVE_TRISAW:
 					output = the_sid->TriSawTable[v->count >> 12];
+					if (is6581) {
+						v->count &= 0x7fffff | (output << 8);	// Counter MSB may get cleared
+					}
 					break;
 				case WAVE_TRIRECT:
 					if (v->test || (v->count >> 12) >= v->pw) {
@@ -1065,12 +1097,18 @@ void DigitalRenderer::calc_buffer(int16_t *buf, long count)
 					} else {
 						output = 0;
 					}
+					if (is6581) {
+						v->count &= 0x7fffff | (output << 8);	// Counter MSB may get cleared
+					}
 					break;
 				case WAVE_TRISAWRECT:
 					if (v->test || (v->count >> 12) >= v->pw) {
 						output = the_sid->TriSawRectTable[v->count >> 12];
 					} else {
 						output = 0;
+					}
+					if (is6581) {
+						v->count &= 0x7fffff | (output << 8);	// Counter MSB may get cleared
 					}
 					break;
 				case WAVE_NOISE:
