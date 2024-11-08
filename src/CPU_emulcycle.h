@@ -1137,17 +1137,26 @@
 			Last;
 
 		case O_SHS:		// ar2 contains the high byte of the operand address
-			write_byte(ar, (ar2+1) & (sp = a & x));
+			write_byte(ar, (ar2 + 1) & (sp = a & x));
 			Last;
 
 		case O_SHY:		// ar2 contains the high byte of the operand address
-			write_byte(ar, y & (ar2+1));
+			if ((ar & 0xff) < x) {	// Page crossed?
+				ar &= (y << 8) | 0xff;
+			}
+			write_byte(ar, y & (ar2 + 1));
 			Last;
 
 		case O_SHX:		// ar2 contains the high byte of the operand address
-			write_byte(ar, x & (ar2+1));
+			if ((ar & 0xff) < y) {	// Page crossed?
+				ar &= (x << 8) | 0xff;
+			}
+			write_byte(ar, x & (ar2 + 1));
 			Last;
 
 		case O_SHA:		// ar2 contains the high byte of the operand address
-			write_byte(ar, a & x & (ar2+1));
+			if ((ar & 0xff) < y) {	// Page crossed?
+				ar &= ((a & x) << 8) | 0xff;
+			}
+			write_byte(ar, a & x & (ar2 + 1));
 			Last;
