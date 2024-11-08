@@ -45,7 +45,7 @@
 
 
 // Size of standard GCR sector encoded from D64 image
-constexpr unsigned GCR_SECTOR_SIZE = 5 + 10 + 9 + 5 + 325 + 12;	// SYNC + Header + Gap + SYNC + Data + Gap
+constexpr unsigned GCR_SECTOR_SIZE = 5 + 10 + 9 + 5 + 325 + 16;	// SYNC + Header + Gap + SYNC + Data + Gap
 
 // Duration of disk change sequence step in cycles
 constexpr unsigned DISK_CHANGE_SEQ_CYCLES = 500000;	// 0.5 s
@@ -549,10 +549,10 @@ void GCRDisk::sector2gcr(unsigned track, unsigned sector, uint8_t * gcr)
 	}
 
 	// Create GCR block header
-	memset(gcr, 0xff, 5);					// SYNC
+	memset(gcr, 0xff, 5);			// SYNC
 	gcr += 5;
 
-	buf[0] = 0x08;							// Header mark
+	buf[0] = 0x08;					// Header mark
 	buf[1] = sector ^ track ^ id2 ^ id1;	// Checksum
 	buf[2] = sector;
 	buf[3] = track;
@@ -572,15 +572,15 @@ void GCRDisk::sector2gcr(unsigned track, unsigned sector, uint8_t * gcr)
 	gcr_conv4(buf, gcr);
 	gcr += 5;
 
-	memset(gcr, 0x55, 9);					// Gap
+	memset(gcr, 0x55, 9);			// Gap
 	gcr += 9;
 
 	// Create GCR data block
-	memset(gcr, 0xff, 5);					// SYNC
+	memset(gcr, 0xff, 5);			// SYNC
 	gcr += 5;
 
 	uint8_t sum;
-	buf[0] = 0x07;							// Data mark
+	buf[0] = 0x07;					// Data mark
 	sum =  buf[1] = block[0];
 	sum ^= buf[2] = block[1];
 	sum ^= buf[3] = block[2];
@@ -600,7 +600,7 @@ void GCRDisk::sector2gcr(unsigned track, unsigned sector, uint8_t * gcr)
 	}
 
 	sum ^= buf[0] = block[255];
-	buf[1] = sum;							// Checksum
+	buf[1] = sum;					// Checksum
 	buf[2] = 0;
 	buf[3] = 0;
 	if (error == ERR_READ23) {		// Checksum error in data block
@@ -609,7 +609,7 @@ void GCRDisk::sector2gcr(unsigned track, unsigned sector, uint8_t * gcr)
 	gcr_conv4(buf, gcr);
 	gcr += 5;
 
-	memset(gcr, 0x55, 12);					// Gap
+	memset(gcr, 0x55, 16);			// Gap
 }
 
 
