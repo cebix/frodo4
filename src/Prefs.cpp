@@ -240,6 +240,9 @@ void Prefs::ParseItem(std::string item)
 	} else if (keyword == "LoadProgram") {
 		LoadProgram = value;
 
+	} else if (keyword == "TestScreenshot") {
+		TestScreenshotPath = value;
+
 	} else if (keyword == "SIDType") {
 		if (value == "DIGITAL") {
 			SIDType = SIDTYPE_DIGITAL_6581;

@@ -728,13 +728,17 @@ int C64::main_loop()
 {
 	unsigned prev_raster_y = 0;
 
-	while (!quit_requested) {
+	while (true) {
 		bool new_frame;
 
 		// Stop emulation in pause mode, just update the display
 		if (play_mode == PLAY_MODE_PAUSE) {
 			vblank();
-			continue;
+			if (quit_requested) {
+				break;
+			} else {
+				continue;
+			}
 		}
 
 #ifdef FRODO_SC
@@ -810,6 +814,11 @@ int C64::main_loop()
 		// Update display etc. if new frame has started
 		if (new_frame) {
 			vblank();
+
+			// Exit if requested
+			if (quit_requested) {
+				break;
+			}
 
 			// Exit with code 1 if automated test time has elapsed
 			if (ThePrefs.TestMaxFrames > 0) {

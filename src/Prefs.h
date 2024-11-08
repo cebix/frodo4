@@ -126,6 +126,8 @@ public:
 	std::string ButtonMap;		// Name of selected controller button mapping
 
 	std::string CartridgePath;	// Path for cartridge image file
+
+	std::string TestScreenshotPath;	// Path for screenshot to be saved on exit in test-bench mode (not saved to preferences file)
 };
 
 

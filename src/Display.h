@@ -69,6 +69,7 @@ private:
 
 	void error_and_quit(const std::string & msg) const;
 
+	void draw_overlays();
 	void draw_string(unsigned x, unsigned y, const char *str, uint8_t front_color) const;
 
 	static uint32_t pulse_handler_static(uint32_t interval, void * arg);

@@ -22,6 +22,7 @@
 
 #include "main.h"
 #include "C64.h"
+#include "Display.h"
 #include "Prefs.h"
 #include "Version.h"
 
@@ -122,6 +123,11 @@ int Frodo::ReadyToRun()
 	TheC64 = new C64;
 	int exit_code = TheC64->Run();
 
+	// Save test screenshot on exit if requested
+	if (! ThePrefs.TestScreenshotPath.empty()) {
+		save_test_screenshot(ThePrefs.TestScreenshotPath);
+	}
+
 	// Shutdown
 	delete TheC64;
 
@@ -145,6 +151,80 @@ bool Frodo::RunPrefsEditor()
 		ThePrefs = *prefs;
 	}
 	return result;
+}
+
+
+/*
+ *  Save screenshot of VIC display for regression tests
+ */
+
+void Frodo::save_test_screenshot(const std::string & path)
+{
+	const uint8_t * bitmap = TheC64->TheDisplay->BitmapBase();
+	const int xmod = TheC64->TheDisplay->BitmapXMod();
+
+	const uint32_t width = DISPLAY_X;
+	const uint32_t height = DISPLAY_Y;
+
+	FILE * f = fopen(path.c_str(), "wb");
+	if (! f) {
+		fprintf(stderr, "Cannot create screenshot file '%s'\n", path.c_str());
+		return;
+	}
+
+	// Write BMP file
+	const uint32_t bitmap_size = width * height;
+	const uint32_t file_size = 14 + 40 + 16*4 + bitmap_size;
+
+	uint8_t header[14 + 40] = {
+
+		// File header
+		'B', 'M',
+		file_size & 0xff, (file_size >> 8) & 0xff, (file_size >> 16) & 0xff, (file_size >> 24) & 0xff,
+		0x00, 0x00, 0x00, 0x00,
+		0x76, 0x00, 0x00, 0x00,	// Bitmap offset
+
+		// Info header
+		0x28, 0x00, 0x00, 0x00,	// Info header size
+		width & 0xff, (width >> 8) & 0xff, (width >> 16) & 0xff, (width >> 24) & 0xff,
+		height & 0xff, (height >> 8) & 0xff, (height >> 16) & 0xff, (height >> 24) & 0xff,
+		0x01, 0x00, 0x08, 0x00,	// 1 plane, 8 bpp
+		0x00, 0x00, 0x00, 0x00,
+		bitmap_size & 0xff, (bitmap_size >> 8) & 0xff, (bitmap_size >> 16) & 0xff, (bitmap_size >> 24) & 0xff,
+		0x22, 0x0b, 0x00, 0x00,	// X DPI
+		0x22, 0x0b, 0x00, 0x00,	// Y DPI
+		0x10, 0x00, 0x00, 0x00,	// 16 colors
+		0x00, 0x00, 0x00, 0x00
+	};
+
+	fwrite(header, sizeof(header), 1, f);
+
+	uint8_t palette[16 * 4] = {	// Very drab "Pepto" palette for VICE testbench
+		0x00, 0x00, 0x00, 0x00,	// BGRA
+		0xff, 0xff, 0xff, 0x00,
+		0x2b, 0x37, 0x68, 0x00,
+		0xb2, 0xa4, 0x70, 0x00,
+		0x86, 0x3d, 0x6f, 0x00,
+		0x43, 0x8d, 0x58, 0x00,
+		0x79, 0x28, 0x35, 0x00,
+		0x6f, 0xc7, 0xb8, 0x00,
+		0x25, 0x4f, 0x6f, 0x00,
+		0x00, 0x39, 0x43, 0x00,
+		0x59, 0x67, 0x9a, 0x00,
+		0x44, 0x44, 0x44, 0x00,
+		0x6c, 0x6c, 0x6c, 0x00,
+		0x84, 0xd2, 0x9a, 0x00,
+		0xb5, 0x5e, 0x6c, 0x00,
+		0x95, 0x95, 0x95, 0x00
+	};
+
+	fwrite(palette, sizeof(palette), 1, f);
+
+	for (int y = height - 1; y >= 0; --y) {
+		fwrite(bitmap + y * xmod, width, 1, f);
+	}
+
+	fclose(f);
 }
 
 

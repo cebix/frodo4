@@ -381,7 +381,7 @@ void Display::SetSpeedometer(int speed)
  *  Show VIC bitmap and user interface elements on the display
  */
 
-void Display::Update()
+void Display::draw_overlays()
 {
 	// Update and draw notifications
 	auto now = chrono::steady_clock::now();
@@ -467,6 +467,15 @@ void Display::Update()
 				draw_string(DISPLAY_X - 12, DISPLAY_Y - 10, str, shine_gray);
 			}
 		}
+	}
+
+}
+
+void Display::Update()
+{
+	// Draw user interface elements (but keep regression test screenshot clean)
+	if (ThePrefs.TestScreenshotPath.empty()) {
+		draw_overlays();
 	}
 
 	// Convert 8-bit pixel buffer to 32-bit texture
