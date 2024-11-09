@@ -893,11 +893,15 @@ void Display::PollKeyboard(uint8_t *key_matrix, uint8_t *rev_matrix, uint8_t *jo
 
 			// Controller attached/removed
 			case SDL_CONTROLLERDEVICEADDED:
-				the_c64->JoystickAdded(event.cdevice.which);
+				if (! ThePrefs.TestBench) {
+					the_c64->JoystickAdded(event.cdevice.which);
+				}
 				break;
 
 			case SDL_CONTROLLERDEVICEREMOVED:
-				the_c64->JoystickRemoved(event.cdevice.which);
+				if (! ThePrefs.TestBench) {
+					the_c64->JoystickRemoved(event.cdevice.which);
+				}
 				break;
 
 			// Quit Frodo
