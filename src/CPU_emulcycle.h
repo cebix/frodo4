@@ -264,9 +264,19 @@
 			ar = ((ar + x) & 0xff) | (ar2 << 8);
 			break;
 		case A_ABSX2:	// No page crossed
+#ifndef IS_CPU_1541
+			if (BALow) {
+				ar2 = 0xfe;		// SHA/SHS/SHX/SHY during DMA
+			}
+#endif
 			read_idle(ar);
 			Execute;
 		case A_ABSX3:	// Page crossed
+#ifndef IS_CPU_1541
+			if (BALow) {
+				ar2 = 0xfe;		// SHA/SHS/SHX/SHY during DMA
+			}
+#endif
 			read_idle(ar);
 			ar += 0x100;
 			Execute;
@@ -285,9 +295,19 @@
 			ar = ((ar + y) & 0xff) | (ar2 << 8);
 			break;
 		case A_ABSY2:	// No page crossed
+#ifndef IS_CPU_1541
+			if (BALow) {
+				ar2 = 0xfe;		// SHA/SHS/SHX/SHY during DMA
+			}
+#endif
 			read_idle(ar);
 			Execute;
 		case A_ABSY3:	// Page crossed
+#ifndef IS_CPU_1541
+			if (BALow) {
+				ar2 = 0xfe;		// SHA/SHS/SHX/SHY during DMA
+			}
+#endif
 			read_idle(ar);
 			ar += 0x100;
 			Execute;
@@ -328,9 +348,19 @@
 			ar = ((ar + y) & 0xff) | (ar2 << 8);
 			break;
 		case A_INDY3:	// No page crossed
+#ifndef IS_CPU_1541
+			if (BALow) {
+				ar2 = 0xfe;		// SHA during DMA
+			}
+#endif
 			read_idle(ar);
 			Execute;
 		case A_INDY4:	// Page crossed
+#ifndef IS_CPU_1541
+			if (BALow) {
+				ar2 = 0xfe;		// SHA during DMA
+			}
+#endif
 			read_idle(ar);
 			ar += 0x100;
 			Execute;
@@ -1137,6 +1167,9 @@
 			Last;
 
 		case O_SHS:		// ar2 contains the high byte of the operand address
+			if ((ar & 0xff) < y) {	// Page crossed?
+				ar &= ((a & x) << 8) | 0xff;
+			}
 			write_byte(ar, (ar2 + 1) & (sp = a & x));
 			Last;
 

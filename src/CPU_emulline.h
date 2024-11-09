@@ -1359,7 +1359,11 @@ handle_int:
 
 		case 0x9b:	// SHS abs,Y
 			tmp2 = read_byte(pc + 1);
-			write_byte(read_adr_abs_y(), a & x & (tmp2 + 1));
+			adr = read_adr_abs_y();
+ 			if ((adr & 0xff) < y) {	// Page crossed?
+				adr &= ((a & x) << 8) | 0xff;
+			}
+			write_byte(adr, a & x & (tmp2 + 1));
 			sp = a & x;
 			ENDOP(5);
 
