@@ -129,11 +129,10 @@ Display::Display(C64 * c64) : the_c64(c64)
 	speedometer_string[0] = '\0';
 
 	// Create window and renderer
-	uint32_t flags;
-	if (ThePrefs.DisplayType == DISPTYPE_SCREEN) {
-	    flags = SDL_WINDOW_FULLSCREEN_DESKTOP;
-	} else {
-	    flags = SDL_WINDOW_RESIZABLE;
+	uint32_t flags = (ThePrefs.DisplayType == DISPTYPE_SCREEN) ? SDL_WINDOW_FULLSCREEN_DESKTOP : SDL_WINDOW_RESIZABLE;
+
+	if (ThePrefs.TestBench) {
+		flags |= SDL_WINDOW_HIDDEN;	// Hide window in regression test mode
 	}
 
 	int result = SDL_CreateWindowAndRenderer(
