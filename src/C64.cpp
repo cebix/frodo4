@@ -246,13 +246,36 @@ void C64::load_rom_files(const ROMPaths & p)
 void C64::init_memory()
 {
 	// Initialize RAM with powerup pattern
+	// Sampled from a PAL C64 (Assy 250425) with Fujitsu MB8264A-15 DRAM chips
 	uint8_t *p = RAM;
 	for (unsigned i = 0; i < 512; ++i) {
 		for (unsigned j = 0; j < 64; ++j) {
-			*p++ = 0;
+			if (j == 4 || j == 5) {
+				*p++ = (i & 1) ? 0x03 : 0x01;	// Unstable
+			} else if (j == 7) {
+				*p++ = 0x07;					// Unstable
+			} else if (j == 32 || j == 57 || j == 58) {
+				*p++ = 0xff;
+			} else if (j == 55) {
+				*p++ = (i & 1) ? 0x07 : 0x05;	// Unstable
+			} else if (j == 56) {
+				*p++ = (i & 1) ? 0x2f : 0x27;
+			} else if (j == 59) {
+				*p++ = 0x10;
+			} else if (j == 60) {
+				*p++ = 0x05;
+			} else {
+				*p++ = 0x00;
+			}
 		}
 		for (unsigned j = 0; j < 64; ++j) {
-			*p++ = 0xff;
+			if (j == 36) {
+				*p++ = 0xfb;
+			} else if (j == 63) {
+				*p++ = (i & 1) ? 0xff : 0x7c;	// Unstable
+			} else {
+				*p++ = 0xff;
+			}
 		}
 	}
 
