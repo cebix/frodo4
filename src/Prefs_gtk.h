@@ -37,6 +37,9 @@ namespace fs = std::filesystem;
 // GTK builder object
 static GtkBuilder *builder = nullptr;
 
+// Whether ShowEditor() was called for the first time
+static bool first_time = true;
+
 // Parameter of ShowEditor()
 static bool in_startup = true;
 
@@ -246,28 +249,26 @@ bool Prefs::ShowEditor(bool startup, fs::path prefs_path, fs::path snapshot_path
 	in_startup = startup;
 	prefs = this;
 
-	// Load user interface file on startup
-	if (startup) {
+	if (first_time) {
+		first_time = false;
+
+		// Load user interface file if called the first time
 		builder = gtk_builder_new();
-		GError *error = nullptr;
+		GError * error = nullptr;
 		if (gtk_builder_add_from_file(builder, DATADIR "Frodo.ui", &error) == 0) {
+
+			// No UI means no prefs editor
 			g_warning("Couldn't load preferences UI definition: %s\nPreferences editor not available.\n", error->message);
 			g_object_unref(builder);
 			builder = nullptr;
-		} else {
-			gtk_builder_connect_signals(builder, nullptr);
+			return startup;
 		}
-	}
 
-	// No UI means no prefs editor
-	if (builder == nullptr)
-		return startup;
+		gtk_builder_connect_signals(builder, nullptr);
+		prefs_win = GTK_WINDOW(gtk_builder_get_object(builder, "prefs_win"));
 
-	prefs_win = GTK_WINDOW(gtk_builder_get_object(builder, "prefs_win"));
-
-	if (startup) {
+		// Remove entire "Advanced" page in regular Frodo
 		if (IsFrodoSC) {
-			// Remove entire "Advanced" page
 			gtk_notebook_remove_page(GTK_NOTEBOOK(gtk_builder_get_object(builder, "tabs")), -1);
 		}
 
@@ -364,6 +365,13 @@ bool Prefs::ShowEditor(bool startup, fs::path prefs_path, fs::path snapshot_path
 		filter = gtk_file_filter_new();
 		gtk_file_filter_add_custom(filter, GTK_FILE_FILTER_FILENAME, allow_files_with_size, (gpointer) DRIVE_ROM_SIZE, nullptr);
 		gtk_file_chooser_add_filter(rom_chooser, filter);
+	}
+
+	// No UI means no prefs editor
+	if (builder == nullptr)
+		return startup;
+
+	if (startup) {
 
 		// Adjust menus for startup
 		gtk_menu_item_set_label(GTK_MENU_ITEM(gtk_builder_get_object(builder, "ok_menu")), "Start");
