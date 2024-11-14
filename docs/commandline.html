@@ -1,0 +1,44 @@
+<HTML>
+<HEAD>
+<TITLE>Command-Line Options</TITLE>
+</HEAD>
+<BODY>
+
+<H1>Command-Line Options</H1>
+
+<HR>
+
+<P>Frodo's settings are stored in an editable text file:
+
+<UL>
+<LI>Unix-like systems: <CODE>~/.local/share/cebix/Frodo/config</CODE>
+<LI>macOS: <CODE>/Users/<EM>&lt;user&gt;</EM>/Library/Application Support/cebix/Frodo/config</CODE>
+<LI>Windows: <CODE>C:\Users\<EM>&lt;user&gt;</EM>\AppData\Roaming\cebix\Frodo\config</CODE>
+</UL>
+
+<P>With the command-line option <CODE>-c <EM>&lt;file&gt;</EM></CODE> you
+can specify a different configuration file when starting Frodo:
+
+<P><KBD>Frodo -c /path/to/config</KBD>
+
+<P>You can also override individual settings from the file on the command
+line by giving them in the form
+<CODE><EM>&lt;Item&gt;</EM>=<EM>&lt;Value&gt;</EM></CODE>, for example:
+
+<P><KBD>Frodo FullScreen=true</KBD>
+
+<P>Frodo supports skipping the settings window entirely and starting
+directly from a disk or tape image, or a C64 BASIC program (PRG) file
+specified on the command line:
+
+<P><KBD>Frodo /path/to/disk.d64<BR>
+Frodo /path/to/program[.prg]</KBD>
+
+<P>This is equivalent to:</KBD>
+
+<P><KBD>Frodo DrivePath8=/path/to/disk.d64 AutoStart=true<BR>
+Frodo LoadProgram=/path/to/program[.prg] AutoStart=true</KBD>
+
+
+</BODY>
+</HTML>

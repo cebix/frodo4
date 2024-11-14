@@ -22,7 +22,9 @@
 
 #include "main.h"
 #include "C64.h"
+#include "Cartridge.h"
 #include "Display.h"
+#include "IEC.h"
 #include "Prefs.h"
 #include "Version.h"
 
@@ -56,7 +58,7 @@ void Frodo::ProcessArgs(int argc, char ** argv)
 
 	static GOptionEntry entries[] = {
 		{ "config", 'c', G_OPTION_FLAG_NONE, G_OPTION_ARG_FILENAME, &config_file, "Run with a different configuration file than the default", "FILE" },
-		{ G_OPTION_REMAINING, 0, G_OPTION_FLAG_NONE, G_OPTION_ARG_STRING_ARRAY, &remaining_args, nullptr, "[ITEM=VALUE…]" },
+		{ G_OPTION_REMAINING, 0, G_OPTION_FLAG_NONE, G_OPTION_ARG_STRING_ARRAY, &remaining_args, nullptr, "[ITEM=VALUE…] [image or program file]" },
 		{ nullptr, 0, G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE, nullptr, nullptr, nullptr }
 	};
 
@@ -76,9 +78,49 @@ void Frodo::ProcessArgs(int argc, char ** argv)
 	}
 
 	if (remaining_args) {
+		bool have_filepath = false;
+
 		for (auto arg = remaining_args; *arg != nullptr; ++arg) {
+
+			// One remaining arg can be a file to auto-start
+			if (! have_filepath) {
+				int type;
+
+				if (IsMountableFile(*arg, type)) {
+
+					have_filepath = true;
+					prefs_override.push_back(std::string("DrivePath8=") + *arg);
+					prefs_override.push_back("Cartridge=");		// No cartridge
+					prefs_override.push_back("AutoStart=true");
+					if (type == FILE_IMAGE || type == FILE_GCR_IMAGE) {
+						prefs_override.push_back("Emul1541Proc=true");
+					} else if (type == FILE_ARCH) {
+						prefs_override.push_back("Emul1541Proc=false");
+					}
+					continue;
+
+				} else if (IsCartridgeFile(*arg)) {
+
+					have_filepath = true;
+					prefs_override.push_back(std::string("Cartridge=") + *arg);
+					prefs_override.push_back("DrivePath8=");	// No disk
+					prefs_override.push_back("AutoStart=true");
+					continue;
+
+				} else if (IsBASICProgram(*arg)) {
+
+					have_filepath = true;
+					prefs_override.push_back(std::string("LoadProgram=") + *arg);
+					prefs_override.push_back("DrivePath8=");	// No disk
+					prefs_override.push_back("Cartridge=");		// No cartridge
+					prefs_override.push_back("AutoStart=true");
+					continue;
+				}
+			}
+
 			prefs_override.push_back(*arg);
 		}
+
 		g_strfreev(remaining_args);
 	}
 #endif
