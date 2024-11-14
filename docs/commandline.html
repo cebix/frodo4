@@ -28,15 +28,17 @@ line by giving them in the form
 <P><KBD>Frodo FullScreen=true</KBD>
 
 <P>Frodo supports skipping the settings window entirely and starting
-directly from a disk or tape image, or a C64 BASIC program (PRG) file
-specified on the command line:
+directly from a disk or tape image, a cartridge file, or a C64 BASIC program
+(PRG) file specified on the command line:
 
 <P><KBD>Frodo /path/to/disk.d64<BR>
+Frodo /path/to/cartridge.crt<BR>
 Frodo /path/to/program[.prg]</KBD>
 
 <P>This is equivalent to:</KBD>
 
 <P><KBD>Frodo DrivePath8=/path/to/disk.d64 AutoStart=true<BR>
+Frodo Cartridge=/path/to/cartridge.crt<BR>
 Frodo LoadProgram=/path/to/program[.prg] AutoStart=true</KBD>
 
 

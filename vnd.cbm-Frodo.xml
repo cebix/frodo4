@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/vnd.cbm.c64-disk">
+    <comment>C64 disk image</comment>
+    <magic>
+      <match type="string" offset="0" value="C\x15\x41\x64"/>
+      <match type="string" offset="0" value="GCR-1541"/>
+    </magic>
+    <glob pattern="*.d64"/>
+    <glob pattern="*.x64"/>
+    <glob pattern="*.g64"/>
+  </mime-type>
+  <mime-type type="application/vnd.cbm.c64-tape">
+    <comment>C64 tape image</comment>
+    <magic>
+      <match type="string" offset="0" value="C64S tape file"/>
+      <match type="string" offset="0" value="C64S tape image"/>
+      <match type="string" offset="0" value="C64 tape image"/>
+      <match type="string" offset="0" value="C64-TAPE-RAW"/>
+    </magic>
+    <glob pattern="*.t64"/>
+    <glob pattern="*.tap"/>
+  </mime-type>
+  <mime-type type="application/vnd.cbm.c64-cartridge">
+    <comment>C64 cartridge</comment>
+    <magic>
+      <match type="string" offset="0" value="C64 CARTRIDGE   "/>
+    </magic>
+    <glob pattern="*.crt"/>
+  </mime-type>
+  <mime-type type="application/vnd.cbm.c64-program">
+    <comment>C64 program</comment>
+    <magic>
+      <match type="string" offset="0" value="\x01\x08"/>
+      <match type="string" offset="0" value="C64File\0"/>
+    </magic>
+    <glob pattern="*.prg"/>
+    <glob pattern="*.p00"/>
+  </mime-type>
+</mime-info>

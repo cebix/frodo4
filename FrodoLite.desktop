@@ -1,7 +1,8 @@
 [Desktop Entry]
 Name=Frodo Lite
 Comment=Simple Commodore 64 emulator
-Exec=FrodoLite
+Exec=FrodoLite %f
 Icon=Frodo
 Type=Application
 Categories=Game;Emulator;
+MimeType=application/vnd.cbm.c64-disk;application/vnd.cbm.c64-tape;application/vnd.cbm.c64-cartridge;application/vnd.cbm.c64-program

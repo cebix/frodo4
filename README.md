@@ -136,10 +136,10 @@ Getting software to load and run from the simulated disk drive also usually
 involves typing in some BASIC commands. Luckily, Frodo has an “auto-start”
 feature which types in the necessary commands for you.
 
-Click on the “Auto-Start From Drive 8” button to close the settings window and
-start the emulator with the .D64 image you have mounted in drive number 8. You
-will now see the beautiful, blue startup screen of the Commodore 64 with the
-iconic “READY.” prompt and a LOAD command executing.
+Click on the “Auto-Start Drive 8” button to close the settings window and
+start the emulator with the .D64 image you have mounted in drive number 8.
+You will now see the beautiful, blue startup screen of the Commodore 64 with
+the iconic “READY.” prompt and a LOAD command executing.
 
 Important key combinations inside the emulator window:
 

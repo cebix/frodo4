@@ -39,9 +39,11 @@ make DESTDIR=${RPM_BUILD_ROOT} install
 
 %post
 update-desktop-database &> /dev/null || :
+update-mime-database %{_datadir}/mime/packages &> /dev/null || :
 
 %postun
 update-desktop-database &> /dev/null || :
+update-mime-database %{_datadir}/mime/packages &> /dev/null || :
 
 %files
 %defattr(-,root,root)
@@ -54,3 +56,4 @@ update-desktop-database &> /dev/null || :
 %{_datadir}/applications/Frodo.desktop
 %{_datadir}/applications/FrodoLite.desktop
 %{_datadir}/icons/hicolor/128x128/apps/Frodo.png
+%{_datadir}/mime/packages/vnd.cbm-Frodo.xml
