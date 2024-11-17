@@ -77,8 +77,9 @@ enum {
 
 // Mountable file types
 enum {
-	FILE_IMAGE,			// Disk image file, handled by ImageDrive
-	FILE_GCR_IMAGE,		// GCR disk image file,  requires full 1541 emulation
+	FILE_DISK_IMAGE,	// Disk image file, handled by ImageDrive
+	FILE_GCR_IMAGE,		// GCR disk image file, requires full 1541 emulation
+	FILE_TAPE_IMAGE,	// Tape image file, handled by Datasette emulation
 	FILE_ARCH			// Archive file, handled by ArchDrive
 };
 
@@ -256,7 +257,7 @@ extern char petscii2ascii(uint8_t c);
 // Convert PETSCII string to ASCII string
 extern void petscii2ascii(char *dest, const uint8_t *src, int max);
 
-// Check whether file is a mountable disk image or archive file, return type
+// Check whether file is a mountable disk/tape image or archive file, return type
 extern bool IsMountableFile(const std::string & path, int & ret_type);
 
 // Read directory of mountable disk image or archive file into c64_dir_entry vector

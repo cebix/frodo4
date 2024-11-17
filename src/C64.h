@@ -68,6 +68,7 @@ class IEC;
 class Cartridge;
 class MOS6502_1541;
 class GCRDisk;
+class Tape;
 struct Snapshot;
 
 
@@ -90,7 +91,8 @@ public:
 	uint32_t CycleCounter() const { return cycle_counter; }
 
 	void NewPrefs(const Prefs *prefs);
-	void MountDrive8(bool emul_1541_proc, const char * path = nullptr);
+	void MountDrive8(bool emul_1541_proc, const char * path);
+	void MountDrive1(const char * path = nullptr);
 	void InsertCartridge(const std::string & path);
 
 	void MakeSnapshot(Snapshot * s, bool instruction_boundary = false);
@@ -107,7 +109,10 @@ public:
 	void JoystickAdded(int32_t index);
 	void JoystickRemoved(int32_t instance_id);
 
+	void SetTapePlayButton(bool pressed);
 	void SetTapeControllerButton(bool pressed);
+	bool TapePlaying() const;
+	int TapePercent() const;
 
 	void SetDriveLEDs(int l0, int l1, int l2, int l3);
 	void ShowNotification(std::string s);
@@ -134,6 +139,8 @@ public:
 	MOS6502_1541 * TheCPU1541;	// 1541 objects
 	GCRDisk * TheGCRDisk;
 
+	Tape * TheTape;				// Datasette object
+
 	// Builtin ROM data
 	static const uint8_t BuiltinBasicROM[BASIC_ROM_SIZE];
 	static const uint8_t BuiltinKernalROM[KERNAL_ROM_SIZE];
@@ -149,6 +156,9 @@ private:
 	void resume();
 
 	void patch_roms(bool fast_reset, bool emul_1541_proc, bool auto_start);
+
+	void write_to_screen(const char * str);
+	void set_keyboard_buffer(const char * str);
 
 #ifdef FRODO_SC
 	bool emulate_c64_cycle();

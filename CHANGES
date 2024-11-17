@@ -1,6 +1,9 @@
 Changes from V4.4 to V4.5:
- - Added ability to auto-start D64/G64/T64 images, cartridges, and C64 BASIC
-   program files by specifying them on the command line
+ - Note: The snapshot file format has changed. This version of Frodo will
+   not read snapshot files from earlier versions.
+ - Added Datasette tape drive emulation (TAP files)
+ - Added ability to auto-start D64/G64/T64/TAP images, cartridges, and C64
+   BASIC program files by specifying them on the command line
  - Unix: Added file type associations to let Frodo start disk/tape image
    files, cartridges, and C64 program files from the desktop
  - Windwos: Fixed some portability problems

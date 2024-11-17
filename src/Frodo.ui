@@ -30,6 +30,11 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
       <pattern>*.crt</pattern>
     </patterns>
   </object>
+  <object class="GtkFileFilter" id="C64 Tape Image Files (*.tap)">
+    <patterns>
+      <pattern>*.tap</pattern>
+    </patterns>
+  </object>
   <object class="GtkAboutDialog" id="about_win">
     <property name="can-focus">False</property>
     <property name="window-position">center-on-parent</property>
@@ -338,7 +343,7 @@ Lutz Vieweg</property>
                       <object class="GtkLabel">
                         <property name="visible">True</property>
                         <property name="can-focus">False</property>
-                        <property name="label" translatable="yes">1541 Emulation:</property>
+                        <property name="label" translatable="yes">Disk Drive Emulation Mode:</property>
                       </object>
                     </child>
                   </object>
@@ -582,7 +587,7 @@ Lutz Vieweg</property>
                       <object class="GtkLabel">
                         <property name="visible">True</property>
                         <property name="can-focus">False</property>
-                        <property name="label" translatable="yes">Drive Paths:</property>
+                        <property name="label" translatable="yes">Disk Drive Paths:</property>
                       </object>
                     </child>
                   </object>
@@ -590,6 +595,84 @@ Lutz Vieweg</property>
                     <property name="expand">False</property>
                     <property name="fill">True</property>
                     <property name="position">1</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkFrame" id="tape_path_frame">
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                    <property name="margin-start">4</property>
+                    <property name="margin-end">4</property>
+                    <property name="label-xalign">0</property>
+                    <property name="shadow-type">in</property>
+                    <child>
+                      <object class="GtkAlignment">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="top-padding">4</property>
+                        <property name="bottom-padding">4</property>
+                        <property name="left-padding">12</property>
+                        <child>
+                          <object class="GtkBox">
+                            <property name="visible">True</property>
+                            <property name="can-focus">False</property>
+                            <property name="spacing">4</property>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="visible">True</property>
+                                <property name="can-focus">False</property>
+                                <property name="label" translatable="yes">Drive 1:</property>
+                              </object>
+                              <packing>
+                                <property name="expand">False</property>
+                                <property name="fill">True</property>
+                                <property name="position">0</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkFileChooserButton" id="tape_path">
+                                <property name="visible">True</property>
+                                <property name="can-focus">False</property>
+                                <property name="filter">C64 Tape Image Files (*.tap)</property>
+                                <property name="title" translatable="yes">Choose C64 Tape Image File</property>
+                                <signal name="file-set" handler="on_tape_path_file_set" swapped="no"/>
+                              </object>
+                              <packing>
+                                <property name="expand">False</property>
+                                <property name="fill">True</property>
+                                <property name="position">1</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkButton" id="tape_eject">
+                                <property name="label" translatable="yes">Eject</property>
+                                <property name="visible">True</property>
+                                <property name="can-focus">True</property>
+                                <property name="receives-default">True</property>
+                                <signal name="clicked" handler="on_tape_eject_clicked" swapped="no"/>
+                              </object>
+                              <packing>
+                                <property name="expand">False</property>
+                                <property name="fill">True</property>
+                                <property name="position">2</property>
+                              </packing>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child type="label">
+                      <object class="GtkLabel">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">Tape Drive Path:</property>
+                      </object>
+                    </child>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">True</property>
+                    <property name="position">2</property>
                   </packing>
                 </child>
                 <child>
@@ -629,7 +712,7 @@ Lutz Vieweg</property>
                   <packing>
                     <property name="expand">False</property>
                     <property name="fill">True</property>
-                    <property name="position">2</property>
+                    <property name="position">3</property>
                   </packing>
                 </child>
               </object>
@@ -638,7 +721,7 @@ Lutz Vieweg</property>
               <object class="GtkLabel">
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
-                <property name="label" translatable="yes">Disk Drives</property>
+                <property name="label" translatable="yes">Drives</property>
               </object>
               <packing>
                 <property name="tab-fill">False</property>
@@ -1257,7 +1340,7 @@ Lutz Vieweg</property>
                                 <property name="visible">True</property>
                                 <property name="can-focus">False</property>
                                 <property name="filter">C64 Cartridge Files (*.crt)</property>
-                                <property name="title" translatable="yes"/>
+                                <property name="title" translatable="yes">Choose C64 Cartridge File</property>
                               </object>
                               <packing>
                                 <property name="left-attach">1</property>

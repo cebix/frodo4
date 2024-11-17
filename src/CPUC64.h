@@ -50,6 +50,7 @@ class MOS6526_1;
 class MOS6526_2;
 class Cartridge;
 class IEC;
+class Tape;
 struct MOS6510State;
 
 
@@ -59,7 +60,8 @@ public:
 	MOS6510(C64 * c64, uint8_t * Ram, uint8_t * Basic, uint8_t * Kernal, uint8_t * Char, uint8_t * Color);
 
 	// Set pointers to other objects
-	void SetChips(MOS6569 * vic, MOS6581 * sid, MOS6526_1 * cia1, MOS6526_2 * cia2, Cartridge * cart, IEC * iec)
+	void SetChips(MOS6569 * vic, MOS6581 * sid, MOS6526_1 * cia1, MOS6526_2 * cia2,
+	              Cartridge * cart, IEC * iec, Tape * tape)
 	{
 		the_vic = vic;
 		the_sid = sid;
@@ -67,6 +69,7 @@ public:
 		the_cia2 = cia2;
 		the_cart = cart;
 		the_iec = iec;
+		the_tape = tape;
 	}
 
 #ifdef FRODO_SC
@@ -95,7 +98,7 @@ public:
 	void ClearNMI();
 
 	void SetTapeSense(bool pressed);
-	bool TapeMotorOn() const;
+	bool TapeMotorOn() const { return tape_motor; }
 
 	uint16_t GetPC() const { return pc; }
 
@@ -132,6 +135,7 @@ private:
 	MOS6526_2 * the_cia2;	// Pointer to CIA 2 object
 	Cartridge * the_cart;	// Pointer to cartridge object
 	IEC * the_iec;			// Pointer to drive array
+	Tape * the_tape;		// Pointer to datasette object
 
 	uint8_t * ram;			// Pointer to main RAM
 	uint8_t * basic_rom;	// Pointers to ROMs
@@ -149,6 +153,8 @@ private:
 	uint16_t pc;
 
 	bool jammed;			// Flag: CPU jammed, user notified
+
+	bool tape_motor;		// Flag: Tape motor turned on
 
 #ifdef FRODO_SC
 	void check_interrupts();

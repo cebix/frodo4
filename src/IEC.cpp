@@ -51,6 +51,7 @@
 #include "C64.h"
 #include "main.h"
 #include "Prefs.h"
+#include "Tape.h"
 #include "Version.h"
 
 #include <filesystem>
@@ -90,7 +91,7 @@ Drive *IEC::create_drive(unsigned num, const std::string & path)
 	// Not a directory, check for mountable file type
 	int type;
 	if (IsMountableFile(path, type)) {
-		if (type == FILE_IMAGE) {
+		if (type == FILE_DISK_IMAGE) {
 			// Mount disk image
 			return new ImageDrive(this, path);
 		} else if (type == FILE_ARCH) {
@@ -983,8 +984,8 @@ void petscii2ascii(char *dest, const uint8_t *src, int n)
 
 bool IsMountableFile(const std::string & path, int & ret_type)
 {
-	// Reject directories
-	if (fs::is_directory(path))
+	// Reject empty path and directories
+	if (path.empty() || fs::is_directory(path))
 		return false;
 
 	// Read header and determine file size
@@ -1008,8 +1009,11 @@ bool IsMountableFile(const std::string & path, int & ret_type)
 	if (IsGCRImageFile(path, header, size)) {
 		ret_type = FILE_GCR_IMAGE;
 		return true;
-	} else if (IsImageFile(path, header, size)) {
-		ret_type = FILE_IMAGE;
+	} else if (IsDiskImageFile(path, header, size)) {
+		ret_type = FILE_DISK_IMAGE;
+		return true;
+	} else if (IsTapeImageFile(path, header, size)) {
+		ret_type = FILE_TAPE_IMAGE;
 		return true;
 	} else if (IsArchFile(path, header, size)) {
 		ret_type = FILE_ARCH;
@@ -1029,8 +1033,8 @@ bool ReadDirectory(const std::string & path, int type, std::vector<c64_dir_entry
 {
 	vec.clear();
 	switch (type) {
-		case FILE_IMAGE:
-			return ReadImageDirectory(path, vec);
+		case FILE_DISK_IMAGE:
+			return ReadDiskImageDirectory(path, vec);
 		case FILE_ARCH:
 			return ReadArchDirectory(path, vec);
 		default:

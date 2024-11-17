@@ -174,6 +174,9 @@ void Prefs::ParseItem(std::string item)
 	} else if (keyword == "DrivePath11") {
 		DrivePath[3] = value;
 
+	} else if (keyword == "TapePath") {
+		TapePath = value;
+
 	} else if (keyword == "ROMSetDef") {
 		if (std::ranges::count(value, ';') == 4) {
 			ROMPaths p;
@@ -337,6 +340,8 @@ bool Prefs::Save(fs::path prefs_path)
 	for (unsigned i = 0; i < 4; ++i) {
 		file << "DrivePath" << (i+8) << " = " << DrivePath[i] << std::endl;
 	}
+
+	file << "TapePath = " << TapePath << std::endl;
 
 	for (const auto & [name, paths] : ROMSetDefs) {
 		file << "ROMSetDef = " << name << ";" << paths.BasicROMPath << ";" << paths.KernalROMPath << ";" << paths.CharROMPath << ";" << paths.DriveROMPath << std::endl;

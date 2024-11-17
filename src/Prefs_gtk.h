@@ -110,7 +110,21 @@ static const char * shortcuts_win_ui =
 	            "<object class=\"GtkShortcutsShortcut\">"
 	              "<property name=\"visible\">1</property>"
 	              "<property name=\"accelerator\">&lt;ctrl&gt;F12</property>"
-	              "<property name=\"title\">Reset C64 and auto-start from drive 8</property>"
+	              "<property name=\"title\">Reset C64 and auto-start from drive 1 or 8</property>"
+	            "</object>"
+	          "</child>"
+	          "<child>"
+	            "<object class=\"GtkShortcutsShortcut\">"
+	              "<property name=\"visible\">1</property>"
+	              "<property name=\"accelerator\">F9</property>"
+	              "<property name=\"title\">PLAY button on tape drive 1</property>"
+	            "</object>"
+	          "</child>"
+	          "<child>"
+	            "<object class=\"GtkShortcutsShortcut\">"
+	              "<property name=\"visible\">1</property>"
+	              "<property name=\"accelerator\">&lt;shift&gt;F9</property>"
+	              "<property name=\"title\">STOP button on tape drive 1</property>"
 	            "</object>"
 	          "</child>"
 	          "<child>"
@@ -267,9 +281,15 @@ bool Prefs::ShowEditor(bool startup, fs::path prefs_path, fs::path snapshot_path
 		gtk_builder_connect_signals(builder, nullptr);
 		prefs_win = GTK_WINDOW(gtk_builder_get_object(builder, "prefs_win"));
 
-		// Remove entire "Advanced" page in regular Frodo
 		if (IsFrodoSC) {
+
+			// Remove "Advanced" page in regular Frodo
 			gtk_notebook_remove_page(GTK_NOTEBOOK(gtk_builder_get_object(builder, "tabs")), -1);
+
+		} else {
+
+			// Hide "Tape Drive Path" frame in Frodo Lite
+			gtk_widget_hide(GTK_WIDGET(gtk_builder_get_object(builder, "tape_path_frame")));
 		}
 
 		// Create dialog for loading/saving snapshot files
@@ -490,6 +510,10 @@ static void set_values()
 	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "drive10_path")), prefs->DrivePath[2].c_str());
 	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "drive11_path")), prefs->DrivePath[3].c_str());
 
+	if (IsFrodoSC) {
+		gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "tape_path")), prefs->TapePath.c_str());
+	}
+
 	gtk_combo_box_set_active(GTK_COMBO_BOX(gtk_builder_get_object(builder, "display_type")), prefs->DisplayType);
 	gtk_combo_box_set_active(GTK_COMBO_BOX(gtk_builder_get_object(builder, "scaling_numerator")), prefs->ScalingNumerator - 1);
 	gtk_combo_box_set_active(GTK_COMBO_BOX(gtk_builder_get_object(builder, "palette")), prefs->Palette);
@@ -565,6 +589,8 @@ static std::string get_selected_rom_set()
 
 static void get_values()
 {
+	gchar * path;
+
 	prefs->Emul1541Proc = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "emul1541_proc")));
 	prefs->MapSlash = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "map_slash")));
 
@@ -572,6 +598,14 @@ static void get_values()
 	get_drive_path(1, "drive9_path");
 	get_drive_path(2, "drive10_path");
 	get_drive_path(3, "drive11_path");
+
+	path = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "tape_path")));
+	if (path) {
+		prefs->TapePath = path;
+		g_free(path);
+	} else {
+		prefs->TapePath.clear();
+	}
 
 	prefs->DisplayType = gtk_combo_box_get_active(GTK_COMBO_BOX(gtk_builder_get_object(builder, "display_type")));
 	prefs->ScalingNumerator = gtk_combo_box_get_active(GTK_COMBO_BOX(gtk_builder_get_object(builder, "scaling_numerator"))) + 1;
@@ -593,7 +627,7 @@ static void get_values()
 	prefs->FastReset = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gtk_builder_get_object(builder, "fast_reset")));
 
 	prefs->REUType = gtk_combo_box_get_active(GTK_COMBO_BOX(gtk_builder_get_object(builder, "reu_type")));
-	gchar *path = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "cartridge_path")));
+	path = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "cartridge_path")));
 	if (path) {
 		prefs->CartridgePath = path;
 		g_free(path);
@@ -639,14 +673,21 @@ static void ghost_widgets()
 
 	ghost_widget("cartridge_path", prefs->REUType != REU_NONE);
 
-	// Auto-start is available if drive 8 has a path
-	gchar * path = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "drive8_path")));
-	if (path) {
-		ghost_widget("auto_start_button", false);
-		g_free(path);
+	// Auto-start is available if drive 8 or 1 has a path
+	GtkButton * auto_start = GTK_BUTTON(gtk_builder_get_object(builder, "auto_start_button"));
+	gchar * drive8_path = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "drive8_path")));
+	gchar * tape_path = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "tape_path")));
+	if (drive8_path) {
+		gtk_button_set_label(auto_start, "Auto-Start Drive 8");
+		gtk_widget_set_sensitive(GTK_WIDGET(auto_start), true);
+	} else if (tape_path) {
+		gtk_button_set_label(auto_start, "Auto-Start Drive 1");
+		gtk_widget_set_sensitive(GTK_WIDGET(auto_start), true);
 	} else {
-		ghost_widget("auto_start_button", true);
+		gtk_widget_set_sensitive(GTK_WIDGET(auto_start), false);
 	}
+	g_free(drive8_path);
+	g_free(tape_path);
 }
 
 
@@ -1335,7 +1376,7 @@ extern "C" G_MODULE_EXPORT void on_create_image(GtkMenuItem *menuitem, gpointer 
 	gint res = gtk_dialog_run(GTK_DIALOG(create_image_dialog));
 	if (res == GTK_RESPONSE_ACCEPT) {
 		filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(create_image_dialog));
-		save_ok = CreateImageFile(filename);
+		save_ok = CreateDiskImageFile(filename);
 	}
 
 	gtk_widget_hide(create_image_dialog);
@@ -1408,16 +1449,16 @@ extern "C" G_MODULE_EXPORT void on_emul1541_proc_toggled(GtkToggleButton *button
 
 extern "C" G_MODULE_EXPORT void on_drive_path_file_set(GtkFileChooserButton *button, gpointer user_data)
 {
-	ghost_widgets();	// Auto-start
+	ghost_widgets();	// Update auto-start button
 
 	gchar * path = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(button));
 	if (path == nullptr)
 		return;
 
 	int type;
-	if (! IsMountableFile(path, type)) {
+	if (! IsMountableFile(path, type) || type == FILE_TAPE_IMAGE) {
 
-		// Not a disk image file, mount the parent directory instead
+		// Not a disk image or archive file, mount the parent directory instead
 		gchar * dir = g_path_get_dirname(path);
 		gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(button), dir);
 		g_free(dir);
@@ -1425,10 +1466,15 @@ extern "C" G_MODULE_EXPORT void on_drive_path_file_set(GtkFileChooserButton *but
 	g_free(path);
 }
 
+extern "C" G_MODULE_EXPORT void on_tape_path_file_set(GtkFileChooserButton *button, gpointer user_data)
+{
+	ghost_widgets();	// Update auto-start button
+}
+
 extern "C" G_MODULE_EXPORT void on_drive8_eject_clicked(GtkButton *button, gpointer user_data)
 {
 	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "drive8_path")), "");
-	ghost_widgets();	// Auto-start
+	ghost_widgets();	// Update auto-start button
 }
 
 extern "C" G_MODULE_EXPORT void on_drive9_eject_clicked(GtkButton *button, gpointer user_data)
@@ -1446,28 +1492,34 @@ extern "C" G_MODULE_EXPORT void on_drive11_eject_clicked(GtkButton *button, gpoi
 	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "drive11_path")), "");
 }
 
+extern "C" G_MODULE_EXPORT void on_tape_eject_clicked(GtkButton *button, gpointer user_data)
+{
+	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "tape_path")), "");
+	ghost_widgets();	// Update auto-start button
+}
+
 extern "C" G_MODULE_EXPORT void on_drive8_next_disk_clicked(GtkButton *button, gpointer user_data)
 {
 	get_drive_path(0, "drive8_path");
-	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "drive8_path")), NextImageFile(prefs->DrivePath[0]).c_str());
+	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "drive8_path")), NextDiskImageFile(prefs->DrivePath[0]).c_str());
 }
 
 extern "C" G_MODULE_EXPORT void on_drive9_next_disk_clicked(GtkButton *button, gpointer user_data)
 {
 	get_drive_path(1, "drive9_path");
-	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "drive9_path")), NextImageFile(prefs->DrivePath[1]).c_str());
+	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "drive9_path")), NextDiskImageFile(prefs->DrivePath[1]).c_str());
 }
 
 extern "C" G_MODULE_EXPORT void on_drive10_next_disk_clicked(GtkButton *button, gpointer user_data)
 {
 	get_drive_path(2, "drive10_path");
-	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "drive10_path")), NextImageFile(prefs->DrivePath[2]).c_str());
+	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "drive10_path")), NextDiskImageFile(prefs->DrivePath[2]).c_str());
 }
 
 extern "C" G_MODULE_EXPORT void on_drive11_next_disk_clicked(GtkButton *button, gpointer user_data)
 {
 	get_drive_path(3, "drive11_path");
-	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "drive11_path")), NextImageFile(prefs->DrivePath[3]).c_str());
+	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "drive11_path")), NextDiskImageFile(prefs->DrivePath[3]).c_str());
 }
 
 extern "C" G_MODULE_EXPORT void on_display_type_changed(GtkComboBox *box, gpointer user_data)

@@ -58,6 +58,7 @@
 #include "CIA.h"
 #include "REU.h"
 #include "IEC.h"
+#include "Tape.h"
 #include "Version.h"
 
 #include <format>
@@ -83,7 +84,9 @@ MOS6510::MOS6510(C64 *c64, uint8_t *Ram, uint8_t *Basic, uint8_t *Kernal, uint8_
 
 	nmi_triggered = false;
 
+	tape_motor = false;
 	tape_sense = false;
+
 	borrowed_cycles = 0;
 	dfff_byte = 0x55;
 }
@@ -236,17 +239,6 @@ void MOS6510::SetTapeSense(bool pressed)
 
 
 /*
- *  Get tape motor status
- */
-
-bool MOS6510::TapeMotorOn() const
-{
-	uint8_t port = ~ram[0] | ram[1];
-	return (port & 0x20) == 0;
-}
-
-
-/*
  *  Memory configuration has probably changed
  */
 
@@ -270,6 +262,12 @@ void MOS6510::new_config()
 		char_in = (port & 2) && !(port & 4);
 	}
 	io_in = (port & 3) && (port & 4);
+
+	bool new_tape_motor = (port & 0x20) == 0;
+	if (tape_motor != new_tape_motor) {
+		tape_motor = new_tape_motor;
+		// Datasette is not supported in Frodo Lite
+	}
 }
 
 

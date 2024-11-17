@@ -1849,7 +1849,7 @@ static bool is_x64_file(const uint8_t *header, long size)
 	return memcmp(header, "C\x15\x41\x64\x01\x02", 6) == 0;
 }
 
-bool IsImageFile(const std::string & path, const uint8_t *header, long size)
+bool IsDiskImageFile(const std::string & path, const uint8_t *header, long size)
 {
 	return is_d64_file(header, size) || is_x64_file(header, size);
 }
@@ -1956,7 +1956,7 @@ static bool parse_image_file(FILE *f, image_file_desc &desc)
  *  returns false on error
  */
 
-bool ReadImageDirectory(const std::string & path, std::vector<c64_dir_entry> &vec)
+bool ReadDiskImageDirectory(const std::string & path, std::vector<c64_dir_entry> &vec)
 {
 	bool result = false;
 
@@ -2027,7 +2027,7 @@ done:	fclose(f);
  *  Create new blank disk image file, returns false on error
  */
 
-bool CreateImageFile(const std::string & path)
+bool CreateDiskImageFile(const std::string & path)
 {
 	// Open file for writing
 	FILE *f = fopen(path.c_str(), "wb");
@@ -2102,7 +2102,7 @@ static std::string next_image_file_name(const std::string & path)
 	return path;
 }
 
-std::string NextImageFile(const std::string & path)
+std::string NextDiskImageFile(const std::string & path)
 {
 	std::string candidate = next_image_file_name(path);
 

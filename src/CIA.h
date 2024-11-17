@@ -53,6 +53,8 @@ public:
 	uint8_t PAOut() const { return pra | ~ddra; }
 	uint8_t PBOut() const { return prb | ~ddrb; }
 
+	void TriggerFlagLine();
+
 protected:
 	uint8_t read_register(uint8_t reg);
 	void write_register(uint8_t reg, uint8_t byte);
@@ -244,6 +246,16 @@ inline void MOS6526::set_int_flag(uint8_t flag)
 		trigger_irq();
 	}
 #endif
+}
+
+
+/*
+ *  Set FLAG interrupt flag
+ */
+
+inline void MOS6526::TriggerFlagLine()
+{
+	set_int_flag(0x10);
 }
 
 

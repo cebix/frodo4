@@ -89,14 +89,18 @@ void Frodo::ProcessArgs(int argc, char ** argv)
 				if (IsMountableFile(*arg, type)) {
 
 					have_filepath = true;
-					prefs_override.push_back(std::string("DrivePath8=") + *arg);
-					prefs_override.push_back("Cartridge=");		// No cartridge
-					prefs_override.push_back("AutoStart=true");
-					if (type == FILE_IMAGE || type == FILE_GCR_IMAGE) {
+					if (type == FILE_DISK_IMAGE || type == FILE_GCR_IMAGE) {
+						prefs_override.push_back(std::string("DrivePath8=") + *arg);
 						prefs_override.push_back("Emul1541Proc=true");
 					} else if (type == FILE_ARCH) {
+						prefs_override.push_back(std::string("DrivePath8=") + *arg);
 						prefs_override.push_back("Emul1541Proc=false");
+					} else if (type == FILE_TAPE_IMAGE) {
+						prefs_override.push_back("DrivePath8=");	// No disk
+						prefs_override.push_back(std::string("TapePath=") + *arg);
 					}
+					prefs_override.push_back("Cartridge=");			// No cartridge
+					prefs_override.push_back("AutoStart=true");
 					continue;
 
 				} else if (IsCartridgeFile(*arg)) {
@@ -111,7 +115,6 @@ void Frodo::ProcessArgs(int argc, char ** argv)
 
 					have_filepath = true;
 					prefs_override.push_back(std::string("LoadProgram=") + *arg);
-					prefs_override.push_back("DrivePath8=");	// No disk
 					prefs_override.push_back("Cartridge=");		// No cartridge
 					prefs_override.push_back("AutoStart=true");
 					continue;

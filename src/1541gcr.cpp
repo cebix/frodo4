@@ -185,7 +185,7 @@ void GCRDisk::open_image_file(const std::string & filepath)
 	int type;
 	if (!IsMountableFile(filepath, type))
 		return;
-	if (type != FILE_IMAGE && type != FILE_GCR_IMAGE)
+	if (type != FILE_DISK_IMAGE && type != FILE_GCR_IMAGE)
 		return;
 
 	// Try opening the file for reading/writing first, then for reading only

@@ -93,6 +93,7 @@ public:
 	int FloppyCycles;			// Available 1541 CPU cycles per line
 
 	std::string DrivePath[4];	// Path for drive 8..11
+	std::string TapePath;		// Path for drive 1
 
 	int SIDType;				// SID emulation type
 	int REUType;				// Type of RAM expansion

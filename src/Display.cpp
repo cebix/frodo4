@@ -70,6 +70,7 @@ static const char * led_image[8] = {
 
 #define MCHAR_DRIVE_L "\x07"
 #define MCHAR_DRIVE_R "\x08"
+#define MCHAR_PLAY "\x0a"
 #define MCHAR_REWIND "\x0b"
 #define MCHAR_FORWARD "\x0c"
 #define MCHAR_PAUSE "\x0d"
@@ -403,10 +404,11 @@ void Display::draw_overlays()
 
 	if (ThePrefs.ShowLEDs) {
 
-		// Draw speedometer/LEDs
+		// Draw speedometer
 		draw_string(5, DISPLAY_Y - 8, speedometer_string, shadow_gray);
 		draw_string(4, DISPLAY_Y - 9, speedometer_string, shine_gray);
 
+		// Draw disk drive LEDs
 		for (unsigned i = 0; i < 4; ++i) {
 			if (led_state[i] != LED_OFF) {
 				static const char * drive_str[4] = {
@@ -443,7 +445,22 @@ void Display::draw_overlays()
 			}
 		}
 
-		// Draw play mode marker
+		// Draw tape indicator
+		if (the_c64->TapePlaying()) {
+			draw_string(DISPLAY_X - 80, DISPLAY_Y -  9, MCHAR_TAPE, shadow_gray);
+			draw_string(DISPLAY_X - 81, DISPLAY_Y - 10, MCHAR_TAPE, shine_gray);
+
+			draw_string(DISPLAY_X - 68, DISPLAY_Y -  9, MCHAR_PLAY, shadow_gray);
+			draw_string(DISPLAY_X - 69, DISPLAY_Y - 10, MCHAR_PLAY, green);
+
+			char str[16];
+			snprintf(str, sizeof(str), "%d%%", the_c64->TapePercent());
+
+			draw_string(DISPLAY_X - 58, DISPLAY_Y -  9, str, shadow_gray);
+			draw_string(DISPLAY_X - 59, DISPLAY_Y - 10, str, shine_gray);
+		}
+
+		// Draw play mode indicator
 		PlayMode mode = the_c64->GetPlayMode();
 		if (mode != PLAY_MODE_PLAY) {
 			const char * str;
@@ -462,7 +479,7 @@ void Display::draw_overlays()
 					break;
 			};
 			if (str) {
-				draw_string(DISPLAY_X - 11, DISPLAY_Y - 9, str, shadow_gray);
+				draw_string(DISPLAY_X - 11, DISPLAY_Y -  9, str, shadow_gray);
 				draw_string(DISPLAY_X - 12, DISPLAY_Y - 10, str, shine_gray);
 			}
 		}
@@ -737,6 +754,18 @@ void Display::PollKeyboard(uint8_t *key_matrix, uint8_t *rev_matrix, uint8_t *jo
 
 				switch (event.key.keysym.scancode) {
 
+#ifdef FRODO_SC
+					// TODO: preliminary assignment for testing
+					case SDL_SCANCODE_F9: {	// F9: Tape play/stop
+						if (SDL_GetModState() & KMOD_SHIFT) {
+							the_c64->SetTapePlayButton(false);
+						} else {
+							the_c64->SetTapePlayButton(true);
+						}
+						break;
+					}
+#endif
+
 					case SDL_SCANCODE_F10:	// F10: Prefs/Quit
 						the_c64->RequestPrefsEditor();
 						break;
@@ -829,12 +858,15 @@ void Display::PollKeyboard(uint8_t *key_matrix, uint8_t *rev_matrix, uint8_t *jo
 				} else if (IsMountableFile(filename, type)) {
 
 					// Mount disk image file
-					if (type == FILE_IMAGE) {
+					if (type == FILE_DISK_IMAGE) {
 						the_c64->MountDrive8(ThePrefs.Emul1541Proc, filename);
 						ShowNotification("Disk image file mounted in drive 8");
 					} else if (type == FILE_GCR_IMAGE) {
 						the_c64->MountDrive8(true, filename);
 						ShowNotification("Disk image file mounted in drive 8");
+					} else if (type == FILE_TAPE_IMAGE) {
+						the_c64->MountDrive1(filename);
+						ShowNotification("Tape image file mounted in drive 1");
 					} else if (type == FILE_ARCH) {
 						the_c64->MountDrive8(false, filename);
 						ShowNotification("Archive file mounted in drive 8");

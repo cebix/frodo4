@@ -31,6 +31,7 @@
 #include "Prefs.h"
 #include "REU.h"
 #include "SID.h"
+#include "Tape.h"
 #include "VIC.h"
 
 #include <SDL.h>
@@ -57,7 +58,7 @@ bool IsFrodoSC = false;
 
 
 // Snapshot magic header
-#define SNAPSHOT_HEADER "FrodoSnapshot4\0\0"
+#define SNAPSHOT_HEADER "FrodoSnapshot4\x01\0"
 
 // Snapshot flags
 #define SNAPSHOT_FLAG_1541_PROC 1
@@ -84,6 +85,8 @@ struct Snapshot {
 
 	MOS6502State driveCPU;
 	GCRDiskState driveGCR;
+
+	TapeState tape;
 
 	// TODO: REU state is not saved
 };
@@ -142,11 +145,12 @@ C64::C64() : quit_requested(false), prefs_editor_requested(false), load_snapshot
 	TheCIA1 = new MOS6526_1(TheCPU, TheVIC);
 	TheCIA2 = TheCPU1541->TheCIA2 = new MOS6526_2(TheCPU, TheVIC, TheCPU1541);
 	TheIEC = new IEC(this);
+	TheTape = new Tape(TheCIA1);
 
 	TheCart = new NoCartridge;
 	swap_cartridge(REU_NONE, "", ThePrefs.REUType, ThePrefs.CartridgePath);
 
-	TheCPU->SetChips(TheVIC, TheSID, TheCIA1, TheCIA2, TheCart, TheIEC);
+	TheCPU->SetChips(TheVIC, TheSID, TheCIA1, TheCIA2, TheCart, TheIEC, TheTape);
 
 	// Initialize joystick variables
 	joy_minx[0] = joy_miny[0] = -JOYSTICK_DEAD_ZONE;
@@ -176,6 +180,7 @@ C64::~C64()
 {
 	open_close_joysticks(ThePrefs.Joystick1Port, ThePrefs.Joystick2Port, 0, 0);
 
+	delete TheTape;
 	delete TheGCRDisk;
 	delete TheCart;
 	delete TheIEC;
@@ -303,6 +308,7 @@ int C64::Run()
 	TheCIA2->Reset();
 	TheCPU1541->Reset();
 	TheGCRDisk->Reset();
+	TheTape->Reset();
 
 	// Remember start time of first frame
 	frame_start = chrono::steady_clock::now();
@@ -357,6 +363,7 @@ void C64::Reset(bool clear_memory)
 	TheCPU->AsyncReset();
 	TheCPU1541->AsyncReset();
 	TheGCRDisk->Reset();
+	TheTape->Reset();
 	TheSID->Reset();
 	TheCIA1->Reset();
 	TheCIA2->Reset();
@@ -407,6 +414,7 @@ void C64::NewPrefs(const Prefs *prefs)
 
 	TheIEC->NewPrefs(prefs);
 	TheGCRDisk->NewPrefs(prefs);
+	TheTape->NewPrefs(prefs);
 
 	TheSID->NewPrefs(prefs);
 
@@ -424,7 +432,7 @@ void C64::NewPrefs(const Prefs *prefs)
 	}
 
 	swap_cartridge(ThePrefs.REUType, ThePrefs.CartridgePath, prefs->REUType, prefs->CartridgePath);
-	TheCPU->SetChips(TheVIC, TheSID, TheCIA1, TheCIA2, TheCart, TheIEC);
+	TheCPU->SetChips(TheVIC, TheSID, TheCIA1, TheCIA2, TheCart, TheIEC, TheTape);
 
 	// Reset 1541 processor if turned on or off (to bring IEC lines back to sane state)
 	if (ThePrefs.Emul1541Proc != prefs->Emul1541Proc) {
@@ -436,16 +444,27 @@ void C64::NewPrefs(const Prefs *prefs)
 
 
 /*
- *  Turn 1541 processor emulation on or off, and optionally set the drive path.
+ *  Turn 1541 processor emulation on or off and set disk drive path
  */
 
 void C64::MountDrive8(bool emul_1541_proc, const char * path)
 {
 	auto prefs = std::make_unique<Prefs>(ThePrefs);
-	if (path != nullptr) {
-		prefs->DrivePath[0] = path;
-	}
+	prefs->DrivePath[0] = path;
 	prefs->Emul1541Proc = emul_1541_proc;
+	NewPrefs(prefs.get());
+	ThePrefs = *prefs;
+}
+
+
+/*
+ *  Set tape drive path
+ */
+
+void C64::MountDrive1(const char * path)
+{
+	auto prefs = std::make_unique<Prefs>(ThePrefs);
+	prefs->TapePath = path;
 	NewPrefs(prefs.get());
 	ThePrefs = *prefs;
 }
@@ -606,6 +625,7 @@ bool C64::emulate_c64_cycle()
 	TheCIA1->EmulateCycle();
 	TheCIA2->EmulateCycle();
 	TheCPU->EmulateCycle();
+	TheTape->EmulateCycle();
 
 	++cycle_counter;
 
@@ -1101,12 +1121,44 @@ uint8_t C64::poll_joystick(int port)
 
 
 /*
+ *  Tape button pressed or released
+ */
+
+void C64::SetTapePlayButton(bool pressed)
+{
+	TheCPU->SetTapeSense(pressed);
+	TheTape->PressPlayButton(pressed);
+}
+
+
+/*
  *  Tape PLAY button on game controller pressed or released
  */
 
 void C64::SetTapeControllerButton(bool pressed)
 {
 	TheCPU->SetTapeSense(pressed);
+	// Don't mess with the actual Datasette emulation
+}
+
+
+/*
+ *  Return whether tape is playing
+ */
+
+bool C64::TapePlaying() const
+{
+	return TheTape->TapePlaying();
+}
+
+
+/*
+ *  Return tape position in percent
+ */
+
+int C64::TapePercent() const
+{
+	return TheTape->TapePercent();
 }
 
 
@@ -1170,6 +1222,8 @@ void C64::MakeSnapshot(Snapshot * s, bool instruction_boundary)
 
 	TheGCRDisk->GetState(&(s->driveGCR));
 
+	TheTape->GetState(&(s->tape));
+
 	memcpy(s->driveRam, RAM1541, DRIVE_RAM_SIZE);
 }
 
@@ -1202,6 +1256,8 @@ void C64::RestoreSnapshot(const Snapshot * s)
 		TheCPU1541->SetState(&(s->driveCPU));
 		TheGCRDisk->SetState(&(s->driveGCR));
 	}
+
+	TheTape->SetState(&(s->tape));
 }
 
 
@@ -1340,34 +1396,7 @@ void C64::AutoStartOp()
 	// Remove ROM patch to avoid recursion
 	patch_roms(ThePrefs.FastReset, ThePrefs.Emul1541Proc, ThePrefs.AutoStart = false);
 
-	if (ThePrefs.LoadProgram.empty() ) {
-
-		// Starting from drive 8, write LOAD command to screen
-		static const char * load_cmd = "load\"*\",8,1";
-
-		uint16_t pnt = RAM[0xd1] | (RAM[0xd2] << 8);	// Pointer to current screen line
-		for (size_t i = 0; i < strlen(load_cmd); ++i) {
-			uint8_t c = load_cmd[i];
-
-			// Convert ASCII to screen code
-			if (c == '@') {
-				c = 0x00;
-			} else if ((c >= 'a') && (c <= 'z')) {
-				c ^= 0x60;
-			}
-
-			RAM[pnt + i] = c;
-		}
-
-		// Put <RETURN> RUN <RETURN> into keyboard buffer
-		RAM[0x277] = 0x0d;
-		RAM[0x278] = 'R';
-		RAM[0x279] = 'U';
-		RAM[0x27a] = 'N';
-		RAM[0x27b] = 0x0d;
-		RAM[0xc6] = 5;	// Number of characters
-
-	} else {
+	if (! ThePrefs.LoadProgram.empty() ) {
 
 		// Load specified program
 		std::string error_msg;
@@ -1377,12 +1406,77 @@ void C64::AutoStartOp()
 		}
 
 		// Put RUN <RETURN> into keyboard buffer
-		RAM[0x277] = 'R';
-		RAM[0x278] = 'U';
-		RAM[0x279] = 'N';
-		RAM[0x27a] = 0x0d;
-		RAM[0xc6] = 4;	// Number of characters
+		set_keyboard_buffer("RUN\x0d");
+
+	} else if (! ThePrefs.DrivePath[0].empty()) {
+
+		// Starting from drive 8, write LOAD command to screen
+		write_to_screen("load\"*\",8,1");
+
+		// Put <RETURN> RUN <RETURN> into keyboard buffer
+		set_keyboard_buffer("\x0dRUN\x0d");
+
+	} else if (! ThePrefs.TapePath.empty()) {
+
+		// Starting from drive 1, write LOAD command to screen
+		//
+		// Some alternative Kernals set the default device number to 8,
+		// so we specify it explicitly here.
+		write_to_screen("load\"\",1");
+
+		// Put <RETURN> RUN <RETURN> into keyboard buffer
+		set_keyboard_buffer("\x0dRUN\x0d");
+
+		// Press PLAY on tape
+		SetTapePlayButton(true);
 	}
+}
+
+
+/*
+ *  Write string to C64 screen memory
+ */
+
+void C64::write_to_screen(const char * str)
+{
+	uint16_t pnt = RAM[0xd1] | (RAM[0xd2] << 8);	// Pointer to current screen line
+
+	while (true) {
+		uint8_t c = *str++;
+		if (c == '\0')
+			break;
+
+		// Convert ASCII to screen code
+		if (c == '@') {
+			c = 0x00;
+		} else if ((c >= 'a') && (c <= 'z')) {
+			c ^= 0x60;
+		}
+
+		RAM[pnt++] = c;
+	}
+}
+
+
+/*
+ *  Write string (10 characters max.) to C64 keyboard buffer
+ */
+
+void C64::set_keyboard_buffer(const char * str)
+{
+	uint16_t keyd = 0x277;	// Keyboard buffer
+
+	size_t i = 0;
+	while (true) {
+		uint8_t c = str[i];
+		if (c == '\0')
+			break;
+
+		RAM[keyd++] = c;
+		++i;
+	}
+
+	RAM[0xc6] = i;	// Number of characters
 }
 
 
