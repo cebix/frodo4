@@ -60,18 +60,6 @@ enum {
 
 
 /*
- *  Random number generator for noise waveform
- */
-
-static uint8_t sid_random()
-{
-	static uint32_t seed = 1;
-	seed = seed * 1103515245 + 12345;
-	return seed >> 16;
-}
-
-
-/*
  *  Constructor
  */
 
@@ -186,6 +174,17 @@ void MOS6581::set_wave_tables(int sid_type)
 
 
 /*
+ *  Random number generator for oscillator 3 noise read-back
+ */
+
+uint8_t MOS6581::v3_random()
+{
+	v3_random_seed = v3_random_seed * 1103515245 + 12345;
+	return v3_random_seed >> 16;
+}
+
+
+/*
  *  Simulate oscillator 3 for read-back
  */
 
@@ -284,7 +283,7 @@ uint8_t MOS6581::read_osc3()
 			return r;
 		}
 		case WAVE_NOISE:
-			return sid_random();
+			return v3_random();
 		default:
 			return 0;
 	}
@@ -358,6 +357,7 @@ void MOS6581::GetState(MOS6581State * s) const
 	s->v3_count = fake_v3_count;
 	s->v3_eg_level = fake_v3_eg_level;
 	s->v3_eg_state = fake_v3_eg_state;
+	s->v3_random_seed = v3_random_seed;
 
 	s->last_sid_cycles = last_sid_cycles;
 	s->last_sid_seq = last_sid_seq;
@@ -404,6 +404,7 @@ void MOS6581::SetState(const MOS6581State * s)
 	fake_v3_count = s->v3_count;
 	fake_v3_eg_level = s->v3_eg_level;
 	fake_v3_eg_state = s->v3_eg_state;
+	v3_random_seed = s->v3_random_seed;
 
 	last_sid_cycles = s->last_sid_cycles;
 	last_sid_seq = s->last_sid_seq;
@@ -978,6 +979,18 @@ void DigitalRenderer::calc_filter()
 		// hp_d1 = -2.0
 		// hp_d2 = 1.0
 	}
+}
+
+
+/*
+ *  Random number generator for noise waveform
+ */
+
+static uint8_t sid_random()
+{
+	static uint32_t seed = 1;
+	seed = seed * 1103515245 + 12345;
+	return seed >> 16;
 }
 
 

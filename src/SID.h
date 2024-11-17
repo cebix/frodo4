@@ -66,6 +66,7 @@ private:
 	void open_close_renderer(int old_type, int new_type);
 	void set_wave_tables(int sid_type);
 
+	uint8_t v3_random();
 	void update_osc3();
 	uint8_t read_osc3();
 	uint8_t read_env3() const;
@@ -85,6 +86,8 @@ private:
 	uint32_t fake_v3_count;			// Fake voice 3 phase accumulator for oscillator read-back
 	int32_t fake_v3_eg_level;		// Fake voice 3 EG level (8.16 fixed) for EG read-back
 	int fake_v3_eg_state;			// Fake voice 3 EG state
+
+	uint32_t v3_random_seed = 1;	// Fake voice 3 noise RNG seed value
 };
 
 
@@ -139,6 +142,7 @@ struct MOS6581State {
 	uint32_t v3_count;
 	int32_t v3_eg_level;
 	uint32_t v3_eg_state;
+	uint32_t v3_random_seed;
 
 	uint16_t last_sid_cycles;
 	uint8_t last_sid_seq;
