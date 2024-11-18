@@ -179,6 +179,7 @@ private:
 	uint16_t char_delay;
 	uint16_t color_delay;
 	uint32_t pixel_shifter;			// Output color values (4-bit) for next 8 pixels (note: lower 4 bits = leftmost pixel)
+	uint32_t back_pixel;			// Background pixel value in upper 4 bits
 	uint8_t fore_mask_shifter;		// Foreground mask for next 8 pixel values
 
 	uint8_t spr_data[8][4];			// Sprite data read from memory

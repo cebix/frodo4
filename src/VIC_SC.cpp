@@ -825,6 +825,7 @@ void MOS6569::draw_background()
 	memset8(p, c);
 
 	pixel_shifter = c * 0x11111111;
+	back_pixel = c << 28;
 	fore_mask_shifter = 0;
 }
 
@@ -890,7 +891,7 @@ void MOS6569::load_pixel_shifter(uint8_t gfx_data, uint8_t char_data, uint8_t co
 			goto draw_std;
 
 		case 5:		// Invalid multicolor text
-			pixel_shifter = 0;
+			pixel_shifter = back_pixel = 0;
 			if (color_data & 8) {
 				fore_mask_shifter = (gfx_data & 0xaa) | ((gfx_data & 0xaa) >> 1);
 			} else {
@@ -899,12 +900,12 @@ void MOS6569::load_pixel_shifter(uint8_t gfx_data, uint8_t char_data, uint8_t co
 			return;
 
 		case 6:		// Invalid standard bitmap
-			pixel_shifter = 0;
+			pixel_shifter = back_pixel = 0;
 			fore_mask_shifter = gfx_data;
 			return;
 
 		case 7:		// Invalid multicolor bitmap
-			pixel_shifter = 0;
+			pixel_shifter = back_pixel = 0;
 			fore_mask_shifter = (gfx_data & 0xaa) | ((gfx_data & 0xaa) >> 1);
 			return;
 
@@ -925,6 +926,7 @@ draw_std:
 	s = (s << 4) | c[gfx_data & 1];
 
 	pixel_shifter = s;
+	back_pixel = c[0] << 28;
 	return;
 
 draw_multi:
@@ -940,6 +942,7 @@ draw_multi:
 	s = (s << 4) | c[gfx_data & 3];
 
 	pixel_shifter = s;
+	back_pixel = c[0] << 28;
 	return;
 }
 
@@ -970,9 +973,9 @@ void MOS6569::draw_graphics()
 		uint32_t s = pixel_shifter;
 		for (unsigned i = 0; i < 8; ++i) {
 			*p++ = s & 0xf;
-			s >>= 4;
+			s = (s >> 4) | back_pixel;
 		}
-		pixel_shifter = s;	// == 0
+		pixel_shifter = s;
 
 		// Set foreground mask
 		f[0] = fore_mask_shifter;
@@ -983,7 +986,7 @@ void MOS6569::draw_graphics()
 		uint32_t s = pixel_shifter;
 		for (unsigned i = 0; i < x_scroll; ++i) {
 			*p++ = s & 0xf;
-			s >>= 4;
+			s = (s >> 4) | back_pixel;
 		}
 
 		uint8_t m0 = fore_mask_shifter << (8 - x_scroll);
@@ -996,7 +999,7 @@ void MOS6569::draw_graphics()
 		s = pixel_shifter;
 		for (unsigned i = 0; i < 8 - x_scroll; ++i) {
 			*p++ = s & 0xf;
-			s >>= 4;
+			s = (s >> 4) | back_pixel;
 		}
 		pixel_shifter = s;
 
