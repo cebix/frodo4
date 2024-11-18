@@ -73,10 +73,13 @@ public:
 // Base class for cartridge with ROM
 class ROMCartridge : public Cartridge {
 public:
-	ROMCartridge(unsigned rom_size);
+	ROMCartridge(unsigned num_banks, unsigned bank_size);
 	~ROMCartridge();
 
 	uint8_t * ROM() const { return rom; }
+
+	const unsigned numBanks;
+	const unsigned bankSize;
 
 protected:
 	uint8_t * rom = nullptr;	// Pointer to ROM contents
@@ -99,6 +102,156 @@ public:
 
 	uint8_t ReadROML(uint16_t adr, uint8_t ram_byte, bool notLoram) override;
 	uint8_t ReadROMH(uint16_t adr, uint8_t ram_byte, uint8_t basic_byte, bool notLoram, bool notHiram) override;
+};
+
+
+// Simons' BASIC cartridge (switchable 8K/16K ROM cartridge)
+class CartridgeSimonsBasic : public ROMCartridge {
+public:
+	CartridgeSimonsBasic();
+
+	void Reset() override;
+
+	uint8_t ReadROML(uint16_t adr, uint8_t ram_byte, bool notLoram) override;
+	uint8_t ReadROMH(uint16_t adr, uint8_t ram_byte, uint8_t basic_byte, bool notLoram, bool notHiram) override;
+
+	uint8_t ReadIO1(uint16_t adr, uint8_t bus_byte) override;
+	void WriteIO1(uint16_t adr, uint8_t byte) override;
+
+protected:
+	unsigned bank = 0;	// Selected bank
+};
+
+
+// Ocean cartridge (banked 8K/16K ROM cartridge)
+class CartridgeOcean : public ROMCartridge {
+public:
+	CartridgeOcean(bool not_game);
+
+	void Reset() override;
+
+	uint8_t ReadROML(uint16_t adr, uint8_t ram_byte, bool notLoram) override;
+	uint8_t ReadROMH(uint16_t adr, uint8_t ram_byte, uint8_t basic_byte, bool notLoram, bool notHiram) override;
+
+	void WriteIO1(uint16_t adr, uint8_t byte) override;
+
+protected:
+	unsigned bank = 0;	// Selected bank
+};
+
+
+// Fun Play / Power Play cartridge (banked 8K ROM cartridge)
+class CartridgeFunPlay : public ROMCartridge {
+public:
+	CartridgeFunPlay();
+
+	void Reset() override;
+
+	uint8_t ReadROML(uint16_t adr, uint8_t ram_byte, bool notLoram) override;
+
+	void WriteIO1(uint16_t adr, uint8_t byte) override;
+
+protected:
+	unsigned bank = 0;	// Selected bank
+};
+
+
+// Super Games cartridge (banked 16K ROM cartridge)
+class CartridgeSuperGames : public ROMCartridge {
+public:
+	CartridgeSuperGames();
+
+	void Reset() override;
+
+	uint8_t ReadROML(uint16_t adr, uint8_t ram_byte, bool notLoram) override;
+	uint8_t ReadROMH(uint16_t adr, uint8_t ram_byte, uint8_t basic_byte, bool notLoram, bool notHiram) override;
+
+	void WriteIO2(uint16_t adr, uint8_t byte) override;
+
+protected:
+	unsigned bank = 0;			// Selected bank
+	bool disableIO2 = false;	// Flag: I/O 2 area disabled
+};
+
+
+// C64 Games System / System 3 cartridge (banked 8K ROM cartridge)
+class CartridgeC64GS : public ROMCartridge {
+public:
+	CartridgeC64GS();
+
+	void Reset() override;
+
+	uint8_t ReadROML(uint16_t adr, uint8_t ram_byte, bool notLoram) override;
+
+	uint8_t ReadIO1(uint16_t adr, uint8_t bus_byte) override;
+	void WriteIO1(uint16_t adr, uint8_t byte) override;
+
+protected:
+	unsigned bank = 0;	// Selected bank
+};
+
+
+// Dinamic cartridge (banked 8K ROM cartridge)
+class CartridgeDinamic : public ROMCartridge {
+public:
+	CartridgeDinamic();
+
+	void Reset() override;
+
+	uint8_t ReadROML(uint16_t adr, uint8_t ram_byte, bool notLoram) override;
+
+	uint8_t ReadIO1(uint16_t adr, uint8_t bus_byte) override;
+
+protected:
+	unsigned bank = 0;	// Selected bank
+};
+
+
+// Zaxxon cartridge (banked 16K ROM cartridge)
+class CartridgeZaxxon : public ROMCartridge {
+public:
+	CartridgeZaxxon();
+
+	void Reset() override;
+
+	uint8_t ReadROML(uint16_t adr, uint8_t ram_byte, bool notLoram) override;
+	uint8_t ReadROMH(uint16_t adr, uint8_t ram_byte, uint8_t basic_byte, bool notLoram, bool notHiram) override;
+
+protected:
+	unsigned bank = 0;	// Selected ROMH bank
+};
+
+
+// Magic Desk cartridge (banked 8K ROM cartridge)
+class CartridgeMagicDesk : public ROMCartridge {
+public:
+	CartridgeMagicDesk();
+
+	void Reset() override;
+
+	uint8_t ReadROML(uint16_t adr, uint8_t ram_byte, bool notLoram) override;
+
+	void WriteIO1(uint16_t adr, uint8_t byte) override;
+
+protected:
+	unsigned bank = 0;	// Selected bank
+};
+
+
+// COMAL 80 cartridge (banked 16K ROM cartridge)
+class CartridgeComal80 : public ROMCartridge {
+public:
+	CartridgeComal80();
+
+	void Reset() override;
+
+	uint8_t ReadROML(uint16_t adr, uint8_t ram_byte, bool notLoram) override;
+	uint8_t ReadROMH(uint16_t adr, uint8_t ram_byte, uint8_t basic_byte, bool notLoram, bool notHiram) override;
+
+	void WriteIO1(uint16_t adr, uint8_t byte) override;
+
+protected:
+	unsigned bank = 0;	// Selected ROMH bank
 };
 
 
