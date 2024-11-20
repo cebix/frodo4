@@ -65,10 +65,13 @@ static GtkTextBuffer *sam_buffer = nullptr;
 static GtkTextMark *sam_input_start = nullptr;
 
 // Prototypes
+static void set_tape_controls();
 static void set_values();
 static void get_values();
 static void ghost_widgets();
 static void write_sam_output(std::string s, bool error = false);
+extern "C" G_MODULE_EXPORT void on_tape_play_toggled(GtkToggleButton *button, gpointer user_data);
+extern "C" G_MODULE_EXPORT void on_tape_stop_toggled(GtkToggleButton *button, gpointer user_data);
 extern "C" G_MODULE_EXPORT void on_cartridge_eject_clicked(GtkButton *button, gpointer user_data);
 
 // Shortcuts window definition
@@ -393,21 +396,31 @@ bool Prefs::ShowEditor(bool startup, fs::path prefs_path, fs::path snapshot_path
 
 	if (startup) {
 
-		// Adjust menus for startup
+		// Adjust menus and widgets for startup
 		gtk_menu_item_set_label(GTK_MENU_ITEM(gtk_builder_get_object(builder, "ok_menu")), "Start");
 		gtk_button_set_label(GTK_BUTTON(gtk_builder_get_object(builder, "ok_button")), "Start");
 		gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object(builder, "load_snapshot_menu")), false);
 		gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object(builder, "save_snapshot_menu")), false);
 		gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object(builder, "sam_menu")), false);
 
+		gtk_widget_hide(GTK_WIDGET(gtk_builder_get_object(builder, "tape_play")));
+		gtk_widget_hide(GTK_WIDGET(gtk_builder_get_object(builder, "tape_stop")));
+		gtk_widget_hide(GTK_WIDGET(gtk_builder_get_object(builder, "tape_rewind")));
+
 	} else {
 
-		// Adjust menus for running emulation
+		// Adjust menus and widgets for running emulation
 		gtk_menu_item_set_label(GTK_MENU_ITEM(gtk_builder_get_object(builder, "ok_menu")), "Continue");
 		gtk_button_set_label(GTK_BUTTON(gtk_builder_get_object(builder, "ok_button")), "Continue");
 		gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object(builder, "load_snapshot_menu")), true);
 		gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object(builder, "save_snapshot_menu")), true);
 		gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object(builder, "sam_menu")), true);
+
+		gtk_widget_show(GTK_WIDGET(gtk_builder_get_object(builder, "tape_play")));
+		gtk_widget_show(GTK_WIDGET(gtk_builder_get_object(builder, "tape_stop")));
+		gtk_widget_show(GTK_WIDGET(gtk_builder_get_object(builder, "tape_rewind")));
+
+		set_tape_controls();
 
 #ifndef __APPLE__
 		// Keep SDL event loop running while preferences editor is open
@@ -441,6 +454,31 @@ bool Prefs::ShowEditor(bool startup, fs::path prefs_path, fs::path snapshot_path
 	}
 
 	return result;
+}
+
+
+/*
+ *  Set the tape control buttons to the current tape state
+ */
+
+static void set_tape_controls()
+{
+	GtkWidget * tape_play = GTK_WIDGET(gtk_builder_get_object(builder, "tape_play"));
+	GtkWidget * tape_stop = GTK_WIDGET(gtk_builder_get_object(builder, "tape_stop"));
+
+	bool play_pressed = TheC64->TapePlayPressed();
+
+	g_signal_handlers_block_by_func(G_OBJECT(tape_play), (void *) on_tape_play_toggled, nullptr);
+	g_signal_handlers_block_by_func(G_OBJECT(tape_stop), (void *) on_tape_stop_toggled, nullptr);
+
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(tape_play), play_pressed);
+	gtk_widget_set_sensitive(tape_play, ! play_pressed);
+
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(tape_stop), ! play_pressed);
+	gtk_widget_set_sensitive(tape_stop, play_pressed);
+
+	g_signal_handlers_unblock_by_func(G_OBJECT(tape_play), (void *) on_tape_play_toggled, nullptr);
+	g_signal_handlers_unblock_by_func(G_OBJECT(tape_stop), (void *) on_tape_stop_toggled, nullptr);
 }
 
 
@@ -1520,6 +1558,31 @@ extern "C" G_MODULE_EXPORT void on_drive11_next_disk_clicked(GtkButton *button, 
 {
 	get_drive_path(3, "drive11_path");
 	gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(gtk_builder_get_object(builder, "drive11_path")), NextDiskImageFile(prefs->DrivePath[3]).c_str());
+}
+
+extern "C" G_MODULE_EXPORT void on_tape_play_toggled(GtkToggleButton *button, gpointer user_data)
+{
+	TheC64->SetTapePlayButton(true);
+	set_tape_controls();
+}
+
+extern "C" G_MODULE_EXPORT void on_tape_stop_toggled(GtkToggleButton *button, gpointer user_data)
+{
+	TheC64->SetTapePlayButton(false);
+	set_tape_controls();
+}
+
+extern "C" G_MODULE_EXPORT void on_tape_rewind_clicked(GtkButton *button, gpointer user_data)
+{
+	TheC64->RewindTape();
+	set_tape_controls();
+
+	GtkWidget * msg = gtk_message_dialog_new(prefs_win,
+	    GTK_DIALOG_MODAL, GTK_MESSAGE_INFO, GTK_BUTTONS_OK,
+	    "Tape rewound to start."
+	);
+	gtk_dialog_run(GTK_DIALOG(msg));
+	gtk_widget_destroy(msg);
 }
 
 extern "C" G_MODULE_EXPORT void on_display_type_changed(GtkComboBox *box, gpointer user_data)

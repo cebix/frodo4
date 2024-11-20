@@ -48,6 +48,7 @@ public:
 	void PressPlayButton(bool on);
 	void Rewind();
 
+	bool PlayPressed() const { return play_pressed; }
 	bool TapePlaying() const { return tape_playing; }
 	int TapePercent() const;
 

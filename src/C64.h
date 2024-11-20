@@ -111,6 +111,8 @@ public:
 
 	void SetTapePlayButton(bool pressed);
 	void SetTapeControllerButton(bool pressed);
+	void RewindTape();
+	bool TapePlayPressed() const;
 	bool TapePlaying() const;
 	int TapePercent() const;
 

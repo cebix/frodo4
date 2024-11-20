@@ -1143,6 +1143,26 @@ void C64::SetTapeControllerButton(bool pressed)
 
 
 /*
+ *  Rewind tape
+ */
+
+void C64::RewindTape()
+{
+	TheTape->Rewind();
+}
+
+
+/*
+ *  Return whether tape play button is pressed
+ */
+
+bool C64::TapePlayPressed() const
+{
+	return TheTape->PlayPressed();
+}
+
+
+/*
  *  Return whether tape is playing
  */
 

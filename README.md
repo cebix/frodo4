@@ -106,13 +106,15 @@ Num Lock key to switch between joystick Port 1 and 2.
 You can also use the Enter key on the numeric keypad to change the display mode
 on the fly while the emulator is running.
 
-* The “Disk Drives” tab is where you make software available for the emulator
-  to load and run.
+* The “Drives” tab is where you make software available for the emulator to
+  load and run.
 
-Frodo only supports software written for the Commodore 1541 disk drive. This
-typically comes in the form of .D64 disk image files *(no, they are not called
-“ROMs”!)*. Press the file selection button next to the “Drive 8” label to choose
-a .D64 file to mount in the simulated drive with drive number 8.
+Frodo supports software written for the Commodore 1541 disk drive, the
+“Datasette” tape drive, and also many game cartridges. The disk drive was
+the most popular option back in the day, so most software you will now find
+comes in the form of .D64 disk image files *(no, they are not called
+“ROMs”!)*. Press the file selection button next to the “Drive 8” label to
+choose a .D64 file to mount in the simulated drive with drive number 8.
 
 *(For advanced users: If you deselect the “Enable Full 1541 Emulation”, Frodo
 will let you use up to four simulated disk drives and switch to a faster and
@@ -147,7 +149,7 @@ Important key combinations inside the emulator window:
   window where you can, for example, swap .D64 files.
 * Pressing **F12** resets the C64. Hold down the Shift key while pressing
   F12 to also clear the memory of the C64. This is necessary for some
-  programs which use reset protection to prevent them from being exited.
+  programs using reset protection which prevents them from being exited.
   Hold down the Ctrl key while pressing F12 to reset the C64 and re-run the
   “auto-start” sequence.
 * Hold down the **right trigger** on the game controller or the “+” (**Plus**)

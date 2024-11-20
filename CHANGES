@@ -1,7 +1,8 @@
 Changes from V4.4 to V4.5:
  - Note: The snapshot file format has changed. This version of Frodo will
    not read snapshot files from earlier versions.
- - Added Datasette tape drive emulation (TAP files)
+ - Added Datasette tape drive emulation (TAP files, not available in Frodo
+   Lite)
  - Added ability to auto-start D64/G64/T64/TAP images, cartridges, and C64
    BASIC program files by specifying them on the command line
  - Added support for banked cartridges (Ocean, Fun Play, Power Play, Super
@@ -9,7 +10,7 @@ Changes from V4.4 to V4.5:
    BASIC, COMAL 80)
  - Unix: Added file type associations to let Frodo start disk/tape image
    files, cartridges, and C64 program files from the desktop
- - Windwos: Fixed some portability problems
+ - Windows: Fixed some portability problems
  - Small improvements to CPU and SID emulation
  - Use more realistic RAM initialization pattern
  - Added support for integration with VICE automated regression testbench
