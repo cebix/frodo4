@@ -454,7 +454,7 @@ void Display::draw_overlays()
 			draw_string(DISPLAY_X - 69, DISPLAY_Y - 10, MCHAR_PLAY, green);
 
 			char str[16];
-			snprintf(str, sizeof(str), "%d%%", the_c64->TapePercent());
+			snprintf(str, sizeof(str), "%d%%", the_c64->TapePosition());
 
 			draw_string(DISPLAY_X - 58, DISPLAY_Y -  9, str, shadow_gray);
 			draw_string(DISPLAY_X - 59, DISPLAY_Y - 10, str, shine_gray);

@@ -403,6 +403,7 @@ bool Prefs::ShowEditor(bool startup, fs::path prefs_path, fs::path snapshot_path
 		gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object(builder, "save_snapshot_menu")), false);
 		gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object(builder, "sam_menu")), false);
 
+		gtk_widget_hide(GTK_WIDGET(gtk_builder_get_object(builder, "tape_position")));
 		gtk_widget_hide(GTK_WIDGET(gtk_builder_get_object(builder, "tape_play")));
 		gtk_widget_hide(GTK_WIDGET(gtk_builder_get_object(builder, "tape_stop")));
 		gtk_widget_hide(GTK_WIDGET(gtk_builder_get_object(builder, "tape_rewind")));
@@ -416,6 +417,7 @@ bool Prefs::ShowEditor(bool startup, fs::path prefs_path, fs::path snapshot_path
 		gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object(builder, "save_snapshot_menu")), true);
 		gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object(builder, "sam_menu")), true);
 
+		gtk_widget_show(GTK_WIDGET(gtk_builder_get_object(builder, "tape_position")));
 		gtk_widget_show(GTK_WIDGET(gtk_builder_get_object(builder, "tape_play")));
 		gtk_widget_show(GTK_WIDGET(gtk_builder_get_object(builder, "tape_stop")));
 		gtk_widget_show(GTK_WIDGET(gtk_builder_get_object(builder, "tape_rewind")));
@@ -479,6 +481,8 @@ static void set_tape_controls()
 
 	g_signal_handlers_unblock_by_func(G_OBJECT(tape_play), (void *) on_tape_play_toggled, nullptr);
 	g_signal_handlers_unblock_by_func(G_OBJECT(tape_stop), (void *) on_tape_stop_toggled, nullptr);
+
+	gtk_label_set_text(GTK_LABEL(gtk_builder_get_object(builder, "tape_position")), std::format("Position: {}%", TheC64->TapePosition()).c_str());
 }
 
 

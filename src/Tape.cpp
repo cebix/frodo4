@@ -139,7 +139,7 @@ void Tape::Rewind()
  *  Return tape position in percent
  */
 
-int Tape::TapePercent() const
+int Tape::TapePosition() const
 {
 	if (data_size == 0) {
 		return 0;
@@ -306,6 +306,9 @@ void Tape::SetState(const TapeState * s)
 {
 	if (the_file != nullptr) {
 		current_pos = s->current_pos;
+		if (current_pos > header_size + data_size) {
+			current_pos = header_size + data_size;
+		}
 		fseek(the_file, current_pos, SEEK_SET);
 
 		pulse_length = s->pulse_length;

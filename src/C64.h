@@ -114,7 +114,7 @@ public:
 	void RewindTape();
 	bool TapePlayPressed() const;
 	bool TapePlaying() const;
-	int TapePercent() const;
+	int TapePosition() const;
 
 	void SetDriveLEDs(int l0, int l1, int l2, int l3);
 	void ShowNotification(std::string s);

@@ -1176,9 +1176,9 @@ bool C64::TapePlaying() const
  *  Return tape position in percent
  */
 
-int C64::TapePercent() const
+int C64::TapePosition() const
 {
-	return TheTape->TapePercent();
+	return TheTape->TapePosition();
 }
 
 

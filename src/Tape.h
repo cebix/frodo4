@@ -50,7 +50,7 @@ public:
 
 	bool PlayPressed() const { return play_pressed; }
 	bool TapePlaying() const { return tape_playing; }
-	int TapePercent() const;
+	int TapePosition() const;
 
 private:
 	void open_image_file(const std::string & filepath);
