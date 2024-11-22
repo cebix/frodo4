@@ -68,7 +68,6 @@ void Tape::Reset()
 {
 	SetMotor(false);
 	PressPlayButton(false);
-	Rewind();
 }
 
 

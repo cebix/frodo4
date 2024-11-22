@@ -1447,7 +1447,8 @@ void C64::AutoStartOp()
 		// Put <RETURN> RUN <RETURN> into keyboard buffer
 		set_keyboard_buffer("\x0dRUN\x0d");
 
-		// Press PLAY on tape
+		// Rewind and press PLAY on tape
+		RewindTape();
 		SetTapePlayButton(true);
 	}
 }
