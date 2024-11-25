@@ -74,7 +74,7 @@ static const char * led_image[8] = {
 #define MCHAR_REWIND "\x0b"
 #define MCHAR_FORWARD "\x0c"
 #define MCHAR_PAUSE "\x0d"
-#define MCHAR_REC "\x0e"
+#define MCHAR_RECORD "\x0e"
 #define MCHAR_TAPE "\x0f"
 
 
@@ -446,32 +446,46 @@ void Display::draw_overlays()
 		}
 
 		// Draw tape indicator
-		if (the_c64->TapePlaying()) {
+		TapeState tape_state = the_c64->TapeDriveState();
+		if (tape_state != TapeState::Stop) {
 			draw_string(DISPLAY_X - 80, DISPLAY_Y -  9, MCHAR_TAPE, shadow_gray);
 			draw_string(DISPLAY_X - 81, DISPLAY_Y - 10, MCHAR_TAPE, shine_gray);
 
-			draw_string(DISPLAY_X - 68, DISPLAY_Y -  9, MCHAR_PLAY, shadow_gray);
-			draw_string(DISPLAY_X - 69, DISPLAY_Y - 10, MCHAR_PLAY, green);
+			int x_pos;
+			if (tape_state == TapeState::Record) {
+				draw_string(DISPLAY_X - 68, DISPLAY_Y -  9, MCHAR_RECORD, shadow_gray);
+				draw_string(DISPLAY_X - 69, DISPLAY_Y - 10, MCHAR_RECORD, red);
+				x_pos = 56;
+			} else {
+				draw_string(DISPLAY_X - 68, DISPLAY_Y -  9, MCHAR_PLAY, shadow_gray);
+				draw_string(DISPLAY_X - 69, DISPLAY_Y - 10, MCHAR_PLAY, green);
+				x_pos = 58;
+			}
 
 			char str[16];
-			snprintf(str, sizeof(str), "%d%%", the_c64->TapePosition());
+			int pos = the_c64->TapePosition();
+			if (pos == 100) {
+				strcpy(str, "end");
+			} else {
+				snprintf(str, sizeof(str), "%d%%", pos);
+			}
 
-			draw_string(DISPLAY_X - 58, DISPLAY_Y -  9, str, shadow_gray);
-			draw_string(DISPLAY_X - 59, DISPLAY_Y - 10, str, shine_gray);
+			draw_string(DISPLAY_X - x_pos,     DISPLAY_Y -  9, str, shadow_gray);
+			draw_string(DISPLAY_X - x_pos - 1, DISPLAY_Y - 10, str, shine_gray);
 		}
 
 		// Draw play mode indicator
 		PlayMode mode = the_c64->GetPlayMode();
-		if (mode != PLAY_MODE_PLAY) {
+		if (mode != PlayMode::Play) {
 			const char * str;
 			switch (mode) {
-				case PLAY_MODE_REWIND:
+				case PlayMode::Rewind:
 					str = MCHAR_REWIND;
 					break;
-				case PLAY_MODE_FORWARD:
+				case PlayMode::Forward:
 					str = MCHAR_FORWARD;
 					break;
-				case PLAY_MODE_PAUSE:
+				case PlayMode::Pause:
 					str = MCHAR_PAUSE;
 					break;
 				default:
@@ -754,18 +768,6 @@ void Display::PollKeyboard(uint8_t *key_matrix, uint8_t *rev_matrix, uint8_t *jo
 
 				switch (event.key.keysym.scancode) {
 
-#ifdef FRODO_SC
-					// TODO: preliminary assignment for testing
-					case SDL_SCANCODE_F9: {	// F9: Tape play/stop
-						if (SDL_GetModState() & KMOD_SHIFT) {
-							the_c64->SetTapePlayButton(false);
-						} else {
-							the_c64->SetTapePlayButton(true);
-						}
-						break;
-					}
-#endif
-
 					case SDL_SCANCODE_F10:	// F10: Prefs/Quit
 						the_c64->RequestPrefsEditor();
 						break;
@@ -797,28 +799,28 @@ void Display::PollKeyboard(uint8_t *key_matrix, uint8_t *rev_matrix, uint8_t *jo
 						break;
 
 					case SDL_SCANCODE_KP_PLUS:	// Plus on keypad: Fast-forward while pressed
-						if (the_c64->GetPlayMode() == PLAY_MODE_PLAY) {
-							the_c64->SetPlayMode(PLAY_MODE_FORWARD);
-						} else if (the_c64->GetPlayMode() == PLAY_MODE_PAUSE) {
-							the_c64->SetPlayMode(PLAY_MODE_FORWARD_FRAME);
+						if (the_c64->GetPlayMode() == PlayMode::Play) {
+							the_c64->SetPlayMode(PlayMode::Forward);
+						} else if (the_c64->GetPlayMode() == PlayMode::Pause) {
+							the_c64->SetPlayMode(PlayMode::ForwardFrame);
 						}
 						break;
 
 					case SDL_SCANCODE_KP_MINUS:	// Minus on keypad: Rewind while pressed
-						if (the_c64->GetPlayMode() == PLAY_MODE_PLAY) {
-							the_c64->SetPlayMode(PLAY_MODE_REWIND);
-						} else if (the_c64->GetPlayMode() == PLAY_MODE_PAUSE) {
-							the_c64->SetPlayMode(PLAY_MODE_REWIND_FRAME);
+						if (the_c64->GetPlayMode() == PlayMode::Play) {
+							the_c64->SetPlayMode(PlayMode::Rewind);
+						} else if (the_c64->GetPlayMode() == PlayMode::Pause) {
+							the_c64->SetPlayMode(PlayMode::RewindFrame);
 						}
 						break;
 
 #undef DEBUG
 #ifdef DEBUG
 					case SDL_SCANCODE_PAUSE:
-						if (the_c64->GetPlayMode() == PLAY_MODE_PLAY) {
-							the_c64->SetPlayMode(PLAY_MODE_REQUEST_PAUSE);
-						} else if (the_c64->GetPlayMode() == PLAY_MODE_PAUSE) {
-							the_c64->SetPlayMode(PLAY_MODE_PLAY);
+						if (the_c64->GetPlayMode() == PlayMode::Play) {
+							the_c64->SetPlayMode(PlayMode::RequestPause);
+						} else if (the_c64->GetPlayMode() == PlayMode::Pause) {
+							the_c64->SetPlayMode(PlayMode::Play);
 						}
 						break;
 #endif
@@ -832,12 +834,12 @@ void Display::PollKeyboard(uint8_t *key_matrix, uint8_t *rev_matrix, uint8_t *jo
 			// Key released
 			case SDL_KEYUP:
 				if (event.key.keysym.scancode == SDL_SCANCODE_KP_PLUS) {
-					if (the_c64->GetPlayMode() == PLAY_MODE_FORWARD) {
-						the_c64->SetPlayMode(PLAY_MODE_PLAY);
+					if (the_c64->GetPlayMode() == PlayMode::Forward) {
+						the_c64->SetPlayMode(PlayMode::Play);
 					}
 				} else if (event.key.keysym.scancode == SDL_SCANCODE_KP_MINUS) {
-					if (the_c64->GetPlayMode() == PLAY_MODE_REWIND) {
-						the_c64->SetPlayMode(PLAY_MODE_PLAY);
+					if (the_c64->GetPlayMode() == PlayMode::Rewind) {
+						the_c64->SetPlayMode(PlayMode::Play);
 					}
 				} else {
 					translate_key(event.key.keysym.scancode, true, key_matrix, rev_matrix, joystick);

@@ -86,7 +86,7 @@ struct Snapshot {
 	MOS6502State driveCPU;
 	GCRDiskState driveGCR;
 
-	TapeState tape;
+	TapeSaveState tape;
 
 	// TODO: REU state is not saved
 };
@@ -301,6 +301,8 @@ void C64::init_memory()
 
 int C64::Run()
 {
+	cycle_counter = 0;
+
 	// Reset chips
 	TheCPU->Reset();
 	TheSID->Reset();
@@ -314,8 +316,6 @@ int C64::Run()
 	frame_start = chrono::steady_clock::now();
 	frame_skip_factor = 1;
 	frame_skip_counter = 1;
-
-	cycle_counter = 0;
 
 	// Enter main loop
 	return main_loop();
@@ -684,10 +684,10 @@ void C64::resume()
 void C64::vblank()
 {
 	// Handle single-frame controls
-	if (play_mode == PLAY_MODE_REQUEST_PAUSE) {
-		play_mode = PLAY_MODE_PAUSE;
-	} else if (play_mode == PLAY_MODE_REWIND_FRAME || play_mode == PLAY_MODE_FORWARD_FRAME) {
-		play_mode = PLAY_MODE_PAUSE;
+	if (play_mode == PlayMode::RequestPause) {
+		play_mode = PlayMode::Pause;
+	} else if (play_mode == PlayMode::RewindFrame || play_mode == PlayMode::ForwardFrame) {
+		play_mode = PlayMode::Pause;
 	}
 
 	// Poll keyboard and joysticks
@@ -716,7 +716,7 @@ void C64::vblank()
 	}
 
 	// Count TOD clocks
-	if (play_mode != PLAY_MODE_PAUSE) {
+	if (play_mode != PlayMode::Pause) {
 		TheCIA1->CountTOD();
 		TheCIA2->CountTOD();
 	}
@@ -742,7 +742,7 @@ void C64::vblank()
 	// Limit speed to 100% (and FPS to 50 Hz) if desired
 	if ((elapsed_us < FRAME_TIME_us) && ThePrefs.LimitSpeed) {
 		std::this_thread::sleep_until(frame_start);
-		if (play_mode == PLAY_MODE_FORWARD) {
+		if (play_mode == PlayMode::Forward) {
 			frame_start += chrono::microseconds(FRAME_TIME_us / FORWARD_SCALE);
 			frame_skip_factor = FORWARD_SCALE;
 		} else {
@@ -775,7 +775,7 @@ int C64::main_loop()
 		bool new_frame;
 
 		// Stop emulation in pause mode, just update the display
-		if (play_mode == PLAY_MODE_PAUSE) {
+		if (play_mode == PlayMode::Pause) {
 			vblank();
 			if (quit_requested) {
 				break;
@@ -836,7 +836,7 @@ int C64::main_loop()
 		// Poll keyboard and mouse, and delay execution at three points
 		// within the frame to reduce input lag. This also helps with the
 		// asynchronously running SID emulation.
-		if (ThePrefs.LimitSpeed && play_mode == PLAY_MODE_PLAY) {
+		if (ThePrefs.LimitSpeed && play_mode == PlayMode::Play) {
 			unsigned raster_y = TheVIC->RasterY();
 			if (raster_y != prev_raster_y) {
 				if (raster_y == TOTAL_RASTERS * 1 / 4) {
@@ -1019,16 +1019,16 @@ uint8_t C64::poll_joystick(int port)
 		int trigger = SDL_GameControllerGetAxis(controller[port], SDL_CONTROLLER_AXIS_TRIGGERLEFT);
 		if (trigger > joy_maxtrigl[port]) {
 			if (! joy_trigl_on[port]) {
-				if (GetPlayMode() == PLAY_MODE_PLAY) {
-					SetPlayMode(PLAY_MODE_REWIND);
+				if (GetPlayMode() == PlayMode::Play) {
+					SetPlayMode(PlayMode::Rewind);
 				}
 				joy_trigl_on[port] = true;
 			}
 			joy_maxtrigl[port] = +(JOYSTICK_DEAD_ZONE - JOYSTICK_HYSTERESIS);
 		} else {
 			if (joy_trigl_on[port]) {
-				if (GetPlayMode() == PLAY_MODE_REWIND) {
-					SetPlayMode(PLAY_MODE_PLAY);
+				if (GetPlayMode() == PlayMode::Rewind) {
+					SetPlayMode(PlayMode::Play);
 				}
 				joy_trigl_on[port] = false;
 			}
@@ -1039,16 +1039,16 @@ uint8_t C64::poll_joystick(int port)
 		trigger = SDL_GameControllerGetAxis(controller[port], SDL_CONTROLLER_AXIS_TRIGGERRIGHT);
 		if (trigger > joy_maxtrigr[port]) {
 			if (! joy_trigr_on[port]) {
-				if (GetPlayMode() == PLAY_MODE_PLAY) {
-					SetPlayMode(PLAY_MODE_FORWARD);
+				if (GetPlayMode() == PlayMode::Play) {
+					SetPlayMode(PlayMode::Forward);
 				}
 				joy_trigr_on[port] = true;
 			}
 			joy_maxtrigr[port] = +(JOYSTICK_DEAD_ZONE - JOYSTICK_HYSTERESIS);
 		} else {
 			if (joy_trigr_on[port]) {
-				if (GetPlayMode() == PLAY_MODE_FORWARD) {
-					SetPlayMode(PLAY_MODE_PLAY);
+				if (GetPlayMode() == PlayMode::Forward) {
+					SetPlayMode(PlayMode::Play);
 				}
 				joy_trigr_on[port] = false;
 			}
@@ -1061,7 +1061,7 @@ uint8_t C64::poll_joystick(int port)
 
 		// Control rumble effects
 		if (ThePrefs.TapeRumble) {
-			if (TheCPU->TapeMotorOn()) {
+			if (TheTape->MotorOn()) {
 				SDL_GameControllerRumble(controller[port], 0, 0x8000, 1000 / SCREEN_FREQ);
 			} else {
 				SDL_GameControllerRumble(controller[port], 0, 0, 1000 / SCREEN_FREQ);
@@ -1121,13 +1121,13 @@ uint8_t C64::poll_joystick(int port)
 
 
 /*
- *  Tape button pressed or released
+ *  Tape button pressed
  */
 
-void C64::SetTapePlayButton(bool pressed)
+void C64::SetTapeButtons(TapeState pressed)
 {
-	TheCPU->SetTapeSense(pressed);
-	TheTape->PressPlayButton(pressed);
+	TheCPU->SetTapeSense(pressed != TapeState::Stop);
+	TheTape->SetButtons(pressed);
 }
 
 
@@ -1143,7 +1143,7 @@ void C64::SetTapeControllerButton(bool pressed)
 
 
 /*
- *  Rewind tape
+ *  Rewind tape to start
  */
 
 void C64::RewindTape()
@@ -1153,22 +1153,32 @@ void C64::RewindTape()
 
 
 /*
- *  Return whether tape play button is pressed
+ *  Forward tape to end
  */
 
-bool C64::TapePlayPressed() const
+void C64::ForwardTape()
 {
-	return TheTape->PlayPressed();
+	TheTape->Forward();
 }
 
 
 /*
- *  Return whether tape is playing
+ *  Return which tape button is pressed
  */
 
-bool C64::TapePlaying() const
+TapeState C64::TapeButtonState() const
 {
-	return TheTape->TapePlaying();
+	return TheTape->ButtonState();
+}
+
+
+/*
+ *  Return whether tape is playing or recording
+ */
+
+TapeState C64::TapeDriveState() const
+{
+	return TheTape->DriveState();
 }
 
 
@@ -1449,7 +1459,7 @@ void C64::AutoStartOp()
 
 		// Rewind and press PLAY on tape
 		RewindTape();
-		SetTapePlayButton(true);
+		SetTapeButtons(TapeState::Play);
 	}
 }
 
@@ -1507,7 +1517,7 @@ void C64::set_keyboard_buffer(const char * str)
 
 void C64::reset_play_mode()
 {
-	SetPlayMode(PLAY_MODE_PLAY);
+	SetPlayMode(PlayMode::Play);
 	rewind_start = 0;
 	rewind_fill = 0;
 }
@@ -1530,7 +1540,7 @@ void C64::SetPlayMode(PlayMode mode)
 void C64::handle_rewind()
 {
 	if (rewind_buffer != nullptr) {
-		if (play_mode == PLAY_MODE_REWIND || play_mode == PLAY_MODE_REWIND_FRAME) {
+		if (play_mode == PlayMode::Rewind || play_mode == PlayMode::RewindFrame) {
 
 			// Pop snapshot from ring buffer
 			if (rewind_fill > 0) {
@@ -1544,7 +1554,7 @@ void C64::handle_rewind()
 				}
 			}
 
-		} else if (play_mode == PLAY_MODE_PLAY || play_mode == PLAY_MODE_FORWARD || play_mode == PLAY_MODE_FORWARD_FRAME) {
+		} else if (play_mode == PlayMode::Play || play_mode == PlayMode::Forward || play_mode == PlayMode::ForwardFrame) {
 
 			// Add snapshot to ring buffer
 			size_t write_index = (rewind_start + rewind_fill) % REWIND_LENGTH;

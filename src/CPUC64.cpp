@@ -84,7 +84,6 @@ MOS6510::MOS6510(C64 *c64, uint8_t *Ram, uint8_t *Basic, uint8_t *Kernal, uint8_
 
 	nmi_triggered = false;
 
-	tape_motor = false;
 	tape_sense = false;
 
 	borrowed_cycles = 0;
@@ -263,11 +262,8 @@ void MOS6510::new_config()
 	}
 	io_in = (port & 3) && (port & 4);
 
-	bool new_tape_motor = (port & 0x20) == 0;
-	if (tape_motor != new_tape_motor) {
-		tape_motor = new_tape_motor;
-		// Datasette is not supported in Frodo Lite
-	}
+	bool tape_motor = (port & 0x20) == 0;
+	the_tape->SetMotor(tape_motor);
 }
 
 

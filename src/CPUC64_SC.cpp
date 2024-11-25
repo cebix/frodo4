@@ -89,7 +89,7 @@ MOS6510::MOS6510(C64 *c64, uint8_t *Ram, uint8_t *Basic, uint8_t *Kernal, uint8_
 	nmi_pending = false;
 	nmi_delay = 0;
 
-	tape_motor = false;
+	tape_write = false;
 }
 
 
@@ -272,10 +272,15 @@ void MOS6510::new_config()
 	}
 	io_in = (port & 3) && (port & 4);
 
-	bool new_tape_motor = (port & 0x20) == 0;
-	if (tape_motor != new_tape_motor) {
-		tape_motor = new_tape_motor;
-		the_tape->SetMotor(tape_motor);
+	bool tape_motor = (port & 0x20) == 0;
+	the_tape->SetMotor(tape_motor);
+
+	bool new_tape_write = port & 0x08;
+	if (new_tape_write != tape_write) {
+		tape_write = new_tape_write;
+		if (tape_write) {	// Rising edge
+			the_tape->WritePulse(the_c64->CycleCounter());
+		}
 	}
 }
 

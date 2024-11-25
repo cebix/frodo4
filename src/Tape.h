@@ -24,9 +24,17 @@
 #include <string>
 
 
+// Tape button/mechanism state
+enum class TapeState {
+	Stop,
+	Play,
+	Record,
+};
+
+
 class MOS6526;
 class Prefs;
-struct TapeState;
+struct TapeSaveState;
 
 
 // Datasette emulation
@@ -37,27 +45,33 @@ public:
 
 	void Reset();
 
-	void GetState(TapeState * s) const;
-	void SetState(const TapeState * s);
+	void GetState(TapeSaveState * s) const;
+	void SetState(const TapeSaveState * s);
 
 	void NewPrefs(const Prefs * prefs);
 
 	void EmulateCycle();
 
 	void SetMotor(bool on);
-	void PressPlayButton(bool on);
+	void SetButtons(TapeState pressed);
 	void Rewind();
+	void Forward();
 
-	bool PlayPressed() const { return play_pressed; }
-	bool TapePlaying() const { return tape_playing; }
+	bool MotorOn() const { return motor_on; }
+	TapeState ButtonState() const { return button_state; }
+	TapeState DriveState() const { return drive_state; }
 	int TapePosition() const;
 
+	void WritePulse(uint32_t cycle);
+
 private:
+	void set_drive_state();
+
 	void open_image_file(const std::string & filepath);
 	void close_image_file();
 
-	void schedule_pulse();
-	void trigger_pulse();
+	void schedule_read_pulse();
+	void trigger_read_pulse();
 
 	MOS6526 * the_cia;		// Pointer to CIA object
 
@@ -65,22 +79,28 @@ private:
 	unsigned tap_version;	// TAP file version
 	uint32_t header_size;	// TAP header size
 	uint32_t data_size;		// TAP data size
+	bool write_protected;	// Flag: Image file write protected
+	bool file_extended;		// Flag: Image file grew larger during writing, correct data size in header when closing
 
 	uint32_t current_pos;	// Current position in image file
 
 	bool motor_on;			// Flag: Tape motor on
-	bool play_pressed;		// Flag: Play button pressed
-	bool tape_playing;		// Flag: Tape playing
+	TapeState button_state;	// Tape button state
+	TapeState drive_state;	// Tape drive mechanism state
 
-	int pulse_length;		// Remaining length of next pulse in cycles (-1 = no pulse pending)
+	int read_pulse_length;	// Remaining number of cycles in next read pulse (-1 = no pulse pending)
+	uint32_t write_cycle;	// Cycle of last write pulse
+	bool first_write_pulse;	// Flag: Waiting for first write pulse to determine length
 };
 
 
 // Datasette state
-struct TapeState {
+struct TapeSaveState {
 	uint32_t current_pos;
-	int32_t pulse_length;
-	bool play_pressed;
+	int32_t read_pulse_length;
+	uint32_t write_cycle;
+	bool first_write_pulse;
+	TapeState button_state;
 	// Motor state comes from the CPU
 };
 
@@ -91,12 +111,12 @@ struct TapeState {
 
 inline void Tape::EmulateCycle()
 {
-	if (pulse_length < 0)
+	if (read_pulse_length < 0)
 		return;
 
-	--pulse_length;
-	if (pulse_length == 0) {
-		trigger_pulse();
+	--read_pulse_length;
+	if (read_pulse_length == 0) {
+		trigger_read_pulse();
 	}
 }
 
@@ -108,6 +128,9 @@ inline void Tape::EmulateCycle()
 // Check whether file with given header (64 bytes) and size looks like a
 // tape image file
 extern bool IsTapeImageFile(const std::string & path, const uint8_t * header, long size);
+
+// Create new blank tape image file
+extern bool CreateTapeImageFile(const std::string & path);
 
 
 #endif // ndef TAPE_H

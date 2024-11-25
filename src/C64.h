@@ -27,6 +27,8 @@
 #include <chrono>
 #include <string>
 
+#include "Tape.h"
+
 
 // Sizes of memory areas
 constexpr unsigned C64_RAM_SIZE = 0x10000;
@@ -45,14 +47,14 @@ constexpr unsigned CYCLES_PER_LINE = 63;
 extern bool IsFrodoSC;
 
 
-enum PlayMode {
-	PLAY_MODE_PLAY,
-	PLAY_MODE_REWIND,
-	PLAY_MODE_FORWARD,
-	PLAY_MODE_REQUEST_PAUSE,	// Pause on next VBlank
-	PLAY_MODE_PAUSE,
-	PLAY_MODE_REWIND_FRAME,
-	PLAY_MODE_FORWARD_FRAME,
+enum class PlayMode {
+	Play,
+	Rewind,
+	Forward,
+	RequestPause,	// Pause on next VBlank
+	Pause,
+	RewindFrame,
+	ForwardFrame,
 };
 
 
@@ -109,11 +111,12 @@ public:
 	void JoystickAdded(int32_t index);
 	void JoystickRemoved(int32_t instance_id);
 
-	void SetTapePlayButton(bool pressed);
+	void SetTapeButtons(TapeState pressed);
 	void SetTapeControllerButton(bool pressed);
 	void RewindTape();
-	bool TapePlayPressed() const;
-	bool TapePlaying() const;
+	void ForwardTape();
+	TapeState TapeButtonState() const;
+	TapeState TapeDriveState() const;
 	int TapePosition() const;
 
 	void SetDriveLEDs(int l0, int l1, int l2, int l3);
@@ -200,7 +203,7 @@ private:
 	unsigned frame_skip_factor;				// For display update limiting
 	unsigned frame_skip_counter;			// For display update limiting
 
-	PlayMode play_mode = PLAY_MODE_PLAY;	// Current play mode
+	PlayMode play_mode = PlayMode::Play;	// Current play mode
 	Snapshot * rewind_buffer = nullptr;		// Snapshot buffer for rewinding
 	size_t rewind_start = 0;				// Index of first recorded snapshot
 	size_t rewind_fill = 0;					// Number of recorded snapshots

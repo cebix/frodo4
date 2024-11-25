@@ -47,22 +47,23 @@ static bool in_startup = true;
 static bool result = false;
 
 // Pointer to preferences being edited
-static Prefs *prefs = nullptr;
+static Prefs * prefs = nullptr;
 
 // Main settings window
 static GtkWindow * prefs_win = nullptr;
 
 // Dialog for selecting snapshot file
-static GtkWidget *snapshot_dialog = nullptr;
-static GtkWidget *snapshot_accept_button = nullptr;
+static GtkWidget * snapshot_dialog = nullptr;
+static GtkWidget * snapshot_accept_button = nullptr;
 
-// Dialog for creating disk image file
-static GtkWidget *create_image_dialog = nullptr;
+// Dialogs for creating disk or tape image files
+static GtkWidget * create_disk_image_dialog = nullptr;
+static GtkWidget * create_tape_image_dialog = nullptr;
 
 // SAM text view and buffer
-static GtkTextView *sam_view = nullptr;
-static GtkTextBuffer *sam_buffer = nullptr;
-static GtkTextMark *sam_input_start = nullptr;
+static GtkTextView * sam_view = nullptr;
+static GtkTextBuffer * sam_buffer = nullptr;
+static GtkTextMark * sam_input_start = nullptr;
 
 // Prototypes
 static void set_tape_controls();
@@ -71,6 +72,7 @@ static void get_values();
 static void ghost_widgets();
 static void write_sam_output(std::string s, bool error = false);
 extern "C" G_MODULE_EXPORT void on_tape_play_toggled(GtkToggleButton *button, gpointer user_data);
+extern "C" G_MODULE_EXPORT void on_tape_record_toggled(GtkToggleButton *button, gpointer user_data);
 extern "C" G_MODULE_EXPORT void on_tape_stop_toggled(GtkToggleButton *button, gpointer user_data);
 extern "C" G_MODULE_EXPORT void on_cartridge_eject_clicked(GtkButton *button, gpointer user_data);
 
@@ -114,20 +116,6 @@ static const char * shortcuts_win_ui =
 	              "<property name=\"visible\">1</property>"
 	              "<property name=\"accelerator\">&lt;ctrl&gt;F12</property>"
 	              "<property name=\"title\">Reset C64 and auto-start from drive 1 or 8</property>"
-	            "</object>"
-	          "</child>"
-	          "<child>"
-	            "<object class=\"GtkShortcutsShortcut\">"
-	              "<property name=\"visible\">1</property>"
-	              "<property name=\"accelerator\">F9</property>"
-	              "<property name=\"title\">PLAY button on tape drive 1</property>"
-	            "</object>"
-	          "</child>"
-	          "<child>"
-	            "<object class=\"GtkShortcutsShortcut\">"
-	              "<property name=\"visible\">1</property>"
-	              "<property name=\"accelerator\">&lt;shift&gt;F9</property>"
-	              "<property name=\"title\">STOP button on tape drive 1</property>"
 	            "</object>"
 	          "</child>"
 	          "<child>"
@@ -318,21 +306,38 @@ bool Prefs::ShowEditor(bool startup, fs::path prefs_path, fs::path snapshot_path
 		gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(snapshot_dialog), filter);
 
 		// Create dialog for creating blank disk image file
-		create_image_dialog = gtk_file_chooser_dialog_new("Create Disk Image File", prefs_win,
+		create_disk_image_dialog = gtk_file_chooser_dialog_new("Create Disk Image File", prefs_win,
 			GTK_FILE_CHOOSER_ACTION_SAVE, "Cancel", GTK_RESPONSE_CANCEL, "Save", GTK_RESPONSE_ACCEPT, nullptr
 		);
 
-		gtk_file_chooser_set_current_name(GTK_FILE_CHOOSER(create_image_dialog), "Untitled.d64");
-		gtk_file_chooser_set_do_overwrite_confirmation(GTK_FILE_CHOOSER(create_image_dialog), true);
+		gtk_file_chooser_set_current_name(GTK_FILE_CHOOSER(create_disk_image_dialog), "Untitled.d64");
+		gtk_file_chooser_set_do_overwrite_confirmation(GTK_FILE_CHOOSER(create_disk_image_dialog), true);
 
 		filter = gtk_file_filter_new();
 		gtk_file_filter_add_pattern(filter, "*.d64");
 		gtk_file_filter_set_name(filter, "C64 Disk Image Files (*.d64)");
-		gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(create_image_dialog), filter);
+		gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(create_disk_image_dialog), filter);
 		filter = gtk_file_filter_new();
 		gtk_file_filter_add_pattern(filter, "*");
 		gtk_file_filter_set_name(filter, "All Files (*.*)");
-		gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(create_image_dialog), filter);
+		gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(create_disk_image_dialog), filter);
+
+		// Create dialog for creating blank tape image file
+		create_tape_image_dialog = gtk_file_chooser_dialog_new("Create Tape Image File", prefs_win,
+			GTK_FILE_CHOOSER_ACTION_SAVE, "Cancel", GTK_RESPONSE_CANCEL, "Save", GTK_RESPONSE_ACCEPT, nullptr
+		);
+
+		gtk_file_chooser_set_current_name(GTK_FILE_CHOOSER(create_tape_image_dialog), "Untitled.tap");
+		gtk_file_chooser_set_do_overwrite_confirmation(GTK_FILE_CHOOSER(create_tape_image_dialog), true);
+
+		filter = gtk_file_filter_new();
+		gtk_file_filter_add_pattern(filter, "*.tap");
+		gtk_file_filter_set_name(filter, "C64 Tape Image Files (*.tap)");
+		gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(create_tape_image_dialog), filter);
+		filter = gtk_file_filter_new();
+		gtk_file_filter_add_pattern(filter, "*");
+		gtk_file_filter_set_name(filter, "All Files (*.*)");
+		gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(create_tape_image_dialog), filter);
 
 		// Set up SAM view
 		sam_view = GTK_TEXT_VIEW(gtk_builder_get_object(builder, "sam_view"));
@@ -405,8 +410,10 @@ bool Prefs::ShowEditor(bool startup, fs::path prefs_path, fs::path snapshot_path
 
 		gtk_widget_hide(GTK_WIDGET(gtk_builder_get_object(builder, "tape_position")));
 		gtk_widget_hide(GTK_WIDGET(gtk_builder_get_object(builder, "tape_play")));
+		gtk_widget_hide(GTK_WIDGET(gtk_builder_get_object(builder, "tape_record")));
 		gtk_widget_hide(GTK_WIDGET(gtk_builder_get_object(builder, "tape_stop")));
 		gtk_widget_hide(GTK_WIDGET(gtk_builder_get_object(builder, "tape_rewind")));
+		gtk_widget_hide(GTK_WIDGET(gtk_builder_get_object(builder, "tape_forward")));
 
 	} else {
 
@@ -419,8 +426,10 @@ bool Prefs::ShowEditor(bool startup, fs::path prefs_path, fs::path snapshot_path
 
 		gtk_widget_show(GTK_WIDGET(gtk_builder_get_object(builder, "tape_position")));
 		gtk_widget_show(GTK_WIDGET(gtk_builder_get_object(builder, "tape_play")));
+		gtk_widget_show(GTK_WIDGET(gtk_builder_get_object(builder, "tape_record")));
 		gtk_widget_show(GTK_WIDGET(gtk_builder_get_object(builder, "tape_stop")));
 		gtk_widget_show(GTK_WIDGET(gtk_builder_get_object(builder, "tape_rewind")));
+		gtk_widget_show(GTK_WIDGET(gtk_builder_get_object(builder, "tape_forward")));
 
 		set_tape_controls();
 
@@ -466,20 +475,26 @@ bool Prefs::ShowEditor(bool startup, fs::path prefs_path, fs::path snapshot_path
 static void set_tape_controls()
 {
 	GtkWidget * tape_play = GTK_WIDGET(gtk_builder_get_object(builder, "tape_play"));
+	GtkWidget * tape_record = GTK_WIDGET(gtk_builder_get_object(builder, "tape_record"));
 	GtkWidget * tape_stop = GTK_WIDGET(gtk_builder_get_object(builder, "tape_stop"));
 
-	bool play_pressed = TheC64->TapePlayPressed();
+	TapeState tape_buttons = TheC64->TapeButtonState();
 
 	g_signal_handlers_block_by_func(G_OBJECT(tape_play), (void *) on_tape_play_toggled, nullptr);
+	g_signal_handlers_block_by_func(G_OBJECT(tape_record), (void *) on_tape_record_toggled, nullptr);
 	g_signal_handlers_block_by_func(G_OBJECT(tape_stop), (void *) on_tape_stop_toggled, nullptr);
 
-	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(tape_play), play_pressed);
-	gtk_widget_set_sensitive(tape_play, ! play_pressed);
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(tape_play), tape_buttons == TapeState::Play);
+	gtk_widget_set_sensitive(tape_play, tape_buttons != TapeState::Play);
 
-	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(tape_stop), ! play_pressed);
-	gtk_widget_set_sensitive(tape_stop, play_pressed);
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(tape_record), tape_buttons == TapeState::Record);
+	gtk_widget_set_sensitive(tape_record, tape_buttons != TapeState::Record);
+
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(tape_stop), tape_buttons == TapeState::Stop);
+	gtk_widget_set_sensitive(tape_stop, tape_buttons != TapeState::Stop);
 
 	g_signal_handlers_unblock_by_func(G_OBJECT(tape_play), (void *) on_tape_play_toggled, nullptr);
+	g_signal_handlers_unblock_by_func(G_OBJECT(tape_record), (void *) on_tape_record_toggled, nullptr);
 	g_signal_handlers_unblock_by_func(G_OBJECT(tape_stop), (void *) on_tape_stop_toggled, nullptr);
 
 	gtk_label_set_text(GTK_LABEL(gtk_builder_get_object(builder, "tape_position")), std::format("Position: {}%", TheC64->TapePosition()).c_str());
@@ -1410,18 +1425,18 @@ extern "C" G_MODULE_EXPORT void on_save_snapshot(GtkMenuItem *menuitem, gpointer
 	}
 }
 
-extern "C" G_MODULE_EXPORT void on_create_image(GtkMenuItem *menuitem, gpointer user_data)
+extern "C" G_MODULE_EXPORT void on_create_disk_image(GtkMenuItem *menuitem, gpointer user_data)
 {
 	bool save_ok = false;
 	char * filename = nullptr;
 
-	gint res = gtk_dialog_run(GTK_DIALOG(create_image_dialog));
+	gint res = gtk_dialog_run(GTK_DIALOG(create_disk_image_dialog));
 	if (res == GTK_RESPONSE_ACCEPT) {
-		filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(create_image_dialog));
+		filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(create_disk_image_dialog));
 		save_ok = CreateDiskImageFile(filename);
 	}
 
-	gtk_widget_hide(create_image_dialog);
+	gtk_widget_hide(create_disk_image_dialog);
 
 	GtkWidget * msg = nullptr;
 	if (save_ok) {
@@ -1433,6 +1448,41 @@ extern "C" G_MODULE_EXPORT void on_create_image(GtkMenuItem *menuitem, gpointer 
 		msg = gtk_message_dialog_new(prefs_win,
 			GTK_DIALOG_MODAL, GTK_MESSAGE_ERROR, GTK_BUTTONS_OK,
 			"Can't create disk image file '%s'.", filename
+		);
+	}
+	if (msg) {
+		gtk_dialog_run(GTK_DIALOG(msg));
+		gtk_widget_destroy(msg);
+	}
+
+	if (filename) {
+		g_free(filename);
+	}
+}
+
+extern "C" G_MODULE_EXPORT void on_create_tape_image(GtkMenuItem *menuitem, gpointer user_data)
+{
+	bool save_ok = false;
+	char * filename = nullptr;
+
+	gint res = gtk_dialog_run(GTK_DIALOG(create_tape_image_dialog));
+	if (res == GTK_RESPONSE_ACCEPT) {
+		filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(create_tape_image_dialog));
+		save_ok = CreateTapeImageFile(filename);
+	}
+
+	gtk_widget_hide(create_tape_image_dialog);
+
+	GtkWidget * msg = nullptr;
+	if (save_ok) {
+		msg = gtk_message_dialog_new(prefs_win,
+			GTK_DIALOG_MODAL, GTK_MESSAGE_INFO, GTK_BUTTONS_OK,
+			"Tape image file '%s' created.", filename
+		);
+	} else if (res == GTK_RESPONSE_ACCEPT) {
+		msg = gtk_message_dialog_new(prefs_win,
+			GTK_DIALOG_MODAL, GTK_MESSAGE_ERROR, GTK_BUTTONS_OK,
+			"Can't create tape image file '%s'.", filename
 		);
 	}
 	if (msg) {
@@ -1566,13 +1616,34 @@ extern "C" G_MODULE_EXPORT void on_drive11_next_disk_clicked(GtkButton *button, 
 
 extern "C" G_MODULE_EXPORT void on_tape_play_toggled(GtkToggleButton *button, gpointer user_data)
 {
-	TheC64->SetTapePlayButton(true);
+	TheC64->SetTapeButtons(TapeState::Play);
+	set_tape_controls();
+}
+
+extern "C" G_MODULE_EXPORT void on_tape_record_toggled(GtkToggleButton *button, gpointer user_data)
+{
+	if (TheC64->TapePosition() < 100) {
+		GtkWidget * msg = gtk_message_dialog_new(prefs_win, GTK_DIALOG_MODAL,
+			GTK_MESSAGE_WARNING, GTK_BUTTONS_OK_CANCEL,
+			"Recording at current tape position will overwrite existing data!\n"
+			"OK to proceed?"
+		);
+		int result = gtk_dialog_run(GTK_DIALOG(msg));
+		gtk_widget_destroy(msg);
+
+		if (result != GTK_RESPONSE_OK) {
+			set_tape_controls();
+			return;
+		}
+	}
+
+	TheC64->SetTapeButtons(TapeState::Record);
 	set_tape_controls();
 }
 
 extern "C" G_MODULE_EXPORT void on_tape_stop_toggled(GtkToggleButton *button, gpointer user_data)
 {
-	TheC64->SetTapePlayButton(false);
+	TheC64->SetTapeButtons(TapeState::Stop);
 	set_tape_controls();
 }
 
@@ -1580,13 +1651,12 @@ extern "C" G_MODULE_EXPORT void on_tape_rewind_clicked(GtkButton *button, gpoint
 {
 	TheC64->RewindTape();
 	set_tape_controls();
+}
 
-	GtkWidget * msg = gtk_message_dialog_new(prefs_win,
-	    GTK_DIALOG_MODAL, GTK_MESSAGE_INFO, GTK_BUTTONS_OK,
-	    "Tape rewound to start."
-	);
-	gtk_dialog_run(GTK_DIALOG(msg));
-	gtk_widget_destroy(msg);
+extern "C" G_MODULE_EXPORT void on_tape_forward_clicked(GtkButton *button, gpointer user_data)
+{
+	TheC64->ForwardTape();
+	set_tape_controls();
 }
 
 extern "C" G_MODULE_EXPORT void on_display_type_changed(GtkComboBox *box, gpointer user_data)

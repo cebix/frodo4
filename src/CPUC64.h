@@ -98,7 +98,6 @@ public:
 	void ClearNMI();
 
 	void SetTapeSense(bool pressed);
-	bool TapeMotorOn() const { return tape_motor; }
 
 	uint16_t GetPC() const { return pc; }
 
@@ -154,8 +153,6 @@ private:
 
 	bool jammed;			// Flag: CPU jammed, user notified
 
-	bool tape_motor;		// Flag: Tape motor turned on
-
 #ifdef FRODO_SC
 	void check_interrupts();
 
@@ -166,13 +163,15 @@ private:
 	bool nmi_pending;
 	uint8_t nmi_delay;			// Delay line for NMI recognition (11→01→00)
 
+	bool tape_write;			// Tape write signal
+
 	uint8_t state, op;			// Current state and opcode
 	uint16_t ar, ar2;			// Address registers
 	uint8_t rdbuf;				// Data buffer for RMW instructions
 	uint8_t ddr, pr;			// Processor port
 	uint8_t pr_out, pr_in;
 #else
-	bool tape_sense;			// Tape sense line (true = pressed)
+	bool tape_sense;			// Tape sense line (true = button pressed)
 	int	borrowed_cycles;		// Borrowed cycles from next line
 	uint8_t dfff_byte;			// Byte at $dfff for emulator ID
 #endif

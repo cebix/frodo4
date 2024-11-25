@@ -79,12 +79,14 @@ button</EM> work in the same way as for the disk drives. Note that you
 cannot use .t64 files for the tape drive even though they are often labeled
 as “tape images”.
 
-<P>When the emulation is running, the box also contains two buttons which
-correspond to the <B>“Play”</B> and <B>“Stop”</B> buttons of the tape drive,
-and an additional <B>“Rewind”</B> button which resets the simulated tape
-back to its starting position. The “Auto-Start Drive 1” function
-automatically rewinds the tape and presses the “Play” button for you, so you
-will rarely have to touch these controls.
+<P>When the emulation is running, the box also contains buttons which
+correspond to the <B>“Play”</B>, <B>“Record”</B> and <B>“Stop”</B> buttons
+of the tape drive, and additional <B>“Rewind”</B> and <B>“Forward”</B>
+buttons which move the simulated tape to its start or end position,
+respectively. When the C64 asks you to “Press Record &amp; Play” it is
+sufficient to just click on the “Record” button. The “Auto-Start Drive 1”
+function automatically rewinds the tape and presses the “Play” button for
+you, so you will rarely have to touch these controls.
 
 <P>There are some rare instances of software distributed on tape which
 refuses to run if it sees a disk drive connected. In this case, turn off the
@@ -261,8 +263,10 @@ running.
 
 <P>With <B>“Create Disk Image File...”</B> in the “File” menu you can create
 an empty .d64 image file if you need one, for example to save your progress
-in a game. You can mount the created image file in the “Drive Paths”
-settings.
+in a game. Likewise, the <B>“Create Tape Image File...”</B> command creates
+a blank .tap image file for the tape drive. You can mount the created image
+files in the “Disk Drive Paths” and “Tape Drive Path” settings,
+respectively.
 
 <P>Once the emulation has been started you can use the <B>“Save
 snapshot...”</B> command in the “File” menu to save the current state of the
