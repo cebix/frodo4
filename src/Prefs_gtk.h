@@ -49,6 +49,9 @@ static bool result = false;
 // Pointer to preferences being edited
 static Prefs * prefs = nullptr;
 
+// Application base directory (may be empty)
+static std::string app_base_dir;
+
 // Main settings window
 static GtkWindow * prefs_win = nullptr;
 
@@ -259,11 +262,33 @@ bool Prefs::ShowEditor(bool startup, fs::path prefs_path, fs::path snapshot_path
 
 		// Load user interface file if called the first time
 		builder = gtk_builder_new();
+
+		auto base_path = SDL_GetBasePath();
+		if (base_path) {
+			app_base_dir = base_path;
+			SDL_free(base_path);
+		}
+
 		GError * error = nullptr;
-		if (gtk_builder_add_from_file(builder, DATADIR "Frodo.ui", &error) == 0) {
+		bool success = false;
+
+		// Look in base dir first, then in DATADIR
+		if (! app_base_dir.empty()) {
+			success = gtk_builder_add_from_file(builder, (app_base_dir + "Frodo.ui").c_str(), &error) > 0;
+		}
+		if (! success) {
+			if (error) {
+				g_free(error);
+				error = nullptr;
+			}
+			success = gtk_builder_add_from_file(builder, DATADIR "Frodo.ui", &error) > 0;
+		}
+
+		if (! success) {
 
 			// No UI means no prefs editor
 			g_warning("Couldn't load preferences UI definition: %s\nPreferences editor not available.\n", error->message);
+			g_free(error);
 			g_object_unref(builder);
 			builder = nullptr;
 			return startup;
@@ -1506,7 +1531,19 @@ extern "C" G_MODULE_EXPORT void on_shortcuts_activate(GtkMenuItem *menuitem, gpo
 
 extern "C" G_MODULE_EXPORT void on_user_manual_activate(GtkMenuItem *menuitem, gpointer user_data)
 {
-	gtk_show_uri_on_window(prefs_win, "file://" HTMLDIR "index.html", GDK_CURRENT_TIME, nullptr);
+	// Look in base dir first, then in HTMLDIR
+	std::string index_file;
+	if (! app_base_dir.empty()) {
+		auto p = fs::path(app_base_dir) / "docs" / "index.html";
+		if (fs::is_regular_file(p)) {
+			index_file = p.string();
+		}
+	}
+	if (index_file.empty()) {
+		index_file = HTMLDIR "index.html";
+	}
+
+	gtk_show_uri_on_window(prefs_win, ("file://" + index_file).c_str(), GDK_CURRENT_TIME, nullptr);
 }
 
 extern "C" G_MODULE_EXPORT void on_about_activate(GtkMenuItem *menuitem, gpointer user_data)
