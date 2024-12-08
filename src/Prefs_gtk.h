@@ -1543,7 +1543,11 @@ extern "C" G_MODULE_EXPORT void on_user_manual_activate(GtkMenuItem *menuitem, g
 		index_file = HTMLDIR "index.html";
 	}
 
-	gtk_show_uri_on_window(prefs_win, ("file://" + index_file).c_str(), GDK_CURRENT_TIME, nullptr);
+	gchar * uri = g_filename_to_uri(index_file.c_str(), nullptr, nullptr);
+	if (uri != nullptr) {
+		gtk_show_uri_on_window(prefs_win, uri, GDK_CURRENT_TIME, nullptr);
+		g_free(uri);
+	}
 }
 
 extern "C" G_MODULE_EXPORT void on_about_activate(GtkMenuItem *menuitem, gpointer user_data)
