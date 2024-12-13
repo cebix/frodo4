@@ -24,7 +24,8 @@ $ make
 $ sudo make install
 ```
 
-Installation is necessary to use the GTK-based settings GUI.
+Installation is necessary to use the GTK-based settings GUI and the file
+type associations of Frodo.
 
 ## Installation on macOS
 

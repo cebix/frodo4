@@ -4,38 +4,26 @@
 </HEAD>
 <BODY>
 
-<H1>What's New in V4.4?</H1>
+<H1>What's New in V4.5?</H1>
 
 <HR>
 
-The most important changes from V4.3 are:
+The most important changes from V4.4 are:
 
 <UL>
-<LI>Fixed startup problem when running under Wayland
-<LI>Command line option '-c' is now used to specify a different
-configuration file than the default
-<LI>Settings from configuration file can be overridden on command line (for
-example “DrivePath8=/path/to/disk.d64”)
-<LI>Holding down Ctrl while pressing F12 resets the C64 and auto-starts from
-disk drive 8
-<LI>Settings window changes:
- <UL>
- <LI>Added ability to map game controller buttons to keys on the C64
-     keyboard or the tape PLAY button
- <LI>Added ability to define firmware ROM sets, and switch between them
- <LI>Added option for twin-stick joystick control (for games like “Robotron
-     2084”)
- <LI>Added option to enable controller rumble effects via the C64 tape drive
-     motor signal (for the game “Aquarius”)
- <LI>Added “Auto-Start Drive 8” button
- <LI>Added menu item for opening the included user manual
- <LI>Removed "Display Sprites" and "Enable SID Filters" settings which are
-     now always enabled
- </UL>
-<LI>Improved interrupt timing
-<LI>Improved SID emulation
-<LI>Improved virtual 1541 file name pattern matching
-<LI>New font for on-screen displays
+<LI>Note: The snapshot file format has changed. This version of Frodo will
+not read snapshot files from earlier versions.
+<LI>Added Datasette tape drive emulation (TAP files, not available in Frodo
+Lite)
+<LI>Added support for banked cartridges (Ocean, Fun Play, Power Play, Super
+Games, C64 Games System, System 3, Dinamic, Zaxxon, Magic Desk, Simons'
+BASIC, COMAL 80)
+<LI>Added ability to auto-start D64/G64/T64/TAP images, cartridges, and C64
+BASIC program files by specifying them on the command line
+<LI>Unix: Added file type associations to let Frodo start disk/tape image
+files, cartridges, and C64 program files from the desktop
+<LI>Windows: Fixed some portability problems
+<LI>Added support for integration with VICE automated regression testbench
 </UL>
 
 For changes to earlier versions of Frodo, please look <A HREF="history.html">here</A>.<P>
