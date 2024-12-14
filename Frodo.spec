@@ -1,5 +1,5 @@
 %define name Frodo
-%define version 4.4
+%define version 4.5
 %define release 1
 
 Summary: Commodore 64 emulator
