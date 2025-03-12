@@ -163,7 +163,11 @@ enum {
  *  and sample master volume for sampled voice reproduction
  */
 
-constexpr unsigned SID_CYCLES_PER_LINE = 63;
+#ifdef NTSC
+constexpr unsigned SID_CYCLES_PER_LINE = 65;  // Clock cycles per raster line (NTSC)
+#else
+constexpr unsigned SID_CYCLES_PER_LINE = 63;  // Clock cycles per raster line (PAL)
+#endif
 
 inline void MOS6581::EmulateLine()
 {

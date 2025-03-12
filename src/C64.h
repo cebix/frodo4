@@ -39,8 +39,19 @@ constexpr unsigned CHAR_ROM_SIZE = 0x1000;
 constexpr unsigned DRIVE_RAM_SIZE = 0x800;
 constexpr unsigned DRIVE_ROM_SIZE = 0x4000;
 
-// Clock cycles per raster line
+#ifdef NTSC
+// Screen refresh frequency (NTSC)
+constexpr unsigned SCREEN_FREQ = 60;
+
+// Clock cycles per raster line (NTSC)
+constexpr unsigned CYCLES_PER_LINE = 65;
+#else
+// Screen refresh frequency (PAL)
+constexpr unsigned SCREEN_FREQ = 50;
+
+// Clock cycles per raster line (PAL)
 constexpr unsigned CYCLES_PER_LINE = 63;
+#endif
 
 
 // false: Frodo, true: FrodoSC

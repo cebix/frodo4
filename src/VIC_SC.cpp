@@ -1768,11 +1768,13 @@ unsigned MOS6569::EmulateCycle()
 			DisplayIfBadLine;
 			CheckSpriteDMA;
 
+#ifndef NTSC
 			if (spr_dma_on & 0x01) {
 				SetBALow;
 			} else {
 				SetBAHigh;
 			}
+#endif
 			break;
 
 		// Turn on border in 38 column mode, turn on sprite DMA if Y coordinate is right and
@@ -1803,9 +1805,11 @@ unsigned MOS6569::EmulateCycle()
 				}
 			}
 
+#ifndef NTSC
 			if (spr_dma_on & 0x01) {
 				SetBALow;
 			}
+#endif
 			break;
 
 		// Turn on border in 40 column mode, set BA for sprite 1, paint sprites
@@ -1822,9 +1826,18 @@ unsigned MOS6569::EmulateCycle()
 			gfx_delay <<= 8;	// No graphics_access(), but still shift gfx delay line along for remaining pixels
 			IdleAccess;
 			DisplayIfBadLine;
+
+#ifdef NTSC
+			if (spr_dma_on & 0x01) {
+				SetBALow;
+			} else {
+				SetBAHigh;
+			}
+#else
 			if (spr_dma_on & 0x02) {
 				SetBALow;
 			}
+#endif
 			break;
 
 		// Fetch sprite pointer 0, MCBASE->MC, turn sprite display on/off,
@@ -1850,11 +1863,18 @@ unsigned MOS6569::EmulateCycle()
 				}
 			}
 
+#ifdef NTSC
+			IdleAccess;
+			if (spr_dma_on & 0x01) {
+				SetBALow;
+			}
+#else
 			SprPtrAccess(0);
 			SprDataAccess(0, 0);
 			if (!(spr_dma_on & 0x03)) {
 				SetBAHigh;
 			}
+#endif
 
 			if (rc == 7) {
 				vc_base = vc;
@@ -1871,12 +1891,20 @@ unsigned MOS6569::EmulateCycle()
 			draw_background();
 			SampleBorderColor;
 
+#ifdef NTSC
+			IdleAccess;
+			DisplayIfBadLine;
+			if (spr_dma_on & 0x02) {
+				SetBALow;
+			}
+#else
 			SprDataAccess(0, 1);
 			SprDataAccess(0, 2);
 			DisplayIfBadLine;
 			if (spr_dma_on & 0x04) {
 				SetBALow;
 			}
+#endif
 			break;
 
 		// Fetch sprite pointer 1, reset BA if sprites 1 and 2 off
@@ -1884,12 +1912,21 @@ unsigned MOS6569::EmulateCycle()
 			draw_background();
 			SampleBorderColor;
 
+#ifdef NTSC
+			SprPtrAccess(0);
+			SprDataAccess(0, 0);
+			DisplayIfBadLine;
+			if (!(spr_dma_on & 0x03)) {
+				SetBAHigh;
+			}
+#else
 			SprPtrAccess(1);
 			SprDataAccess(1, 0);
 			DisplayIfBadLine;
 			if (!(spr_dma_on & 0x06)) {
 				SetBAHigh;
 			}
+#endif
 			break;
 
 		// Set BA for sprite 3, read data of sprite 1, graphics display ends here
@@ -2008,16 +2045,67 @@ unsigned MOS6569::EmulateCycle()
 				}
 			}
 
+#ifdef NTSC
+			SprDataAccess(0, 1);
+			SprDataAccess(0, 2);
+			DisplayIfBadLine;
+			if (spr_dma_on & 0x04) {
+				SetBALow;
+			}
+#else
 			SprDataAccess(1, 1);
 			SprDataAccess(1, 2);
 			DisplayIfBadLine;
 			if (spr_dma_on & 0x08) {
 				SetBALow;
 			}
+#endif
 			break;
 
 		// Fetch sprite pointer 2, reset BA if sprites 2 and 3 off
 		case 62:
+#ifdef NTSC
+			SprPtrAccess(1);
+			SprDataAccess(1, 0);
+			DisplayIfBadLine;
+			if (!(spr_dma_on & 0x06)) {
+				SetBAHigh;
+			}
+#else
+			SprPtrAccess(2);
+			SprDataAccess(2, 0);
+			DisplayIfBadLine;
+			if (!(spr_dma_on & 0x0c)) {
+				SetBAHigh;
+			}
+#endif
+			break;
+
+		// Set BA for sprite 4, read data of sprite 2
+		case 63:
+#ifdef NTSC
+			SprDataAccess(1, 1);
+			SprDataAccess(1, 2);
+			DisplayIfBadLine;
+			if (spr_dma_on & 0x08) {
+				SetBALow;
+			}
+#else
+			SprDataAccess(2, 1);
+			SprDataAccess(2, 2);
+			DisplayIfBadLine;
+			if (spr_dma_on & 0x10) {
+				SetBALow;
+			}
+
+			ud_border_on = ud_border_set;
+
+			retFlags = VIC_HBLANK;
+#endif
+			break;
+
+#ifdef NTSC
+		case 64:
 			SprPtrAccess(2);
 			SprDataAccess(2, 0);
 			DisplayIfBadLine;
@@ -2026,8 +2114,7 @@ unsigned MOS6569::EmulateCycle()
 			}
 			break;
 
-		// Set BA for sprite 4, read data of sprite 2
-		case 63:
+		case 65:
 			SprDataAccess(2, 1);
 			SprDataAccess(2, 2);
 			DisplayIfBadLine;
@@ -2039,6 +2126,7 @@ unsigned MOS6569::EmulateCycle()
 
 			retFlags = VIC_HBLANK;
 			break;
+#endif
 	}
 
 	// Handle vertical border for next line

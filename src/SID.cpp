@@ -424,7 +424,11 @@ void MOS6581::SetState(const MOS6581State * s)
  **/
 
 constexpr int SAMPLE_FREQ = 48000;			// Desired default sample frequency (note: obtained freq may be different!)
-constexpr uint32_t SID_FREQ = 985248;		// SID frequency in Hz
+#ifdef NTSC
+constexpr uint32_t SID_FREQ = 1022727;		// SID frequency in Hz (NTSC)
+#else
+constexpr uint32_t SID_FREQ = 985248;		// SID frequency in Hz (PAL)
+#endif
 constexpr size_t SAMPLE_BUF_SIZE = TOTAL_RASTERS * 2;	// Size of buffer for sampled voice (double buffered)
 
 

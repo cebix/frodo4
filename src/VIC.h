@@ -28,11 +28,13 @@
 #endif
 
 
+#ifdef NTSC
+// Total number of raster lines (NTSC)
+constexpr unsigned TOTAL_RASTERS = 0x107;
+#else
 // Total number of raster lines (PAL)
 constexpr unsigned TOTAL_RASTERS = 0x138;
-
-// Screen refresh frequency (PAL)
-constexpr unsigned SCREEN_FREQ = 50;
+#endif
 
 // Flags returned by EmulateCycle()/EmulateLine()
 enum {

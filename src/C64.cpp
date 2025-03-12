@@ -96,9 +96,9 @@ struct Snapshot {
 constexpr size_t REWIND_LENGTH = SCREEN_FREQ * 30;  // 30 seconds
 
 
-// For speed limiting to 50 fps
-constexpr int FRAME_TIME_us = 20000;	// 20 ms for 50 fps
-constexpr int FORWARD_SCALE = 4;		// Fast-forward is four times faster
+// For speed limiting to 50/60 fps
+constexpr int FRAME_TIME_us = 1000000 / SCREEN_FREQ;	// 20 ms for 50 fps (PAL)
+constexpr int FORWARD_SCALE = 4;	// Fast-forward is four times faster
 
 
 // Joystick dead zone around center (+/-), and hysteresis to prevent jitter
