@@ -55,8 +55,8 @@ void MOS6526::Reset()
 
 	sdr = icr = cra = crb = int_mask = 0;
 
-	ta.counter       = tb.counter       = 0xffff;
-	ta.latch         = tb.latch         = 1;
+	ta.counter       = tb.counter       = 0;
+	ta.latch         = tb.latch         = 0xffff;
 	ta.pb_toggle     = tb.pb_toggle     = false;
 	ta.idle          = tb.idle          = false;
 	ta.output        = tb.output        = false;
