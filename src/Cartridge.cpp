@@ -212,7 +212,9 @@ uint8_t CartridgeC64GS::ReadROML(uint16_t adr, uint8_t ram_byte, bool notLoram)
 
 uint8_t CartridgeC64GS::ReadIO1(uint16_t adr, uint8_t bus_byte)
 {
-	bank = adr & 0x3f;
+	// Despite various online reports, reading from io1 switches to  bank 0
+	// according to VICE source code - and seems to work on tested C64GS carts.
+	bank = 0;
 	return bus_byte;
 }
 
