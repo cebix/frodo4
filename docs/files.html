@@ -16,10 +16,10 @@
 <P>In this mode, the C64 programs and files are stored in a directory on your
 computer and can be <KBD>LOAD</KBD>ed and <KBD>SAVE</KBD>d as usual from
 the emulator. The paths to the directories of the simulated drives are
-given in the settings window in the “Drive Paths” group.
+given in the settings window in the &ldquo;Drive Paths&rdquo; group.
 
 <P>You can also load the directory with <KBD>LOAD"$",8</KBD>. All files are
-displayed as having type “PRG”, all subdirectories as type “DIR”. To get
+displayed as having type &ldquo;PRG&rdquo;, all subdirectories as type &ldquo;DIR&rdquo;. To get
 into a subdirectory you have to open the settings window and change the path
 for the drive, as the operating system of the C64 doesn't know about
 subdirectories. However, it is possible to use a '/' in the C64 file name to
@@ -29,7 +29,7 @@ unless the '/' translation setting is turned on.
 <P>For opening files, the file types 'P' and 'S' and the access modes 'R',
 'W' and 'A' are supported. Wildcards ('*', '?') can also be used. Files are
 always overwritten by the <KBD>SAVE</KBD> command even if they are not
-opened with “@:”. Floppy commands other than 'I' and 'UJ', relative files,
+opened with &ldquo;@:&rdquo;. Floppy commands other than 'I' and 'UJ', relative files,
 and direct block access are not implemented. You can however read the error
 channel.
 
@@ -37,19 +37,19 @@ channel.
 <H2>2. .d64/.x64 disk image file (Disk Image Mode)</H2>
 
 <P>Most C64 programs available on the internet and on software collections,
-expecially demos and games, are stored in files with the extension “.d64”.
+expecially demos and games, are stored in files with the extension &ldquo;.d64&rdquo;.
 Such a file holds all 683 blocks of a complete side of a 1541 disk, so that
 direct block access is possible from within the emulation. The path name of
-the disk image file must be given in the settings window in “Drive Paths”
+the disk image file must be given in the settings window in &ldquo;Drive Paths&rdquo;
 group.
 
-<P>Apart from .d64 files, Frodo can also use image files of the “x64”
+<P>Apart from .d64 files, Frodo can also use image files of the &ldquo;x64&rdquo;
 emulator, automatically detecting the file type.
 
 
 <H2>3. .t64/LYNX archive file (Tape/Archive Mode)</H2>
 
-<P>.t64 and LYNX (.lnx) files are archive files like “tar”. .t64 files are
+<P>.t64 and LYNX (.lnx) files are archive files like &ldquo;tar&rdquo;. .t64 files are
 also sometimes found on the internet and on software collections; LYNX is a
 native C64 archiver. Frodo's .t64 support is a bit special in that it
 doesn't treat the .t64 file like a tape image (that's what the .t64 format
@@ -62,7 +62,7 @@ files, they are read-only under Frodo.
 
 <H2>4. Processor-level 1541 emulation</H2>
 
-<P>The 1541 is an “intelligent” disk drive with its own CPU and memory that
+<P>The 1541 is an &ldquo;intelligent&rdquo; disk drive with its own CPU and memory that
 executes code concurrently to the C64 and can even be programmed from the
 C64 side. Frodo is able to emulate a 1541 on this level, but as this notably
 slows down all disk accesses, the 1541 processor emulation can be turned on
