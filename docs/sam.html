@@ -1,5 +1,7 @@
+<!DOCTYPE html>
 <HTML>
 <HEAD>
+<META charset="utf-8">
 <TITLE>SAM</TITLE>
 </HEAD>
 <BODY>
@@ -177,7 +179,7 @@ three bytes per line. With this command, you can view sprite data.
 
 <PRE>
  r [reg value]       Show/set CPU registers
-</PRE><P>
+</PRE>
 
 <P>'r' without parameters shows all 6510 (C64) or 6502 (1541) registers and
 flags, and the instruction at the address specified by the program counter.
@@ -188,7 +190,7 @@ and the new value (“value”) as parameters.
 
 <PRE>
  s start end "file"  Save data
-</PRE><P>
+</PRE>
 
 <P>writes the memory from “start” to (and including) “end” to the specified
 file. The file name must be enclosed in quotation marks even if it contains
@@ -241,7 +243,7 @@ Source and destination may overlap.
 
 <PRE>
  : addr {byte}       Modify memory
-</PRE><P>
+</PRE>
 
 <P>writes the space-separated values “byte” into memory starting at “addr”.
 

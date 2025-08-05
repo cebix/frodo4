@@ -1,5 +1,7 @@
+<!DOCTYPE html>
 <HTML>
 <HEAD>
+<META charset="utf-8">
 <TITLE>Command-Line Options</TITLE>
 <STYLE>TD, TH { border: 1px solid black; padding: 4px }</STYLE>
 </HEAD>
@@ -37,7 +39,7 @@ Frodo /path/to/tape.tap<BR>
 Frodo /path/to/cartridge.crt<BR>
 Frodo /path/to/program[.prg]</KBD>
 
-<P>This is equivalent to:</KBD>
+<P>This is equivalent to:
 
 <P><KBD>Frodo DrivePath8=/path/to/disk.d64 AutoStart=true<BR>
 Frodo TapePath=/path/to/tape.tap AutoStart=true<BR>
@@ -49,71 +51,71 @@ Frodo LoadProgram=/path/to/program[.prg] AutoStart=true</KBD>
 
 <P>The following settings items are supported on the command line:
 
-<P><TABLE STYLE="border: 1px solid black; border-collapse: collapse">
+<TABLE STYLE="border: 1px solid black; border-collapse: collapse">
 <TR><TH>Item</TH><TH>Description</TH></TR>
-<TR><TD><TT>DrivePath8=<EM>&lt;file&gt;</EM><BR>DrivePath9=<EM>&lt;file&gt;</EM><BR>DrivePath10=<EM>&lt;file&gt;</EM><BR>DrivePath11=<EM>&lt;file&gt;</EM></TT></TD>
+<TR><TD><VAR>DrivePath8=<EM>&lt;file&gt;</EM><BR>DrivePath9=<EM>&lt;file&gt;</EM><BR>DrivePath10=<EM>&lt;file&gt;</EM><BR>DrivePath11=<EM>&lt;file&gt;</EM></VAR></TD>
   <TD>File or directory paths for floppy drives 8..11</TD></TR>
-<TR><TD><TT>Emul1541Proc=[false|true]</TT></TD>
+<TR><TD><VAR>Emul1541Proc=[false|true]</VAR></TD>
   <TD>Enable processor-level 1541 floppy drive emulation</TD></TR>
-<TR><TD><TT>TapePath=<EM>&lt;file&gt;</EM></TT></TD>
+<TR><TD><VAR>TapePath=<EM>&lt;file&gt;</EM></VAR></TD>
   <TD>File path for Datasette tape drive 1</TD></TR>
-<TR><TD><TT>LoadProgram=<EM>&lt;file&gt;</EM></TT></TD>
-  <TD>File path for C64 BASIC program to load on startup (must be used with <TT>AutoStart=true</TT>)</TD></TR>
-<TR><TD><TT>AutoStart=[false|true]</TT></TD>
+<TR><TD><VAR>LoadProgram=<EM>&lt;file&gt;</EM></VAR></TD>
+  <TD>File path for C64 BASIC program to load on startup (must be used with <VAR>AutoStart=true</VAR>)</TD></TR>
+<TR><TD><VAR>AutoStart=[false|true]</VAR></TD>
   <TD>Auto-start from drive 8 or 1 on startup, don't show settings window</TD></TR>
-<TR><TD><TT>MapSlash=[false|true]</TT></TD>
+<TR><TD><VAR>MapSlash=[false|true]</VAR></TD>
   <TD>Enable forward↔backward slash character mapping in 1541 directory mode</TD></TR>
-<TR><TD><TT>Cartridge=<EM>&lt;file&gt;</EM></TT></TD>
+<TR><TD><VAR>Cartridge=<EM>&lt;file&gt;</EM></VAR></TD>
   <TD>File path for cartridge</TD></TR>
-<TR><TD><TT>DisplayType=[WINDOW|SCREEN]</TT></TD>
+<TR><TD><VAR>DisplayType=[WINDOW|SCREEN]</VAR></TD>
   <TD>Whether to use windowed or full screen display</TD></TR>
-<TR><TD><TT>ScalingNumerator=<EM>&lt;number&gt;</EM></TT></TD>
+<TR><TD><VAR>ScalingNumerator=<EM>&lt;number&gt;</EM></VAR></TD>
   <TD>Initial window scaling numerator</TD></TR>
-<TR><TD><TT>ScalingDenominator=<EM>&lt;number&gt;</EM></TT></TD>
+<TR><TD><VAR>ScalingDenominator=<EM>&lt;number&gt;</EM></VAR></TD>
   <TD>Initial window scaling denominator (not available in settings window)</TD></TR>
-<TR><TD><TT>Palette=[PEPTO|COLODORE]</TT></TD>
+<TR><TD><VAR>Palette=[PEPTO|COLODORE]</VAR></TD>
   <TD>Color palette to use</TD></TR>
-<TR><TD><TT>SpriteCollisions=[false|true]</TT></TD>
+<TR><TD><VAR>SpriteCollisions=[false|true]</VAR></TD>
   <TD>Enable sprite collision detection</TD></TR>
-<TR><TD><TT>ShowLEDs=[false|true]</TT></TD>
+<TR><TD><VAR>ShowLEDs=[false|true]</VAR></TD>
   <TD>Show speed and drive LED status overlay on screen</TD></TR>
-<TR><TD><TT>SIDType=[6581|8580|SIDCARD]</TT></TD>
+<TR><TD><VAR>SIDType=[6581|8580|SIDCARD]</VAR></TD>
   <TD>SID type to emulate</TD></TR>
-<TR><TD><TT>Joystick1Port=<EM>&lt;number&gt;</EM></TT></TD>
+<TR><TD><VAR>Joystick1Port=<EM>&lt;number&gt;</EM></VAR></TD>
   <TD>SDL index of controller to use for joystick port 1 (-1 = autodetect)</TD></TR>
-<TR><TD><TT>Joystick2Port=<EM>&lt;number&gt;</EM></TT></TD>
+<TR><TD><VAR>Joystick2Port=<EM>&lt;number&gt;</EM></VAR></TD>
   <TD>SDL index of controller to use for joystick port 2 (-1 = autodetect)</TD></TR>
-<TR><TD><TT>JoystickSwap=[false|true]</TT></TD>
+<TR><TD><VAR>JoystickSwap=[false|true]</VAR></TD>
   <TD>Swap joystick ports</TD></TR>
-<TR><TD><TT>TwinStick=[false|true]</TT></TD>
+<TR><TD><VAR>TwinStick=[false|true]</VAR></TD>
   <TD>Enable twin stick controller mode</TD></TR>
-<TR><TD><TT>TapeRumble=[false|true]</TT></TD>
+<TR><TD><VAR>TapeRumble=[false|true]</VAR></TD>
   <TD>Enable controller rumble via tape motor signal</TD></TR>
-<TR><TD><TT>ButtonMap=<EM>&lt;string&gt;</EM></TT></TD>
+<TR><TD><VAR>ButtonMap=<EM>&lt;string&gt;</EM></VAR></TD>
   <TD>Name of game controller button mapping to use (empty = standard)</TD></TR>
-<TR><TD><TT>LimitSpeed=[false|true]</TT></TD>
+<TR><TD><VAR>LimitSpeed=[false|true]</VAR></TD>
   <TD>Limit speed to 100% of original C64</TD></TR>
-<TR><TD><TT>FastReset=[false|true]</TT></TD>
+<TR><TD><VAR>FastReset=[false|true]</VAR></TD>
   <TD>Enable fast reset</TD></TR>
-<TR><TD><TT>REUType=[NONE|128K|256K|512K|GEORAM]</TT></TD>
+<TR><TD><VAR>REUType=[NONE|128K|256K|512K|GEORAM]</VAR></TD>
   <TD>RAM expansion to emulate</TD></TR>
-<TR><TD><TT>ROMSet=<EM>&lt;string&gt;</EM></TT></TD>
+<TR><TD><VAR>ROMSet=<EM>&lt;string&gt;</EM></VAR></TD>
   <TD>Name of firmware ROM set to use (empty = built-in)</TD></TR>
-<TR><TD><TT>NormalCycles=<EM>&lt;number&gt;</EM></TT></TD>
+<TR><TD><VAR>NormalCycles=<EM>&lt;number&gt;</EM></VAR></TD>
   <TD>CPU clock cycles per line (only in Frodo Lite)</TD></TR>
-<TR><TD><TT>BadLineCycles=<EM>&lt;number&gt;</EM></TT></TD>
+<TR><TD><VAR>BadLineCycles=<EM>&lt;number&gt;</EM></VAR></TD>
   <TD>CPU clock cycles per bad line (only in Frodo Lite)</TD></TR>
-<TR><TD><TT>CIACycles=<EM>&lt;number&gt;</EM></TT></TD>
+<TR><TD><VAR>CIACycles=<EM>&lt;number&gt;</EM></VAR></TD>
   <TD>CIA clock cycles per line (only in Frodo Lite)</TD></TR>
-<TR><TD><TT>FloppyCycles=<EM>&lt;number&gt;</EM></TT></TD>
+<TR><TD><VAR>FloppyCycles=<EM>&lt;number&gt;</EM></VAR></TD>
   <TD>1541 CPU clock cycles per line (only in Frodo Lite)</TD></TR>
-<TR><TD><TT>CIAIRQHack=[false|true]</TT></TD>
+<TR><TD><VAR>CIAIRQHack=[false|true]</VAR></TD>
   <TD>Enable CIA IRQ hack (only in Frodo Lite)</TD></TR>
-<TR><TD><TT>TestBench=[false|true]</TT></TD>
+<TR><TD><VAR>TestBench=[false|true]</VAR></TD>
   <TD>Enable VICE testbench mode (no video display, exit by write to $D7FF)</TD></TR>
-<TR><TD><TT>TestMaxFrames=<EM>&lt;number&gt;</EM></TT></TD>
+<TR><TD><VAR>TestMaxFrames=<EM>&lt;number&gt;</EM></VAR></TD>
   <TD>Maximum number of frames to run in testbench mode before timeout</TD></TR>
-<TR><TD><TT>TestSnapshot=<EM>&lt;file.bmp&gt;</EM></TT></TD>
+<TR><TD><VAR>TestSnapshot=<EM>&lt;file.bmp&gt;</EM></VAR></TD>
   <TD>Save screenshot of C64 display to BMP file when exiting in testbench mode</TD></TR>
 </TABLE>
 
