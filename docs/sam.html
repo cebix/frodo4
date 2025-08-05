@@ -7,14 +7,14 @@
 <H1>SAM</H1>
 
 <CITE>
-“Frodo! Mr. Frodo, my dear!” cried Sam,<BR>
-tears almost blinding him. “It's Sam, I've come!”
+&ldquo;Frodo! Mr. Frodo, my dear!&rdquo; cried Sam,<BR>
+tears almost blinding him. &ldquo;It's Sam, I've come!&rdquo;
 </CITE>
 
 <HR>
 
 <P>Frodo has a built-in machine language monitor that can be activated from
-the “Tools” menu of the <A HREF="settings.html">settings window</A>: SAM
+the &ldquo;Tools&rdquo; menu of the <A HREF="settings.html">settings window</A>: SAM
 (<EM>Simple Assembler and Monitor</EM>). It provides full access to the
 memory and hardware of the emulated C64 and 1541.
 
@@ -22,10 +22,10 @@ memory and hardware of the emulated C64 and 1541.
 represented in hexadecimal. With the command 'h' you can display a list of
 all commands.
 
-<P>SAM has two modes of operation, indicated by the prompt “C64>” or
-“1541>”. You can switch between them with the “64” and “1541” commands. In
-“C64” mode, all commands that access memory or the CPU operate on the
-memory/CPU of the emulated C64. In “1541” mode, they operate on the emulated
+<P>SAM has two modes of operation, indicated by the prompt &ldquo;C64>&rdquo; or
+&ldquo;1541>&rdquo;. You can switch between them with the &ldquo;64&rdquo; and &ldquo;1541&rdquo; commands. In
+&ldquo;C64&rdquo; mode, all commands that access memory or the CPU operate on the
+memory/CPU of the emulated C64. In &ldquo;1541&rdquo; mode, they operate on the emulated
 1541 (this is only useful if the processor-level 1541 emulation is turned
 on).
 
@@ -51,11 +51,11 @@ command stopped):
  a [start]           Assemble
 </PRE>
 
-<P>starts the assembler at the address “start”. SAM always prints the
+<P>starts the assembler at the address &ldquo;start&rdquo;. SAM always prints the
 address where the next instruction will be written to. The syntax of the
 instructions conforms to the standard except for shift/rotate instructions
-in the “accumulator” addressing mode. Those have to be entered without
-operand, e.g. “lsr” instead of “lsr a”. Entering a blank line quits the
+in the &ldquo;accumulator&rdquo; addressing mode. Those have to be entered without
+operand, e.g. &ldquo;lsr&rdquo; instead of &ldquo;lsr a&rdquo;. Entering a blank line quits the
 assembler and returns to the command mode of SAM.
 
 
@@ -63,7 +63,7 @@ assembler and returns to the command mode of SAM.
  b [start] [end]     Binary dump
 </PRE>
 
-<P>displays the memory from “start” to “end” in byte-wise binary
+<P>displays the memory from &ldquo;start&rdquo; to &ldquo;end&rdquo; in byte-wise binary
 representation. With this command, you can view character sets.
 
 
@@ -71,8 +71,8 @@ representation. With this command, you can view character sets.
  c start end dest    Compare memory
 </PRE>
 
-<P>compares the memory in the range from “start” to (and including) “end”
-with the memory at “dest”. The addresses of all different bytes and the
+<P>compares the memory in the range from &ldquo;start&rdquo; to (and including) &ldquo;end&rdquo;
+with the memory at &ldquo;dest&rdquo;. The addresses of all different bytes and the
 total number of differences (in decimal) are printed.
 
 
@@ -80,7 +80,7 @@ total number of differences (in decimal) are printed.
  d [start] [end]     Disassemble
 </PRE>
 
-<P>disassembles the memory from “start” to “end”. Undocumented opcodes are
+<P>disassembles the memory from &ldquo;start&rdquo; to &ldquo;end&rdquo;. Undocumented opcodes are
 marked with a star '*'.
 
 
@@ -96,15 +96,15 @@ marked with a star '*'.
  f start end byte    Fill memory
 </PRE>
 
-<P>fills the memory in the range from “start” to (and including) “end” with
-the value “byte”.
+<P>fills the memory in the range from &ldquo;start&rdquo; to (and including) &ldquo;end&rdquo; with
+the value &ldquo;byte&rdquo;.
 
 
 <PRE>
  i [start] [end]     ASCII/PETSCII dump
 </PRE>
 
-<P>shows the memory from “start” to “end” as ASCII/PETSCII characters.
+<P>shows the memory from &ldquo;start&rdquo; to &ldquo;end&rdquo; as ASCII/PETSCII characters.
 
 
 <PRE>
@@ -136,7 +136,7 @@ effect in 1541 mode. The 8 possible configurations are:
 </PRE>
 
 <P>loads the contents of the specified file into memory starting from
-address “start”. The file name must be enclosed in quotation marks even if
+address &ldquo;start&rdquo;. The file name must be enclosed in quotation marks even if
 it contains no spaces. This command cannot be used to load C64 programs as
 it doesn't respect the embedded load address in the program.
 
@@ -145,7 +145,7 @@ it doesn't respect the embedded load address in the program.
  m [start] [end]     Memory dump
 </PRE>
 
-<P>displays the memory from “start” to “end” as hexadecimal numbers and
+<P>displays the memory from &ldquo;start&rdquo; to &ldquo;end&rdquo; as hexadecimal numbers and
 ASCII/PETSCII characters.
 
 
@@ -153,7 +153,7 @@ ASCII/PETSCII characters.
  n [start] [end]     Screen code dump
 </PRE>
 
-<P>displays the memory from “start” to “end” as characters, interpreting
+<P>displays the memory from &ldquo;start&rdquo; to &ldquo;end&rdquo; as characters, interpreting
 each byte as a screen code of the standard C64 character set.
 
 
@@ -171,7 +171,7 @@ output into the window of SAM again.
  p [start] [end]     Sprite dump
 </PRE>
 
-<P>displays the memory from “start” to “end” in binary representation with
+<P>displays the memory from &ldquo;start&rdquo; to &ldquo;end&rdquo; in binary representation with
 three bytes per line. With this command, you can view sprite data.
 
 
@@ -181,16 +181,16 @@ three bytes per line. With this command, you can view sprite data.
 
 <P>'r' without parameters shows all 6510 (C64) or 6502 (1541) registers and
 flags, and the instruction at the address specified by the program counter.
-For the 6510, “DR” and “PR” are the data direction register and data
-register of the processor port. To modify a register, give its name (“reg”)
-and the new value (“value”) as parameters.
+For the 6510, &ldquo;DR&rdquo; and &ldquo;PR&rdquo; are the data direction register and data
+register of the processor port. To modify a register, give its name (&ldquo;reg&rdquo;)
+and the new value (&ldquo;value&rdquo;) as parameters.
 
 
 <PRE>
  s start end "file"  Save data
 </PRE><P>
 
-<P>writes the memory from “start” to (and including) “end” to the specified
+<P>writes the memory from &ldquo;start&rdquo; to (and including) &ldquo;end&rdquo; to the specified
 file. The file name must be enclosed in quotation marks even if it contains
 no spaces. This command cannot be used to save C64 programs as it doesn't
 save a load address in the file.
@@ -200,7 +200,7 @@ save a load address in the file.
  t start end dest    Transfer memory
 </PRE>
 
-<P>transfers the memory from “start” to (and including) “end” to “dest”.
+<P>transfers the memory from &ldquo;start&rdquo; to (and including) &ldquo;end&rdquo; to &ldquo;dest&rdquo;.
 Source and destination may overlap.
 
 
@@ -243,7 +243,7 @@ Source and destination may overlap.
  : addr {byte}       Modify memory
 </PRE><P>
 
-<P>writes the space-separated values “byte” into memory starting at “addr”.
+<P>writes the space-separated values &ldquo;byte&rdquo; into memory starting at &ldquo;addr&rdquo;.
 
 
 <PRE>
