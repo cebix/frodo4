@@ -14,7 +14,7 @@ Prerequisites:
 
 * A C++20 compiler
 * SDL (Simple DirectMedia Layer) 2.x
-* GTK 3
+* GTK 3 [optional]
 
 Frodo can be compiled and installed in the usual way:
 
